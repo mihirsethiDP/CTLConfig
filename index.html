@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CloseTheLoop Configuration — Proposal</title>
+<meta name="description" content="A critique of the 28 September configuration handoff and a proposal for a simpler, equipment-first way to configure alerts, schedules and flows.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/app.css">
+<style>
+  body { background: var(--paper); }
+  .doc-top { background: var(--navy); color: #fff; padding: 44px 0 40px; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+  .doc-top .eyebrow { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--teal-deco); font-weight: 700; }
+  .doc-top h1 { font-size: 36px; line-height: 1.15; margin: 10px 0 8px; letter-spacing: -.02em; }
+  .doc-top .sub { font-size: 17px; color: rgba(255,255,255,.8); max-width: 66ch; }
+  .doc-top .meta { margin-top: 18px; font-size: 13px; color: rgba(255,255,255,.65); display: flex; gap: 18px; flex-wrap: wrap; }
+  .doc-top .cta { margin-top: 22px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .doc-top .cta a { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 8px; font-weight: 700; text-decoration: none; }
+  .doc-top .cta a.p { background: var(--teal); color: var(--navy); }
+  .doc-top .cta a.s { border: 1px solid rgba(255,255,255,.4); color: #fff; }
+  .layout { display: grid; grid-template-columns: 220px 1fr; gap: 40px; padding-top: 32px; }
+  .toc { position: sticky; top: 20px; align-self: start; font-size: 13px; }
+  .toc a { display: block; padding: 5px 0; color: var(--ink-2); border-left: 2px solid transparent; padding-left: 10px; }
+  .toc a:hover { color: var(--teal-ink); text-decoration: none; border-color: var(--teal); }
+  .toc .eyebrow { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); padding: 0 0 6px 12px; }
+  article { max-width: 78ch; font-size: 15.5px; line-height: 1.6; padding-bottom: 80px; }
+  article h2 { font-size: 24px; margin: 46px 0 12px; letter-spacing: -.02em; padding-top: 8px; }
+  article h2:first-of-type { margin-top: 8px; }
+  article h3 { font-size: 16.5px; margin: 26px 0 8px; }
+  article p { margin: 0 0 12px; }
+  article ul, article ol { margin: 0 0 14px; padding-left: 22px; }
+  article li { margin-bottom: 6px; }
+  article table { border-collapse: collapse; width: 100%; font-size: 13.5px; margin: 10px 0 18px; background: #fff; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  article th { text-align: left; background: var(--layer-2); padding: 8px 10px; font-size: 11.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); }
+  article td { padding: 8px 10px; border-top: 1px solid var(--line); vertical-align: top; }
+  article code { font-family: var(--mono); font-size: 12.5px; background: var(--layer-2); padding: 1px 5px; border-radius: 4px; }
+  .lines { counter-reset: n; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 8px 0; margin: 12px 0 22px; }
+  .lines div { counter-increment: n; display: grid; grid-template-columns: 34px 1fr; gap: 8px; padding: 8px 16px; border-bottom: 1px solid var(--line); }
+  .lines div:last-child { border-bottom: 0; }
+  .lines div::before { content: counter(n); font-family: var(--mono); color: var(--teal-ink); font-weight: 600; }
+  .callout { border-left: 4px solid var(--teal); background: var(--teal-tint); padding: 12px 16px; border-radius: 0 10px 10px 0; margin: 14px 0 18px; font-size: 14.5px; }
+  .callout.warn { border-color: var(--sev-minor); background: var(--warn-tint); }
+  .callout.err { border-color: var(--sev-emergency); background: var(--err-tint); }
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0 20px; }
+  .compare > div { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; font-size: 13.5px; }
+  .compare .h { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; font-weight: 700; margin-bottom: 6px; }
+  .compare .before .h { color: var(--rust-ink); }
+  .compare .after .h { color: var(--teal-ink); }
+  .compare ul { margin: 0; padding-left: 18px; }
+  .compare li { margin-bottom: 4px; }
+  figure { margin: 16px 0 22px; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 12.5px; color: var(--ink-3); margin-top: 8px; }
+  .pill { display: inline-block; font-family: var(--mono); font-size: 11px; padding: 1px 6px; border-radius: 4px; background: var(--layer-2); border: 1px solid var(--line-2); }
+  .try { display: inline-block; font-size: 12.5px; padding: 4px 10px; border-radius: 6px; background: var(--navy); color: #fff !important; text-decoration: none !important; font-weight: 600; margin: 2px 0; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .box { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; font-size: 13.5px; }
+  .box b.t { display: block; margin-bottom: 4px; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } .toc { position: static; display: none; } .compare, .grid2 { grid-template-columns: 1fr; } .doc-top h1 { font-size: 28px; } }
+</style>
+</head>
+<body>
+<div class="doc-top"><div class="wrap">
+  <div class="eyebrow">CloseTheLoop · Configuration · Proposal</div>
+  <h1>Configure by equipment, not by trigger.</h1>
+  <p class="sub">A critique of the 28 September configuration handoff (the <code style="background:rgba(255,255,255,.12);color:#fff">cfg-console-v4</code> console and its PRD), and a proposal that keeps the approved data model but changes what an admin sees and does — so a plant can be set up in an hour by someone who has never read the PRD.</p>
+  <div class="meta"><span>29 September 2026</span><span>Mihir Sethi, with Claude</span><span>Manesar STP used as the worked example</span></div>
+  <div class="cta"><a class="p" href="prototype.html">Open the prototype →</a><a class="s" href="#critique">Read the critique</a><a class="s" href="#hood">Under the hood</a></div>
+</div></div>
+
+<div class="wrap"><div class="layout">
+<nav class="toc">
+  <div class="eyebrow">Contents</div>
+  <a href="#tenlines">In ten lines</a>
+  <a href="#critique">What the handoff gets wrong</a>
+  <a href="#principles">Principles</a>
+  <a href="#model">How it fits together</a>
+  <a href="#surfaces">The surfaces</a>
+  <a href="#roles">Who configures what</a>
+  <a href="#hood">Under the hood</a>
+  <a href="#disagree">Where this departs from the PRD</a>
+  <a href="#open">Still open</a>
+  <a href="#build">What to build first</a>
+  <a href="#howto">Using the prototype</a>
+</nav>
+
+<article>
+
+<h2 id="tenlines">In ten lines</h2>
+<div class="lines">
+  <div><span><b>The equipment tree is the console.</b> An admin configures a machine, a stage or the plant — never an abstract list of 300 triggers. Every alert, schedule and job lives on the thing it is about.</span></div>
+  <div><span><b>Limits live on the sensor.</b> Caution · Minor · Major · Emergency thresholds are a property of the instrument. An alert uses them by default; two alerts never disagree about one probe.</span></div>
+  <div><span><b>Three plain things to add:</b> an <b>alert</b> (something is wrong), a <b>schedule</b> (planned work: routine, preventive maintenance, calibration), and <b>condition-based work</b> (the plant asks for a job). Underneath, all three are the PRD's one Trigger entity.</span></div>
+  <div><span><b>Nobody draws who is told.</b> Every alert and schedule shows, resolved from the real roster, who hears now, who hears when nothing starts, who hears when it is overdue. It is a preview, not a form.</span></div>
+  <div><span><b>Clocks are derived and shown as a consequence</b> — one line, not a section. The two numbers the Notifications Brief lets a Technical Admin change sit behind one link.</span></div>
+  <div><span><b>Standard sets replace the template library.</b> A machine of a known type shows "3 alerts and 2 schedules not added yet — review and add", bound to its own tags, landing as drafts.</span></div>
+  <div><span><b>Setup is a checklist, not a validator.</b> One page says whether alerts reach a human, which sensors lack limits, which machines lack a maintenance programme, which probes lack calibration, which causes lack a fix.</span></div>
+  <div><span><b>Flows keep the v4 editor's model</b> (an answer owns its destination; a conclusion names a cause; a cause names its fix). Causes are a tab inside Flows, not a fourth library.</span></div>
+  <div><span><b>Maintenance mode, PLC set points and cycles are visible where they bite:</b> on the sensor row and the alert form, so monitoring limits, control set points and batch phases never contradict each other silently.</span></div>
+  <div><span><b>No spec vocabulary on screen.</b> No rung, band, promotion, attribution, observation poll, lead parameter, §-numbers or AC ids. A "Show the model underneath" toggle reveals the PRD entity behind every card for engineers.</span></div>
+</div>
+
+<h2 id="critique">What the handoff gets wrong</h2>
+<p>The PRD is careful and most of its decisions are right: one entity, derived clocks, role-based routing, the freeze on triggers with open records, PPM as a scheduled task, sensor faults as their own path. The problem is the <em>surface</em> built on it. The console renders the specification instead of hiding it. Concretely:</p>
+
+<h3>1. The trigger form is the PRD with input boxes</h3>
+<p>Opening <em>DO Low — Aeration Zone 2</em> in the console shows nine numbered sections (§1, §2, §2b, §3, §3b, §4, §5, §5b, §12), a 130-word essay under the Outcome selector, and roughly 1,500 words of helper prose before the footer. Acceptance-criteria ids appear in product copy ("Pinned at 1 — AC-ESC-11.3", "before FR-COND-07"). An admin who wants to say <em>tell someone when DO drops below 2</em> is asked to understand bands, promotion, observation polls, resolution polls, subject versus observation, lead parameters and context readings first.</p>
+<div class="callout warn">The PRD itself says half the dead ends in the console lead to equipment configuration. That is the tell: the console is organised around the wrong noun.</div>
+
+<h3>2. It is organised by trigger, when admins think by machine</h3>
+<p>The primary surface is a 39-row list filtered by Outcome, with a scope bar, three tabs and a banner explaining scope on every one of four libraries. Nobody at a plant asks "show me all triggers"; they ask "what watches Blower-1?" and "does the MBR have a CIP schedule?". Goal 13 already made the Equipment Card the operator's centre; the config console should mirror it rather than sit beside it as a different mental model.</p>
+
+<h3>3. One threshold, three homes</h3>
+<p>A DO limit can be authored on the sensor (zone defaults), in the formula library (a SignalCondition), and on the trigger (a band). The prototype shows all three on one screen: a band rail with <code>RANGE MIN / MAX</code>, a formula dropdown of 35 entries, and a note that the sensor has no zone set. One number should have one home. The PRD's own §9.2 points at it — the sensor.</p>
+
+<h3>4. The form asks what the system already knows</h3>
+<p>It states "Observed on Aeration Tank-2 in Biological, because that is where the formula's sensor is" and then asks the admin to choose a subject with a three-button question and two paragraphs of consequence. If you are on Blower-1's page, the alert is about Blower-1. If you are on Biological, it is about the stage. Position in the tree answers the question.</p>
+
+<h3>5. Card design leaks into configuration</h3>
+<p>"What the card shows" (lead parameter, up to three context readings, display limit) is a decision about the operator card's rendering, defaulted correctly by the alert's own sensor 95% of the time. It does not belong in the alert form. Achievements as a peer form mode hide four-fifths of the form and inflate every other mode with a helper explaining why.</p>
+
+<h3>6. It contradicts the Notifications Brief, which wins</h3>
+<ul>
+  <li>Brief §4.1: "A Technical Admin may change [response time and deadline] on a rule." The console renders both read-only with a paragraph on why nobody may.</li>
+  <li>Brief §5: a person's settings are four rows plus quiet hours. The console's Roles page still offers a "Which moments?" checklist and a channel block per person.</li>
+  <li>Brief §6: admins set roster, quiet hours, hooter, the two clock numbers, and a technical-alerts toggle. Nothing else. The console's Site Settings spec still carries shift windows and a night override.</li>
+</ul>
+
+<h3>7. No path for a new plant</h3>
+<p>Day one at a new site is an empty trigger list and a template library in three tabs. The right day one is: equipment exists → its archetype says what it needs → the standard set is offered → the admin checks the numbers and activates. The "Ready to add" tab is the seed of this idea, buried two clicks deep.</p>
+
+<h3>8. Maintenance is a validator warning, not a programme</h3>
+<p>Addendum A folds PPM into scheduled Tasks (right), then surfaces coverage as a warning row in §12. An admin should see, on the machine, "its type expects a mechanical PM — none set", and on the plant, "14 of 17 machines have a programme". The Maintenance tool already proves how little config maintenance needs: a checklist per equipment type, a cadence, a team.</p>
+
+<h3>9. Reference pages and a state bar in the navigation</h3>
+<p>Record lifecycle, Open &amp; close paths, Screen states, Design notes are handoff material, not product. The empty/loading/saving bar is a prototype affordance that reads as a toolbar.</p>
+
+<div class="compare">
+  <div class="before"><div class="h">Handoff console</div><ul><li>Nav: Triggers · Flows · Root Causes · Analytical Engine Formulas · Site Settings · Audit · Roles &amp; Routing · Viz/Equipment · 4 reference pages</li><li>Trigger form: 9 sections, outcome selector, band rail + formula picker + zone note, subject question, card display config, ~1,500 words of helper</li><li>Scope bar, 3 tabs and a scope banner on every library</li><li>Thresholds in three places</li><li>Clocks read-only with justification</li><li>Achievements as a form mode</li></ul></div>
+  <div class="after"><div class="h">This proposal</div><ul><li>Nav: Plant setup · Equipment · Flows · People &amp; alerts · Activity (+ Standard sets for Global Admin)</li><li>Alert sheet: 5 short steps, one-line helpers, a live "what the operator sees" card and a "try a reading" test</li><li>Scope is where you are in the tree; Global is a persona, not a bar</li><li>Limits on the sensor; alerts follow them</li><li>Clocks as a one-line consequence, override behind a link (per brief)</li><li>Milestones as a small list on the plant page</li></ul></div>
+</div>
+
+<h2 id="principles">Principles</h2>
+<p>These are the design rules the prototype is held to. Each one is checkable against a screen.</p>
+<ol>
+  <li><b>One home per fact.</b> Limits on the sensor. Schedules on the machine. People on the roster. A fact never has two editors that can disagree.</li>
+  <li><b>Recognition over recall.</b> The plant's own tree, names and sensors are the navigation. No library of abstract things to search.</li>
+  <li><b>Defaults do the work.</b> A standard set for the machine type, limits from the sensor, clocks from severity and criticality, closing rule from the entry limit. The admin confirms; they rarely author.</li>
+  <li><b>Show the consequence, not the theory.</b> "Told now: Dheeraj, Nagesh, Devid — WhatsApp" beats a paragraph about rung 1. A "try a reading" box beats a section on evaluation semantics.</li>
+  <li><b>Plain words, one line.</b> Every helper is one sentence a plant lead would say aloud. Spec words stay in the model overlay.</li>
+  <li><b>Progressive disclosure.</b> Hold time, gating, cycle phase, tolerance days, clock overrides are behind "Advanced" links. The common case is five fields.</li>
+  <li><b>Nothing fires by surprise.</b> Everything added from a standard set is a draft. A draft never fires. Activate runs every check, and the checks read as a checklist, not an essay.</li>
+  <li><b>Reversible.</b> Drafts, undo on delete, switch off instead of delete when records are open, pause instead of delete on schedules.</li>
+  <li><b>Readiness over validation.</b> The home page answers "is this plant set up?" with links to the place that fixes each gap.</li>
+  <li><b>The model is one toggle away.</b> Engineers flip "Show the model underneath" and every card names the PRD entity and fields it maps to. The vocabulary problem is solved by layering, not by choosing.</li>
+</ol>
+
+<h2 id="model">How it fits together</h2>
+<p>Configuration is the left half of a loop the rest of the product already defines. Everything an admin sets here has exactly one downstream consumer.</p>
+<figure>
+<svg viewBox="0 0 1000 420" xmlns="http://www.w3.org/2000/svg" font-family="Figtree, sans-serif" font-size="13">
+  <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0L10 5 0 10z" fill="#667486"/></marker></defs>
+  <rect x="10" y="10" width="300" height="400" rx="12" fill="#e8f5f6" stroke="#95cfd3"/>
+  <text x="24" y="34" font-weight="700" fill="#0f6b72" font-size="12" letter-spacing="1">CONFIGURE · ADMIN</text>
+  <rect x="24" y="48" width="272" height="60" rx="8" fill="#fff" stroke="#d7dde4"/>
+  <text x="36" y="70" font-weight="700">Equipment tree</text><text x="36" y="90" fill="#4a5568">plant › stage › group › machine · archetype · criticality tier</text>
+  <rect x="24" y="118" width="272" height="60" rx="8" fill="#fff" stroke="#d7dde4"/>
+  <text x="36" y="140" font-weight="700">Sensors and limits</text><text x="36" y="160" fill="#4a5568">valid range · Caution/Minor/Major/Emergency · set point</text>
+  <rect x="24" y="188" width="272" height="82" rx="8" fill="#fff" stroke="#d7dde4"/>
+  <text x="36" y="210" font-weight="700">Alerts · Schedules · Condition work</text><text x="36" y="230" fill="#4a5568">what closes it · what the operator does · verify</text><text x="36" y="250" fill="#4a5568">cadence · meter · statutory · vendor</text>
+  <rect x="24" y="280" width="272" height="50" rx="8" fill="#fff" stroke="#d7dde4"/>
+  <text x="36" y="302" font-weight="700">Flows and causes</text><text x="36" y="320" fill="#4a5568">diagnostic → cause → action flow</text>
+  <rect x="24" y="340" width="272" height="56" rx="8" fill="#fff" stroke="#d7dde4"/>
+  <text x="36" y="362" font-weight="700">People</text><text x="36" y="382" fill="#4a5568">roster by role · quiet hours · hooter — that is all</text>
+
+  <rect x="360" y="10" width="300" height="400" rx="12" fill="#f4f6f8" stroke="#d7dde4"/>
+  <text x="374" y="34" font-weight="700" fill="#4a5568" font-size="12" letter-spacing="1">RUNS · ENGINE</text>
+  <rect x="374" y="48" width="272" height="70" rx="8" fill="#fff" stroke="#d7dde4"/>
+  <text x="386" y="70" font-weight="700">Evaluate every minute</text><text x="386" y="90" fill="#4a5568">limit crossed → one open issue per alert</text><text x="386" y="108" fill="#4a5568">deeper limit → louder, wider · back → silent</text>
+  <rect x="374" y="128" width="272" height="70" rx="8" fill="#fff" stroke="#d7dde4"/>
+  <text x="386" y="150" font-weight="700">Emit planned work</text><text x="386" y="170" fill="#4a5568">calendar or meter · claimable 3 days early</text><text x="386" y="188" fill="#4a5568">clocks from tier × cadence</text>
+  <rect x="374" y="208" width="272" height="70" rx="8" fill="#fff" stroke="#d7dde4"/>
+  <text x="386" y="230" font-weight="700">Resolve who is told</text><text x="386" y="250" fill="#4a5568">from the roster at fire time, by role</text><text x="386" y="268" fill="#4a5568">WhatsApp · call · hooter · morning email</text>
+  <rect x="374" y="288" width="272" height="108" rx="8" fill="#fff" stroke="#d7dde4"/>
+  <text x="386" y="310" font-weight="700">Guards</text><text x="386" y="330" fill="#4a5568">sensor fault → pause, own ladder</text><text x="386" y="348" fill="#4a5568">maintenance mode → pause the machine</text><text x="386" y="366" fill="#4a5568">cycle phase → only when it means something</text><text x="386" y="384" fill="#4a5568">open record → terms frozen</text>
+
+  <rect x="710" y="10" width="280" height="400" rx="12" fill="#0d1117"/>
+  <text x="724" y="34" font-weight="700" fill="#95cfd3" font-size="12" letter-spacing="1">SEEN · OPERATOR AND LEAD</text>
+  <rect x="724" y="48" width="252" height="80" rx="8" fill="#1d232c" stroke="#313b48"/>
+  <text x="736" y="70" font-weight="700" fill="#fff">Equipment card</text><text x="736" y="90" fill="#b4becb">one queue: issues, tasks, PM · one button</text><text x="736" y="108" fill="#b4becb">live readings coloured by the same limits</text>
+  <rect x="724" y="138" width="252" height="70" rx="8" fill="#1d232c" stroke="#313b48"/>
+  <text x="736" y="160" font-weight="700" fill="#fff">Issue and Task cards</text><text x="736" y="180" fill="#b4becb">Start = claim + silence + begin</text><text x="736" y="198" fill="#b4becb">flow steps · photo · verify · close</text>
+  <rect x="724" y="218" width="252" height="70" rx="8" fill="#1d232c" stroke="#313b48"/>
+  <text x="736" y="240" font-weight="700" fill="#fff">Notifications</text><text x="736" y="260" fill="#b4becb">the person's four rows + quiet hours</text><text x="736" y="278" fill="#b4becb">named messages always arrive</text>
+  <rect x="724" y="298" width="252" height="98" rx="8" fill="#1d232c" stroke="#313b48"/>
+  <text x="736" y="320" font-weight="700" fill="#fff">History and metrics</text><text x="736" y="340" fill="#b4becb">filed on one node, rolls up</text><text x="736" y="358" fill="#b4becb">attribution adds a machine, never moves</text><text x="736" y="376" fill="#b4becb">sensor faults shown, never counted</text>
+
+  <line x1="310" y1="210" x2="360" y2="210" stroke="#667486" stroke-width="2" marker-end="url(#ar)"/>
+  <line x1="660" y1="210" x2="710" y2="210" stroke="#667486" stroke-width="2" marker-end="url(#ar)"/>
+  <path d="M850 396 C 850 416, 160 416, 160 400" fill="none" stroke="#667486" stroke-width="1.5" stroke-dasharray="4 4" marker-end="url(#ar)"/>
+  <text x="430" y="411" fill="#667486" font-size="11.5">history, ignore counts and fault rates feed back into what to change</text>
+</svg>
+<figcaption>Left: what an admin sets. Middle: what the engine does with it, unchanged from the PRD. Right: what the operator and Lead see. The loop closes when history tells the admin which limit, cadence or flow to change.</figcaption>
+</figure>
+
+<h3>The three things you can add, and what each becomes</h3>
+<table>
+  <tr><th>You add</th><th>It means</th><th>It becomes</th><th>Who sees it</th></tr>
+  <tr><td><b>Alert</b> on a sensor</td><td>Something is wrong; someone must fix it</td><td>An Issue with a severity from the limit crossed; escalates by the fixed ladder; closes by the sensor or by the operator's word</td><td>Issues list, the equipment card's button, WhatsApp/call/hooter by severity</td></tr>
+  <tr><td><b>Schedule</b> on a machine, stage or the plant</td><td>Planned work: routine check, preventive maintenance, calibration</td><td>A Task emitted on a calendar or a meter; clocks from tier × cadence; claimable 3 days early; PM and Calibration chips on the card</td><td>Tasks list, the card, Lead's maintenance calendar; quiet until late</td></tr>
+  <tr><td><b>Condition-based work</b> on a sensor</td><td>The plant asks for a job — the process working, not failing</td><td>A Task on the rising edge; re-arms on the "done" threshold; grades itself by whether the reading cleared; optionally pairs with an Issue above a worse threshold</td><td>Tasks list ("just came up"), the card; ignored five times → one Issue to the Lead</td></tr>
+  <tr><td><b>Milestone</b> on the plant</td><td>Something went right</td><td>An Achievement record, counted</td><td>Plant Home counter only. Never notifies</td></tr>
+</table>
+
+<h3>Where the other modules plug in</h3>
+<ul>
+  <li><b>Equipment Card (Goal 13).</b> The tree, archetypes, criticality tier, duty/standby and the "filed on one node, rolls up" rule are shared. The Lead's six-field cadence edit on the card and the console's schedule sheet write the same record — one store, two surfaces.</li>
+  <li><b>Maintenance tool.</b> Its checklist-per-equipment-type becomes an action flow "for" that type; its <em>Scheduled / Breakdown</em> reasons become schedules and equipment-fault reports; its holds become the Blocked path; "Put in Maintenance" becomes Maintenance Mode, which pauses the machine's alerts. Its Excel PPM import stays as the way to seed schedules at migration.</li>
+  <li><b>Notifications.</b> Consumed, never configured. The "who is told" block on every alert and schedule is the brief's tables resolved against the roster. People &amp; alerts holds the only admin levers the brief allows.</li>
+  <li><b>Roles.</b> Technical Admin owns Equipment and Flows; People Admin owns People &amp; alerts; Global Admin owns Standard sets; a Lead edits in-house PM cadence in place. One new permission line, <code>approve.schedule</code>, carries the Lead's grant.</li>
+  <li><b>Remote Control.</b> A sensor's PLC set point is shown beside its alert limits, read-only, with a nudge when an alert limit sits inside the control band. Maintenance-mode and group-control hooks stay on the card.</li>
+  <li><b>Insights+ cycles.</b> The UF/SBR/MBR cycle-and-phase config already designed there is the missing input for cycle-bound issues. A machine with cycles shows them; an alert can be limited to a phase and closes at the boundary. This answers the PRD's open item 5 with something that exists.</li>
+  <li><b>Sensor Health and the Internal Tool.</b> A reported or detected sensor fault pauses the sensor's alerts and shows a paused count on the sensor row; calibration and cleaning cadences on the sensor sheet generate calibration tasks, in the vendor's name where a contract exists.</li>
+  <li><b>Formula builder.</b> Kept, demoted: a compound condition ("DO low AND blower running") is an Advanced option on an alert, and a computed sensor (RO recovery) is an ordinary row on the sensor table with an expression. The library still exists in the data model; it is not a navigation item.</li>
+</ul>
+
+<h2 id="surfaces">The surfaces</h2>
+<div class="grid2">
+  <div class="box"><b class="t">Plant setup</b>A health card (green or red, never amber) and a checklist: people reachable, sensors with limits, machines with their standard set, machines with a maintenance programme, probes with calibration, causes with a fix, site defaults. Every row links to the place that fixes it. <a class="try" href="prototype.html#/setup">Try it</a></div>
+  <div class="box"><b class="t">Equipment</b>The tree on the left. A machine page has Sensors and limits, Alerts, Schedules, Condition-based work, Cycles (where relevant) and Details (tier, archetype, standby). A stage page carries stage-level alerts and rounds. The plant page carries plant-wide schedules and milestones. <a class="try" href="prototype.html#/equipment/eq:bl1">Blower 1</a> <a class="try" href="prototype.html#/equipment/stage:bio">Biological</a> <a class="try" href="prototype.html#/equipment/plant">Plant</a></div>
+  <div class="box"><b class="t">Alert sheet</b>Five steps: what to watch · limits (from the sensor by default) · when it closes · what the operator does · who is told. A live operator card and a "try a reading" box on the right. Checks read as a list. <a class="try" href="prototype.html#/equipment/eq:bl1">Open Blower 1, click Add alert</a></div>
+  <div class="box"><b class="t">Schedule sheet</b>Four steps: kind of work · how often (calendar, run-hours, whichever first; from last completion or fixed dates) · how urgent (derived; statutory toggle; tolerance behind Advanced) · who is told. Sign in as the Lead to see the same sheet as the six-field card edit.</div>
+  <div class="box"><b class="t">Flows</b>Diagnostic and action flows in one list with "runs when". Causes as a tab, each showing what diagnoses it and what fixes it. The editor keeps the v4 model in a lighter shell. <a class="try" href="prototype.html#/flows">Try it</a></div>
+  <div class="box"><b class="t">People &amp; alerts</b>The roster, the health card, "who is told right now" for each severity resolved from the roster, and the two site defaults. Removing the last reachable Operator or Lead is refused. <a class="try" href="prototype.html#/people">Try it</a></div>
+  <div class="box"><b class="t">Standard sets (Global Admin)</b>One set per equipment type: alerts by sensor kind with default limits, schedules with cadence. Rolled out to plants as drafts, with plants that cannot take a set listed with the reason. Sign in as the Global Admin to see it.</div>
+  <div class="box"><b class="t">Activity</b>Everything that changes who gets woken up, with before and after. Kept 24 months. <a class="try" href="prototype.html#/activity">Try it</a></div>
+</div>
+
+<h2 id="roles">Who configures what</h2>
+<table>
+  <tr><th>Person</th><th>Can change</th><th>Cannot change</th><th>Where</th></tr>
+  <tr><td><b>Technical Admin</b></td><td>Equipment details, sensor limits and valid ranges, alerts, schedules, condition-based work, cycles, flows and causes, criticality override with a reason, the two clock numbers on an alert</td><td>Roster, quiet hours, hooter</td><td>Equipment · Flows</td></tr>
+  <tr><td><b>People Admin</b></td><td>Who holds which role, the site's default quiet hours, the hooter on/off and duration</td><td>Anything on Equipment or Flows; anyone else's notification settings</td><td>People &amp; alerts</td></tr>
+  <tr><td><b>Full Site Admin</b></td><td>Both of the above</td><td>—</td><td>All</td></tr>
+  <tr><td><b>Lead (L3, L4)</b></td><td>Cadence, next due, meter interval, tolerance, flow and pause on an <em>in-house preventive maintenance</em> schedule — from the equipment card or this console, same record</td><td>Calibration cadence, vendor-contract schedules, alerts, limits, anything else</td><td>Equipment (read-only apart from that sheet)</td></tr>
+  <tr><td><b>Global Admin</b></td><td>Standard sets; act as Full Site Admin at any plant</td><td>—</td><td>Standard sets + all</td></tr>
+  <tr><td><b>Operator</b></td><td>Nothing here. Their own four notification rows and quiet hours live in their profile. They report sensor faults and set Maintenance Mode from the card</td><td>—</td><td>Not in this console</td></tr>
+</table>
+<p>Permission keys, mapped to the User Center catalogue: Equipment and alerts use <code>tech.rules</code>, <code>tech.sensors</code>, <code>tech.plant</code>; Flows use <code>tech.flows</code>; the clock override uses <code>tech.routing</code>; People &amp; alerts uses <code>people.groups</code> and <code>people.notif</code>; Standard sets use <code>templates.library</code> and <code>templates.publish</code>. The Lead's PM edit is one added line, <code>approve.schedule</code>, in the <code>approve</code> set — consistent with the rule that the roles catalogue is closed and only permission lines are added.</p>
+
+<h2 id="hood">Under the hood</h2>
+<p>Nothing in the approved data model is thrown away. The UI vocabulary is a layer over it. Flip "Show the model underneath" in the prototype to see this mapping on every card.</p>
+<table>
+  <tr><th>On screen</th><th>In the PRD</th><th>Notes</th></tr>
+  <tr><td>Alert</td><td><code>Trigger { outcome:'issue', triggerType:'alert', severityBands[], resolutionType, procedureTreeId, requiresSupervisorVerification }</code></td><td>Each limit is one band; each band mints or reuses a <code>SignalCondition</code> on the sensor. "Use the sensor's limits" = <code>inheritsSensorZones:true</code>. "Try a reading" runs the §9.1 rules.</td></tr>
+  <tr><td>Sensor limits</td><td><code>Sensor.defaultZones</code>, <code>validMin/validMax</code>, <code>SensorMaintenanceContract</code></td><td>Exactly FR-COND-06 and FR-COND-07. The set point comes from Remote Control's <code>SetpointBase</code>, read-only.</td></tr>
+  <tr><td>Schedule</td><td><code>Trigger { outcome:'task', triggerType:'schedule', workType, dueBasis, calendarAnchor, meter*, performedBy, statutory, toleranceDays, displaySensorId }</code></td><td>Addendum A, unchanged. Clocks from §6.3 (tier × cadence), shown as a consequence line.</td></tr>
+  <tr><td>Condition-based work</td><td><code>Trigger { outcome:'task', triggerType:'alert', rearmConditionId, clearanceCheckMinutes, chronicIgnoreThreshold, promotionPairOf }</code></td><td>§5.9 routine work. "If it gets worse" mints the paired Issue trigger with its own page.</td></tr>
+  <tr><td>Milestone</td><td><code>Trigger { outcome:'achievement' }</code> → <code>RECORDED</code></td><td>Kept, moved out of the form into a list.</td></tr>
+  <tr><td>Where you are in the tree</td><td><code>Subject = equipment | unitProcess | plant</code></td><td><b>Adds <code>group</code></b> for duty/standby sets and control groups, which the Equipment Card needs and the PRD's Subject type lacks (its ADR-1).</td></tr>
+  <tr><td>Who is told</td><td>Notifications Brief §4.1–4.3 resolved against the roster</td><td>Read-only everywhere. The only inputs are the roster and, per alert, the two clock numbers (brief §4.1, §6).</td></tr>
+  <tr><td>Flows and causes</td><td><code>Procedure { treeType, steps[].answers → Destination }</code>, <code>RootCause { remediationTreeId }</code></td><td>Flows v4 model, unchanged. "For" a machine type = the template's <code>equipmentType</code>; binding is per step at adoption.</td></tr>
+  <tr><td>Standard set</td><td>Global <code>Trigger</code> templates with <code>equipmentType</code> and sensor kinds; <code>sourceTemplateId</code>, <code>pinnedTemplateVersion</code> on instances</td><td>§5.10 propagation mechanics unchanged; the site-side surface is a recommendation on the machine, not a library.</td></tr>
+  <tr><td>Cycles</td><td>The Events/Batch entity the PRD names as the next step; phases from the Insights+ cycle config</td><td>Gives <code>closeReason:'cycle_complete'</code> its <em>observed</em> grade. A cycle that skips or overruns is its own issue.</td></tr>
+  <tr><td>Setup checklist</td><td>§6.7 routing validator + §15.4 coverage warnings + FR-COND-07 zone checks + §7.4 causes without a fix</td><td>Same checks, one page, phrased as things to do.</td></tr>
+  <tr><td>Frozen terms</td><td>§5.7</td><td>Unchanged. The sheet says which fields are frozen and offers switch off → duplicate.</td></tr>
+</table>
+
+<h2 id="disagree">Where this departs from the PRD and the handoff, and where it does not</h2>
+<h3>Departures, stated plainly</h3>
+<ol>
+  <li><b>The formula library is not a navigation item.</b> Thresholds are authored on sensors; compound conditions are an Advanced option inside an alert. The library remains in the model and can be exposed for migration and power users under Equipment, but it is not how an admin thinks.</li>
+  <li><b>No Outcome selector.</b> Three named actions replace a mode switch. The PRD's argument for one entity is about the model, not the form.</li>
+  <li><b>No subject question.</b> Tree position decides the subject. The observed-versus-subject distinction is preserved: a stage-level alert shows "read on AT-2".</li>
+  <li><b>No scope bar on site surfaces.</b> Global is a persona with its own Standard sets page. A site admin sees recommendations, not a library.</li>
+  <li><b>Achievements leave the form.</b> They are a list on the plant page.</li>
+  <li><b>Card display settings leave the form.</b> The lead reading is the alert's sensor; context readings are a card-design default per archetype.</li>
+  <li><b>Response time and deadline are overridable per alert</b>, behind a link, because the Notifications Brief says so and the brief wins. The list marks such alerts as exceptions.</li>
+  <li><b>Subject gains a group level</b>, because the Equipment Card's duty/standby sets and the blower-group task need it.</li>
+  <li><b>Cycles are a config object</b>, reusing the Insights+ cycle design, instead of an interim per-trigger chronic threshold.</li>
+  <li><b>Reference pages leave the nav.</b> They belong in the handoff bundle, which this document is.</li>
+</ol>
+<h3>Kept on purpose</h3>
+<ul>
+  <li>One entity, three outcomes, one open record per trigger, the freeze on open records, drafts that never fire.</li>
+  <li>Severity from the limit crossed; promotion and silent demotion; peak severity for metrics.</li>
+  <li>Derived clocks for Issues (severity) and Tasks (tier × cadence); the ladder fixed by role; Emergency with no settings; Start as acknowledgement.</li>
+  <li>PPM as a scheduled Task with work type, due basis, calendar anchor, meter floor, vendor marking; Lead's six-field grant; coverage as warnings.</li>
+  <li>Sensor faults as their own path, pausing alerts, never counted; valid range on the sensor; reading states.</li>
+  <li>Flows v4 (answer owns destination), causes global-only, publish validators as two grades.</li>
+  <li>Attribution additive; events on one node rolling up; the 24-month audit.</li>
+</ul>
+
+<h2 id="open">Still open</h2>
+<table>
+  <tr><th>Question</th><th>Proposed answer</th><th>Needs</th></tr>
+  <tr><td>Recurrence semantics (next occurrence, month-end, DST, <code>endAt</code> mid-series) have no acceptance criteria</td><td>Adopt iCal RRULE semantics with IST as the only zone; "monthly on the 31st" clamps to month end; <code>endAt</code> stops emission after the last occurrence at or before it</td><td>Written as FR-SCHED before the scheduler is built</td></tr>
+  <tr><td>Tier shares 10 / 20 / 30% and the one-off and condition-triggered defaults</td><td>Keep configurable at the estate level, not per plant; validate the graph-derived tiers against each site's critical-equipment list before the tiers drive escalation</td><td>Sign-off</td></tr>
+  <tr><td>Cycle signal source</td><td>The Insights+ cycle config: phases by time or valve state; the transition the PLC reports is the observed grade</td><td>Confirm the cycle config is in scope for this phase; otherwise the per-alert maximum cycle time stands as the inferred grade</td></tr>
+  <tr><td>Emergency on a manual report</td><td>Reporter raises Major and the Lead promotes; a Lead may raise Emergency directly</td><td>Card PRD decision</td></tr>
+  <tr><td>A cause typed in free text on a report</td><td>Lead maps it to a library cause afterwards, from the Causes tab ("unmapped reports: 3")</td><td>Card PRD decision</td></tr>
+  <tr><td>Field-level permissions</td><td>None. The freeze and the four personas cover it; the Lead sheet is scoped by fields in code, not by a matrix</td><td>—</td></tr>
+  <tr><td>Whether the site-side formula library should be reachable at all</td><td>Yes, under Equipment as "All conditions", read-mostly, for migration clean-up</td><td>Decide at migration</td></tr>
+</table>
+
+<h2 id="build">What to build first</h2>
+<ol>
+  <li><b>Equipment page with sensors, limits and alerts.</b> This is the whole value: one machine, its limits, its alerts, who is told. It reuses the equipment module's tree and the existing trigger and condition tables.</li>
+  <li><b>Schedules and condition-based work</b> on the same page, plus the Lead's in-place sheet. Migrate the Maintenance tool's PPM import into it.</li>
+  <li><b>Plant setup checklist</b> — cheap, because every check already exists as a validator or a coverage rule.</li>
+  <li><b>People &amp; alerts</b> — mostly read-only, on top of the roster the User Center already has.</li>
+  <li><b>Flows</b> — the v4 editor is sound; restyle its shell to match and add the Causes tab.</li>
+  <li><b>Standard sets</b> for Global Admins, with roll-out as drafts. Until then, a site can still add everything by hand.</li>
+</ol>
+
+<h2 id="howto">Using the prototype</h2>
+<ul>
+  <li>Everything is in memory. <b>Reset data</b> in the top bar restores the starting state.</li>
+  <li><b>Sign in as</b> switches persona: Technical Admin (full equipment config), People Admin (roster and site defaults), Lead (read-only, except in-house PM cadence), Global Admin (adds Standard sets).</li>
+  <li><b>Show the model underneath</b> (bottom of the left nav) reveals the PRD entity behind every card and sheet.</li>
+  <li>Good paths to walk: Plant setup → "Review" on Air Blower 2 → add the standard set as drafts → open a draft and activate it. Or: Biological → DO low → try a reading of 0.4. Or: sign in as the Lead → Air Blower 1 → Bearing service.</li>
+  <li>Not built here: the operator app, the equipment card itself, the notification pipeline, real persistence.</li>
+</ul>
+<p class="muted small" style="margin-top:32px">Sources: the 28 Sep handoff bundle (Configuration PRD v1.0 and its 783 acceptance criteria, the decisions register, the Notifications Brief v3.9), the Equipment Card handoff (Goal 13, v3), the Maintenance Ops tool, User Center v2 roles, the Notifications Center prototype, Insights+, Remote Control set points, the user-flow and diagnostic-flow prototypes, and the Internal Tool's flow engine.</p>
+
+</article>
+</div></div>
+</body>
+</html>
