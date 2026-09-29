@@ -29,7 +29,7 @@ window.CTL = (function () {
     tech: { label: 'Technical Admin', who: 'Swadesh Singh', can: { equipment: true, flows: true, people: false, site: false, standards: false } },
     people: { label: 'People Admin', who: 'Kishore Reddy', can: { equipment: false, flows: false, people: true, site: true, standards: false } },
     lead: { label: 'Lead (L3)', who: 'Kishore Reddy', can: { equipment: false, flows: false, people: false, site: false, standards: false } },
-    global: { label: 'Global Admin', who: 'Alex Loijos', can: { equipment: true, flows: true, people: true, site: true, standards: true } },
+    global: { label: 'Global Admin', who: 'Satyadev Singh', can: { equipment: true, flows: true, people: true, site: true, standards: true } },
   };
   const can = (k) => PERSONA[S.persona].can[k];
 
