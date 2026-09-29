@@ -4,10 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CloseTheLoop · Configure</title>
-<meta name="description" content="Proposal prototype: configuring alerts, schedules and flows by equipment, not by trigger.">
+<meta name="description" content="Proposal prototype: configuring alerts, schedules and flows by equipment, one decision at a time.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/app.css">
+<link rel="stylesheet" href="assets/app.css?v=4">
+<link rel="stylesheet" href="assets/app2.css?v=4">
 </head>
 <body>
 <div class="shell">
@@ -27,14 +28,19 @@
       </select>
     </label>
     <button class="link" id="reset" type="button" title="Reload the starting data">Reset data</button>
+    <button class="link help" id="guideBtn" type="button" aria-pressed="true">? Help</button>
     <a class="link" href="index.html">Proposal</a>
   </header>
   <div class="body">
     <nav class="sidenav" id="nav" aria-label="Configuration"></nav>
     <main id="main"></main>
+    <aside class="guide" id="guide" aria-label="Help"></aside>
   </div>
 </div>
-<script src="assets/data.js"></script>
-<script src="assets/app.js"></script>
+<script src="assets/data.js?v=4"></script>
+<script src="assets/app.js?v=4"></script>
+<script src="assets/views.js?v=4"></script>
+<script src="assets/sheets.js?v=4"></script>
+<script>CTL.boot();</script>
 </body>
 </html>

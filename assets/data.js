@@ -215,8 +215,29 @@ window.SEED = {
     { id: 't_aeration', type: 'Aeration basin', usedAt: 27, alerts: [
         { name: 'DO low', sensorKind: 'Dissolved oxygen', direction: 'below', limits: { minor: 2.0, major: 1.0, emergency: 0.5 }, flow: 'f_lowdo' },
         { name: 'MLSS out of band', sensorKind: 'MLSS', direction: 'above', limits: { minor: 4500 } },
+        { name: 'Temperature high', sensorKind: 'Temperature', direction: 'above', limits: { caution: 35, minor: 38 } },
       ], schedules: [
         { name: 'DO probe calibration', workType: 'calibration', basis: 'calendar', every: { n: 1, unit: 'month' } },
+      ] },
+    { id: 't_eqtank', type: 'Equalisation tank', usedAt: 24, alerts: [
+        { name: 'Level high', sensorKind: 'Level', direction: 'above', limits: { caution: 85, major: 95 } },
+        { name: 'pH out of band', sensorKind: 'pH', direction: 'above', limits: { minor: 8.5, major: 9.5 } },
+      ], schedules: [
+        { name: 'Tank cleaning', workType: 'pm', basis: 'calendar', every: { n: 6, unit: 'month' } },
+      ] },
+    { id: 't_mgf', type: 'Multigrade filter', usedAt: 19, alerts: [
+        { name: 'Backwash not keeping up', sensorKind: 'Differential pressure', direction: 'above', limits: { minor: 1.8 } },
+      ], schedules: [
+        { name: 'Backwash when pressure builds', workType: 'condition', sensorKind: 'Differential pressure', doWhen: 1.2, doneWhen: 1.0, flow: 'f_backwash' },
+      ] },
+    { id: 't_uf', type: 'Ultrafiltration skid', usedAt: 11, alerts: [
+        { name: 'Recovery low', sensorKind: 'Recovery', direction: 'below', limits: { minor: 72, major: 65 } },
+        { name: 'Inlet pressure high', sensorKind: 'Inlet pressure', direction: 'above', limits: { minor: 3.2 } },
+      ], schedules: [
+        { name: 'Quarterly CIP', workType: 'pm', basis: 'calendar', every: { n: 3, unit: 'month' } },
+      ] },
+    { id: 't_screen', type: 'Mechanical bar screen', usedAt: 33, alerts: [], schedules: [
+        { name: 'Weekly rake and screen inspection', workType: 'routine', basis: 'calendar', every: { n: 1, unit: 'week' }, flow: 'f_screen' },
       ] },
     { id: 't_membrane', type: 'Membrane bioreactor skid', usedAt: 9, alerts: [
         { name: 'Permeability falling', sensorKind: 'Permeability', direction: 'below', limits: { minor: 80, major: 50 }, flow: 'f_turb' },

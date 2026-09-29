@@ -76,6 +76,7 @@
   <a href="#tenlines">In ten lines</a>
   <a href="#critique">What the handoff gets wrong</a>
   <a href="#principles">Principles</a>
+  <a href="#simplify">Simplifying by design</a>
   <a href="#model">How it fits together</a>
   <a href="#surfaces">The surfaces</a>
   <a href="#roles">Who configures what</a>
@@ -96,7 +97,7 @@
   <div><span><b>Nobody draws who is told.</b> Every alert and schedule shows, resolved from the real roster, who hears now, who hears when nothing starts, who hears when it is overdue. It is a preview, not a form.</span></div>
   <div><span><b>Clocks are derived and shown as a consequence</b> — one line, not a section. The two numbers the Notifications Brief lets a Technical Admin change sit behind one link.</span></div>
   <div><span><b>Standard sets replace the template library.</b> A machine of a known type shows "3 alerts and 2 schedules not added yet — review and add", bound to its own tags, landing as drafts.</span></div>
-  <div><span><b>Setup is a checklist, not a validator.</b> One page says whether alerts reach a human, which sensors lack limits, which machines lack a maintenance programme, which probes lack calibration, which causes lack a fix.</span></div>
+  <div><span><b>Setup is a guided path, not a validator.</b> Five steps with a progress bar say whether alerts reach a human, which sensors lack limits, which machines lack alerts or a maintenance programme, which causes lack a fix, and offer a one-click answer for each.</span></div>
   <div><span><b>Flows keep the v4 editor's model</b> (an answer owns its destination; a conclusion names a cause; a cause names its fix). Causes are a tab inside Flows, not a fourth library.</span></div>
   <div><span><b>Maintenance mode, PLC set points and cycles are visible where they bite:</b> on the sensor row and the alert form, so monitoring limits, control set points and batch phases never contradict each other silently.</span></div>
   <div><span><b>No spec vocabulary on screen.</b> No rung, band, promotion, attribution, observation poll, lead parameter, §-numbers or AC ids. A "Show the model underneath" toggle reveals the PRD entity behind every card for engineers.</span></div>
@@ -156,6 +157,40 @@
   <li><b>Readiness over validation.</b> The home page answers "is this plant set up?" with links to the place that fixes each gap.</li>
   <li><b>The model is one toggle away.</b> Engineers flip "Show the model underneath" and every card names the PRD entity and fields it maps to. The vocabulary problem is solved by layering, not by choosing.</li>
 </ol>
+
+<h2 id="simplify">Simplifying by design</h2>
+<p>The requirement is complex and the end result will be too. The job is to make sure the complexity is paid by the system and the defaults, not by the person at the screen. Each row is a law, the decision it drove, and where to see it in the prototype.</p>
+<table>
+  <tr><th>Law</th><th>Decision</th><th>Where</th></tr>
+  <tr><td><b>Tesler</b> (complexity is conserved)</td><td>Move it into defaults: limits from the standard set, clocks from severity and tier, closing threshold from the entry limit, who-is-told from the roster. The admin confirms; they rarely author.</td><td>Any alert or schedule sheet: most fields are pre-filled</td></tr>
+  <tr><td><b>Hick</b> (more choices, slower decisions)</td><td>One decision per screen. Alerts are four questions in order; schedules three; nothing else is visible until the current question is answered.</td><td>Stepper sheets</td></tr>
+  <tr><td><b>Miller</b> (about seven things)</td><td>Never more than five things on a screen that need a decision. The equipment page shows one section open at a time; cards are one line.</td><td>Equipment page accordions</td></tr>
+  <tr><td><b>Progressive disclosure</b></td><td>Hold time, gating, cycle phase, tolerance, clock override, valid range and calibration contract sit behind "More options". Names, spec fields and the entity model sit behind a toggle.</td><td>"More options" in every sheet · "Show the model underneath"</td></tr>
+  <tr><td><b>Goal gradient and Zeigarnik</b></td><td>Setup is five steps with a progress bar; the home page names the next one and keeps unfinished steps visible until done or skipped.</td><td>Set up the plant</td></tr>
+  <tr><td><b>Recognition over recall</b></td><td>The plant's own tree, sensor names and current readings are the navigation and the pickers. No library of abstract objects to search.</td><td>Equipment tree · "Which reading?" step</td></tr>
+  <tr><td><b>Jakob</b> (familiar patterns)</td><td>Wizard, side sheet, accordion, radio cards, toggles: nothing invented. Save · Save draft · Activate mean what they mean everywhere else.</td><td>Throughout</td></tr>
+  <tr><td><b>Doherty</b> (respond within 400 ms)</td><td>Every save shows a spinner and disables the footer; pages show a skeleton on first load; validation is inline on change, not on submit.</td><td>Any save · first visit to a page</td></tr>
+  <tr><td><b>Postel</b> (be liberal in what you accept)</td><td>Blank tiers are allowed. A schedule with no steps is allowed. A flow nothing runs is allowed. Drafts skip every check. The system says what each omission costs instead of blocking.</td><td>"If you skip" in the help panel · fallbacks on the review step</td></tr>
+  <tr><td><b>Peak-end</b></td><td>Every completed action ends in one sentence that says what will now happen ("active · Operators now · Leads if not started in 8 h"). Setup ends on a ready screen.</td><td>Toasts · Setup › Ready</td></tr>
+  <tr><td><b>Error prevention over error messages</b></td><td>Inputs that cannot apply are disabled with the reason rather than validated after the fact (run-hours without a meter, a standard alert without its sensor, Next while limits are out of order).</td><td>Step 2 of an alert · standard set sheet</td></tr>
+</table>
+
+<h3>Every state, designed</h3>
+<table>
+  <tr><th>State</th><th>What the person sees</th><th>Try it</th></tr>
+  <tr><td><b>Empty plant</b></td><td>Setup opens at step 1 with a red card and the reason. Every list on a machine has a one-line empty state with the single action that fills it.</td><td>Help panel → "Start from an empty plant"</td></tr>
+  <tr><td><b>Empty section</b></td><td>"No alerts on Air Blower 2 yet. Nothing here is being watched." plus Add the standard set / Add an alert.</td><td>Equipment › any machine without alerts</td></tr>
+  <tr><td><b>Loading</b></td><td>A skeleton for the first paint of each page, never a spinner over content.</td><td>First visit to any page</td></tr>
+  <tr><td><b>Saving</b></td><td>The button becomes a spinner, the footer locks, nothing else moves.</td><td>Any save</td></tr>
+  <tr><td><b>Save failed</b></td><td>"Nothing was saved. Your changes are still here." with Try again and Keep as a draft on this device. The form is untouched.</td><td>Help panel → "Make the next save fail", then save anything</td></tr>
+  <tr><td><b>Validation error</b></td><td>Inline, at the field, in plain words with the fix ("Major must be lower than Minor: deeper means worse"). Next is blocked only for that step; drafts are always allowed.</td><td>Alert step 2: type limits out of order</td></tr>
+  <tr><td><b>Refused action</b></td><td>Removing the last reachable Lead, deleting a frozen alert, archiving a flow something runs: refused with the reason and the alternative.</td><td>People › remove Kishore</td></tr>
+  <tr><td><b>Frozen</b></td><td>An alert with an open record shows what is locked and offers switch off → add a corrected copy.</td><td>Air Blower 1 › Line pressure high</td></tr>
+  <tr><td><b>Degraded input</b></td><td>A stale or not-trusted sensor is marked on the row and on any alert using it, with what happens meanwhile (nothing fires; the Technical Admin is told).</td><td>Aeration Tank 1 › MLSS</td></tr>
+  <tr><td><b>Graceful fallback</b></td><td>Every review step lists "If something is missing": no meter → calendar leg; no Senior Lead → Leads again; no flow → open → done with proof; maintenance mode → alerts pause.</td><td>Review step of any sheet</td></tr>
+  <tr><td><b>Read-only</b></td><td>A one-line note naming the persona and who can change it; controls are disabled, not hidden, so the page still teaches what exists.</td><td>Sign in as People Admin → Equipment</td></tr>
+  <tr><td><b>Help</b></td><td>A panel that follows the screen and the step: what to do, why, and what happens if you skip. Closable; remembered per person.</td><td>? Help in the top bar</td></tr>
+</table>
 
 <h2 id="model">How it fits together</h2>
 <p>Configuration is the left half of a loop the rest of the product already defines. Everything an admin sets here has exactly one downstream consumer.</p>
@@ -228,10 +263,10 @@
 
 <h2 id="surfaces">The surfaces</h2>
 <div class="grid2">
-  <div class="box"><b class="t">Plant setup</b>A health card (green or red, never amber) and a checklist: people reachable, sensors with limits, machines with their standard set, machines with a maintenance programme, probes with calibration, causes with a fix, site defaults. Every row links to the place that fixes it. <a class="try" href="prototype.html#/setup">Try it</a></div>
+  <div class="box"><b class="t">Set up the plant</b>Five steps with a progress bar: people reachable, limits on every sensor, alerts on every machine, a schedule for every machine, a fix for every cause. Each step shows only what is missing and offers a one-click answer; any step can be skipped and comes back to the home page. <a class="try" href="prototype.html#/setup">Try it</a></div>
   <div class="box"><b class="t">Equipment</b>The tree on the left. A machine page has Sensors and limits, Alerts, Schedules, Condition-based work, Cycles (where relevant) and Details (tier, archetype, standby). A stage page carries stage-level alerts and rounds. The plant page carries plant-wide schedules and milestones. <a class="try" href="prototype.html#/equipment/eq:bl1">Blower 1</a> <a class="try" href="prototype.html#/equipment/stage:bio">Biological</a> <a class="try" href="prototype.html#/equipment/plant">Plant</a></div>
-  <div class="box"><b class="t">Alert sheet</b>Five steps: what to watch · limits (from the sensor by default) · when it closes · what the operator does · who is told. A live operator card and a "try a reading" box on the right. Checks read as a list. <a class="try" href="prototype.html#/equipment/eq:bl1">Open Blower 1, click Add alert</a></div>
-  <div class="box"><b class="t">Schedule sheet</b>Four steps: kind of work · how often (calendar, run-hours, whichever first; from last completion or fixed dates) · how urgent (derived; statutory toggle; tolerance behind Advanced) · who is told. Sign in as the Lead to see the same sheet as the six-field card edit.</div>
+  <div class="box"><b class="t">Alert sheet</b>Four questions, one per screen: which reading · when is it a problem (limits pre-filled from the sensor) · what happens next (closes how, operator does what) · review, which reads back one sentence, who is told, a "try a reading" box and the fallbacks. Nothing fires until Activate. <a class="try" href="prototype.html#/equipment/eq:bl1">Open Blower 1, click Add</a></div>
+  <div class="box"><b class="t">Schedule sheet</b>Three questions: what work · how often (calendar, run-hours, whichever first; from last completion or fixed dates) · review with urgency and who is told. Sign in as the Lead to see the same sheet as the six-field card edit.</div>
   <div class="box"><b class="t">Flows</b>Diagnostic and action flows in one list with "runs when". Causes as a tab, each showing what diagnoses it and what fixes it. The editor keeps the v4 model in a lighter shell. <a class="try" href="prototype.html#/flows">Try it</a></div>
   <div class="box"><b class="t">People &amp; alerts</b>The roster, the health card, "who is told right now" for each severity resolved from the roster, and the two site defaults. Removing the last reachable Operator or Lead is refused. <a class="try" href="prototype.html#/people">Try it</a></div>
   <div class="box"><b class="t">Standard sets (Global Admin)</b>One set per equipment type: alerts by sensor kind with default limits, schedules with cadence. Rolled out to plants as drafts, with plants that cannot take a set listed with the reason. Sign in as the Global Admin to see it.</div>
@@ -319,8 +354,8 @@
 <ul>
   <li>Everything is in memory. <b>Reset data</b> in the top bar restores the starting state.</li>
   <li><b>Sign in as</b> switches persona: Technical Admin (full equipment config), People Admin (roster and site defaults), Lead (read-only, except in-house PM cadence), Global Admin (adds Standard sets).</li>
-  <li><b>Show the model underneath</b> (bottom of the left nav) reveals the PRD entity behind every card and sheet.</li>
-  <li>Good paths to walk: Plant setup → "Review" on Air Blower 2 → add the standard set as drafts → open a draft and activate it. Or: Biological → DO low → try a reading of 0.4. Or: sign in as the Lead → Air Blower 1 → Bearing service.</li>
+  <li><b>? Help</b> in the top bar opens a panel that follows the screen and the step: what to do, why, and what happens if you skip. It also holds the three demo switches: make the next save fail, start from an empty plant, show the model underneath.</li>
+  <li>Good paths to walk: turn on "Start from an empty plant" and follow the five setup steps. Or: Equipment → Air Blower 1 → Add → an alert on Motor current, and try a reading of 50 on the review step. Or: sign in as the Lead → Air Blower 1 → Bearing service.</li>
   <li>Not built here: the operator app, the equipment card itself, the notification pipeline, real persistence.</li>
 </ul>
 <p class="muted small" style="margin-top:32px">Sources: the 28 Sep handoff bundle (Configuration PRD v1.0 and its 783 acceptance criteria, the decisions register, the Notifications Brief v3.9), the Equipment Card handoff (Goal 13, v3), the Maintenance Ops tool, User Center v2 roles, the Notifications Center prototype, Insights+, Remote Control set points, the user-flow and diagnostic-flow prototypes, and the Internal Tool's flow engine.</p>
