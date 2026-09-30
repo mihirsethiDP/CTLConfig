@@ -362,10 +362,10 @@ details.adv > div { margin-top: 10px; }
 .pick input { margin-top: 3px; }
 
 /* ── Model overlay ("under the hood") ─────────────────────── */
-body.model .model { display: block; }
+body.show-model .model { display: block; }
 .model { display: none; }
 .model-pill { display: none; font-family: var(--mono); font-size: 10.5px; color: var(--teal-ink); background: var(--teal-tint); padding: 1px 6px; border-radius: 4px; }
-body.model .model-pill { display: inline-block; }
+body.show-model .model-pill { display: inline-block; }
 
 /* ── Persona banners ───────────────────────────────────────── */
 .persona-note { margin-bottom: 14px; }

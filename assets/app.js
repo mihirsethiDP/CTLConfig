@@ -162,7 +162,7 @@ window.CTL = (function () {
       </div>`;
     $('#guideClose').onclick = () => setGuide(false);
     $('#failToggle').onchange = (e) => { S.failNext = e.target.checked; };
-    $('#modelToggle').onchange = (e) => { S.model = e.target.checked; document.body.classList.toggle('model', S.model); };
+    $('#modelToggle').onchange = (e) => { S.model = e.target.checked; document.body.classList.toggle('show-model', S.model); };
     $('#emptyToggle').onchange = (e) => { S.emptyDemo = e.target.checked; resetData(); location.hash = '#/setup'; render(); toast(S.emptyDemo ? 'Empty plant: no limits, no alerts, no schedules, no reachable Lead. Follow the setup.' : 'Back to the fully set-up plant.'); };
   }
   function setGuide(on) { S.guide = on; try { localStorage.setItem('ctl.guide', on ? '1' : '0'); } catch (e) { /* ignore */ } renderGuide(); }
@@ -181,7 +181,7 @@ window.CTL = (function () {
     $('#persona').value = S.persona; $('#crumb').innerHTML = `<b>${esc(D().plant.name)}</b>`;
   }
   function render() {
-    document.body.classList.toggle('model', S.model); renderNav();
+    document.body.classList.toggle('show-model', S.model); renderNav();
     const { view, rest } = route(); const V = window.CTL_VIEWS;
     const fn = V[view] || V.setup; const main = $('#main');
     if (!S.loadedRoutes.has(view)) { S.loadedRoutes.add(view); main.innerHTML = skeleton(); setTimeout(() => { main.innerHTML = fn(rest); V.wire(view, rest); }, 350); }
