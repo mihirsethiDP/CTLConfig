@@ -199,9 +199,29 @@ window.SCADA_SAMPLES = {
       { id: 'sp1', tag: 'SP-1', label: 'Sludge pump', scadaType: 'PMP', zone: 'sludge', sensors: [{ tag: 'HRS', widget: 'NUMBER_SENSOR', reading: 310 }] } ],
     links: [['bs1', 'eq1'], ['eq1', 'at1'], ['eq1', 'at2'], ['bl1', 'at1'], ['bl1', 'at2'], ['bl2', 'at1'], ['bl2', 'at2'], ['at1', 'cl1'], ['at2', 'cl1'], ['cl1', 'mbr1'], ['mbr1', 'mgf1'], ['mgf1', 'uf1'], ['uf1', 'cdu'], ['cl1', 'sp1']] },
 };
+/* Vedanta ETP: an effluent plant with a collection sump, neutralisation, an anaerobic stage,
+   an SBR, a tube settler and a filter press. Connected and detected; nothing inherited yet. */
+window.SCADA_SAMPLES.vedanta = { name: 'Vedanta ETP', type: 'ETP', capacity: '200 KLD', drawn: '2026-10-01', zones: [
+    { id: 'v1', name: 'Collection sump' }, { id: 'v2', name: 'Equalisation and neutralisation' }, { id: 'v3', name: 'Anaerobic' }, { id: 'v4', name: 'SBR' }, { id: 'v5', name: 'Tube settler' }, { id: 'v6', name: 'Sludge dewatering' } ],
+  equipment: [
+    { id: 'v_p1', tag: 'P-1', label: 'Sump pump 1', scadaType: 'SUB_PMP', zone: 'v1', sensors: [{ tag: 'AMP', widget: 'chart.knob', reading: 11 }, { tag: 'HRS', widget: 'NUMBER_SENSOR', reading: 3100 }] },
+    { id: 'v_p2', tag: 'P-2', label: 'Sump pump 2', scadaType: 'SUB_PMP', zone: 'v1', sensors: [{ tag: 'AMP', widget: 'chart.knob', reading: 0 }, { tag: 'HRS', widget: 'NUMBER_SENSOR', reading: 1200 }] },
+    { id: 'v_eq1', tag: 'EQ-1', label: 'Equalisation tank', scadaType: 'OS_TANK', zone: 'v2', sensors: [{ tag: 'LVL', widget: 'LEVEL_SENSOR', reading: 48 }, { tag: 'PH', widget: 'NUMBER_SENSOR', reading: 6.1 }] },
+    { id: 'v_mx1', tag: 'MX-1', label: 'Agitator', scadaType: 'OS_TANK_AG', zone: 'v2', sensors: [{ tag: 'AMP', widget: 'chart.knob', reading: 5 }] },
+    { id: 'v_dt1', tag: 'DT-1', label: 'Lime dosing tank', scadaType: 'DOS_TANK', zone: 'v2', sensors: [{ tag: 'TLVL', widget: 'LEVEL_SENSOR', reading: 35 }] },
+    { id: 'v_an1', tag: 'AN-1', label: 'Anaerobic tank', scadaType: 'ANAEROBIC_TANK', zone: 'v3', sensors: [{ tag: 'PH', widget: 'NUMBER_SENSOR', reading: 6.9 }, { tag: 'TEMP', widget: 'NUMBER_SENSOR', reading: 33 }] },
+    { id: 'v_sbr', tag: 'SBR-1', label: 'SBR', scadaType: 'SBR_TANK', zone: 'v4', sensors: [{ tag: 'DO', widget: 'NUMBER_SENSOR', reading: 1.6 }, { tag: 'MLSS', widget: 'NUMBER_SENSOR', reading: 3800 }] },
+    { id: 'v_bl1', tag: 'BL-1', label: 'Blower 1', scadaType: 'BLW', zone: 'v4', sensors: [{ tag: 'PRESS', widget: 'chart.knob', reading: 0.52 }, { tag: 'AMP', widget: 'chart.knob', reading: 29 }, { tag: 'HRS', widget: 'NUMBER_SENSOR', reading: 9800 }] },
+    { id: 'v_bl2', tag: 'BL-2', label: 'Blower 2', scadaType: 'BLW', zone: 'v4', sensors: [{ tag: 'PRESS', widget: 'chart.knob', reading: 0 }, { tag: 'HRS', widget: 'NUMBER_SENSOR', reading: 2400 }] },
+    { id: 'v_ts1', tag: 'TS-1', label: 'Tube settler', scadaType: 'T_SETTLER', zone: 'v5', sensors: [{ tag: 'BLK', widget: 'NUMBER_SENSOR', reading: 0.9 }] },
+    { id: 'v_fp1', tag: 'FP-1', label: 'Filter press', scadaType: 'F_PRESS', zone: 'v6', sensors: [{ tag: 'HRS', widget: 'NUMBER_SENSOR', reading: 410 }] },
+    { id: 'v_sp1', tag: 'SP-1', label: 'Sludge pump', scadaType: 'PMP', zone: 'v6', sensors: [{ tag: 'HRS', widget: 'NUMBER_SENSOR', reading: 520 }] },
+    { id: 'v_v1', tag: 'V-7', label: 'Three way Valve', scadaType: 'VALVE_3', zone: 'v2', sensors: [] } ],
+  links: [['v_p1', 'v_eq1'], ['v_p2', 'v_eq1'], ['v_dt1', 'v_eq1'], ['v_eq1', 'v_an1'], ['v_an1', 'v_sbr'], ['v_bl1', 'v_sbr'], ['v_bl2', 'v_sbr'], ['v_sbr', 'v_ts1'], ['v_ts1', 'v_sp1'], ['v_sp1', 'v_fp1']] };
 /* What SCADA hands over later, when an engineer draws something new: a third blower on the
-   Manesar aeration header, a third raw-water pump at Bawal. */
+   Manesar aeration header, a third raw-water pump at Bawal, a second filter press at Vedanta. */
 window.SCADA_DELTAS = {
+  vedanta: { what: 'FP-2, a second filter press', equipment: [{ id: 'v_fp2', tag: 'FP-2', label: 'Filter press 2', scadaType: 'F_PRESS', zone: 'v6', sensors: [{ tag: 'HRS', widget: 'NUMBER_SENSOR', reading: 0 }] }], links: [['v_sp1', 'v_fp2']] },
   manesar: { what: 'BL-3, a third blower on the aeration header', equipment: [{ id: 'bl3', tag: 'BL-3', label: 'Blower 3', scadaType: 'BLW', zone: 'bio', sensors: [{ tag: 'PRESS', widget: 'chart.knob', reading: 0.57 }, { tag: 'AMP', widget: 'chart.knob', reading: 36 }, { tag: 'TRIP', widget: 'SWITCH_SENSOR', reading: 0 }, { tag: 'HRS', widget: 'NUMBER_SENSOR', reading: 12 }] }], links: [['bl3', 'at1'], ['bl3', 'at2']] },
   bawal: { what: 'P-3, a third raw-water pump', equipment: [{ id: 'sc_p3', tag: 'P-3', label: 'Raw water pump 3', scadaType: 'SUB_PMP', zone: 'z1', sensors: [{ tag: 'AMP', widget: 'chart.knob', reading: 0 }, { tag: 'HRS', widget: 'NUMBER_SENSOR', reading: 0 }] }], links: [['sc_bs1', 'sc_p3'], ['sc_p3', 'sc_mgf1']] },
 };
