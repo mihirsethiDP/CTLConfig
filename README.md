@@ -1,10 +1,10 @@
 # CloseTheLoop · Configuration proposal
 
-A critique of the 28 September 2026 configuration handoff (`cfg-console-v4`) and a proposal for a simpler, equipment-first way to configure alerts, schedules and flows. Static site, no build step.
+A critique of the 28 September 2026 configuration handoff (`cfg-console-v4`) and a proposal for a simpler way to configure alerts, schedules and flows: SCADA draws the plant, a three-level library decides what each thing watches, the admin confirms. Static site, no build step.
 
-- `index.html` — the proposal: what the handoff gets wrong, principles, simplifying by design (laws → decisions, every state designed), how it fits together, who configures what, the mapping to the approved PRD data model, open questions.
-- `prototype.html` — the interactive console. Everything is in memory; **Reset data** restores the start state. **Sign in as** switches persona. **? Help** opens a panel that follows the screen and the step, and holds three demo switches: make the next save fail, start from an empty plant, show the model underneath.
-- `assets/data.js` — the fixture plant (Manesar STP). `assets/app.js` — core, router, guide, states. `assets/views.js` — setup wizard and pages. `assets/sheets.js` — stepper sheets. `assets/app.css`, `assets/app2.css` — styles on DigitalPaani tokens.
+- `index.html` — the proposal: what the handoff gets wrong, principles, simplifying by design, how it fits together, "SCADA builds it, the library decides", who configures what, the mapping to the approved PRD data model, open questions.
+- `prototype.html` — the interactive console. Everything is in memory; **Reset data** restores the start state. **Sign in as** switches persona. **? Help** opens a panel that follows the screen and the step, and holds three demo switches: make the next save fail, start a new plant from SCADA, show the model underneath.
+- `assets/data.js` — the sample plant (Manesar STP). `assets/catalogue.js` — the library (plant types, unit-process profiles, equipment types), the SCADA palette with every code and what it maps to, and two sample SCADA drawings (Bawal WTP, Manesar STP) plus the change each receives later. `assets/app.js` — core: state, SCADA import, detection, inheritance, propagation, router, guide, export. `assets/views.js` — setup steps (with the SCADA drawing), equipment, flows, library, people, activity. `assets/sheets.js` — stepper sheets. `assets/app.css`, `assets/app2.css`, `assets/theme-calm.css` — styles on DigitalPaani tokens.
 
 Live: https://mihirsethidp.github.io/CTLConfig/
 

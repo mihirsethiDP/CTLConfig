@@ -79,6 +79,7 @@
   <a href="#principles">Principles</a>
   <a href="#simplify">Simplifying by design</a>
   <a href="#model">How it fits together</a>
+  <a href="#scada">SCADA builds it, the library decides</a>
   <a href="#surfaces">The surfaces</a>
   <a href="#roles">Who configures what</a>
   <a href="#hood">Under the hood</a>
@@ -92,13 +93,14 @@
 
 <h2 id="tenlines">In ten lines</h2>
 <div class="lines">
-  <div><span><b>The equipment tree is the console.</b> An admin configures a machine, a stage or the plant — never an abstract list of 300 triggers. Every alert, schedule and job lives on the thing it is about.</span></div>
+  <div><span><b>SCADA draws the plant; nobody draws it twice.</b> Zones, machines, sensor widgets and pipes come from the SCADA view. The console reads them, and reads them again when the drawing changes. It cannot add a machine, on purpose.</span></div>
+  <div><span><b>The library decides what a thing watches.</b> Three levels — plant type, unit process, equipment type — each say what is inherited the moment SCADA adds something. A plant follows the library or marks an item Custom; nothing in between.</span></div>
+  <div><span><b>The equipment tree is the console.</b> An admin configures a machine, a unit process or the plant — never an abstract list of 300 triggers. Every alert, schedule and job lives on the thing it is about.</span></div>
   <div><span><b>Limits live on the sensor.</b> Caution · Minor · Major · Emergency thresholds are a property of the instrument. An alert uses them by default; two alerts never disagree about one probe.</span></div>
   <div><span><b>Three plain things to add:</b> an <b>alert</b> (something is wrong), a <b>schedule</b> (planned work: routine, preventive maintenance, calibration), and <b>condition-based work</b> (the plant asks for a job). Underneath, all three are the PRD's one Trigger entity.</span></div>
   <div><span><b>Nobody draws who is told.</b> Every alert and schedule shows, resolved from the real roster, who hears now, who hears when nothing starts, who hears when it is overdue. It is a preview, not a form.</span></div>
   <div><span><b>Clocks are derived and shown as a consequence</b> — one line, not a section. The two numbers the Notifications Brief lets a Technical Admin change sit behind one link.</span></div>
-  <div><span><b>Standard sets replace the template library.</b> A machine of a known type shows "3 alerts and 2 schedules not added yet — review and add", bound to its own tags, landing as drafts.</span></div>
-  <div><span><b>Setup is a guided path, not a validator.</b> Five steps with a progress bar say whether alerts reach a human, which sensors lack limits, which machines lack alerts or a maintenance programme, which causes lack a fix, and offer a one-click answer for each.</span></div>
+  <div><span><b>Setup is a guided path, not a validator.</b> Nine steps: connect SCADA, add people, confirm what was detected, inherit from the library, then four review steps and go-live. Each step shows only what is missing and offers a one-click answer.</span></div>
   <div><span><b>Flows keep the v4 editor's model</b> (an answer owns its destination; a conclusion names a cause; a cause names its fix). Causes are a tab inside Flows, not a fourth library.</span></div>
   <div><span><b>Maintenance mode, PLC set points and cycles are visible where they bite:</b> on the sensor row and the alert form, so monitoring limits, control set points and batch phases never contradict each other silently.</span></div>
   <div><span><b>No spec vocabulary on screen.</b> No rung, band, promotion, attribution, observation poll, lead parameter, §-numbers or AC ids. A "Show the model underneath" toggle reveals the PRD entity behind every card for engineers.</span></div>
@@ -262,15 +264,26 @@
   <li><b>Formula builder.</b> Kept, demoted: a compound condition ("DO low AND blower running") is an Advanced option on an alert, and a computed sensor (RO recovery) is an ordinary row on the sensor table with an expression. The library still exists in the data model; it is not a navigation item.</li>
 </ul>
 
+<h2 id="scada">SCADA builds it, the library decides what it watches</h2>
+<p>Plants are already drawn in the in-house SCADA view: every zone, every machine with its palette type (<code>BLW</code>, <code>SBR_TANK</code>, <code>ACF_MGF</code>, <code>D_PMP</code>, sixty codes in all), every sensor widget bound to a machine, every pipe and header. The handoff asked an admin to re-create all of that by hand in a configuration console. This proposal refuses to: the drawing is the source of truth for <em>what exists</em>, and a second place to type it would only drift.</p>
+<p>What the drawing does not know is <em>what to watch</em>. That lives in a library DigitalPaani curates, at three levels, each inherited downward:</p>
+<div class="grid2" style="margin:12px 0 18px">
+  <div class="box"><b class="t">1 · Plant type</b>STP, ETP, WTP. Gives the plant-wide rounds (logbook, compliance sample, hooter test), the milestones, and the unit processes a plant of this kind usually has.</div>
+  <div class="box"><b class="t">2 · Unit process</b>Inlet, Balancing, Biological, Separation, Filtration, Disinfection, Sludge, Utilities. Detected from the SCADA zone's name, or from the machines inside it. Gives its own rounds (SV30, residual chlorine check), which machines form duty/standby pairs, and the criticality rule (a sole blower is tier A; with a standby, B).</div>
+  <div class="box"><b class="t">3 · Equipment type</b>Thirty types the SCADA palette maps onto. Gives the usual readings, the alerts with estate-default limits, the schedules with cadence, a calibration for every probe, and the diagnostic flow. The old "standard set" is this level.</div>
+</div>
+<p>The console does three things with it, in order. <b>Detect:</b> each zone becomes a unit process, each SCADA code becomes a library type, two machines of one type on one header become a pair. A code the library does not know asks once, and is remembered for every plant. Valves, motors, agitators and our own devices (Sabre, Bio Health Tracker) are left in the drawing: they belong to a machine, they are not one. <b>Inherit:</b> the plant, each unit process and each machine show what the library has for them; accept each, or everything at once. A machine whose widgets lack a reading the library expects inherits the rest and says what is missing. <b>Re-read:</b> when an engineer draws a third blower, "Read SCADA again" brings it in, puts it in the pair, and step 4 offers what the library has for it. Nothing already here is touched.</p>
+<p>Every inherited item carries one of two words. <b>Follows library</b>: an estate-wide change to the library re-thresholds it at once. <b>Custom</b>: someone at this plant edited it, and the library leaves it alone from then on. That is the whole governance model; there is no per-plant override matrix. The Global Admin edits the library from the Library page; the sheet says how many readings at this plant follow it and how many are Custom before the change lands.</p>
+
 <h2 id="surfaces">The surfaces</h2>
 <div class="grid2">
-  <div class="box"><b class="t">Set up the plant</b>Five steps with a progress bar: people reachable, limits on every sensor, alerts on every machine, a schedule for every machine, a fix for every cause. Each step shows only what is missing and offers a one-click answer; any step can be skipped and comes back to the home page. <a class="try" href="prototype.html#/setup">Try it</a></div>
-  <div class="box"><b class="t">Equipment</b>The tree on the left. A machine page has Sensors and limits, Alerts, Schedules, Condition-based work, Cycles (where relevant) and Details (tier, archetype, standby). A stage page carries stage-level alerts and rounds. The plant page carries plant-wide schedules and milestones. <a class="try" href="prototype.html#/equipment/eq:bl1">Blower 1</a> <a class="try" href="prototype.html#/equipment/stage:bio">Biological</a> <a class="try" href="prototype.html#/equipment/plant">Plant</a></div>
+  <div class="box"><b class="t">Set up the plant</b>Nine steps with a progress bar: connect SCADA, people reachable, what SCADA found, inherit from the library, limits and alerts, escalation and overrides, maintenance, workflows, review and go live. The first four build the plant; the rest show only what is missing and offer a one-click answer. <a class="try" href="prototype.html#/setup">Try it</a> <a class="try" href="prototype.html#/setup/scada">The SCADA drawing</a></div>
+  <div class="box"><b class="t">Library (Global Admin)</b>Plant types, unit processes, equipment types, and the SCADA vocabulary: every palette code and what it maps to. Edit an equipment type and the change reaches every following plant; Custom items are left alone and counted before you save. <a class="try" href="prototype.html#/library">Try it</a></div>
+  <div class="box"><b class="t">Equipment</b>The tree on the left, built from SCADA. A machine page has Readings and limits, Alerts, Schedules, Condition-based work, Cycles (where relevant) and Details (tier, library type, what SCADA calls it, standby). A unit-process page carries its alerts and rounds. The plant page carries plant-wide schedules, milestones and "Read SCADA again". <a class="try" href="prototype.html#/equipment/eq:bl1">Blower 1</a> <a class="try" href="prototype.html#/equipment/stage:bio">Biological</a> <a class="try" href="prototype.html#/equipment/plant">Plant</a></div>
   <div class="box"><b class="t">Alert sheet</b>Four questions, one per screen: which reading · when is it a problem (limits pre-filled from the sensor) · what happens next (closes how, operator does what) · review, which reads back one sentence, who is told, a "try a reading" box and the fallbacks. Nothing fires until Activate. <a class="try" href="prototype.html#/equipment/eq:bl1">Open Blower 1, click Add</a></div>
   <div class="box"><b class="t">Schedule sheet</b>Three questions: what work · how often (calendar, run-hours, whichever first; from last completion or fixed dates) · review with urgency and who is told. Sign in as the Lead to see the same sheet as the six-field card edit.</div>
   <div class="box"><b class="t">Flows</b>Diagnostic and action flows in one list with "runs when". Causes as a tab, each showing what diagnoses it and what fixes it. The editor keeps the v4 model in a lighter shell. <a class="try" href="prototype.html#/flows">Try it</a></div>
   <div class="box"><b class="t">People &amp; alerts</b>The roster, the health card, "who is told right now" for each severity resolved from the roster, and the two site defaults. Removing the last reachable Operator or Lead is refused. <a class="try" href="prototype.html#/people">Try it</a></div>
-  <div class="box"><b class="t">Standard sets (Global Admin)</b>One set per equipment type: alerts by sensor kind with default limits, schedules with cadence. Rolled out to plants as drafts, with plants that cannot take a set listed with the reason. Sign in as the Global Admin to see it.</div>
   <div class="box"><b class="t">Activity</b>Everything that changes who gets woken up, with before and after. Kept 24 months. <a class="try" href="prototype.html#/activity">Try it</a></div>
 </div>
 
@@ -354,10 +367,11 @@
 <h2 id="howto">Using the prototype</h2>
 <ul>
   <li>Everything is in memory. <b>Reset data</b> in the top bar restores the starting state.</li>
-  <li><b>Sign in as</b> switches persona: Technical Admin (full equipment config), People Admin (roster and site defaults), Lead (read-only, except in-house PM cadence), Global Admin (adds Standard sets).</li>
-  <li><b>? Help</b> in the top bar opens a panel that follows the screen and the step: what to do, why, and what happens if you skip. It also holds the three demo switches: make the next save fail, start from an empty plant, show the model underneath.</li>
-  <li>Good paths to walk: turn on "Start from an empty plant" and follow the five setup steps. Or: Equipment → Air Blower 1 → Add → an alert on Motor current, and try a reading of 50 on the review step. Or: sign in as the Lead → Air Blower 1 → Bearing service.</li>
-  <li>Not built here: the operator app, the equipment card itself, the notification pipeline, real persistence.</li>
+  <li><b>Sign in as</b> switches persona: Technical Admin (full equipment config), People Admin (roster and site defaults), Lead (read-only, except in-house PM cadence), Global Admin (edits the Library).</li>
+  <li><b>? Help</b> in the top bar opens a panel that follows the screen and the step: what to do, why, and what happens if you skip. It also holds the three demo switches: make the next save fail, start a new plant from SCADA, show the model underneath.</li>
+  <li>The best path: turn on <b>Start a new plant from SCADA</b>, connect <b>Bawal WTP</b>, click machines in the drawing, press "Demo: an engineer draws something new in SCADA" then "Read SCADA again", add an Operator and a Lead in step 2, give the Cavitator a type in step 3, press "Inherit everything" in step 4, and walk the rest. Then sign in as the Global Admin, open Library → Submersible pump → Edit, change a limit, and watch it reach the pumps that follow it.</li>
+  <li>On the sample plant: Equipment → Air Blower 1 → an alert → change its limits and see it become Custom. Or: Set up → step 1 → Demo → Read SCADA again, and BL-3 joins the blower pair.</li>
+  <li>Not built here: the operator app, the equipment card itself, the notification pipeline, real persistence, the real SCADA connection (two sample drawings stand in for it).</li>
 </ul>
 <p class="muted small" style="margin-top:32px">Sources: the 28 Sep handoff bundle (Configuration PRD v1.0 and its 783 acceptance criteria, the decisions register, the Notifications Brief v3.9), the Equipment Card handoff (Goal 13, v3), the Maintenance Ops tool, User Center v2 roles, the Notifications Center prototype, Insights+, Remote Control set points, the user-flow and diagnostic-flow prototypes, and the Internal Tool's flow engine.</p>
 

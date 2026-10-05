@@ -1,12 +1,12 @@
-/* CloseTheLoop · Configuration — proposal prototype, v2 (simplified by design).
-   Core: state, helpers, derived facts, router, shell, guide panel, states.
+/* CloseTheLoop · Configuration — proposal prototype, v3 (from-scratch builder).
+   Core: state, helpers, derived facts, router, shell, guide panel, states, export.
    Views live in views.js, sheets in sheets.js. Everything is in memory. */
 window.CTL = (function () {
   'use strict';
   const clone = (o) => JSON.parse(JSON.stringify(o));
   const S = {
-    d: clone(window.SEED), persona: 'tech', model: false, guide: true, sheet: null,
-    node: 'plant', treeFilter: '', openSec: null, skipped: new Set(), failNext: false, loadedRoutes: new Set(), emptyDemo: false,
+    d: clone(window.SEED), mode: 'sample', persona: 'tech', model: false, guide: true, sheet: null,
+    node: 'plant', treeFilter: '', openSec: null, skipped: new Set(), visited: new Set(), failNext: false, loadedRoutes: new Set(),
   };
   try { const g = localStorage.getItem('ctl.guide'); if (g !== null) S.guide = g === '1'; } catch (e) { /* private mode */ }
 
@@ -43,7 +43,8 @@ window.CTL = (function () {
   const alertById = (id) => D().alerts.find((a) => a.id === id);
   const schedById = (id) => D().schedules.find((s) => s.id === id);
   const workById = (id) => D().conditionWork.find((w) => w.id === id);
-  const subjectName = (sub) => sub.kind === 'plant' ? D().plant.name : sub.kind === 'stage' ? stage(sub.id).name : sub.kind === 'group' ? group(sub.id).name : eq(sub.id).name;
+  const catalogue = (type) => window.CATALOGUE.find((c) => c.type === type);
+  const subjectName = (sub) => sub.kind === 'plant' ? (D().plant.name || 'the plant') : sub.kind === 'stage' ? stage(sub.id).name : sub.kind === 'group' ? group(sub.id).name : eq(sub.id).name;
   const subjectTier = (sub) => sub.kind === 'eq' ? eq(sub.id).tier : 'B';
   const subjectKey = (sub) => sub.kind === 'plant' ? 'plant' : `${sub.kind}:${sub.id}`;
   const parseNode = (key) => key === 'plant' ? { kind: 'plant' } : { kind: key.split(':')[0], id: key.split(':')[1] };
@@ -57,12 +58,12 @@ window.CTL = (function () {
   const limitsText = (lim, dir, unit) => SEVS.filter((k) => lim && lim[k] != null).map((k) => `${SEV_LABEL[k]} ${dir === 'below' ? '<' : '>'} ${lim[k]}${unit ? ' ' + unit : ''}`).join(' · ');
   const fmtLimits = (lim, dir, unit) => { const p = SEVS.filter((k) => lim && lim[k] != null).map((k) => `<span class="l ${k}">${SEV_LABEL[k]} ${dir === 'below' ? '<' : '>'} ${lim[k]}${unit ? ' ' + unit : ''}</span>`); return p.length ? `<span class="limits">${p.join('')}</span>` : '<span class="limits"><span class="none">no limits yet</span></span>'; };
   const every = (sch) => { const mh = sch.meter ? sch.meter.hours : sch.meterHours; const cal = `every ${sch.every.n === 1 ? '' : sch.every.n + ' '}${sch.every.unit}${sch.every.n > 1 ? 's' : ''}`; if (sch.basis === 'meter') return `every ${mh} run-hours`; if (sch.basis === 'either') return `${cal} or ${mh} run-hours`; return cal; };
-  /* Default closing threshold: a little past the entry limit (5% of the instrument's range) so a reading resting on the limit does not flap. */
   const closeDefault = (s, dir, entry) => { if (!s || s.kind === 'status' || entry == null) return entry; const step = (s.valid[1] - s.valid[0]) * 0.05; const raw = dir === 'below' ? entry + step : entry - step; const p = step < 0.1 ? 1000 : step < 1 ? 100 : step < 10 ? 10 : 1; return Math.round(raw * p) / p; };
   const intervalHours = (sch) => sch.every.n * ({ day: 24, week: 168, month: 720, year: 8760 }[sch.every.unit] || 24);
   const taskClocks = (sch, tier) => { if (sch.statutory) return { deadline: 0, start: 0 }; const h = intervalHours(sch); const deadline = sch.tolerance != null ? sch.tolerance * 24 : Math.max(2, h * TIER_SHARE[tier]); return { deadline, start: Math.max(1, deadline / 2) }; };
   const fmtH = (h) => h == null ? '—' : h === 0 ? 'at once' : h >= 48 ? `${Math.round(h / 24 * 10) / 10} days` : h >= 24 ? `${Math.round(h / 24 * 10) / 10} day` : `${Math.round(h * 10) / 10} h`;
   const suggestedLimits = (s) => { for (const t of D().standardSets) { const a = t.alerts.find((x) => x.sensorKind === s.name); if (a) return { lim: { caution: a.limits.caution ?? null, minor: a.limits.minor ?? null, major: a.limits.major ?? null, emergency: a.limits.emergency ?? null }, dir: a.direction, from: t.usedAt }; } return null; };
+  const nextTag = (prefix) => { const n = D().equipment.filter((e) => e.tag.startsWith(prefix + '-')).length + 1; return `${prefix}-${n}`; };
 
   /* roster → who is told (Notifications Brief §4) */
   const people = () => D().people;
@@ -84,7 +85,91 @@ window.CTL = (function () {
   function taskLadder(sch, tier) { const c = taskClocks(sch, tier); const loud = tier === 'A' || sch.statutory; const O = roleWord(ops(), 'Operator'), L = roleWord(leads(), 'Lead'); return [['When due', `${O} — in the app and the morning email`], [`Not started in ${fmtH(c.start)}`, loud ? `${O} — WhatsApp` : `${O} — in the app`], [`Overdue after ${fmtH(c.deadline)}`, `${O} and ${L} — WhatsApp${loud ? ' · ' + roleWord(seniors(), 'Senior Lead') : ''}`], ['Twice overdue', `everyone · Site Admin by email`]]; }
   const toldBlock = (rows) => `<div class="told">${rows.map(([w, p]) => `<div class="r"><div class="w">${esc(w)}</div><div class="p">${esc(p)}</div></div>`).join('')}</div>`;
 
-  /* readiness */
+  /* readiness: the nine builder steps */
+  const STEP_IDS = ['scada', 'people', 'detect', 'inherit', 'alerts', 'escalation', 'maintenance', 'flows', 'review'];
+  const STEP_TITLE = { scada: 'Connect SCADA', people: 'People who can be reached', detect: 'What SCADA found', inherit: 'Inherit from the library', alerts: 'Limits and alerts', escalation: 'Escalation and overrides', maintenance: 'Maintenance and tasks', flows: 'Workflows', review: 'Review and go live' };
+
+  /* ── SCADA → plant: import, detect, inherit ──────────────────────────────── */
+  const detectProfile = (zoneName) => { const z = zoneName.toLowerCase(); return window.UP_PROFILES.find((p) => p.keywords.some((k) => z.includes(k))) || null; };
+  const profileForType = (type) => window.UP_PROFILES.find((p) => p.expectsTypes.includes(type)) || null;
+  const profileById = (id) => id ? window.UP_PROFILES.find((p) => p.id === id) || null : null;
+  const palette = (code) => window.SCADA_PALETTE.find((p) => p.code === code) || null;
+  const scadaKind = (code) => (window.SCADA_KIND[code]) || 'equipment';
+  const fmtTime = (iso) => { const t = new Date(iso); return `${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}`; };
+  function importScada(key) {
+    const sc = clone(window.SCADA_SAMPLES[key]); S.scada = { key, model: sc, syncedAt: new Date().toISOString(), skipped: [], staged: false, applied: false };
+    const d = D(); d.plant = { id: key, name: sc.name, code: `DP-SITE-${key === 'manesar' ? '014' : '021'}`, type: sc.type, capacity: sc.capacity, quietHours: { from: '22:00', to: '06:00', on: true }, hooter: { on: true, seconds: 60 }, modules: d.plant.modules, scada: true };
+    d.stages = sc.zones.map((z) => ({ id: z.id, name: z.name, scadaZone: z.name, profile: null }));
+    d.groups = []; d.equipment = []; d.sensors = []; d.alerts = []; d.schedules = []; d.conditionWork = []; d.milestones = []; d.cycles = []; d.audit = [];
+    sc.equipment.forEach((se) => addScadaEquipment(se, false));
+    d.stages.forEach((st) => { let p = detectProfile(st.scadaZone); if (!p) { const t = d.equipment.find((e) => e.stage === st.id && profileForType(e.type)); p = t ? profileForType(t.type) : null; } st.profile = p ? p.id : null; st.name = p ? p.name : st.scadaZone; st.detectedBy = p ? (detectProfile(st.scadaZone) ? 'name' : 'types') : null; });
+    detectGroups(); S.node = 'plant'; S.scadaSel = null;
+    audit(`Connected SCADA for ${sc.name}`, `${sc.zones.length} zones · ${d.equipment.length} machines · ${d.sensors.length} sensors · ${S.scada.skipped.length} parts and devices left in SCADA`);
+  }
+  function addScadaEquipment(se, log) {
+    const d = D(); const kind = scadaKind(se.scadaType); const pal = palette(se.scadaType);
+    if (kind !== 'equipment') { S.scada.skipped.push({ id: se.id, tag: se.tag, label: se.label, code: se.scadaType, kind, zone: se.zone }); return null; }
+    const type = window.SCADA_TYPE_MAP[se.scadaType] || null; const cat = type ? catalogue(type) : null;
+    const e = { id: se.id, name: se.label, tag: se.tag, stage: se.zone, type: type || `${pal ? pal.name : se.scadaType} (not in the library)`, scadaType: se.scadaType, unmapped: !type, archetype: cat ? cat.archetype : 'unknown', tier: cat ? cat.tier : 'B', status: 'running', expects: cat ? cat.expects.slice() : [], cycles: !!(cat && cat.cycles) };
+    if (cat && cat.sensors.some((s) => s.kind === 'meter') && se.sensors.some((s) => s.tag === 'HRS')) e.meter = `${se.id}_HRS`;
+    d.equipment.push(e);
+    se.sensors.forEach((ss) => { const nm = window.SCADA_SENSOR_MAP[ss.tag] || ss.tag; const def = cat && cat.sensors.find((x) => x.name === nm); d.sensors.push({ id: `${se.id}_${ss.tag}`, name: nm, tag: `${ss.tag}-${se.tag}`, scadaTag: ss.tag, widget: ss.widget, unit: def ? def.unit : '', on: 'eq:' + se.id, kind: def ? def.kind : (ss.widget === 'SWITCH_SENSOR' ? 'status' : 'process'), expr: def ? def.expr : undefined, valid: def ? def.valid.slice() : (ss.widget === 'SWITCH_SENSOR' ? [0, 1] : [0, 1000]), reading: ss.reading, state: 'live', direction: def ? def.direction : 'above', limits: null, fromScada: true }); });
+    if (e.status === 'running' && se.sensors.some((s) => (s.tag === 'AMP' || s.tag === 'PRESS') && s.reading === 0)) e.status = 'stopped';
+    if (log) audit(`SCADA added ${e.name} (${e.tag})`, `${type || 'type not in the library yet'} · ${se.sensors.length} sensors`);
+    return e;
+  }
+  /* Resolve a machine's library type: once per SCADA code, for every plant. */
+  function mapType(e, type) {
+    const d = D(); const cat = catalogue(type); if (!cat) return; const was = e.type;
+    e.type = type; e.unmapped = false; e.archetype = cat.archetype; if (!e.tierReason) e.tier = cat.tier; e.expects = cat.expects.slice(); e.cycles = !!cat.cycles;
+    d.sensors.filter((s) => s.on === 'eq:' + e.id).forEach((s) => { const def = cat.sensors.find((x) => x.name === s.name); if (def && s.fromScada) { s.unit = def.unit; s.kind = def.kind; s.valid = def.valid.slice(); if (!s.limits) s.direction = def.direction; } });
+    if (cat.sensors.some((s) => s.kind === 'meter') && d.sensors.some((s) => s.on === 'eq:' + e.id && s.name === 'Run hours')) e.meter = `${e.id}_HRS`;
+    if (e.scadaType) { window.SCADA_TYPE_MAP[e.scadaType] = type; const p = palette(e.scadaType); if (p) p.type = type; else window.SCADA_PALETTE.push({ code: e.scadaType, name: e.scadaType, kind: 'equipment', type }); }
+    let also = 0; d.equipment.filter((x) => x.id !== e.id && x.unmapped && x.scadaType === e.scadaType).forEach((x) => { mapType(x, type); also++; });
+    d.stages.forEach((st) => { if (!st.profile) { const t = d.equipment.find((x) => x.stage === st.id && profileForType(x.type)); if (t) { const p = profileForType(t.type); st.profile = p.id; st.name = p.name; st.detectedBy = 'types'; } } });
+    detectGroups(); return { was, also };
+  }
+  function leaveInScada(e) { const d = D(); d.equipment = d.equipment.filter((x) => x.id !== e.id); d.sensors = d.sensors.filter((s) => s.on !== 'eq:' + e.id); d.alerts = d.alerts.filter((a) => !!sensor(a.sensor)); d.schedules = d.schedules.filter((s) => !(s.subject.kind === 'eq' && s.subject.id === e.id)); d.conditionWork = d.conditionWork.filter((w) => w.subject.id !== e.id); if (S.scada) S.scada.skipped.push({ id: e.id, tag: e.tag, label: e.name, code: e.scadaType, kind: 'ignored', zone: e.stage }); detectGroups(); }
+  function detectGroups() {
+    const d = D(); const old = d.groups.slice(); d.groups = [];
+    d.stages.forEach((st) => { const prof = profileById(st.profile); if (!prof) return; prof.groups.forEach((gr) => { const members = d.equipment.filter((e) => e.stage === st.id && e.type === gr.type); members.forEach((e) => { delete e.duty; delete e.standbyOf; delete e.group; }); const rule = (prof.criticality || []).find((c) => c.type === gr.type); if (members.length >= 2 && !members.some((m) => m.noGroup)) { const prev = old.find((g) => g.stage === st.id && g.members.some((m) => members.some((x) => x.id === m))); const g = { id: prev ? prev.id : `g_${st.id}_${gr.type.replace(/\W+/g, '')}`, name: prev ? prev.name : gr.name, stage: st.id, members: members.map((m) => m.id), note: 'Detected from SCADA: same type, same zone, shared header' }; d.groups.push(g); members.forEach((m, i) => { m.group = g.id; m.duty = i === 0 ? 'lead' : 'standby'; if (i > 0) m.standbyOf = members[0].id; if (rule && !m.tierReason) m.tier = i === 0 ? rule.soleUnit : rule.withStandby; }); } else if (rule) members.forEach((m) => { if (!m.tierReason) m.tier = rule.soleUnit; }); }); });
+  }
+  /* The demo stands in for an engineer drawing something new in SCADA; "Read SCADA again" brings it in. */
+  function stageDelta() { if (!S.scada || S.scada.applied) return null; S.scada.staged = true; return window.SCADA_DELTAS[S.scada.key]; }
+  function applyDelta() {
+    if (!S.scada) return []; S.scada.syncedAt = new Date().toISOString(); if (!S.scada.staged) return [];
+    const delta = window.SCADA_DELTAS[S.scada.key]; const added = [];
+    delta.equipment.forEach((se) => { if (eq(se.id)) return; S.scada.model.equipment.push(clone(se)); const e = addScadaEquipment(se, true); if (e) added.push(e); });
+    delta.links.forEach((l) => { if (!S.scada.model.links.some((x) => x[0] === l[0] && x[1] === l[1])) S.scada.model.links.push(l); });
+    detectGroups(); S.scada.staged = false; S.scada.applied = true; return added;
+  }
+  const inheritance = (e) => { const t = D().standardSets.find((x) => x.type === e.type); const sens = sensorsOf({ kind: 'eq', id: e.id }); return t ? { set: t, alerts: t.alerts.map((a) => ({ ...a, ok: !!sens.find((s) => s.name === a.sensorKind) })), schedules: t.schedules.map((s) => ({ ...s, ok: s.workType !== 'condition' || !!sens.find((x) => x.name === s.sensorKind) })) } : null; };
+  function inheritEquipment(e) {
+    const d = D(), inh = inheritance(e); if (!inh) return { active: 0, draft: 0, why: ['no library entry for this type'] };
+    const sens = sensorsOf({ kind: 'eq', id: e.id }); let active = 0, draft = 0; const why = [];
+    inh.alerts.forEach((ta) => { const s = sens.find((x) => x.name === ta.sensorKind); if (!s) { why.push(`${ta.name}: needs a ${ta.sensorKind} sensor`); return; } if (d.alerts.some((a) => a.sensor === s.id)) return; const has = s.limits && SEVS.some((k) => s.limits[k] != null); const lim = has ? s.limits : { caution: ta.limits.caution ?? null, minor: ta.limits.minor ?? null, major: ta.limits.major ?? null, emergency: ta.limits.emergency ?? null }; if (!has) { s.limits = { ...lim }; s.direction = ta.direction; s.source = 'library'; } const entry = entrySeverity(lim); const subject = ta.scope === 'unitProcess' ? { kind: 'stage', id: e.stage } : { kind: 'eq', id: e.id }; d.alerts.push({ id: uid('a'), name: `${ta.name} — ${ta.scope === 'unitProcess' ? stage(e.stage).name : e.tag}`, subject, sensor: s.id, limits: 'sensor', holdMin: lim.emergency != null ? 0 : 5, closes: s.kind === 'status' ? { mode: 'operator' } : { mode: 'sensor', back: closeDefault(s, ta.direction, lim[entry]), holdMin: 10 }, flow: ta.flow && flow(ta.flow) ? ta.flow : null, cause: ta.cause || null, verify: lim.emergency != null, status: entry ? 'active' : 'draft', open: 0, source: 'library', template: inh.set.id }); if (entry) active++; else { draft++; why.push(`${ta.name}: no limits`); } });
+    inh.schedules.forEach((ts) => { if (d.schedules.some((s) => s.subject.id === e.id && s.name === ts.name) || d.conditionWork.some((w) => w.subject.id === e.id && w.name === ts.name)) return; if (ts.workType === 'condition') { const s = sens.find((x) => x.name === ts.sensorKind); if (!s) { why.push(`${ts.name}: needs a ${ts.sensorKind} sensor`); return; } d.conditionWork.push({ id: uid('w'), name: ts.name, subject: { kind: 'eq', id: e.id }, sensor: s.id, doWhen: ts.doWhen, doneWhen: ts.doneWhen, flow: ts.flow, escalate: null, status: 'active', open: 0, source: 'library' }); active++; return; } const meter = sens.find((x) => x.kind === 'meter'); d.schedules.push({ id: uid('s'), name: ts.name, subject: { kind: 'eq', id: e.id }, workType: ts.workType, probe: ts.workType === 'calibration' ? (sens.find((x) => x.kind === 'analytical') || {}).id || null : null, flow: ts.flow && flow(ts.flow) ? ts.flow : null, basis: ts.meterHours && meter ? 'either' : 'calendar', every: { ...ts.every }, meter: ts.meterHours && meter ? { tag: meter.id, hours: ts.meterHours, last: meter.reading } : null, anchor: ts.workType === 'pm' ? 'last' : 'fixed', nextDue: '2026-11-02', performedBy: 'in_house', statutory: false, verify: ts.workType === 'pm', status: 'active', open: 0, source: 'library', template: inh.set.id }); active++; });
+    sens.filter((s) => s.kind === 'analytical' && !d.schedules.some((x) => x.workType === 'calibration' && x.probe === s.id)).forEach((s) => { d.schedules.push({ id: uid('s'), name: `${s.name} calibration`, subject: { kind: 'eq', id: e.id }, workType: 'calibration', probe: s.id, flow: null, basis: 'calendar', every: { n: 1, unit: 'month' }, anchor: 'fixed', nextDue: '2026-11-02', performedBy: 'in_house', statutory: false, verify: false, status: 'active', open: 0, source: 'library' }); active++; });
+    return { active, draft, why };
+  }
+  function inheritUnitProcess(st) { const d = D(), prof = st.profile && window.UP_PROFILES.find((p) => p.id === st.profile); if (!prof) return 0; let n = 0; prof.rounds.forEach((r) => { if (d.schedules.some((s) => s.subject.kind === 'stage' && s.subject.id === st.id && s.name === r.name)) return; d.schedules.push({ id: uid('s'), name: r.name, subject: { kind: 'stage', id: st.id }, workType: 'routine', probe: null, flow: null, basis: 'calendar', every: { ...r.every }, meter: null, anchor: 'fixed', nextDue: '2026-10-06', performedBy: 'in_house', statutory: false, verify: false, status: 'active', open: 0, source: 'library' }); n++; }); return n; }
+  function inheritPlant() { const d = D(), prof = window.PLANT_PROFILES[d.plant.type] || window.PLANT_PROFILES.STP; let n = 0; prof.rounds.forEach((r) => { if (d.schedules.some((s) => s.subject.kind === 'plant' && s.name === r.name)) return; d.schedules.push({ id: uid('s'), name: r.name, subject: { kind: 'plant' }, workType: r.workType, probe: null, flow: r.flow && flow(r.flow) ? r.flow : null, basis: 'calendar', every: { ...r.every }, meter: null, anchor: 'fixed', nextDue: '2026-10-06', performedBy: 'in_house', statutory: !!r.statutory, verify: !!r.verify, status: 'active', open: 0, source: 'library' }); n++; }); prof.milestones.forEach((m) => { if (d.milestones.some((x) => x.name === m)) return; d.milestones.push({ id: uid('m'), name: m, on: null, status: 'active', count: 0, source: 'library' }); n++; }); return n; }
+  const plantProfile = () => window.PLANT_PROFILES[D().plant.type] || window.PLANT_PROFILES.STP;
+  const plantRoundDone = (r) => D().schedules.some((s) => s.subject.kind === 'plant' && s.name === r.name);
+  const upRoundDone = (st, r) => D().schedules.some((s) => s.subject.kind === 'stage' && s.subject.id === st.id && s.name === r.name);
+  /* What a machine still has to inherit, item by item, with the reason when it cannot. */
+  const eqInheritItems = (e) => { const d = D(), inh = inheritance(e); if (!inh) return null; const sens = sensorsOf({ kind: 'eq', id: e.id }); const items = [];
+    inh.alerts.forEach((a) => { const done = d.alerts.some((x) => sensorHome(sensor(x.sensor)).id === e.id && sensor(x.sensor).name === a.sensorKind); items.push({ kind: 'alert', name: a.name, done, ok: a.ok, why: a.ok ? '' : `needs a ${a.sensorKind} reading from SCADA` }); });
+    inh.schedules.forEach((s) => { const done = d.schedules.some((x) => x.subject.id === e.id && x.name === s.name) || d.conditionWork.some((w) => w.subject.id === e.id && w.name === s.name); items.push({ kind: s.workType === 'condition' ? 'work' : 'schedule', name: s.name, done, ok: s.ok, why: s.ok ? '' : `needs a ${s.sensorKind} reading from SCADA` }); });
+    sens.filter((s) => s.kind === 'analytical').forEach((s) => { const done = d.schedules.some((x) => x.workType === 'calibration' && x.probe === s.id); items.push({ kind: 'schedule', name: `${s.name} calibration`, done, ok: true, why: '' }); });
+    return { set: inh.set, items, pending: items.filter((i) => i.ok && !i.done).length, blocked: items.filter((i) => !i.ok).length }; };
+  const inheritStatus = () => { const d = D(); const prof = plantProfile(); const plantPending = d.plant.name ? prof.rounds.filter((r) => !plantRoundDone(r)).length + prof.milestones.filter((m) => !d.milestones.some((x) => x.name === m)).length : 0; const upPending = d.stages.filter((st) => { const p = profileById(st.profile); return p && p.rounds.some((r) => !upRoundDone(st, r)); }).length; const eqPending = d.equipment.filter((e) => { const it = eqInheritItems(e); return it && it.pending > 0; }); return { plantPending, upPending, eqPending }; };
+  const customCount = () => { const d = D(); return d.alerts.filter((a) => a.source === 'custom').length + d.schedules.filter((s) => s.source === 'custom').length + d.conditionWork.filter((w) => w.source === 'custom').length + d.sensors.filter((s) => s.source === 'custom').length; };
+  /* A library edit reaches every following item at this plant; Custom ones are left alone. */
+  function propagateSet(t) { const d = D(); let sensors = 0, schedules = 0, custom = 0; const eqs = d.equipment.filter((e) => e.type === t.type);
+    eqs.forEach((e) => { t.alerts.forEach((ta) => { const s = d.sensors.find((x) => x.on === 'eq:' + e.id && x.name === ta.sensorKind); if (!s) return; if (s.source === 'custom') { custom++; return; } if (d.alerts.some((a) => a.sensor === s.id) || s.source === 'library') { s.limits = { caution: ta.limits.caution ?? null, minor: ta.limits.minor ?? null, major: ta.limits.major ?? null, emergency: ta.limits.emergency ?? null }; s.direction = ta.direction; s.source = 'library'; sensors++; } });
+      t.schedules.forEach((ts) => { if (ts.workType === 'condition') { const w = d.conditionWork.find((x) => x.subject.id === e.id && x.name === ts.name); if (!w) return; if (w.source === 'custom') { custom++; return; } w.doWhen = ts.doWhen; w.doneWhen = ts.doneWhen; schedules++; return; } const sc = d.schedules.find((x) => x.subject.id === e.id && x.name === ts.name); if (!sc) return; if (sc.source === 'custom') { custom++; return; } sc.every = { ...ts.every }; if (sc.meter && ts.meterHours) sc.meter.hours = ts.meterHours; schedules++; }); });
+    return { plants: eqs.length ? 1 : 0, sensors, schedules, custom }; }
   function gaps() {
     const d = D();
     const isProcess = (s) => s.kind !== 'meter' && s.kind !== 'status';
@@ -94,44 +179,59 @@ window.CTL = (function () {
     const probesNoCal = d.sensors.filter((s) => s.kind === 'analytical' && !d.schedules.some((x) => x.workType === 'calibration' && x.probe === s.id));
     const eqNoAlerts = d.equipment.filter((e) => d.standardSets.some((t) => t.type === e.type && t.alerts.length) && !d.alerts.some((a) => sensorHome(sensor(a.sensor)).id === e.id));
     const causesNoFix = d.causes.filter((c) => !c.fix && !c.sensorFault);
+    const alertsNoFlow = d.alerts.filter((a) => !a.flow && !a.cause && d.flows.some((f) => f.kind === 'diagnostic' && f.status === 'published' && f.forType === sensorHome(sensor(a.sensor)).type));
+    const drafts = [...d.alerts.filter((a) => a.status === 'draft'), ...d.schedules.filter((s) => s.status === 'draft'), ...d.conditionWork.filter((w) => w.status === 'draft')];
     const reachOps = ops().filter((p) => p.phone.verified), reachLeads = leads().filter((p) => p.phone.verified);
     const majorNow = ops().some((p) => p.major === 'now') && leads().some((p) => p.major === 'now');
     const routingOk = reachOps.length > 0 && reachLeads.length > 0 && majorNow;
-    const routingWhy = !reachOps.length ? 'No Operator has a verified phone.' : !reachLeads.length ? 'No Lead has a verified phone.' : !majorNow ? 'Nobody at the plant has Major set to Now.' : '';
+    const routingWhy = !ops().length ? 'No Operator on the roster yet.' : !leads().length ? 'No Lead on the roster yet.' : !reachOps.length ? 'No Operator has a verified phone.' : !reachLeads.length ? 'No Lead has a verified phone.' : !majorNow ? 'Nobody at the plant has Major set to Now.' : '';
+    const plantOk = !!(d.plant.name && d.stages.length);
+    const eqNoSensors = d.equipment.filter((e) => !d.sensors.some((s) => s.on === 'eq:' + e.id));
+    const unmapped = d.equipment.filter((e) => e.unmapped); const stagesUnmapped = d.stages.filter((s) => s.scadaZone && !s.profile);
+    const inh = plantOk ? inheritStatus() : { plantPending: 0, upPending: 0, eqPending: [] };
+    const inheritPending = inh.plantPending + inh.upPending + inh.eqPending.length;
     const steps = [
-      { id: 'people', title: 'People who can be reached', done: routingOk, count: routingOk ? 0 : 1 },
-      { id: 'limits', title: 'Limits on every sensor', done: !sensorsNoLimits.length, count: sensorsNoLimits.length },
-      { id: 'alerts', title: 'Alerts on every machine', done: !eqNoAlerts.length, count: eqNoAlerts.length },
-      { id: 'schedules', title: 'A schedule for every machine', done: !eqNeedingPM.length && !probesNoCal.length, count: eqNeedingPM.length + probesNoCal.length },
-      { id: 'flows', title: 'A fix for every cause', done: !causesNoFix.length, count: causesNoFix.length },
-    ].map((st) => ({ ...st, skipped: S.skipped.has(st.id) }));
+      { id: 'scada', done: plantOk && !!S.scada, count: plantOk && S.scada ? 0 : 1 },
+      { id: 'people', done: routingOk, count: routingOk ? 0 : 1 },
+      { id: 'detect', done: plantOk && !unmapped.length && !stagesUnmapped.length && S.visited.has('detect'), count: unmapped.length + stagesUnmapped.length || (plantOk && S.visited.has('detect') ? 0 : 1) },
+      { id: 'inherit', done: plantOk && !inheritPending && S.visited.has('inherit'), count: inheritPending || (plantOk && S.visited.has('inherit') ? 0 : 1) },
+      { id: 'alerts', done: d.sensors.length > 0 && !sensorsNoLimits.length, count: sensorsNoLimits.length || (d.sensors.length ? 0 : 1) },
+      { id: 'escalation', done: S.visited.has('escalation') && routingOk, count: S.visited.has('escalation') ? 0 : 1 },
+      { id: 'maintenance', done: d.equipment.length > 0 && !eqNeedingPM.length && !probesNoCal.length, count: eqNeedingPM.length + probesNoCal.length || (d.equipment.length ? 0 : 1) },
+      { id: 'flows', done: !causesNoFix.length && !alertsNoFlow.length, count: causesNoFix.length + alertsNoFlow.length },
+      { id: 'review', done: S.visited.has('review') && !drafts.length && plantOk && routingOk, count: drafts.length || (S.visited.has('review') ? 0 : 1) },
+    ].map((st) => ({ ...st, title: STEP_TITLE[st.id], skipped: S.skipped.has(st.id) }));
     const doneCount = steps.filter((s) => s.done || s.skipped).length;
-    return { sensorsNoLimits, eqNeedingPM, probesNoCal, eqNoAlerts, causesNoFix, routingOk, routingWhy, reachOps, reachLeads, steps, doneCount, allDone: doneCount === steps.length };
+    return { sensorsNoLimits, eqNeedingPM, probesNoCal, eqNoAlerts, eqNoSensors, unmapped, stagesUnmapped, inherit: inh, inheritPending, causesNoFix, alertsNoFlow, drafts, routingOk, routingWhy, reachOps, reachLeads, plantOk, steps, doneCount, allDone: doneCount === steps.length };
   }
-  const nodeStatus = (sub) => { const g = gaps(); const eqs = sub.kind === 'eq' ? [eq(sub.id)] : sub.kind === 'group' ? group(sub.id).members.map(eq) : sub.kind === 'stage' ? D().equipment.filter((e) => e.stage === sub.id) : D().equipment; const missing = eqs.some((e) => g.eqNeedingPM.includes(e) || g.eqNoAlerts.includes(e) || g.sensorsNoLimits.some((s) => s.on === 'eq:' + e.id) || g.probesNoCal.some((s) => s.on === 'eq:' + e.id)); const has = D().alerts.some((a) => eqs.some((e) => subjectKey(a.subject) === 'eq:' + e.id) || subjectKey(a.subject) === subjectKey(sub)) || D().schedules.some((s) => subjectKey(s.subject) === subjectKey(sub) || eqs.some((e) => subjectKey(s.subject) === 'eq:' + e.id)); return missing ? 'gap' : has ? 'ok' : 'none'; };
+  const nodeStatus = (sub) => { const g = gaps(); const eqs = sub.kind === 'eq' ? [eq(sub.id)] : sub.kind === 'group' ? group(sub.id).members.map(eq) : sub.kind === 'stage' ? D().equipment.filter((e) => e.stage === sub.id) : D().equipment; const missing = eqs.some((e) => g.eqNeedingPM.includes(e) || g.eqNoAlerts.includes(e) || g.eqNoSensors.includes(e) || g.sensorsNoLimits.some((s) => s.on === 'eq:' + e.id) || g.probesNoCal.some((s) => s.on === 'eq:' + e.id)); const has = D().alerts.some((a) => eqs.some((e) => subjectKey(a.subject) === 'eq:' + e.id) || subjectKey(a.subject) === subjectKey(sub)) || D().schedules.some((s) => subjectKey(s.subject) === subjectKey(sub) || eqs.some((e) => subjectKey(s.subject) === 'eq:' + e.id)); return missing ? 'gap' : has ? 'ok' : 'none'; };
 
   /* ── feedback: toast, modal, audit, saving simulation ────────── */
   let toastT;
   function toast(msg, undo) { $('#toast')?.remove(); const el = document.createElement('div'); el.className = 'toast'; el.id = 'toast'; el.innerHTML = `<span>${msg}</span>${undo ? '<span class="u">Undo</span>' : ''}`; if (undo) el.querySelector('.u').onclick = () => { undo(); el.remove(); render(); }; document.body.appendChild(el); clearTimeout(toastT); toastT = setTimeout(() => el.remove(), 6500); }
   function audit(what, detail) { const n = new Date(); const ts = `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')} ${String(n.getHours()).padStart(2, '0')}:${String(n.getMinutes()).padStart(2, '0')}`; D().audit.unshift({ ts, who: PERSONA[S.persona].who, what, detail: detail || '' }); }
   function modal(title, body, actions) { $('#modal')?.remove(); const m = document.createElement('div'); m.className = 'modal'; m.id = 'modal'; m.innerHTML = `<div class="box"><div class="h">${esc(title)}</div><div class="b">${body}</div><div class="ft">${actions.map((a, i) => `<button class="btn ${a.primary ? 'primary' : ''}" data-i="${i}">${esc(a.label)}</button>`).join('')}</div></div>`; document.body.appendChild(m); $$('.ft button', m).forEach((b) => b.onclick = () => { const a = actions[+b.dataset.i]; const keep = a.fn && a.fn(m); if (!keep) m.remove(); }); return m; }
-  /* Simulated write: resolves after 500 ms; rejects once if "Make the next save fail" is on. */
   function save(fn) { return new Promise((res, rej) => setTimeout(() => { if (S.failNext) { S.failNext = false; rej(new Error('network')); } else { fn(); res(); } }, 500)); }
 
   /* ── guide panel ─────────────────────────────────────────────── */
   const GUIDE = {
-    'setup': { t: 'Set up the plant', w: 'Five steps, in order. Each shows only what is missing and offers a recommended answer you can accept in one click.', y: 'A plant is ready when an alert reaches a person, every reading has limits, every machine is watched, every machine that needs a schedule has one, and every diagnosis leads to a fix.', s: 'You can skip any step and come back. The home page remembers where you were.' },
-    'setup/people': { t: 'Step 1 · People', w: 'Check that at least one Operator and one Lead can be reached by phone.', y: 'Who is told is fixed by role and looked up from this roster the moment something fires. With nobody reachable, every alert goes nowhere.', s: 'This one cannot be skipped. Nothing else matters until it is green.' },
-    'setup/limits': { t: 'Step 2 · Limits', w: 'Give each sensor its Caution, Minor, Major and Emergency thresholds. Suggested values come from plants with the same machine type.', y: 'Limits live on the sensor so every alert on it agrees, and so the operator card colours readings the same way.', s: 'A skipped sensor simply has no alert until you come back.' },
-    'setup/alerts': { t: 'Step 3 · Alerts', w: 'Add the standard alerts for each machine type. They use the limits you just confirmed.', y: 'A standard set is what other plants already watch on this kind of machine. You are checking, not authoring.', s: 'An alert that cannot run yet (a missing sensor) is kept as a draft with the reason.' },
-    'setup/schedules': { t: 'Step 4 · Schedules', w: 'Give every machine that needs a maintenance programme one, and every probe a calibration schedule.', y: 'Reminders and deadlines come from the machine\'s criticality and the cadence. Nothing to type.', s: 'A missing schedule is a planning gap, not a safety failure. Skip and the plant still alerts.' },
-    'setup/flows': { t: 'Step 5 · Fixes', w: 'Link an action flow to each cause that has none.', y: 'A diagnosis without a fix tells the operator what is wrong and nothing about what to do.', s: 'Without a fix the operator closes with a photo or note. It works; it teaches nothing.' },
-    'setup/done': { t: 'Ready', w: 'The plant is set up. From here you maintain it from the Equipment page.', y: 'Everything you accepted is editable on the machine it belongs to.', s: '' },
+    'setup': { t: 'Set up a plant', w: 'Nine steps. SCADA hands over the plant (1), you add people (2), the console says what it detected (3) and what the library gives each level (4). Steps 5 to 8 are review; 9 switches it on.', y: 'Nothing is drawn twice. SCADA already knows the machines and how they connect; the library already knows what each kind of machine, unit process and plant needs.', s: 'Steps 5 to 8 can be skipped and come back on the home page.' },
+    'setup/scada': { t: 'Step 1 · Connect SCADA', w: 'Pick the plant in SCADA. The console reads its zones, every machine with its SCADA type, every sensor widget, and the pipes and headers between them. Click a machine in the drawing to see what came through.', y: 'The plant is drawn once, in SCADA. This console never asks you to draw it again; it reads it, and reads it again whenever SCADA changes. Valves, motors and DigitalPaani devices stay in the drawing: they belong to a machine, they are not one.', s: 'Cannot be skipped. Nothing exists until SCADA says so.' },
+    'setup/people': { t: 'Step 2 · People', w: 'Add the people who work here with one role each. At least one Operator and one Lead must verify a phone.', y: 'Who is told is looked up from this roster the moment something fires. SCADA knows machines, not people, so this is the one thing you add by hand.', s: 'Cannot be skipped. Alerts would reach nobody.' },
+    'setup/detect': { t: 'Step 3 · What SCADA found', w: 'Zones became unit processes; SCADA types became library types; parallel machines of one type on one header became duty/standby groups. Anything the library does not recognise asks you once.', y: 'Detection is what turns a drawing into something that can inherit. One wrong type here is one wrong set of alerts, so this is the step to read slowly.', s: 'Cannot be skipped while anything is unmapped; an unmapped machine inherits nothing.' },
+    'setup/inherit': { t: 'Step 4 · Inherit from the library', w: 'Three levels. The plant type gives rounds and milestones. Each unit process gives its checks and groups. Each machine type gives alerts, limits, schedules, calibration and flows. Accept each, or all at once.', y: 'The library is where the estate\'s experience lives. A plant that follows it gets every improvement; a plant that edits an item keeps its own version, marked Custom.', s: 'Skip and add everything by hand in steps 5, 7 and 8.' },
+    'setup/alerts': { t: 'Step 5 · Limits and alerts', w: 'Confirm the Caution, Minor, Major and Emergency limits on each sensor, then review the alerts. Add any the standard set did not cover.', y: 'The limit crossed decides the severity, and severity decides who is told and how loudly. This step is the sensor-based escalation.', s: 'A sensor without limits raises nothing. Skip and it stays quiet until you come back.' },
+    'setup/escalation': { t: 'Step 6 · Escalation and overrides', w: 'Nothing to draw. Read who is told for each severity, resolved from your roster, and the clocks that drive the time-based part. Overrides are listed where they exist.', y: 'Fixed by role so every plant behaves the same and support can reason about it. The only levers are the roster, two clock numbers per alert, criticality, and pausing.', s: 'Read it once. It is marked done when you have.' },
+    'setup/maintenance': { t: 'Step 7 · Maintenance and tasks', w: 'A programme for every machine whose type expects one, a calibration schedule for every probe, and the plant-level rounds.', y: 'Reminders and deadlines come from the machine\'s criticality and the cadence. Nothing to type.', s: 'A missing schedule is a planning gap, not a safety failure. Skip and the plant still alerts.' },
+    'setup/flows': { t: 'Step 8 · Workflows', w: 'Attach a diagnostic flow to alerts on machine types that have one, give every cause a fix, and give schedules their steps.', y: 'A diagnosis without a fix tells the operator what is wrong and nothing about what to do.', s: 'Without a flow the operator closes with a photo or note. It works; it teaches nothing.' },
+    'setup/review': { t: 'Step 9 · Review and go live', w: 'Read the summary, activate what passed its checks, and download the configuration.', y: 'Nothing fires until it is active. The download is the PRD-shaped record of everything you set.', s: '' },
     'equipment': { t: 'Equipment', w: 'Pick a machine, a stage or the plant on the left. Everything about it is on one page, one section open at a time.', y: 'Admins think per machine. Each alert and schedule lives on the thing it is about.', s: 'An amber dot means something is missing on that machine. Grey means nothing is set up yet.' },
     'flows': { t: 'Flows', w: 'A diagnostic flow asks questions until it reaches a cause. An action flow is the numbered steps that do the work.', y: 'Alerts open diagnostic flows. Schedules and causes run action flows.', s: 'A flow nothing runs is fine while you write it; the list says so.' },
     'people': { t: 'People & alerts', w: 'Who holds which role, whether they can be reached, and the two site defaults.', y: 'This is the whole routing configuration. There is no chain to draw and no recipients to type.', s: 'Removing the last reachable Operator or Lead is refused.' },
     'activity': { t: 'Activity', w: 'Everything that changed who gets woken up, with before and after.', y: 'Kept 24 months.', s: '' },
-    'standards': { t: 'Standard sets', w: 'One set per machine type: the alerts and schedules every plant with that machine should have.', y: 'A plant binds a set to a real machine and checks the numbers. Changing a set here reaches every plant that follows it.', s: '' },
+    'standards': { t: 'Library', w: 'Three levels: plant types, unit processes, equipment types. Each says what a thing of that kind inherits the moment SCADA adds it.', y: 'Edit here and every plant that follows the entry gets the change; items a plant edited stay Custom and are left alone.', s: '' },
+    'library': { t: 'Library', w: 'Three levels: plant types, unit processes, equipment types. Each says what a thing of that kind inherits the moment SCADA adds it.', y: 'Edit here and every plant that follows the entry gets the change; items a plant edited stay Custom and are left alone.', s: '' },
+    'sheet/libtype': { t: 'Equipment type', w: 'The sensors this type usually has, the alerts and limits it inherits, and the schedules it needs.', y: 'Changing a limit here re-thresholds every following plant\'s sensors of this kind. Custom ones are left alone.', s: '' },
     'sheet/alert/1': { t: 'Which reading?', w: 'Pick the sensor that shows the problem. The name fills itself in.', y: 'One alert watches one reading. Two directions or two sensors are two alerts.', s: '' },
     'sheet/alert/2': { t: 'When is it a problem?', w: 'The sensor\'s own limits are pre-filled. Change them only if this alert should differ from the sensor.', y: 'Each tier you fill in is a step up in who is told and how loudly. Blank tiers are skipped.', s: 'Leave "More options" alone unless a reading flaps or a planned shutdown raises it.' },
     'sheet/alert/3': { t: 'What happens next?', w: 'Say what closes it and what the operator should do.', y: 'A sensor closing it is honest; an operator closing it is honest when no sensor can see the fix. A clock is never honest.', s: 'No flow is fine: the operator gets a simple open → done issue.' },
@@ -143,6 +243,8 @@ window.CTL = (function () {
     'sheet/work/2': { t: 'When?', w: 'Two numbers: when to do it, and what the sensor reads when it is done.', y: 'The gap between them stops a reading resting on the line from asking on every poll.', s: 'Optionally raise an issue above a worse threshold, for when the job stops keeping up.' },
     'sheet/work/3': { t: 'Review', w: 'Check and activate.', y: '', s: '' },
     'sheet/sensor': { t: 'Sensor limits', w: 'Direction, then a threshold per tier. Blank tiers are skipped.', y: 'Every alert that follows this sensor changes with it. The change is audited.', s: '' },
+    'sheet/sensornew': { t: 'Add a sensor', w: 'Name, tag, unit and the range the instrument can physically read.', y: 'Anything outside the valid range is a sensor fault, never an alert.', s: '' },
+    'sheet/equipment': { t: 'A machine', w: 'Pick the type first: it fills in the sensors, the archetype and a suggested criticality. Then the tag and, if it has one, its duty partner.', y: 'Criticality sets how early a late task gets loud and how far it reaches. A standby counts one tier lower while its duty unit runs.', s: '' },
     'sheet/standard': { t: 'Standard set', w: 'Untick anything that does not apply here, then add.', y: 'Everything lands bound to this machine and its tags.', s: 'Rows without the sensor they need are disabled with the reason.' },
     'sheet/flow': { t: 'Flow', w: 'Add steps in order. A question routes on its answer; a reading binds to a tag.', y: 'A conclusion names a cause, and the cause names its fix.', s: '' },
     'sheet/cause': { t: 'Cause', w: 'One estate-wide word for one failure, and what fixes it.', y: 'Thirty plants using one word is what makes "what goes wrong" countable.', s: '' },
@@ -157,16 +259,43 @@ window.CTL = (function () {
       <h3>${esc(g.t)}</h3><p>${esc(g.w)}</p>${g.y ? `<p class="why"><b>Why.</b> ${esc(g.y)}</p>` : ''}${g.s ? `<p class="skip"><b>If you skip.</b> ${esc(g.s)}</p>` : ''}
       <div class="gdemo"><div class="eyebrow">Try the hard cases</div>
         <label class="toggle"><input type="checkbox" id="failToggle" ${S.failNext ? 'checked' : ''}> <span>Make the next save fail</span></label>
-        <label class="toggle"><input type="checkbox" id="emptyToggle" ${S.emptyDemo ? 'checked' : ''}> <span>Start from an empty plant</span></label>
+        <label class="toggle"><input type="checkbox" id="newToggle" ${S.mode === 'new' ? 'checked' : ''}> <span>Start a new plant from SCADA</span></label>
         <label class="toggle"><input type="checkbox" id="modelToggle" ${S.model ? 'checked' : ''}> <span>Show the model underneath</span></label>
       </div>`;
     $('#guideClose').onclick = () => setGuide(false);
     $('#failToggle').onchange = (e) => { S.failNext = e.target.checked; };
     $('#modelToggle').onchange = (e) => { S.model = e.target.checked; document.body.classList.toggle('show-model', S.model); };
-    $('#emptyToggle').onchange = (e) => { S.emptyDemo = e.target.checked; resetData(); location.hash = '#/setup'; render(); toast(S.emptyDemo ? 'Empty plant: no limits, no alerts, no schedules, no reachable Lead. Follow the setup.' : 'Back to the fully set-up plant.'); };
+    $('#newToggle').onchange = (e) => { S.mode = e.target.checked ? 'new' : 'sample'; resetData(); location.hash = S.mode === 'new' ? '#/setup/scada' : '#/setup'; render(); toast(S.mode === 'new' ? 'Nothing here yet. Connect SCADA in step 1; the help panel explains each step.' : 'Back to the sample plant, Manesar STP.'); };
   }
   function setGuide(on) { S.guide = on; try { localStorage.setItem('ctl.guide', on ? '1' : '0'); } catch (e) { /* ignore */ } renderGuide(); }
-  function resetData() { S.d = clone(window.SEED); S.skipped = new Set(); S.sheet = null; S.openSec = null; if (S.emptyDemo) { const d = S.d; d.alerts = []; d.schedules = []; d.conditionWork = []; d.milestones = []; d.sensors.forEach((s) => { if (s.kind !== 'status') s.limits = null; }); d.people.forEach((p) => { if (p.role === 'l3') p.phone = { verified: false, channel: null }; }); d.audit = [{ ts: '2026-09-29 09:00', who: 'Kishore Reddy', what: 'Plant created from the equipment module', detail: '12 machines, 22 sensors imported' }]; } }
+  function resetData() {
+    S.d = clone(window.SEED); S.skipped = new Set(); S.visited = new Set(); S.sheet = null; S.openSec = null; S.node = 'plant'; S.scada = null; S.scadaSel = null;
+    if (S.mode === 'new') { const d = S.d; d.plant = { id: 'new', name: '', code: '', type: null, capacity: '', quietHours: { from: '22:00', to: '06:00', on: true }, hooter: { on: true, seconds: 60 }, modules: d.plant.modules }; d.stages = []; d.groups = []; d.equipment = []; d.sensors = []; d.alerts = []; d.schedules = []; d.conditionWork = []; d.milestones = []; d.cycles = []; d.people = []; d.audit = []; }
+    else { const model = clone(window.SCADA_SAMPLES.manesar); S.scada = { key: 'manesar', model, syncedAt: new Date(Date.now() - 23 * 60000).toISOString(), sample: true, skipped: [], staged: false, applied: false }; S.visited.add('detect'); S.visited.add('inherit'); S.d.stages.forEach((st) => { const z = model.zones.find((x) => x.id === st.id); const p = detectProfile(st.name); st.profile = p ? p.id : null; st.scadaZone = z ? z.name : st.name; st.detectedBy = 'name'; }); S.d.equipment.forEach((e) => { const se = model.equipment.find((x) => x.id === e.id); if (se) e.scadaType = se.scadaType; }); S.d.sensors.forEach((s) => { s.fromScada = true; const se = model.equipment.find((x) => x.id === s.on.slice(3)); const ss = se && se.sensors.find((x) => (window.SCADA_SENSOR_MAP[x.tag] || x.tag) === s.name); if (ss) { s.scadaTag = ss.tag; s.widget = ss.widget; } }); S.d.plant.scada = true; S.d.plant.type = 'STP'; [...S.d.alerts, ...S.d.schedules, ...S.d.conditionWork].forEach((x) => { if (x.template) x.source = 'library'; }); }
+  }
+
+  /* ── export: the configuration in the PRD's shape ────────────── */
+  function exportConfig() {
+    const d = D(); const cond = (s, op, v) => ({ id: uid('cond'), name: `${s.name} ${op} ${v}`, sensorId: s.tag, operator: op, threshold: v, unit: s.unit });
+    const conditions = []; const triggers = [];
+    d.alerts.forEach((a) => { const { lim, dir, s } = limitsOfAlert(a); const bands = SEVS.filter((k) => lim[k] != null).map((k) => { const c = cond(s, dir === 'below' ? '<' : '>', lim[k]); conditions.push(c); return { conditionId: c.id, severity: { caution: 'low', minor: 'high', major: 'critical', emergency: 'emergency' }[k] }; }); let res = null; if (a.closes.mode === 'sensor') { res = cond(s, dir === 'below' ? '>' : '<', a.closes.back); res.durationMinutes = a.closes.holdMin; conditions.push(res); } triggers.push({ id: a.id, ruleName: a.name, status: a.status === 'off' ? 'inactive' : a.status, outcome: 'issue', triggerType: 'alert', subject: a.subject.kind === 'eq' ? { kind: 'equipment', id: a.subject.id } : a.subject.kind === 'stage' ? { kind: 'unitProcess', id: a.subject.id } : a.subject, triggerConfig: { observationConditionId: bands[0] && bands[0].conditionId, observationPolls: a.holdMin ? Math.max(1, a.holdMin) : 1, resolutionPolls: a.closes.holdMin || 1 }, severityBands: bands, inheritsSensorZones: a.limits === 'sensor', resolutionType: a.closes.mode === 'sensor' ? 'condition' : 'manual', resolutionConditionId: res && res.id, procedureTreeId: a.flow || null, knownCauseId: a.cause || null, requiresSupervisorVerification: !!a.verify, clocksOverride: a.clocks || null, cycleBound: a.cycle || null }); });
+    d.schedules.forEach((sc) => triggers.push({ id: sc.id, ruleName: sc.name, status: sc.status, outcome: 'task', triggerType: 'schedule', subject: sc.subject.kind === 'eq' ? { kind: 'equipment', id: sc.subject.id } : sc.subject.kind === 'stage' ? { kind: 'unitProcess', id: sc.subject.id } : sc.subject, triggerConfig: { recurrence: sc.every.unit === 'day' && sc.every.n === 1 ? 'daily' : sc.every.unit === 'week' && sc.every.n === 1 ? 'weekly' : sc.every.unit === 'month' && sc.every.n === 1 ? 'monthly' : 'custom', recurrenceRule: `FREQ=${{ day: 'DAILY', week: 'WEEKLY', month: 'MONTHLY', year: 'YEARLY' }[sc.every.unit]};INTERVAL=${sc.every.n}`, startAt: sc.nextDue, scope: 'site', workType: sc.workType === 'pm' ? 'preventive_maintenance' : sc.workType === 'calibration' ? 'calibration' : 'routine_check', dueBasis: sc.basis, meterTagId: sc.meter ? sensor(sc.meter.tag).tag : null, meterIntervalHours: sc.meter ? sc.meter.hours : null, meterMinIntervalDays: 30, performedBy: sc.performedBy, toleranceDays: sc.tolerance ?? null, calendarAnchor: sc.anchor === 'last' ? 'from_last_service' : 'fixed' }, statutory: !!sc.statutory, displaySensorId: sc.probe ? sensor(sc.probe).tag : null, procedureTreeId: sc.flow || null, requiresSupervisorVerification: !!sc.verify }));
+    d.conditionWork.forEach((w) => { const s = sensor(w.sensor); const fire = cond(s, '>', w.doWhen), rearm = cond(s, '<', w.doneWhen); conditions.push(fire, rearm); triggers.push({ id: w.id, ruleName: w.name, status: w.status, outcome: 'task', triggerType: 'alert', subject: { kind: 'equipment', id: w.subject.id }, triggerConfig: { observationConditionId: fire.id, observationPolls: 1 }, rearmConditionId: rearm.id, clearanceCheckMinutes: 15, chronicIgnoreThreshold: 5, promotionPairOf: w.escalate ? w.escalate.alert : null, procedureTreeId: w.flow }); });
+    d.milestones.forEach((m) => triggers.push({ id: m.id, ruleName: m.name, status: 'active', outcome: 'achievement', triggerType: m.on ? 'alert' : 'schedule' }));
+    return {
+      exportedAt: new Date().toISOString(), plant: { name: d.plant.name, type: d.plant.type || null, capacity: d.plant.capacity, siteDefaults: { quietHours: d.plant.quietHours, hooter: d.plant.hooter } },
+      scada: S.scada ? { source: S.scada.key, lastRead: S.scada.syncedAt, leftInScada: S.scada.skipped.map((x) => ({ tag: x.tag, scadaType: x.code, kind: x.kind })) } : null,
+      unitProcesses: d.stages.map((st) => ({ id: st.id, name: st.name, scadaZone: st.scadaZone || null, profileId: st.profile || null })), groups: d.groups,
+      equipment: d.equipment.map((e) => ({ id: e.id, name: e.name, tag: e.tag, unitProcessId: e.stage, groupId: e.group || null, scadaType: e.scadaType || null, type: e.type, archetype: e.archetype, criticalityTier: e.tier, criticalityOverrideReason: e.tierReason || null, duty: e.duty || null, standbyOf: e.standbyOf || null, expectsProgramme: e.expects })),
+      sensors: d.sensors.map((s) => ({ id: s.id, tag: s.tag, name: s.name, unit: s.unit, equipmentId: s.on.slice(3), scadaWidget: s.widget || null, manualEntry: !!s.manual, kind: s.kind, expression: s.expr || null, validMin: s.valid[0], validMax: s.valid[1], defaultZones: s.limits ? { direction: s.direction, zones: SEVS.filter((k) => s.limits[k] != null).map((k) => ({ severity: k, threshold: s.limits[k] })) } : null, zonesSource: s.source || null, maintenanceContract: s.calibration ? { maintainer: s.calibration.by, vendorName: s.calibration.vendor || null, contractEndDate: s.calibration.contractEnd || null } : null, setpoint: s.setpoint || null })),
+      roster: d.people.map((p) => ({ id: p.id, name: p.name, role: p.role, grant: p.grant || null, phoneVerified: p.phone.verified, channel: p.phone.channel })),
+      signalConditions: conditions, triggers,
+      procedures: d.flows.map((f) => ({ id: f.id, name: f.name, treeType: f.kind === 'diagnostic' ? 'branching' : 'linear', equipmentType: f.forType, version: f.version, status: f.status, steps: f.steps })),
+      rootCauses: d.causes.map((c) => ({ id: c.id, name: c.name, unitProcessId: c.stage, equipmentType: c.type, remediationTreeId: c.fix || null })),
+      cycles: d.cycles,
+    };
+  }
+  function download(name, obj) { const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500); }
 
   /* ── router and shell ────────────────────────────────────────── */
   function route() { const h = location.hash.replace(/^#\/?/, '') || 'setup'; const [view, ...rest] = h.split('/'); return { view, rest }; }
@@ -174,11 +303,11 @@ window.CTL = (function () {
   function renderNav() {
     const { view } = route(); const g = gaps();
     const dot = (k) => k === 'err' ? '<span class="dot err"></span>' : k === 'gap' ? '<span class="dot"></span>' : '';
-    const items = [['setup', g.allDone ? 'Plant' : 'Set up the plant', g.routingOk ? (g.allDone ? '' : 'gap') : 'err'], ['equipment', 'Equipment', (g.sensorsNoLimits.length + g.eqNeedingPM.length + g.probesNoCal.length + g.eqNoAlerts.length) ? 'gap' : ''], ['flows', 'Flows', g.causesNoFix.length ? 'gap' : ''], ['people', 'People & alerts', g.routingOk ? '' : 'err'], ['activity', 'Activity', '']];
-    if (can('standards')) items.splice(3, 0, ['standards', 'Standard sets', '']);
-    $('#nav').innerHTML = `<div class="eyebrow">${esc(D().plant.name)}</div>${items.map(([r, l, k]) => `<a class="item ${view === r ? 'active' : ''}" href="#/${r}">${l}${dot(k)}</a>`).join('')}
+    const items = [['setup', g.allDone ? 'Plant' : 'Set up the plant', g.routingOk ? (g.allDone ? '' : 'gap') : 'err'], ['equipment', 'Equipment', (g.sensorsNoLimits.length + g.eqNeedingPM.length + g.probesNoCal.length + g.eqNoAlerts.length + g.eqNoSensors.length) ? 'gap' : ''], ['flows', 'Flows', g.causesNoFix.length ? 'gap' : ''], ['people', 'People & alerts', g.routingOk ? '' : 'err'], ['activity', 'Activity', '']];
+    items.splice(3, 0, ['library', 'Library', '']);
+    $('#nav').innerHTML = `<div class="eyebrow">${esc(D().plant.name || 'New plant')}</div>${items.map(([r, l, k]) => `<a class="item ${view === r ? 'active' : ''}" href="#/${r}">${l}${dot(k)}</a>`).join('')}
       <div class="foot">Signed in as <b>${esc(PERSONA[S.persona].who)}</b><br>${esc(PERSONA[S.persona].label)}<div style="margin-top:8px"><a href="index.html">← Read the proposal</a></div></div>`;
-    $('#persona').value = S.persona; $('#crumb').innerHTML = `<b>${esc(D().plant.name)}</b>`;
+    $('#persona').value = S.persona; $('#crumb').innerHTML = `<b>${esc(D().plant.name || 'New plant')}</b>`;
   }
   function render() {
     document.body.classList.toggle('show-model', S.model); renderNav();
@@ -199,11 +328,11 @@ window.CTL = (function () {
   const failedBanner = (retryId, draftId) => `<div class="note err" style="margin-bottom:14px"><span><b>Nothing was saved.</b> The network did not answer. Your changes are still here. <button class="btn sm" id="${retryId}" style="margin-left:8px">Try again</button> ${draftId ? `<button class="btn sm ghost" id="${draftId}">Keep as a draft on this device</button>` : ''}</span></div>`;
 
   function boot() {
-    $('#persona').onchange = (e) => { S.persona = e.target.value; S.sheet = null; if (S.persona !== 'global' && route().view === 'standards') location.hash = '#/setup'; render(); };
-    $('#reset').onclick = () => { resetData(); render(); toast('Reset to the starting data.'); };
+    $('#persona').onchange = (e) => { S.persona = e.target.value; S.sheet = null; render(); };
+    $('#reset').onclick = () => { resetData(); render(); toast(S.mode === 'new' ? 'Blank again. Connect SCADA in step 1.' : 'Reset to the sample plant.'); };
     $('#guideBtn').onclick = () => setGuide(!S.guide);
-    render();
+    resetData(); render();
   }
 
-  return { S, $, $$, esc, uid, plural, cap, SEVS, SEV_LABEL, SEV_CLOCK, TIER_LABEL, TIER_SHARE, ROLE_LABEL, GRANT_LABEL, WT_LABEL, PERSONA, can, D, eq, stage, group, sensor, flow, cause, alertById, schedById, workById, subjectName, subjectTier, subjectKey, parseNode, sensorHome, sensorsOf, limitsOfAlert, entrySeverity, deepestSeverity, limitsText, fmtLimits, every, closeDefault, taskClocks, fmtH, suggestedLimits, people, ops, leads, seniors, seniorOrLeads, siteAdmins, first, issueLadder, ladderSummary, taskLadder, toldBlock, gaps, nodeStatus, toast, audit, modal, save, openSheet, closeSheet, sheetFrame, stepRail, segWire, segVal, failedBanner, render, renderGuide, clone, boot, route };
+  return { S, $, $$, esc, uid, plural, cap, SEVS, SEV_LABEL, SEV_CLOCK, TIER_LABEL, TIER_SHARE, ROLE_LABEL, GRANT_LABEL, WT_LABEL, PERSONA, STEP_IDS, STEP_TITLE, can, D, eq, stage, group, sensor, flow, cause, alertById, schedById, workById, catalogue, subjectName, subjectTier, subjectKey, parseNode, sensorHome, sensorsOf, limitsOfAlert, entrySeverity, deepestSeverity, limitsText, fmtLimits, every, closeDefault, taskClocks, fmtH, suggestedLimits, nextTag, people, ops, leads, seniors, seniorOrLeads, siteAdmins, first, issueLadder, ladderSummary, taskLadder, toldBlock, gaps, nodeStatus, toast, audit, modal, save, openSheet, closeSheet, sheetFrame, stepRail, segWire, segVal, failedBanner, render, renderGuide, clone, boot, route, exportConfig, download, resetData, importScada, applyDelta, stageDelta, detectGroups, detectProfile, profileForType, profileById, palette, scadaKind, fmtTime, mapType, leaveInScada, inheritance, inheritEquipment, inheritUnitProcess, inheritPlant, inheritStatus, eqInheritItems, plantProfile, plantRoundDone, upRoundDone, customCount, propagateSet };
 })();

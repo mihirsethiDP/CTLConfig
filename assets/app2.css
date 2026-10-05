@@ -1,6 +1,9 @@
 /* v2: guide panel, setup wizard, one-line cards, accordions, steppers, states */
-.body { grid-template-columns: 220px 1fr; }
-body.guide-open .body { grid-template-columns: 220px 1fr 300px; }
+.body { grid-template-columns: 220px minmax(0, 1fr); }
+body.guide-open .body { grid-template-columns: 220px minmax(0, 1fr) 300px; }
+.wiz { grid-template-columns: 230px minmax(0, 1fr); }
+.split { grid-template-columns: 290px minmax(0, 1fr); }
+.fs { overflow-x: auto; }
 .guide { display: none; background: var(--white); border-left: 1px solid var(--line); padding: 16px 18px; position: sticky; top: 52px; height: calc(100vh - 52px); overflow: auto; font-size: 13.5px; }
 .guide.open { display: block; }
 .guide .gh { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
@@ -98,3 +101,49 @@ body.guide-open .body { grid-template-columns: 220px 1fr 300px; }
 .sheet .sb.narrow { max-width: 640px; }
 @media (max-width: 1100px) { body.guide-open .body { grid-template-columns: 220px 1fr; } .guide { position: fixed; right: 0; top: 52px; width: 300px; z-index: 35; box-shadow: var(--shadow-lg); } }
 @media (max-width: 900px) { .wiz { grid-template-columns: 1fr; } .wrail { position: static; display: flex; flex-wrap: wrap; gap: 4px; } .limitrow { grid-template-columns: 90px 1fr; } .limitrow .sk { grid-column: 1 / -1; } }
+
+/* v3: SCADA drawing, inspector, detect table, inherit lists, library grid */
+.warnink { color: var(--warn-ink, #8a6a2a); }
+.schemwrap { display: grid; grid-template-columns: 1fr; gap: 14px; align-items: start; }
+@media (min-width: 1500px) { .schemwrap { grid-template-columns: 1fr 280px; } }
+.schemscroll { overflow-x: auto; background: var(--white); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 10px; }
+.schem { display: block; font-family: var(--font); }
+.schem .zbg { fill: var(--layer-2); stroke: var(--line); }
+.schem .zbg.unmapped { stroke: var(--sev-minor); stroke-dasharray: 5 4; }
+.schem .zn { font-size: 11px; font-weight: 700; fill: var(--ink-2); letter-spacing: .04em; text-transform: uppercase; }
+.schem .grp { fill: none; stroke: var(--teal-ink); stroke-dasharray: 4 3; stroke-width: 1.2; }
+.schem .lk path { fill: none; stroke: var(--line-2); stroke-width: 2; }
+.schem .nd { cursor: pointer; outline: none; }
+.schem .nd rect { fill: var(--white); stroke: var(--line-2); stroke-width: 1.2; transition: stroke .12s; }
+.schem .nd:hover rect, .schem .nd:focus rect { stroke: var(--teal-ink); }
+.schem .nd.sel rect { stroke: var(--navy); stroke-width: 2; fill: var(--teal-tint); }
+.schem .nd.unmapped rect { stroke: var(--sev-minor); stroke-dasharray: 4 3; }
+.schem .nd .tag { font-family: var(--mono); font-size: 11.5px; font-weight: 600; fill: var(--ink); }
+.schem .nd .nm { font-size: 11px; fill: var(--ink-3); }
+.schem .nd .sn { font-family: var(--mono); font-size: 10px; fill: var(--ink-3); }
+.schem .nd .st { fill: var(--line-2); } .schem .nd .st.running { fill: var(--ok); }
+.insp { background: var(--white); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 12px 14px; font-size: 13px; position: sticky; top: 72px; }
+.insp .ih { display: flex; align-items: flex-start; gap: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--line); margin-bottom: 8px; }
+.insp .ih > div:first-child { flex: 1; }
+.insp .irow { display: grid; grid-template-columns: 96px 1fr; gap: 8px; padding: 6px 0; border-bottom: 1px dashed var(--line); }
+.insp .irow:last-child { border-bottom: 0; }
+.insp .irow > span:first-child { color: var(--ink-3); font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; padding-top: 2px; }
+.tbl tr.grp td { background: var(--layer-2); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-2); font-weight: 700; padding: 6px 14px; }
+.tbl tr.ask td { background: var(--warn-tint); }
+.tbl.detect select, .tbl select { max-width: 240px; padding: 6px 8px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--white); }
+.inh { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
+.inh .it { display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; }
+.inh .it .ic { width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 800; flex: none; background: var(--teal-tint); color: var(--teal-ink); }
+.inh .it.done .ic { background: var(--ok-tint); color: var(--ok); }
+.inh .it.done { color: var(--ink-3); }
+.inh .it.blocked .ic { background: var(--layer-2); color: var(--ink-3); }
+.libgrid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+.tree .tfoot { padding: 10px 12px; font-size: 11.5px; color: var(--ink-3); border-top: 1px solid var(--line); }
+.health .actions { margin-left: auto; align-self: center; }
+.libedit .row { display: grid; grid-template-columns: 1fr auto; gap: 8px 12px; align-items: center; padding: 8px 0; border-bottom: 1px dashed var(--line); }
+.libedit .row:last-child { border-bottom: 0; }
+.libedit .lims { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.libedit .lims label { font-size: 11px; color: var(--ink-3); display: block; }
+.libedit .lims input { width: 100%; padding: 6px 8px; border: 1px solid var(--line-2); border-radius: 6px; }
+@media (max-width: 1499px) { .insp { position: static; } }
+@media (max-width: 1100px) { .libgrid { grid-template-columns: 1fr; } }
