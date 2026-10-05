@@ -1,0 +1,369 @@
+/* The flows and root-cause library. Loaded after data.js and catalogue.js; replaces SEED.flows and
+   SEED.causes and binds flows to the library's standard sets, so every plant inherits them.
+
+   Two flow kinds (PRD §7.1): a DIAGNOSTIC flow asks questions until it reaches a root cause on a
+   subject; an ACTION flow is the numbered sequence that does the work — what a task runs, and what a
+   cause nominates as its fix. A root cause is estate-wide vocabulary scoped by unit process and
+   equipment TYPE, never a machine (PRD §7.4). A scheduled task carries a preassigned cause: the
+   failure the work prevents (PRD §5.9, tasks-list spec).
+
+   Sources: the handoff's procedure fixtures (Low DO, Backwash, Clear bar screen, MBR CIP, pH
+   correction, Blower inspection, Turbidity diagnostic, Daily logbook round), its root-cause library
+   and tree-editor specs, the PPM addendum, and standard STP/ETP/WTP operating practice. */
+(function () {
+  'use strict';
+  /* ── 1. Root causes ──────────────────────────────────────────────────────────────────────────
+     stage: unit-process profile id, or null with anyStage. types: the equipment types it can be
+     diagnosed on (empty = the unit process as a whole). fix: the action flow that resolves it.
+     sensorFault: closes the record as a sensor fault, never counted as a plant failure. */
+  const RC = (id, name, stage, types, fix, extra) => Object.assign({ id, name, stage, type: types[0] || null, types, fix: fix || null }, extra || {});
+  const CAUSES = [
+    /* inlet works */
+    RC('c_screen', 'Bar screen choked', 'inlet', ['Mechanical bar screen'], 'f_screen'),
+    RC('c_rake_drive', 'Rake drive fault or chain jammed', 'inlet', ['Mechanical bar screen'], 'f_screen_drive'),
+    RC('c_grit_full', 'Grit chamber full', 'inlet', ['Grit chamber'], 'f_grit_remove'),
+    RC('c_surge', 'Hydraulic surge at the inlet', 'inlet', [], 'f_surge_mgmt'),
+    RC('c_rag_wrap', 'Rags wrapped on the impeller', 'inlet', ['Submersible pump', 'Mixer', 'Progressive cavity pump'], 'f_pump_lift'),
+    RC('c_pump_seal', 'Mechanical seal failure', 'inlet', ['Submersible pump', 'Progressive cavity pump'], 'f_pump_lift'),
+    RC('c_pump_airlock', 'Air lock or lost prime', 'inlet', ['Submersible pump'], 'f_pump_prime'),
+    RC('c_level_switch', 'Level float stuck', 'inlet', ['Submersible pump', 'Equalisation tank'], 'f_float_check'),
+    /* balancing */
+    RC('c_flood_inflow', 'Inflow exceeds transfer capacity', 'bal', [], 'f_surge_mgmt'),
+    RC('c_mixer_off', 'Agitator stopped, tank stratified', 'bal', ['Mixer', 'Equalisation tank'], 'f_mixer_restart'),
+    RC('c_ph_shock', 'Acid or alkali shock load from upstream', 'bal', [], 'f_ph_corr'),
+    /* biological */
+    RC('c_blower_off', 'Duty blower off', 'bio', ['Centrifugal blower'], 'f_blower_changeover'),
+    RC('c_intake', 'Intake filter blocked', 'bio', ['Centrifugal blower', 'Air compressor'], 'f_blower'),
+    RC('c_belt', 'Belt slipping or worn', 'bio', ['Centrifugal blower'], 'f_blower_pm'),
+    RC('c_bearing_wear', 'Bearing wear', 'bio', ['Centrifugal blower', 'Submersible pump', 'Progressive cavity pump', 'Mixer', 'Screw press', 'DAF unit', 'Air compressor', 'Circular clarifier'], 'f_blower_pm'),
+    RC('c_trip', 'Motor overload trip', 'bio', ['Centrifugal blower', 'Submersible pump', 'Mixer', 'Screw press', 'Progressive cavity pump'], 'f_motor_trip'),
+    RC('c_diffuser', 'Diffuser fouling', 'bio', ['Aeration basin', 'MBBR reactor'], 'f_diffuser_clean'),
+    RC('c_bulking', 'Filamentous sludge bulking', 'bio', [], 'f_bulking_control'),
+    RC('c_underaer', 'Under-aeration: load exceeds blower capacity', 'bio', [], 'f_blower_step_up'),
+    RC('c_overload', 'Organic shock load', 'bio', [], 'f_shock_load'),
+    RC('c_toxic', 'Toxic inhibition, nitrification lost', 'bio', [], 'f_shock_load'),
+    RC('c_mlss_high', 'Insufficient sludge wasting', 'bio', [], 'f_sludge'),
+    RC('c_mlss_low', 'Biomass washout, wasting too high', 'bio', [], 'f_sludge_reduce'),
+    RC('c_foam', 'Nocardia foaming', 'bio', [], 'f_foam_control'),
+    RC('c_temp_high', 'High mixed-liquor temperature from influent', 'bio', [], null),
+    RC('c_media_loss', 'MBBR media carried over or retention screen blocked', 'bio', ['MBBR reactor'], 'f_mbbr_media'),
+    RC('c_anaerobic_souring', 'Digester souring, alkalinity lost', 'bio', ['Anaerobic tank'], 'f_digester_alk'),
+    /* separation */
+    RC('c_fouling', 'Membrane fouling', 'sep', ['Membrane bioreactor skid'], 'f_cip'),
+    RC('c_seal', 'Membrane seal or fibre breach', 'sep', ['Membrane bioreactor skid'], null),
+    RC('c_blanket', 'Return sludge rate too low', 'sep', ['Circular clarifier', 'Tube settler'], 'f_ras_adjust'),
+    RC('c_scraper', 'Scraper drive stalled', 'sep', ['Circular clarifier'], 'f_scraper_pm'),
+    RC('c_denit_float', 'Denitrification lifting sludge', 'sep', ['Circular clarifier', 'Tube settler'], 'f_ras_adjust'),
+    RC('c_tube_clog', 'Tube settler modules clogged', 'sep', ['Tube settler'], 'f_tube_clean'),
+    RC('c_daf_saturator', 'DAF saturator or air injection failed', 'sep', ['DAF unit'], 'f_daf_pm'),
+    RC('c_weir_uneven', 'Weir out of level, short-circuiting', 'sep', ['Circular clarifier'], null),
+    /* filtration */
+    RC('c_media_choked', 'Filter media choked, backwash overdue', 'filt', ['Multigrade filter'], 'f_backwash'),
+    RC('c_mudball', 'Mud balls or media loss', 'filt', ['Multigrade filter'], 'f_media_inspect'),
+    RC('c_backwash_valve', 'Backwash valves not sequencing', 'filt', ['Multigrade filter', 'Ultrafiltration skid'], 'f_valve_check'),
+    RC('c_uf_fouling', 'UF membrane fouling', 'filt', ['Ultrafiltration skid'], 'f_uf_cip'),
+    RC('c_uf_fibre', 'UF fibre breakage', 'filt', ['Ultrafiltration skid'], null),
+    RC('c_ro_scaling', 'RO scaling, antiscalant under-dosed', 'filt', ['RO skid'], 'f_ro_cip'),
+    RC('c_ro_biofoul', 'RO biofouling', 'filt', ['RO skid'], 'f_ro_cip'),
+    RC('c_cartridge', 'Cartridge filter exhausted', 'filt', ['Cartridge filter', 'RO skid'], 'f_cartridge_replace'),
+    RC('c_softener_exhaust', 'Softener resin exhausted', 'filt', ['Softener'], 'f_softener_regen'),
+    RC('c_feed_pump', 'Feed pump under-delivering', 'filt', ['Submersible pump', 'Ultrafiltration skid'], 'f_pump_lift'),
+    /* disinfection */
+    RC('c_hypo_empty', 'Hypo tank empty', 'dis', ['Hypochlorite dosing unit'], 'f_hypo_refill'),
+    RC('c_hypo_degraded', 'Hypo strength degraded by heat or age', 'dis', ['Hypochlorite dosing unit'], 'f_hypo_refill'),
+    RC('c_dosing_pump', 'Dosing pump lost prime or diaphragm failed', 'dis', ['Hypochlorite dosing unit'], 'f_dosing_pump_service'),
+    RC('c_cl_demand', 'Chlorine demand up: ammonia or organics in the outlet', 'dis', [], 'f_dose_adjust'),
+    RC('c_uv_lamp', 'UV lamp at end of life or sleeve fouled', 'dis', ['UV unit'], 'f_uv_lamp'),
+    RC('c_ozone_trip', 'Ozonator tripped on dew point', 'dis', ['Ozonator'], 'f_ozone_reset'),
+    RC('c_tonner_empty', 'Chlorine tonner empty', 'dis', ['Gas chlorinator'], 'f_tonner_change'),
+    /* sludge handling */
+    RC('c_poly_dose', 'Polymer dose wrong, poor flocculation', 'sludge', ['Screw press', 'Filter press'], 'f_poly_jar_test'),
+    RC('c_screen_blind', 'Press screen blinded', 'sludge', ['Screw press'], 'f_press_wash'),
+    RC('c_cloth', 'Filter cloth blinded or torn', 'sludge', ['Filter press'], 'f_cloth_change'),
+    RC('c_stator', 'Pump stator worn', 'sludge', ['Progressive cavity pump'], 'f_pc_pump_pm'),
+    RC('c_sludge_thin', 'Feed sludge too thin', 'sludge', [], 'f_sludge'),
+    RC('c_sludge_hold', 'Sludge held too long before dewatering', 'sludge', [], 'f_sludge'),
+    /* utilities */
+    RC('c_mcc_trip', 'Incomer trip or phase loss', 'util', ['Control panel (MCC)'], 'f_mcc_reset'),
+    RC('c_compressor_leak', 'Air leak, compressor cannot hold pressure', 'util', ['Air compressor'], 'f_compressor_pm'),
+    RC('c_ct_scale', 'Cooling tower fill scaled', 'util', ['Cooling tower'], 'f_ct_clean'),
+    /* any stage */
+    RC('c_probe', 'Probe drift — needs calibration', null, [], null, { anyStage: true, sensorFault: true }),
+    RC('c_probe_fouled', 'Probe fouled — needs cleaning', null, [], 'f_probe_clean', { anyStage: true, sensorFault: true }),
+    RC('c_power', 'Power failure or DG changeover', null, [], 'f_power_restore', { anyStage: true }),
+    RC('c_valve_closed', 'Isolation valve left closed', null, [], 'f_valve_check', { anyStage: true }),
+    RC('c_dosing_empty', 'Chemical tank empty', null, ['Dosing tank'], 'f_chem_refill', { anyStage: true }),
+    RC('c_no_fault', 'No fault found, reading verified normal', null, [], null, { anyStage: true, noFault: true }),
+  ];
+
+  /* ── 2. Action flows ─────────────────────────────────────────────────────────────────────────
+     A compact line per step: plain text = instruction · '!' photo required · '*' photo optional ·
+     '^' a Lead signs this step · '?' a yes/no the operator records · '#Kind|' a reading bound to the
+     machine's reading of that kind at inheritance · '#|' a number typed by hand · '~N|' a wait of N min.
+     use: pm · fix · round · calibration · condition  (how the Flows page groups them). */
+  const parseStep = (s, i) => { const st = { id: i + 1, type: 'instruction', text: s }; const m = s.match(/^([!*^?#~])(.*)$/); if (!m) return st; const rest = m[2]; if (m[1] === '!') { st.text = rest; st.photo = 'required'; } else if (m[1] === '*') { st.text = rest; st.photo = 'optional'; } else if (m[1] === '^') { st.text = rest; st.approve = true; } else if (m[1] === '?') { st.type = 'question'; st.text = rest; } else if (m[1] === '#') { st.type = 'reading'; const [kind, text] = rest.split('|'); st.sensorKind = kind || null; st.text = text; } else if (m[1] === '~') { st.type = 'wait'; const [n, text] = rest.split('|'); st.minutes = +n; st.text = text; } return st; };
+  const A = (id, name, forTypes, use, steps, extra) => Object.assign({ id, name, kind: 'action', forTypes, forType: forTypes[0] || null, forStage: null, use, version: 1, status: 'published', steps: steps.map(parseStep) }, extra || {});
+  const ACTION = [
+    /* blowers and aeration */
+    A('f_blower', 'Blower inspection and intake filter clean', ['Centrifugal blower'], 'fix', ['!Stop the blower and lock out at the MCC', 'Remove and inspect the intake filter', '?Is the filter element clean?', 'Clean with compressed air, or fit the spare element', 'Check belt tension by hand: 10 mm deflection, no glazing', '#Motor current|Restart and record the motor current', '!Remove the lock-out and confirm the blower is running'], { version: 3 }),
+    A('f_blower_pm', 'Blower bearing and belt service', ['Centrifugal blower'], 'pm', ['!Isolate at the MCC, lock out, hang the tag', 'Grease both bearings: 2 pumps each, wipe the excess', 'Check belt tension and alignment; replace a cracked or glazed belt', 'Check the coupling and the anti-vibration mounts', 'Clean the intake filter and the silencer', '#Line pressure|Restart and record the discharge pressure', '^Hand back to service; the Lead signs off']),
+    A('f_blower_changeover', 'Blower changeover, duty to standby', ['Centrifugal blower'], 'fix', ['Confirm the standby blower is in AUTO and its discharge valve is open', 'Start the standby from the panel and watch it come up to pressure', '~5|Let the header pressure settle', '#Line pressure|Record the header pressure with the standby running', 'Stop the duty blower and raise a repair issue if it did not start by itself']),
+    A('f_blower_step_up', 'Raise aeration one step and re-read DO', ['Aeration basin', 'MBBR reactor'], 'fix', ['Raise the blower output one step at the panel, or open the header valve one turn', '~20|Let the basin respond', '#Dissolved oxygen|Re-read DO at the probe location', '?Is DO back above 2 mg/L?', 'If not, start the standby blower and tell the Lead: the load may exceed capacity']),
+    A('f_motor_trip', 'Overload trip: inspect and reset', ['Centrifugal blower', 'Submersible pump', 'Mixer', 'Screw press', 'Progressive cavity pump'], 'fix', ['!Lock out at the MCC before touching the machine', 'Turn the shaft by hand; it must move freely without a grinding noise', 'Check the motor for heat, smell and water ingress', '?Did the shaft turn freely and the motor look sound?', 'Reset the overload relay once only; a second trip is a repair, not a reset', '#Motor current|Restart and record the current for two minutes']),
+    A('f_diffuser_clean', 'Diffuser inspection and acid clean', ['Aeration basin', 'MBBR reactor'], 'pm', ['Drop the basin level or isolate the grid to be inspected', '!Photograph the bubble pattern before cleaning', 'Inspect diffuser membranes for tearing, bulging and scale', 'Dose formic acid into the air line per the manufacturer card; keep air on', '~30|Let the acid work through the membranes', '!Return to level and photograph the bubble pattern after cleaning', '^Record membranes replaced; the Lead signs off']),
+    A('f_bulking_control', 'Filamentous bulking control', ['Aeration basin'], 'fix', ['Take a 1 L sample and run the SV30 test', '#|Record the SV30 settled volume (mL/L)', 'Check F:M: reduce wasting if MLSS is low, raise it if high', 'Dose hypochlorite to the return sludge line at 2 to 3 kg Cl₂ per tonne MLSS per day; never to the basin', '~1440|Hold the dose for one day', '#|Re-run SV30 and record the settled volume', '^The Lead decides whether to continue or stop']),
+    A('f_shock_load', 'Shock load response', ['Aeration basin'], 'fix', ['Divert or hold the inflow in the equalisation tank where possible', 'Start the standby blower; run both until DO recovers', 'Stop sludge wasting for 24 hours', '#Dissolved oxygen|Record DO every 2 hours until it holds above 2 mg/L', '^Tell the Lead and the client; they decide on sampling the source']),
+    A('f_foam_control', 'Foam control: skim and antifoam', ['Aeration basin'], 'fix', ['!Photograph the foam colour and depth', 'Skim the foam to the scum pit; do not return it to the basin', 'Spray antifoam at the foaming corner only, as per the dosing card', 'Raise wasting for three days to bring the sludge age down']),
+    A('f_sludge', 'Sludge wasting', ['Progressive cavity pump', 'Aeration basin'], 'round', ['Check the sludge holding tank has room', 'Open the WAS valve and start the pump', '~20|Run for 20 minutes', '#Run hours|Record the pump run hours', 'Close the valve and log the volume wasted']),
+    A('f_sludge_reduce', 'Reduce wasting and rebuild MLSS', ['Aeration basin'], 'fix', ['Halve the daily wasting time for one week', '#MLSS|Record MLSS daily', 'Return to normal wasting when MLSS is back in band']),
+    A('f_mbbr_media', 'MBBR media retention screen clear', ['MBBR reactor'], 'pm', ['!Lock out the blower and photograph the screen', 'Clear media and rags from the retention screen by hand', 'Check media is circulating evenly across the tank', 'Restart aeration and confirm the rolling pattern']),
+    A('f_digester_alk', 'Digester alkalinity correction', ['Anaerobic tank'], 'fix', ['Reduce the feed rate by half', 'Dose sodium bicarbonate per the dosing card', '~720|Let the digester recover', '#pH|Record pH and resume feed when above 6.8']),
+    A('f_desludge', 'Digester desludging', ['Anaerobic tank'], 'pm', ['Confirm the sludge tanker or drying bed has capacity', '!Open the bottom drain and photograph the sludge consistency', '~60|Drain to the marked level', 'Close the drain and flush the line', '^Log the volume removed; the Lead signs off']),
+    /* separation */
+    A('f_cip', 'MBR clean in place', ['Membrane bioreactor skid'], 'pm', ['Isolate the skid and drain the membrane tank', '!Prepare 500 ppm hypochlorite solution; gloves and goggles on', 'Backpulse the solution into the modules', '~60|Soak for 60 minutes', 'Drain to the EQ tank and rinse with permeate', '#Permeability|Record permeability after the clean', '^Return to service; the Lead signs off'], { version: 2 }),
+    A('f_ras_adjust', 'Return sludge rate adjustment', ['Circular clarifier', 'Tube settler'], 'fix', ['#Sludge blanket|Record the blanket depth now', 'Raise the RAS pump rate one step, or start the second RAS pump', '~120|Let the blanket respond', '#Sludge blanket|Re-read the blanket depth', '?Is the blanket back below 1 m?']),
+    A('f_scraper_pm', 'Clarifier scraper drive service', ['Circular clarifier'], 'pm', ['!Lock out the scraper drive', 'Check gearbox oil level and top up', 'Grease the centre bearing and the drive chain', 'Inspect the scraper blades and the squeegees for wear', '^Restart and confirm one full revolution without binding']),
+    A('f_tube_clean', 'Tube settler module cleaning', ['Tube settler'], 'pm', ['Lower the water level below the tube modules', '!Photograph the modules before cleaning', 'Hose the modules from above until the tubes run clear', 'Check modules for sagging or broken tubes', 'Refill slowly and confirm even flow over the launders']),
+    A('f_daf_pm', 'DAF saturator and scraper service', ['DAF unit'], 'pm', ['!Lock out the recycle pump and the scraper', 'Drain and inspect the saturator vessel; clear scale from the injection nozzle', 'Check the air regulator and the pressure gauge', 'Grease the scraper drive and check the flights', '#Motor current|Restart and record the scraper current']),
+    /* filtration */
+    A('f_backwash', 'Backwash filter', ['Multigrade filter'], 'condition', ['Close the inlet valve', 'Open the backwash valve and start the backwash pump', '~8|Backwash for 8 minutes', 'Rinse to drain for 4 minutes', '#Differential pressure|Record the differential pressure after rinse', '*Return the filter to service'], { version: 3 }),
+    A('f_media_inspect', 'Filter media inspection and top-up', ['Multigrade filter'], 'pm', ['Drain the filter to 10 cm above the media', '!Photograph the media surface: cracks, mud balls, uneven bed', 'Rake the top 5 cm and remove mud balls', 'Top up media to the marked level if it has dropped', 'Run two backwashes before returning to service']),
+    A('f_valve_check', 'Valve line-up check', [], 'fix', ['Walk the line from source to destination and check every valve position against the P&ID card', '!Photograph any valve found in the wrong position', 'Set each valve correctly and confirm flow', 'Log who last operated the valve, if known']),
+    A('f_uf_cip', 'UF chemically enhanced backwash', ['Ultrafiltration skid'], 'pm', ['Isolate the skid and run a normal backwash', '!Prepare the hypochlorite solution; gloves and goggles on', 'Backwash the solution into the modules and close the valves', '~30|Soak for 30 minutes', 'Flush to drain until residual chlorine is below 0.2 mg/L', '#Recovery|Return to production and record the recovery', '^The Lead signs off']),
+    A('f_ro_cip', 'RO membrane clean in place', ['RO skid'], 'pm', ['Shut down and flush with permeate', 'Prepare the low-pH clean (citric) to the card strength', 'Circulate for 30 minutes, then soak', '~60|Soak for one hour', 'Flush, then repeat with the high-pH clean if biofouling is suspected', '#Recovery|Return to service and record the recovery', '^The Lead signs off']),
+    A('f_cartridge_replace', 'Cartridge replacement', ['Cartridge filter', 'RO skid'], 'pm', ['Isolate the housing and vent the pressure', '!Open the housing and photograph the old cartridges', 'Fit new cartridges; check the O-ring seats', '#Differential pressure|Return to service and record the differential pressure']),
+    A('f_softener_regen', 'Softener regeneration', ['Softener'], 'condition', ['Check brine tank salt level; top up to the mark', 'Start the regeneration cycle from the controller', '~90|Let the cycle complete', 'Rinse until the outlet runs clear of brine', '#|Record outlet hardness (ppm as CaCO₃)', 'Reset the throughput counter']),
+    /* disinfection */
+    A('f_hypo_refill', 'Hypo tank refill', ['Hypochlorite dosing unit'], 'round', ['!Gloves, goggles and apron on; have water to hand', 'Check the drum date; hypo older than 30 days has lost strength', 'Transfer with the drum pump, never by pouring', '#Hypo tank level|Record the tank level after filling', 'Rinse the pump and store the drum out of the sun']),
+    A('f_dosing_pump_service', 'Dosing pump service', ['Hypochlorite dosing unit'], 'pm', ['!Isolate the suction and discharge valves; depressurise', 'Replace the diaphragm and the suction and discharge valve balls', 'Clean the foot valve and the strainer', 'Re-prime and check for leaks at the head', '#Residual chlorine|Return to service and record the outlet residual']),
+    A('f_dose_adjust', 'Chlorine dose adjustment with DPD check', ['Hypochlorite dosing unit', 'Gas chlorinator'], 'fix', ['#Residual chlorine|Record the outlet residual from the probe', '#|Test the outlet with the DPD kit and record the result (mg/L)', 'Raise the stroke or the feed rate one step', '~30|Let the contact tank turn over', '#|Re-test with the DPD kit and record']),
+    A('f_uv_lamp', 'UV lamp and sleeve replacement', ['UV unit'], 'pm', ['!Switch off, lock out and let the lamps cool for 10 minutes', 'Withdraw the lamp and the quartz sleeve', 'Clean the sleeve with the descaler, or replace it if etched', 'Fit the new lamp with gloves; never touch the glass', 'Reset the lamp-hours counter', '^Restart and confirm the intensity reading']),
+    A('f_ozone_reset', 'Ozonator reset and air dryer check', ['Ozonator'], 'fix', ['Check the air dryer dew point and drain the moisture trap', 'Reset the dew-point trip', 'Restart and watch the ozone output for five minutes', 'If it trips again, raise a repair issue']),
+    A('f_ozone_pm', 'Ozonator generator service', ['Ozonator'], 'pm', ['!Lock out the generator and the oxygen or air supply', 'Replace the air dryer desiccant and the filters', 'Check the cooling water flow and the dielectric cells', '^Restart and confirm output; the Lead signs off']),
+    A('f_tonner_change', 'Chlorine tonner change', ['Gas chlorinator'], 'round', ['!Two people, canister masks on, ammonia bottle ready for leak check', 'Close the tonner valve and let the chlorinator draw the line down', 'Disconnect the yoke and cap the empty tonner', 'Connect the full tonner with a new lead gasket', '!Open the valve a quarter turn and leak-check with the ammonia bottle', '#Residual chlorine|Return to service and record the outlet residual', '^The Lead signs off']),
+    A('f_chem_refill', 'Chemical tank refill', ['Dosing tank'], 'round', ['!Gloves and goggles on; check the chemical label matches the tank', 'Fill to the mark; never mix chemicals in one tank', '#Hypo tank level|Record the tank level after filling', 'Prime the dosing pump and check for leaks']),
+    A('f_ph_corr', 'pH correction dosing', ['Equalisation tank'], 'fix', ['Confirm the dosing pump is primed', '#pH|Read pH at the equalisation tank', 'Adjust the dosing rate one increment', '~15|Let the tank mix before re-reading', '#pH|Re-read pH and confirm it is trending back'], { version: 2 }),
+    A('f_mixer_restart', 'Agitator restart and inspection', ['Mixer', 'Equalisation tank'], 'fix', ['!Lock out and check the propeller for rags', 'Turn the shaft by hand', 'Reset and restart from the panel', '#Motor current|Record the current for two minutes']),
+    /* inlet works */
+    A('f_screen', 'Clear bar screen', ['Mechanical bar screen'], 'fix', ['Stop the rake and lock out', '!Rake screenings by hand into the skip', '#Level differential|Record the level differential after clearing', 'Restart the rake and confirm free travel'], { version: 2 }),
+    A('f_screen_inspect', 'Rake and screen inspection', ['Mechanical bar screen'], 'round', ['?Is the rake cycling and discharging into the skip?', '*Check the bar spacing for lodged debris', '#Level differential|Record the level differential', 'Empty the screenings skip if more than half full']),
+    A('f_screen_drive', 'Screen rake drive service', ['Mechanical bar screen'], 'pm', ['!Lock out the rake drive', 'Check chain tension and sprocket wear; grease the chain', 'Check the limit switches and the torque trip', 'Inspect the rake teeth and the wiper', '^Restart and confirm three full cycles']),
+    A('f_grit_remove', 'Grit removal', ['Grit chamber'], 'round', ['Isolate the chamber and drain to the grit level', '!Remove grit to the skip; photograph the fill level', 'Hose down and return to service']),
+    A('f_surge_mgmt', 'Hydraulic surge management', ['Equalisation tank'], 'fix', ['Open the bypass to the equalisation tank, or throttle the inlet gate', 'Start the standby transfer pump', '#Level|Record the tank level every 30 minutes until it falls', 'Tell the Lead if the level is still rising after two hours']),
+    A('f_pump_lift', 'Pump lift and inspect', ['Submersible pump', 'Progressive cavity pump'], 'pm', ['!Isolate at the MCC, lock out, and close the delivery valve', 'Lift the pump on the guide rails; two people', '!Clear rags from the impeller and photograph the impeller and the volute', 'Check the cable gland and the seal chamber oil for water', 'Grease or replace the seal per the card', 'Lower the pump and confirm it seats on the pedestal', '#Motor current|Restart and record the current']),
+    A('f_pump_prime', 'Pump priming and air release', ['Submersible pump'], 'fix', ['Stop the pump', 'Open the air release valve on the delivery until water runs', 'Restart and confirm delivery at the outfall', '#Motor current|Record the running current']),
+    A('f_float_check', 'Level float check', ['Submersible pump', 'Equalisation tank'], 'fix', ['Lift the float and confirm the pump starts', 'Clear rags from the float cable', '!Photograph the float position at the correct level']),
+    A('f_pc_pump_pm', 'PC pump stator and rotor check', ['Progressive cavity pump'], 'pm', ['!Isolate, lock out and drain the pump casing', 'Open the stator housing and check the stator for swelling and wear', 'Check the rotor and the coupling rod joints', 'Reassemble and grease the joints', '#Run hours|Restart and record the run hours']),
+    /* sludge */
+    A('f_poly_jar_test', 'Polymer dose jar test', ['Screw press', 'Filter press'], 'fix', ['Take 1 L of feed sludge in a jar', 'Add polymer in steps and stir; note the dose where flocs form and water clears', '#|Record the best dose (kg polymer per tonne dry solids)', 'Set the polymer pump to the new dose', '*Photograph the cake at the new dose']),
+    A('f_press_wash', 'Screw press screen wash', ['Screw press'], 'pm', ['!Stop the press and lock out', 'Run the screen wash cycle twice', 'Open the covers and hose the screen until the slots run clear', 'Check the screw flights for wear', '^Restart and confirm cake forming']),
+    A('f_cloth_change', 'Filter press cloth inspection and change', ['Filter press'], 'pm', ['!Depressurise the hydraulic ram and lock out', 'Open the plates and inspect each cloth for blinding and tears', 'Hose blinded cloths; replace torn ones', 'Check the plate alignment and the ram seals', '^Close up and run one cycle; the Lead signs off']),
+    /* utilities */
+    A('f_mcc_reset', 'MCC incomer inspection and reset', ['Control panel (MCC)'], 'fix', ['!Check all three phases on the incomer meter and photograph', 'Check the earth-fault and overload indications', 'Reset once only after the cause is known', 'Restart machines in order: pumps, blowers, dosing']),
+    A('f_mcc_thermal', 'MCC thermal and tightness inspection', ['Control panel (MCC)'], 'pm', ['!Thermal-image every busbar joint and breaker under load; photograph hot spots', 'Isolate, lock out and torque-check the joints found warm', 'Clean the panel filters and check the cooling fans', 'Check the earth bonding and the door interlocks', '^Close up; the Lead signs off']),
+    A('f_compressor_pm', 'Compressor service', ['Air compressor'], 'pm', ['!Isolate, lock out and vent the receiver', 'Change the oil and the oil filter; clean the intake filter', 'Drain the receiver and the moisture traps', 'Check belts and the safety valve', '#Line pressure|Restart and record the line pressure']),
+    A('f_ct_clean', 'Cooling tower fill and basin clean', ['Cooling tower'], 'pm', ['!Lock out the fan and the circulation pump', 'Drain the basin and remove sludge and scale', 'Hose the fill from above; replace collapsed fill', 'Check the fan belt and the gearbox oil', 'Refill, restart and confirm even water distribution']),
+    A('f_power_restore', 'Power restore and DG changeover check', [], 'fix', ['Confirm the DG has taken load, or the mains is back', 'Restart machines in order: pumps, blowers, dosing', '#|Record the outage duration (minutes)', 'Check every alert that paused during the outage has cleared']),
+    A('f_probe_clean', 'Probe cleaning', [], 'pm', ['Lift the probe and rinse with clean water', '*Wipe the sensing face with a soft cloth; photograph any damage', 'Return to position and wait five minutes', '#|Compare with a handheld reading and record the difference']),
+    /* calibration */
+    A('f_do_cal', 'DO probe calibration', ['Aeration basin', 'MBBR reactor'], 'calibration', ['Lift the probe, rinse and dry the membrane', 'Hold in water-saturated air for 10 minutes', '#|Record the saturation reading (% or mg/L) before adjustment', 'Set the span to saturation on the transmitter', '#|Record the reading after adjustment and return the probe']),
+    A('f_ph_cal', 'pH probe two-point calibration', ['Equalisation tank', 'Anaerobic tank'], 'calibration', ['Rinse the probe and place it in pH 7 buffer', '#|Record the reading in pH 7 buffer before adjustment', 'Set the zero, rinse, and place in pH 4 or pH 10 buffer', '#|Record the reading in the second buffer and set the slope', 'Replace the probe if the slope is below 85%']),
+    A('f_turb_cal', 'Turbidity meter calibration', ['Membrane bioreactor skid', 'Ultrafiltration skid'], 'calibration', ['Clean the cuvette or flow cell', '#|Record the reading in the formazin standard before adjustment', 'Set the span to the standard value', '#|Record the reading after adjustment']),
+    A('f_probe_cal', 'Probe calibration against reference', [], 'calibration', ['Clean the probe and take a reference sample', '#|Record the reference instrument reading', 'Adjust the transmitter to match the reference', '#|Record the reading after adjustment']),
+    /* rounds */
+    A('f_logbook', 'Daily logbook round', [], 'round', ['Collect the logbook tablet and check the handover notes', '#|Inlet works: record the totaliser flow (m³)', '?Bar screen: is the rake running and the channel clear?', '#Level|Equalisation tank: record the level', '#Dissolved oxygen|Aeration: record dissolved oxygen', 'Fill the settling cone to 1 litre', '~30|Let the sludge settle; carry on with the round', '#|Record the settled volume, SV30 (mL/L)', '#Sludge blanket|Clarifier: record the sludge blanket depth', '#Residual chlorine|Outlet: record residual chlorine', '!Outlet: take the sample and photograph it against the label', '*Record anything unusual: noise, smell, leaks'], { version: 4 }),
+    A('f_sv30', 'SV30 settling test', ['Aeration basin'], 'round', ['Fill the settling cone to 1 litre from the aeration tank', '~30|Let the sludge settle', '#|Record the settled volume (mL/L)', '?Is the supernatant clear?']),
+    A('f_frc_round', 'Outlet residual chlorine check', ['Hypochlorite dosing unit', 'Gas chlorinator'], 'round', ['#|Test the outlet with the DPD kit and record (mg/L)', '#Residual chlorine|Record the probe reading at the same time', '?Do the two agree within 0.1 mg/L?']),
+    A('f_inlet_round', 'Screenings and grit check', ['Mechanical bar screen', 'Grit chamber'], 'round', ['?Is the rake cycling and the channel clear?', '#|Record the screenings bins removed since the last round', '*Check the grit chamber fill and photograph if above the mark']),
+    A('f_sample', 'Compliance sample', [], 'round', ['Rinse the sample bottle three times with the outlet water', '!Fill, cap and photograph the bottle against the label with the time', 'Store in the cool box and hand to the courier before noon', '^Log the sample id; the Lead signs off']),
+    A('f_hooter_test', 'Hooter function test', [], 'round', ['Tell everyone on site a test is about to run', 'Trigger the hooter from the panel test button', '?Was it heard at the furthest point of the plant?', '^Log the test; the Lead signs off']),
+    A('f_housekeeping', 'Weekly housekeeping round', [], 'round', ['Walk every unit process; clear rags, spills and growth from walkways', '*Photograph anything left unsafe', 'Check every guard and handrail is in place', 'Check the chemical store: labels, bunds, eyewash']),
+    A('f_eq_clean', 'Equalisation tank cleaning', ['Equalisation tank'], 'pm', ['Pump the tank down during low inflow', '!Wash down the walls and remove grit from the floor; photograph before and after', 'Check the float switches and the mixer propeller', 'Return to service']),
+    A('f_tank_clean', 'Tank cleaning', ['Process tank', 'Dosing tank'], 'pm', ['Isolate and drain the tank', '!Wash down and remove sediment; photograph the floor', 'Check the level sensor and the drain valve', 'Refill and return to service']),
+    A('f_gearbox_pm', 'Gearbox and bearing service', ['Mixer'], 'pm', ['!Lock out the drive', 'Check gearbox oil level and top up', 'Grease the bearings', '#Motor current|Restart and record the current']),
+  ];
+
+  /* ── 3. Diagnostic flows ─────────────────────────────────────────────────────────────────────
+     q(id, text, yes, no) · r(id, text, kind, split, above, below): a destination is a step number or
+     a cause id. forStage lets an alert about the whole unit process use the flow too. */
+  const dest = (x) => typeof x === 'number' ? { t: 'step', id: x } : x ? { t: 'cause', id: x } : { t: 'open' };
+  const q = (id, text, yes, no, photo) => ({ id, type: 'question', text, photo: photo || undefined, answers: { Yes: dest(yes), No: dest(no) } });
+  const r = (id, text, kind, split, above, below) => ({ id, type: 'reading', text, sensorKind: kind, split, answers: { Above: dest(above), Below: dest(below) } });
+  const Dg = (id, name, forTypes, steps, extra) => Object.assign({ id, name, kind: 'diagnostic', forTypes, forType: forTypes[0] || null, forStage: null, use: 'diagnostic', version: 1, status: 'published', steps }, extra || {});
+  const DIAG = [
+    Dg('f_lowdo', 'Low DO diagnostic', ['Aeration basin'], [
+      q(1, 'Is the duty blower running?', 2, 'c_blower_off'),
+      r(2, 'Read the blower line pressure', 'Line pressure', 0.45, 3, 'c_intake'),
+      q(3, 'Is bubbling even across the basin?', 4, 'c_diffuser', 'optional'),
+      q(4, 'Is there thick brown foam on the surface?', 'c_foam', 5),
+      q(5, 'Does the SV30 settle below 400 mL/L?', 6, 'c_bulking'),
+      q(6, 'Does a handheld DO meter agree with the probe?', 7, 'c_probe'),
+      r(7, 'Read MLSS', 'MLSS', 4500, 'c_mlss_high', 'c_underaer') ], { version: 5, forStage: 'bio' }),
+    Dg('f_mbbr', 'MBBR low DO diagnostic', ['MBBR reactor'], [
+      q(1, 'Is the media rolling evenly across the tank?', 2, 'c_media_loss'),
+      q(2, 'Is the duty blower running?', 3, 'c_blower_off'),
+      q(3, 'Does a handheld DO meter agree with the probe?', 'c_diffuser', 'c_probe') ]),
+    Dg('f_turb', 'MBR turbidity and permeability diagnostic', ['Membrane bioreactor skid'], [
+      q(1, 'Is the permeate visibly cloudy in a clean jar?', 2, 4, 'required'),
+      q(2, 'Is only one train cloudy?', 3, 'c_fouling'),
+      q(3, 'Isolate that train. Does the seal face show damage?', 'c_seal', 'c_fouling', 'required'),
+      r(4, 'Read the trans-membrane pressure', 'Trans-membrane pressure', 0.4, 'c_fouling', 'c_probe') ], { version: 3 }),
+    Dg('f_blower_press', 'Blower line pressure high', ['Centrifugal blower'], [
+      q(1, 'Is the discharge valve and the header valve fully open?', 2, 'c_valve_closed'),
+      q(2, 'Is bubbling even across the basin?', 3, 'c_diffuser'),
+      q(3, 'Does the gauge on the blower agree with the SCADA reading?', 'c_diffuser', 'c_probe') ]),
+    Dg('f_blower_current', 'Blower motor current high', ['Centrifugal blower'], [
+      q(1, 'Is the intake filter clean?', 2, 'c_intake'),
+      r(2, 'Read the line pressure', 'Line pressure', 0.65, 'c_diffuser', 3),
+      q(3, 'Is the bearing hot or noisy?', 'c_bearing_wear', 'c_belt') ]),
+    Dg('f_blower_trip', 'Blower tripped', ['Centrifugal blower'], [
+      q(1, 'Is the MCC incomer healthy on all three phases?', 2, 'c_mcc_trip'),
+      q(2, 'Has the overload relay tripped?', 3, 'c_power'),
+      q(3, 'Was the motor hot or the bearing noisy before the trip?', 'c_bearing_wear', 'c_trip') ]),
+    Dg('f_rotating_current', 'Motor current high on a rotating machine', ['Mixer', 'Screw press', 'DAF unit', 'Progressive cavity pump'], [
+      q(1, 'Are rags or debris wrapped on the shaft or impeller?', 'c_rag_wrap', 2, 'optional'),
+      q(2, 'Is the bearing hot or noisy?', 'c_bearing_wear', 3),
+      q(3, 'Does a clamp meter agree with the panel reading?', 'c_trip', 'c_probe') ]),
+    Dg('f_pump_fail', 'Pump not delivering', ['Submersible pump'], [
+      q(1, 'Is the pump running at the panel?', 2, 4),
+      r(2, 'Read the motor current', 'Motor current', 10, 3, 'c_pump_airlock'),
+      q(3, 'Is the delivery valve open?', 'c_rag_wrap', 'c_valve_closed'),
+      q(4, 'Is the MCC incomer healthy?', 'c_level_switch', 'c_mcc_trip') ]),
+    Dg('f_screen_dh', 'Bar screen differential high', ['Mechanical bar screen'], [
+      q(1, 'Is the rake running?', 3, 2),
+      q(2, 'Has the rake drive tripped?', 'c_rake_drive', 'c_power'),
+      q(3, 'Is the skip full, or the rake not discharging?', 'c_screen', 4),
+      q(4, 'Is the channel overflowing from a surge?', 'c_surge', 'c_probe') ]),
+    Dg('f_blanket', 'Sludge blanket high', ['Circular clarifier', 'Tube settler'], [
+      q(1, 'Is the scraper turning?', 2, 'c_scraper'),
+      q(2, 'Is the RAS pump running at its normal rate?', 3, 'c_blanket'),
+      q(3, 'Are floating clumps with gas bubbles on the surface?', 'c_denit_float', 4, 'optional'),
+      q(4, 'Does the SV30 settle above 400 mL/L?', 'c_bulking', 'c_mlss_high') ], { forStage: 'sep' }),
+    Dg('f_eq_level', 'Tank level high', ['Equalisation tank', 'Process tank'], [
+      q(1, 'Are the transfer pumps running?', 2, 'c_level_switch'),
+      q(2, 'Is inflow unusually high: rain, or a batch discharge?', 'c_flood_inflow', 3),
+      q(3, 'Is the delivery valve open?', 'c_rag_wrap', 'c_valve_closed') ]),
+    Dg('f_sump_flood', 'Sump flooding', ['Equalisation tank'], [
+      q(1, 'Are the pumps running?', 'c_flood_inflow', 2),
+      q(2, 'Is the MCC incomer healthy?', 'c_level_switch', 'c_mcc_trip') ]),
+    Dg('f_ph', 'pH out of band', ['Equalisation tank'], [
+      q(1, 'Is the agitator running?', 2, 'c_mixer_off'),
+      q(2, 'Is the neutralisation chemical tank above 10%?', 3, 'c_dosing_empty'),
+      q(3, 'Does a handheld meter agree with the probe?', 'c_ph_shock', 'c_probe') ], { forStage: 'bal' }),
+    Dg('f_mlss', 'MLSS out of band', ['Aeration basin'], [
+      q(1, 'Does the SV30 settle above 400 mL/L?', 'c_bulking', 2),
+      q(2, 'Is MLSS above the target band?', 'c_mlss_high', 'c_mlss_low') ], { forStage: 'bio' }),
+    Dg('f_foam', 'Foaming on the basin', ['Aeration basin'], [
+      q(1, 'Is the foam thick, brown and greasy?', 'c_foam', 2, 'required'),
+      q(2, 'Is it white and billowing?', 'c_mlss_low', 'c_overload') ], { forStage: 'bio' }),
+    Dg('f_anaerobic', 'Digester pH low', ['Anaerobic tank'], [
+      q(1, 'Was the feed rate raised in the last week?', 'c_overload', 2),
+      q(2, 'Is alkalinity below 1000 mg/L on the kit?', 'c_anaerobic_souring', 'c_probe') ]),
+    Dg('f_mgf_dp', 'Filter differential pressure high', ['Multigrade filter'], [
+      q(1, 'Was the last backwash done on schedule?', 2, 'c_media_choked'),
+      q(2, 'Do the backwash valves sequence correctly?', 3, 'c_backwash_valve'),
+      q(3, 'Is the media surface cracked, or are there mud balls?', 'c_mudball', 'c_media_choked', 'optional') ]),
+    Dg('f_uf', 'UF recovery low or pressure high', ['Ultrafiltration skid'], [
+      q(1, 'Is the backwash or CEB running on its cycle?', 2, 'c_backwash_valve'),
+      q(2, 'Did the last integrity test pass?', 3, 'c_uf_fibre'),
+      r(3, 'Read the inlet pressure', 'Inlet pressure', 3.0, 'c_uf_fouling', 'c_feed_pump') ]),
+    Dg('f_ro', 'RO recovery low', ['RO skid'], [
+      q(1, 'Is the antiscalant tank above 10%?', 2, 'c_dosing_empty'),
+      q(2, 'Is the differential pressure across the stages high?', 3, 'c_cartridge'),
+      q(3, 'Has feed hardness or conductivity gone up?', 'c_ro_scaling', 'c_ro_biofoul') ]),
+    Dg('f_frc', 'Residual chlorine low', ['Hypochlorite dosing unit'], [
+      q(1, 'Is the hypo tank above 10%?', 2, 'c_hypo_empty'),
+      q(2, 'Is the dosing pump stroking?', 3, 'c_dosing_pump'),
+      q(3, 'Is the hypo older than 30 days, or stored in the sun?', 'c_hypo_degraded', 4),
+      q(4, 'Does the DPD kit agree with the probe?', 'c_cl_demand', 'c_probe') ], { forStage: 'dis' }),
+    Dg('f_gas_frc', 'Residual chlorine low, gas chlorinator', ['Gas chlorinator'], [
+      q(1, 'Is the tonner above 10% on the scale?', 2, 'c_tonner_empty'),
+      q(2, 'Is the ejector water pressure normal?', 3, 'c_valve_closed'),
+      q(3, 'Does the DPD kit agree with the probe?', 'c_cl_demand', 'c_probe') ]),
+    Dg('f_uv', 'UV lamp fault', ['UV unit'], [
+      q(1, 'Are the lamp hours past the rated life?', 'c_uv_lamp', 2),
+      q(2, 'Is the sleeve visibly fouled?', 'c_uv_lamp', 'c_power', 'optional') ]),
+    Dg('f_press', 'Poor cake or press overflowing', ['Screw press'], [
+      q(1, 'Do flocs form in the jar test?', 2, 'c_poly_dose'),
+      q(2, 'Are the screen slots blinded?', 'c_screen_blind', 3, 'optional'),
+      q(3, 'Is the feed sludge thin, below 1% solids?', 'c_sludge_thin', 'c_poly_dose') ]),
+    Dg('f_compressor', 'Air pressure low', ['Air compressor'], [
+      q(1, 'Is the compressor running?', 2, 'c_mcc_trip'),
+      q(2, 'Can you hear an air leak?', 'c_compressor_leak', 3),
+      q(3, 'Is the intake filter clogged?', 'c_intake', 'c_bearing_wear') ]),
+    Dg('f_ct', 'Cooling tower outlet temperature high', ['Cooling tower'], [
+      q(1, 'Is the fan running?', 2, 'c_mcc_trip'),
+      q(2, 'Is the fill scaled or blocked?', 'c_ct_scale', 'c_valve_closed', 'optional') ]),
+    Dg('f_daf', 'DAF scum carry-over', ['DAF unit'], [
+      q(1, 'Is the saturator pressure normal?', 2, 'c_daf_saturator'),
+      q(2, 'Do flocs form in the jar test?', 'c_bearing_wear', 'c_poly_dose') ]),
+    Dg('f_odour', 'Odour complaint', [], [
+      q(1, 'Is there a septic smell at the inlet or the equalisation tank?', 'c_mixer_off', 2),
+      q(2, 'Is aeration DO below 1 mg/L?', 'c_underaer', 3),
+      q(3, 'Has sludge been held more than three days?', 'c_sludge_hold', 'c_no_fault') ], { forStage: 'plant' }),
+    Dg('f_effluent', 'Outlet BOD or COD high', [], [
+      q(1, 'Is aeration DO holding above 2 mg/L?', 2, 'c_underaer'),
+      q(2, 'Is MLSS in band?', 3, 'c_mlss_low'),
+      q(3, 'Is the clarifier blanket below 1 m?', 4, 'c_blanket'),
+      q(4, 'Has the influent load gone up: an industrial discharge, a tanker?', 'c_overload', 'c_toxic') ], { forStage: 'plant' }),
+  ];
+
+  /* ── 4. Bind to the library: which flow an inherited alert opens, which flow a schedule runs,
+     and which cause a scheduled task logs against (the failure the work prevents). ─────────── */
+  const BIND = {
+    'Centrifugal blower': { alerts: { 'Line pressure high': { flow: 'f_blower_press' }, 'Motor current high': { flow: 'f_blower_current' }, 'Blower tripped': { flow: 'f_blower_trip' } }, schedules: { 'Bearing service': { flow: 'f_blower_pm', cause: 'c_bearing_wear' }, 'Clean intake filter': { flow: 'f_blower', cause: 'c_intake' } } },
+    'Aeration basin': { alerts: { 'DO low': { flow: 'f_lowdo' }, 'MLSS out of band': { flow: 'f_mlss' }, 'Temperature high': { cause: 'c_temp_high' } }, schedules: { 'DO probe calibration': { flow: 'f_do_cal' } } },
+    'MBBR reactor': { alerts: { 'DO low': { flow: 'f_mbbr' } }, schedules: { 'Media and diffuser inspection': { flow: 'f_mbbr_media', cause: 'c_media_loss' } } },
+    'Anaerobic tank': { alerts: { 'pH low': { flow: 'f_anaerobic' } }, schedules: { 'Desludging': { flow: 'f_desludge' } } },
+    'Equalisation tank': { alerts: { 'Level high': { flow: 'f_eq_level' }, 'pH out of band': { flow: 'f_ph' }, 'Sump flooding': { flow: 'f_sump_flood' } }, schedules: { 'Tank cleaning': { flow: 'f_eq_clean' } } },
+    'Process tank': { alerts: { 'Level high': { flow: 'f_eq_level' } }, schedules: { 'Tank cleaning': { flow: 'f_tank_clean' } } },
+    'Mechanical bar screen': { alerts: { 'Screen differential high': { flow: 'f_screen_dh' } }, schedules: { 'Weekly rake and screen inspection': { flow: 'f_screen_inspect', cause: 'c_rake_drive' } } },
+    'Grit chamber': { alerts: {}, schedules: { 'Grit removal': { flow: 'f_grit_remove', cause: 'c_grit_full' } } },
+    'Circular clarifier': { alerts: { 'Sludge blanket high': { flow: 'f_blanket' } }, schedules: { 'Scraper drive service': { flow: 'f_scraper_pm', cause: 'c_scraper' } } },
+    'Tube settler': { alerts: { 'Sludge blanket high': { flow: 'f_blanket' } }, schedules: { 'Tube module cleaning': { flow: 'f_tube_clean', cause: 'c_tube_clog' } } },
+    'Membrane bioreactor skid': { alerts: { 'Permeability falling': { flow: 'f_turb' }, 'Outlet turbidity high': { flow: 'f_turb' } }, schedules: { 'Quarterly CIP': { flow: 'f_cip', cause: 'c_fouling' } } },
+    'DAF unit': { alerts: { 'Motor current high': { flow: 'f_daf' } }, schedules: { 'Saturator and scraper service': { flow: 'f_daf_pm', cause: 'c_daf_saturator' } } },
+    'Multigrade filter': { alerts: { 'Backwash not keeping up': { flow: 'f_mgf_dp' } }, schedules: { 'Backwash when pressure builds': { flow: 'f_backwash', cause: 'c_media_choked' } } },
+    'Ultrafiltration skid': { alerts: { 'Recovery low': { flow: 'f_uf' }, 'Inlet pressure high': { flow: 'f_uf' } }, schedules: { 'Quarterly CIP': { flow: 'f_uf_cip', cause: 'c_uf_fouling' } } },
+    'RO skid': { alerts: { 'Recovery low': { flow: 'f_ro' }, 'Inlet pressure high': { flow: 'f_ro' } }, schedules: { 'Membrane CIP': { flow: 'f_ro_cip', cause: 'c_ro_scaling' } } },
+    'Softener': { alerts: {}, schedules: { 'Regenerate softener': { flow: 'f_softener_regen', cause: 'c_softener_exhaust' } } },
+    'Cartridge filter': { alerts: { 'Cartridge choked': { cause: 'c_cartridge' } }, schedules: { 'Cartridge replacement': { flow: 'f_cartridge_replace', cause: 'c_cartridge' } } },
+    'Hypochlorite dosing unit': { alerts: { 'Residual chlorine low': { flow: 'f_frc' }, 'Hypo tank low': { cause: 'c_hypo_empty' } }, schedules: { 'Dosing pump service': { flow: 'f_dosing_pump_service', cause: 'c_dosing_pump' }, 'Hypo tank refill': { flow: 'f_hypo_refill', cause: 'c_hypo_empty' } } },
+    'Dosing tank': { alerts: { 'Chemical tank low': { cause: 'c_dosing_empty' } }, schedules: { 'Chemical refill': { flow: 'f_chem_refill', cause: 'c_dosing_empty' } } },
+    'UV unit': { alerts: { 'UV lamp fault': { flow: 'f_uv' } }, schedules: { 'Lamp and sleeve replacement': { flow: 'f_uv_lamp', cause: 'c_uv_lamp' } } },
+    'Ozonator': { alerts: { 'Ozonator tripped': { cause: 'c_ozone_trip' } }, schedules: { 'Generator service': { flow: 'f_ozone_pm' } } },
+    'Gas chlorinator': { alerts: { 'Residual chlorine low': { flow: 'f_gas_frc' } }, schedules: { 'Tonner change': { flow: 'f_tonner_change', cause: 'c_tonner_empty' } } },
+    'Progressive cavity pump': { alerts: {}, schedules: { 'Stator and rotor check': { flow: 'f_pc_pump_pm', cause: 'c_stator' } } },
+    'Submersible pump': { alerts: { 'Motor current high': { flow: 'f_pump_fail' } }, schedules: { 'Bearing and seal service': { flow: 'f_pump_lift', cause: 'c_pump_seal' } } },
+    'Mixer': { alerts: { 'Motor current high': { flow: 'f_rotating_current' } }, schedules: { 'Gearbox and bearing service': { flow: 'f_gearbox_pm', cause: 'c_bearing_wear' } } },
+    'Screw press': { alerts: { 'Motor current high': { flow: 'f_rotating_current' } }, schedules: { 'Screw and screen service': { flow: 'f_press_wash', cause: 'c_screen_blind' } } },
+    'Filter press': { alerts: {}, schedules: { 'Hydraulic and cloth inspection': { flow: 'f_cloth_change', cause: 'c_cloth' } } },
+    'Air compressor': { alerts: { 'Air pressure low': { flow: 'f_compressor' } }, schedules: { 'Compressor service': { flow: 'f_compressor_pm', cause: 'c_compressor_leak' } } },
+    'Cooling tower': { alerts: { 'Outlet temperature high': { flow: 'f_ct' } }, schedules: { 'Fill and fan service': { flow: 'f_ct_clean', cause: 'c_ct_scale' } } },
+    'Control panel (MCC)': { alerts: { 'Incomer tripped': { cause: 'c_mcc_trip' } }, schedules: { 'Thermal and tightness inspection': { flow: 'f_mcc_thermal' } } },
+  };
+  /* Which calibration flow a probe gets, by what it reads. */
+  window.CAL_FLOWS = { 'Dissolved oxygen': 'f_do_cal', 'pH': 'f_ph_cal', 'Outlet turbidity': 'f_turb_cal' };
+  window.CAL_FLOW_DEFAULT = 'f_probe_cal';
+
+  /* ── 5. Install ─────────────────────────────────────────────────────────────────────────── */
+  const SEED = window.SEED;
+  SEED.flows = [...DIAG, ...ACTION];
+  SEED.causes = CAUSES;
+  /* Two alerts the library did not have: the screen's differential and the sump flood contact. */
+  const scr = SEED.standardSets.find((t) => t.type === 'Mechanical bar screen'); if (scr && !scr.alerts.length) scr.alerts.push({ name: 'Screen differential high', sensorKind: 'Level differential', direction: 'above', limits: { minor: 150, major: 300 } });
+  const eqt = SEED.standardSets.find((t) => t.type === 'Equalisation tank'); if (eqt && !eqt.alerts.some((a) => a.name === 'Sump flooding')) eqt.alerts.push({ name: 'Sump flooding', sensorKind: 'Sump flood switch', direction: 'above', limits: { emergency: 1 } });
+  SEED.standardSets.forEach((t) => { const b = BIND[t.type]; if (!b) return; t.alerts.forEach((a) => { const x = b.alerts[a.name]; if (x) { if (x.flow) a.flow = x.flow; if (x.cause) a.cause = x.cause; } }); t.schedules.forEach((s) => { const x = b.schedules[s.name]; if (x) { if (x.flow) s.flow = x.flow; if (x.cause) s.cause = x.cause; } }); });
+  /* Unit-process and plant rounds run a flow too. */
+  const UPF = { 'Screenings and grit check': 'f_inlet_round', 'SV30 settling test': 'f_sv30', 'Outlet residual chlorine check': 'f_frc_round', 'Sludge wasting': 'f_sludge' };
+  window.UP_PROFILES.forEach((p) => p.rounds.forEach((r2) => { if (UPF[r2.name]) r2.flow = UPF[r2.name]; }));
+  const PF = { 'Daily logbook round': 'f_logbook', 'Monthly compliance sample': 'f_sample', 'Weekly bacteriological sample': 'f_sample', 'Hooter function test': 'f_hooter_test', 'Weekly housekeeping round': 'f_housekeeping' };
+  Object.values(window.PLANT_PROFILES).forEach((p) => p.rounds.forEach((r2) => { if (PF[r2.name]) r2.flow = PF[r2.name]; }));
+  /* The sample plant's own records point at the richer library. */
+  SEED.schedules.forEach((s) => { if (s.name === 'Bearing service') { s.flow = 'f_blower_pm'; s.cause = 'c_bearing_wear'; } if (s.name === 'Quarterly CIP') s.cause = 'c_fouling'; if (s.name === 'Weekly backwash') s.cause = 'c_media_choked'; if (s.name === 'Monthly compliance sample') s.flow = 'f_sample'; if (s.name === 'Hooter function test') s.flow = 'f_hooter_test'; if (s.name === 'Sludge wasting') s.flow = 'f_sludge'; });
+  SEED.conditionWork.forEach((w) => { if (w.name === 'Backwash when pressure builds') w.cause = 'c_media_choked'; if (w.name === 'Clean intake filter') w.cause = 'c_intake'; });
+  SEED.alerts.forEach((a) => { if (a.name.startsWith('Line pressure high')) a.flow = 'f_blower_press'; if (a.name.startsWith('Sludge blanket high')) a.flow = 'f_blanket'; if (a.name.startsWith('Residual chlorine low')) a.flow = 'f_frc'; if (a.name.startsWith('Backwash not keeping up')) a.flow = 'f_mgf_dp'; if (a.name.startsWith('Sump flooding')) a.flow = 'f_sump_flood'; if (a.name.startsWith('MLSS high')) a.flow = 'f_mlss'; });
+  /* Reading steps in the sample plant's flows bind to its real sensors where the kind matches. */
+  const bindOn = { f_lowdo: 'at2', f_logbook: null };
+  SEED.flows.forEach((f) => f.steps.forEach((st) => { if (st.type !== 'reading' || st.sensor || !st.sensorKind) return; const home = bindOn[f.id]; const s = SEED.sensors.find((x) => x.name === st.sensorKind && (!home || x.on === 'eq:' + home)); if (s && f.id === 'f_logbook') st.sensor = s.id; }));
+})();
