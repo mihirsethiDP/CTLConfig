@@ -168,6 +168,19 @@ body.guide-open .body { grid-template-columns: 220px minmax(0, 1fr) 300px; }
 .pchip.skipped .n { border-style: dashed; }
 .pchip .c { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); }
 .home-foot { margin-top: 18px; font-size: 12.5px; color: var(--ink-3); }
+/* escalation step: a timeline and the override box */
+.tl { position: relative; margin: 4px 0 4px 6px; padding-left: 18px; border-left: 2px solid var(--line-2); }
+.tl .r { position: relative; display: grid; grid-template-columns: 150px 1fr; gap: 10px; padding: 7px 0; font-size: 13px; }
+.tl .r::before { content: ""; position: absolute; left: -24px; top: 12px; width: 10px; height: 10px; border-radius: 50%; background: var(--white); border: 2px solid var(--teal-ink); }
+.tl .r:first-child::before { background: var(--teal-ink); }
+.tl .r .w { font-weight: 700; color: var(--ink-2); }
+.tl .r .p { color: var(--ink); }
+.ovbox { margin-top: 12px; padding: 12px 14px; border: 1px dashed var(--teal); background: var(--teal-tint); border-radius: var(--r-md); }
+.ovbox > .t { font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+.ovbox > .t .hint { margin-left: auto; font-size: 12px; font-weight: 400; color: var(--ink-3); }
+.ovbox input[type=number], .ovbox input[type=time] { padding: 6px 8px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--white); }
+.ovbox .f.inline { margin-bottom: 4px; }
+@media (max-width: 900px) { .tl .r { grid-template-columns: 1fr; gap: 2px; } }
 /* flows page */
 .flowbar { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
 .flowbar input { flex: 1; min-width: 200px; max-width: 320px; padding: 7px 10px; border: 1px solid var(--line-2); border-radius: 8px; }
