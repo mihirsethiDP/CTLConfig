@@ -184,6 +184,38 @@ body.guide-open .body { grid-template-columns: 220px minmax(0, 1fr) 300px; }
 .covline { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
 .covline .kpi .l { margin-top: 2px; }
 @media (max-width: 900px) { .covline { grid-template-columns: 1fr; } }
+.sevgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.sevgrid > div .sev { margin-bottom: 4px; }
+@media (max-width: 900px) { .sevgrid { grid-template-columns: 1fr 1fr; } }
+/* equipment tree: plant › unit process › (pair ›) machine */
+.tree2 .plant { display: flex; align-items: center; gap: 8px; padding: 12px 12px; font-weight: 700; cursor: pointer; border-bottom: 1px solid var(--line); }
+.tree2 .plant .lv { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); font-weight: 700; }
+.tree2 .plant .nm { flex: 1; }
+.tree2 .up { display: flex; align-items: center; gap: 6px; padding: 9px 10px 9px 10px; font-weight: 600; cursor: pointer; border-top: 1px solid var(--line); }
+.tree2 .up .car { width: 14px; font-size: 11px; color: var(--ink-3); text-align: center; border-radius: 4px; }
+.tree2 .up .car:hover { background: var(--line); color: var(--ink); }
+.tree2 .up .nm { flex: 1; }
+.tree2 .up .cnt { font-size: 11px; color: var(--ink-3); font-weight: 400; white-space: nowrap; }
+.tree2 .kids { margin-left: 18px; border-left: 2px solid var(--line-2); padding: 2px 0 6px; }
+.tree2 .kids .kids { margin-left: 14px; }
+.tree2 .eqn { position: relative; display: flex; align-items: center; gap: 6px; padding: 6px 8px 6px 12px; cursor: pointer; font-size: 13px; }
+.tree2 .eqn::before { content: ""; position: absolute; left: -2px; top: 50%; width: 10px; height: 2px; background: var(--line-2); }
+.tree2 .eqn .nm { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tree2 .eqn .tg { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); }
+.tree2 .eqn.grp { font-weight: 600; }
+.tree2 .eqn.grp .nm::before { content: "⇄ "; color: var(--ink-3); font-weight: 400; }
+.tree2 .du { font-size: 10px; color: var(--ink-3); border: 1px solid var(--line-2); border-radius: 4px; padding: 0 4px; }
+.tree2 .du.warn { color: var(--warn-ink); border-color: var(--sev-minor); }
+.tree2 .plant:hover, .tree2 .up:hover, .tree2 .eqn:hover { background: var(--layer-2); }
+.tree2 .sel { background: var(--teal-tint) !important; color: var(--teal-ink); }
+.tree2 .bz { display: inline-flex; align-items: center; gap: 5px; margin-left: auto; flex: none; }
+.tree2 .b { font-family: var(--mono); font-size: 10.5px; line-height: 16px; min-width: 16px; text-align: center; padding: 0 5px; border-radius: 999px; }
+.tree2 .b.iss { background: var(--sev-emergency); color: #fff; font-weight: 600; }
+.tree2 .b.al { color: var(--ink-3); background: var(--layer-2); }
+.tree2 .sdot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.tree2 .sdot.ok { background: var(--ok); } .tree2 .sdot.gap { background: var(--sev-minor); } .tree2 .sdot.none { background: var(--line-2); }
+.tree2 .legend { padding: 8px 12px 10px; font-size: 11px; color: var(--ink-3); border-top: 1px solid var(--line); line-height: 1.7; }
+.tree2 .legend .b, .tree2 .legend .sdot { display: inline-block; vertical-align: middle; }
 /* flows page */
 .flowbar { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
 .flowbar input { flex: 1; min-width: 200px; max-width: 320px; padding: 7px 10px; border: 1px solid var(--line-2); border-radius: 8px; }
