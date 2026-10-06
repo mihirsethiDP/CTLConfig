@@ -181,6 +181,9 @@ body.guide-open .body { grid-template-columns: 220px minmax(0, 1fr) 300px; }
 .ovbox input[type=number], .ovbox input[type=time] { padding: 6px 8px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--white); }
 .ovbox .f.inline { margin-bottom: 4px; }
 @media (max-width: 900px) { .tl .r { grid-template-columns: 1fr; gap: 2px; } }
+.covline { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.covline .kpi .l { margin-top: 2px; }
+@media (max-width: 900px) { .covline { grid-template-columns: 1fr; } }
 /* flows page */
 .flowbar { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
 .flowbar input { flex: 1; min-width: 200px; max-width: 320px; padding: 7px 10px; border: 1px solid var(--line-2); border-radius: 8px; }
