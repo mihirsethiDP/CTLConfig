@@ -187,6 +187,12 @@ body.guide-open .body { grid-template-columns: 220px minmax(0, 1fr) 300px; }
 .sevgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
 .sevgrid > div .sev { margin-bottom: 4px; }
 @media (max-width: 900px) { .sevgrid { grid-template-columns: 1fr 1fr; } }
+/* review step checklist */
+.chk .r { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 10px; align-items: start; padding: 7px 0; border-bottom: 1px dashed var(--line); font-size: 13px; }
+.chk .r:last-child { border-bottom: 0; }
+.chk .ic { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 800; color: #fff; }
+.chk .ic.ok { background: var(--ok); } .chk .ic.warn { background: var(--sev-minor); color: var(--ink); } .chk .ic.err { background: var(--sev-emergency); }
+.chk .r a { white-space: nowrap; }
 /* workflows step rows */
 .wfrow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; align-items: center; padding: 8px 0; border-bottom: 1px dashed var(--line); }
 .wfrow:last-child { border-bottom: 0; }
