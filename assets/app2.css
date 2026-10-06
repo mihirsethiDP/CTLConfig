@@ -187,6 +187,14 @@ body.guide-open .body { grid-template-columns: 220px minmax(0, 1fr) 300px; }
 .sevgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
 .sevgrid > div .sev { margin-bottom: 4px; }
 @media (max-width: 900px) { .sevgrid { grid-template-columns: 1fr 1fr; } }
+/* workflows step rows */
+.wfrow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; align-items: center; padding: 8px 0; border-bottom: 1px dashed var(--line); }
+.wfrow:last-child { border-bottom: 0; }
+.wfrow .wfl b { font-size: 13px; }
+.wfrow .wfr { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.wfrow select { max-width: 250px; padding: 5px 8px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--white); font-size: 12.5px; }
+.wfrow select.saving { opacity: .5; }
+@media (max-width: 900px) { .wfrow { grid-template-columns: 1fr; } .wfrow .wfr { justify-content: flex-start; } }
 /* equipment tree: plant › unit process › (pair ›) machine */
 .tree2 .plant { display: flex; align-items: center; gap: 8px; padding: 12px 12px; font-weight: 700; cursor: pointer; border-bottom: 1px solid var(--line); }
 .tree2 .plant .lv { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); font-weight: 700; }
