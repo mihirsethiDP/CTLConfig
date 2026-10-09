@@ -366,6 +366,97 @@ window.SCADA_SAMPLES.vedanta = { name: 'Vedanta ETP', type: 'ETP', capacity: '20
     { id: 'pv_dc', tag: 'DC-1', label: 'Decant to settler', from: ['v_sbr'], to: ['v_ts1'], sensors: [] },
     { id: 'pv_sl1', tag: 'SL-1', label: 'Sludge to pump', from: ['v_ts1'], to: ['v_sp1'], sensors: [] },
     { id: 'pv_sl2', tag: 'SL-2', label: 'Sludge to press', from: ['v_sp1'], to: ['v_fp1'], sensors: [] } ] };
+/* Three more sample drawings: an MBBR-based STP, a DAF-and-RO effluent plant, a surface-water WTP.
+   Rudrapur arrives fully inherited and live; Pithampur partly inherited; Jhajjar is left for the
+   "connect a new plant" demo. Each drawing carries at least one deliberate state: a suction with
+   a level reading, an air header without a widget, two outlets the type cannot tell apart. */
+window.SCADA_SAMPLES.rudrapur = { name: 'Rudrapur STP', type: 'STP', capacity: '5 MLD', drawn: '2026-09-26', zones: [
+    { id: 'r1', name: 'Inlet works' }, { id: 'r2', name: 'Equalisation' }, { id: 'r3', name: 'MBBR' }, { id: 'r4', name: 'Tube settler' }, { id: 'r5', name: 'Tertiary and UV' }, { id: 'r6', name: 'Sludge dewatering' } ],
+  equipment: [
+    { id: 'r_bs1', tag: 'BS-1', label: 'Mechanical screen', scadaType: 'MECHANICAL_SCREEN', zone: 'r1', sensors: [{ tag: 'DH', widget: 'NUMBER_SENSOR', reading: 55 }] },
+    { id: 'r_gc1', tag: 'GC-1', label: 'Grit chamber', scadaType: 'GRIT_CHAMBER', zone: 'r1', sensors: [] },
+    { id: 'r_eq1', tag: 'EQ-1', label: 'Equalisation tank', scadaType: 'OS_TANK', zone: 'r2', sensors: [{ tag: 'LVL', widget: 'LEVEL_SENSOR', reading: 54 }, { tag: 'PH', widget: 'NUMBER_SENSOR', reading: 7.1 }] },
+    { id: 'r_p1', tag: 'TP-1', label: 'Transfer pump 1', scadaType: 'SUB_PMP', zone: 'r2', sensors: [{ tag: 'AMP', widget: 'chart.knob', reading: 18 }, { tag: 'HRS', widget: 'NUMBER_SENSOR', reading: 5100 }] },
+    { id: 'r_p2', tag: 'TP-2', label: 'Transfer pump 2', scadaType: 'SUB_PMP', zone: 'r2', sensors: [{ tag: 'AMP', widget: 'chart.knob', reading: 0 }, { tag: 'HRS', widget: 'NUMBER_SENSOR', reading: 2300 }] },
+    { id: 'r_mb1', tag: 'MBBR-1', label: 'MBBR reactor 1', scadaType: 'MBBR', zone: 'r3', sensors: [{ tag: 'DO', widget: 'NUMBER_SENSOR', reading: 2.6 }] },
+    { id: 'r_mb2', tag: 'MBBR-2', label: 'MBBR reactor 2', scadaType: 'MBBR', zone: 'r3', sensors: [{ tag: 'DO', widget: 'NUMBER_SENSOR', reading: 2.2 }] },
+    { id: 'r_bl1', tag: 'BL-1', label: 'Blower 1', scadaType: 'BLW', zone: 'r3', sensors: [{ tag: 'PRESS', widget: 'chart.knob', reading: 0.55 }, { tag: 'AMP', widget: 'chart.knob', reading: 41 }, { tag: 'TRIP', widget: 'SWITCH_SENSOR', reading: 0 }, { tag: 'HRS', widget: 'NUMBER_SENSOR', reading: 14200 }] },
+    { id: 'r_bl2', tag: 'BL-2', label: 'Blower 2', scadaType: 'BLW', zone: 'r3', sensors: [{ tag: 'PRESS', widget: 'chart.knob', reading: 0 }, { tag: 'AMP', widget: 'chart.knob', reading: 0 }, { tag: 'HRS', widget: 'NUMBER_SENSOR', reading: 6100 }] },
+    { id: 'r_ts1', tag: 'TS-1', label: 'Tube settler', scadaType: 'T_SETTLER', zone: 'r4', sensors: [{ tag: 'BLK', widget: 'NUMBER_SENSOR', reading: 0.6 }] },
+    { id: 'r_mgf1', tag: 'MGF-1', label: 'Multigrade filter', scadaType: 'ACF_MGF', zone: 'r5', sensors: [{ tag: 'DP', widget: 'NUMBER_SENSOR', reading: 0.6 }] },
+    { id: 'r_uv1', tag: 'UV-1', label: 'UV unit', scadaType: 'UV', zone: 'r5', sensors: [{ tag: 'TRIP', widget: 'SWITCH_SENSOR', reading: 0 }] },
+    { id: 'r_sp1', tag: 'SP-1', label: 'Sludge pump', scadaType: 'PMP', zone: 'r6', sensors: [{ tag: 'HRS', widget: 'NUMBER_SENSOR', reading: 760 }] },
+    { id: 'r_scp1', tag: 'SCP-1', label: 'Screw press', scadaType: 'SC_PRESS', zone: 'r6', sensors: [{ tag: 'AMP', widget: 'chart.knob', reading: 9 }, { tag: 'HRS', widget: 'NUMBER_SENSOR', reading: 410 }] },
+    { id: 'r_v1', tag: 'V-3', label: 'Two way Valve', scadaType: 'VALVE_2', zone: 'r2', sensors: [] } ],
+  pipes: [
+    { id: 'pr_in', tag: 'IN-1', label: 'Inlet channel', from: ['r_bs1'], to: ['r_gc1'], sensors: [{ tag: 'FLOW', widget: 'NUMBER_SENSOR', reading: 205 }] },
+    { id: 'pr_gc', tag: 'IN-2', label: 'Degritted channel', from: ['r_gc1'], to: ['r_eq1'], sensors: [] },
+    { id: 'pr_su1', tag: 'SU-1', label: 'Suction, TP-1', from: ['r_eq1'], to: ['r_p1'], sensors: [] },
+    { id: 'pr_su2', tag: 'SU-2', label: 'Suction, TP-2', from: ['r_eq1'], to: ['r_p2'], sensors: [] },
+    { id: 'pr_dh', tag: 'DH-1', label: 'Transfer header', from: ['r_p1', 'r_p2'], to: ['r_mb1', 'r_mb2'], sensors: [{ tag: 'PRESS', widget: 'chart.knob', reading: 1.6 }, { tag: 'FLOW', widget: 'NUMBER_SENSOR', reading: 198 }] },
+    { id: 'pr_air', tag: 'AH-1', label: 'Air header', from: ['r_bl1', 'r_bl2'], to: ['r_mb1', 'r_mb2'], sensors: [{ tag: 'PRESS', widget: 'chart.knob', reading: 0.54 }] },
+    { id: 'pr_ml', tag: 'ML-1', label: 'To the settler', from: ['r_mb1', 'r_mb2'], to: ['r_ts1'], sensors: [] },
+    { id: 'pr_cl', tag: 'CL-1', label: 'Clarified water', from: ['r_ts1'], to: ['r_mgf1'], sensors: [{ tag: 'FLOW', widget: 'NUMBER_SENSOR', reading: 190 }] },
+    { id: 'pr_ft', tag: 'FT-1', label: 'Filtered water', from: ['r_mgf1'], to: ['r_uv1'], sensors: [{ tag: 'PRESS', widget: 'chart.knob', reading: 1.4 }, { tag: 'TURB', widget: 'NUMBER_SENSOR', reading: 1.1 }] },
+    { id: 'pr_out', tag: 'OUT-1', label: 'Treated water outlet', from: ['r_uv1'], to: [], sensors: [{ tag: 'FLOW', widget: 'NUMBER_SENSOR', reading: 188 }] },
+    { id: 'pr_sl1', tag: 'SL-1', label: 'Sludge to pump', from: ['r_ts1'], to: ['r_sp1'], sensors: [] },
+    { id: 'pr_sl2', tag: 'SL-2', label: 'Sludge to press', from: ['r_sp1'], to: ['r_scp1'], sensors: [{ tag: 'PRESS', widget: 'chart.knob', reading: 2.1 }] } ] };
+window.SCADA_SAMPLES.pithampur = { name: 'Pithampur ETP', type: 'ETP', capacity: '500 KLD', drawn: '2026-10-06', zones: [
+    { id: 'q1', name: 'Collection sump' }, { id: 'q2', name: 'Pre-treatment and DAF' }, { id: 'q3', name: 'Aeration' }, { id: 'q4', name: 'Secondary clarifier' }, { id: 'q5', name: 'Polishing and RO' }, { id: 'q6', name: 'Sludge' } ],
+  equipment: [
+    { id: 'q_sump', tag: 'CS-1', label: 'Collection sump', scadaType: 'OS_TANK_SP', zone: 'q1', sensors: [{ tag: 'LVL', widget: 'LEVEL_SENSOR', reading: 44 }, { tag: 'FLOOD', widget: 'SWITCH_SENSOR', reading: 0 }] },
+    { id: 'q_p1', tag: 'P-1', label: 'Sump pump 1', scadaType: 'SUB_PMP', zone: 'q1', sensors: [{ tag: 'AMP', widget: 'chart.knob', reading: 9 }, { tag: 'HRS', widget: 'NUMBER_SENSOR', reading: 2800 }] },
+    { id: 'q_p2', tag: 'P-2', label: 'Sump pump 2', scadaType: 'SUB_PMP', zone: 'q1', sensors: [{ tag: 'AMP', widget: 'chart.knob', reading: 0 }, { tag: 'HRS', widget: 'NUMBER_SENSOR', reading: 900 }] },
+    { id: 'q_fm1', tag: 'FM-1', label: 'Flash mixer', scadaType: 'FLASH_MIXER', zone: 'q2', sensors: [{ tag: 'AMP', widget: 'chart.knob', reading: 4 }] },
+    { id: 'q_ct1', tag: 'CT-1', label: 'Coagulant tank', scadaType: 'DOS_TANK', zone: 'q2', sensors: [{ tag: 'TLVL', widget: 'LEVEL_SENSOR', reading: 62 }] },
+    { id: 'q_daf1', tag: 'DAF-1', label: 'DAF unit', scadaType: 'DAF', zone: 'q2', sensors: [{ tag: 'AMP', widget: 'chart.knob', reading: 12 }] },
+    { id: 'q_at1', tag: 'AT-1', label: 'Aeration tank', scadaType: 'OS_TANK_DF', zone: 'q3', sensors: [{ tag: 'DO', widget: 'NUMBER_SENSOR', reading: 1.9 }, { tag: 'MLSS', widget: 'NUMBER_SENSOR', reading: 3100 }] },
+    { id: 'q_bl1', tag: 'BL-1', label: 'Blower 1', scadaType: 'BLW', zone: 'q3', sensors: [{ tag: 'PRESS', widget: 'chart.knob', reading: 0.49 }, { tag: 'AMP', widget: 'chart.knob', reading: 22 }, { tag: 'HRS', widget: 'NUMBER_SENSOR', reading: 7700 }] },
+    { id: 'q_bl2', tag: 'BL-2', label: 'Blower 2', scadaType: 'BLW', zone: 'q3', sensors: [{ tag: 'PRESS', widget: 'chart.knob', reading: 0 }, { tag: 'HRS', widget: 'NUMBER_SENSOR', reading: 3100 }] },
+    { id: 'q_cl1', tag: 'SC-1', label: 'Secondary clarifier', scadaType: 'CLARIFIER', zone: 'q4', sensors: [{ tag: 'BLK', widget: 'NUMBER_SENSOR', reading: 0.8 }] },
+    { id: 'q_cf1', tag: 'CF-1', label: 'Cartridge filter', scadaType: 'CARTRIDGE_FILTER', zone: 'q5', sensors: [{ tag: 'DP', widget: 'NUMBER_SENSOR', reading: 0.4 }] },
+    { id: 'q_ro1', tag: 'RO-1', label: 'RO skid', scadaType: 'RO', zone: 'q5', sensors: [{ tag: 'REC', widget: 'NUMBER_SENSOR', reading: 70 }, { tag: 'PIN', widget: 'chart.knob', reading: 9.8 }] },
+    { id: 'q_sp1', tag: 'SP-1', label: 'Sludge pump', scadaType: 'PMP', zone: 'q6', sensors: [{ tag: 'HRS', widget: 'NUMBER_SENSOR', reading: 380 }] },
+    { id: 'q_fp1', tag: 'FP-1', label: 'Filter press', scadaType: 'F_PRESS', zone: 'q6', sensors: [{ tag: 'HRS', widget: 'NUMBER_SENSOR', reading: 290 }] } ],
+  pipes: [
+    { id: 'pq_su1', tag: 'SU-1', label: 'Suction, P-1', from: ['q_sump'], to: ['q_p1'], sensors: [] },
+    { id: 'pq_su2', tag: 'SU-2', label: 'Suction, P-2', from: ['q_sump'], to: ['q_p2'], sensors: [] },
+    { id: 'pq_dh', tag: 'DH-1', label: 'Pump discharge header', from: ['q_p1', 'q_p2'], to: ['q_fm1'], sensors: [{ tag: 'PRESS', widget: 'chart.knob', reading: 1.1 }] },
+    { id: 'pq_cg', tag: 'CG-1', label: 'Coagulant line', from: ['q_ct1'], to: ['q_fm1'], sensors: [] },
+    { id: 'pq_fm', tag: 'FD-1', label: 'To DAF', from: ['q_fm1'], to: ['q_daf1'], sensors: [{ tag: 'FLOW', widget: 'NUMBER_SENSOR', reading: 21 }] },
+    { id: 'pq_daf', tag: 'FD-2', label: 'To aeration', from: ['q_daf1'], to: ['q_at1'], sensors: [{ tag: 'FLOW', widget: 'NUMBER_SENSOR', reading: 20 }] },
+    { id: 'pq_air', tag: 'AH-1', label: 'Air header', from: ['q_bl1', 'q_bl2'], to: ['q_at1'], sensors: [] },
+    { id: 'pq_ml', tag: 'ML-1', label: 'Mixed liquor', from: ['q_at1'], to: ['q_cl1'], sensors: [] },
+    { id: 'pq_cl', tag: 'CL-1', label: 'Clarified water', from: ['q_cl1'], to: ['q_cf1'], sensors: [{ tag: 'FLOW', widget: 'NUMBER_SENSOR', reading: 19 }] },
+    { id: 'pq_cf', tag: 'FT-1', label: 'Filtered water', from: ['q_cf1'], to: ['q_ro1'], sensors: [{ tag: 'PRESS', widget: 'chart.knob', reading: 3.1 }] },
+    { id: 'pq_perm', tag: 'PM-1', label: 'RO permeate', from: ['q_ro1'], to: [], sensors: [{ tag: 'FLOW', widget: 'NUMBER_SENSOR', reading: 13 }] },
+    { id: 'pq_rej', tag: 'RJ-1', label: 'RO reject', from: ['q_ro1'], to: [], sensors: [{ tag: 'FLOW', widget: 'NUMBER_SENSOR', reading: 6 }] },
+    { id: 'pq_sl1', tag: 'SL-1', label: 'Sludge to pump', from: ['q_cl1'], to: ['q_sp1'], sensors: [] },
+    { id: 'pq_sl2', tag: 'SL-2', label: 'Sludge to press', from: ['q_sp1'], to: ['q_fp1'], sensors: [] } ] };
+window.SCADA_SAMPLES.jhajjar = { name: 'Jhajjar WTP', type: 'WTP', capacity: '3 MLD', drawn: '2026-10-08', zones: [
+    { id: 'j1', name: 'Intake' }, { id: 'j2', name: 'Clarification' }, { id: 'j3', name: 'Filtration and softening' }, { id: 'j4', name: 'Chlorination' } ],
+  equipment: [
+    { id: 'j_p1', tag: 'RW-1', label: 'Raw water pump 1', scadaType: 'SUB_PMP', zone: 'j1', sensors: [{ tag: 'AMP', widget: 'chart.knob', reading: 24 }, { tag: 'HRS', widget: 'NUMBER_SENSOR', reading: 8800 }] },
+    { id: 'j_p2', tag: 'RW-2', label: 'Raw water pump 2', scadaType: 'SUB_PMP', zone: 'j1', sensors: [{ tag: 'AMP', widget: 'chart.knob', reading: 0 }, { tag: 'HRS', widget: 'NUMBER_SENSOR', reading: 4100 }] },
+    { id: 'j_fm1', tag: 'FM-1', label: 'Flash mixer', scadaType: 'FLASH_MIXER', zone: 'j2', sensors: [{ tag: 'AMP', widget: 'chart.knob', reading: 3 }] },
+    { id: 'j_ts1', tag: 'TS-1', label: 'Tube settler', scadaType: 'T_SETTLER', zone: 'j2', sensors: [{ tag: 'BLK', widget: 'NUMBER_SENSOR', reading: 0.4 }] },
+    { id: 'j_mgf1', tag: 'MGF-1', label: 'Multigrade filter 1', scadaType: 'ACF_MGF', zone: 'j3', sensors: [{ tag: 'DP', widget: 'NUMBER_SENSOR', reading: 0.5 }] },
+    { id: 'j_mgf2', tag: 'MGF-2', label: 'Multigrade filter 2', scadaType: 'ACF_MGF', zone: 'j3', sensors: [{ tag: 'DP', widget: 'NUMBER_SENSOR', reading: 0.9 }] },
+    { id: 'j_sf1', tag: 'SF-1', label: 'Softener', scadaType: 'SOFTNER', zone: 'j3', sensors: [{ tag: 'THR', widget: 'NUMBER_SENSOR', reading: 6100 }] },
+    { id: 'j_cf1', tag: 'CF-1', label: 'Cartridge filter', scadaType: 'CARTRIDGE_FILTER', zone: 'j3', sensors: [{ tag: 'DP', widget: 'NUMBER_SENSOR', reading: 0.3 }] },
+    { id: 'j_ro1', tag: 'RO-1', label: 'RO skid', scadaType: 'RO', zone: 'j3', sensors: [{ tag: 'REC', widget: 'NUMBER_SENSOR', reading: 74 }, { tag: 'PIN', widget: 'chart.knob', reading: 10.5 }] },
+    { id: 'j_dp1', tag: 'DP-1', label: 'Hypo dosing pump', scadaType: 'D_PMP', zone: 'j4', sensors: [{ tag: 'FRC', widget: 'NUMBER_SENSOR', reading: 0.4 }, { tag: 'HRS', widget: 'NUMBER_SENSOR', reading: 700 }] },
+    { id: 'j_dt1', tag: 'DT-1', label: 'Hypo tank', scadaType: 'DOS_TANK', zone: 'j4', sensors: [{ tag: 'TLVL', widget: 'LEVEL_SENSOR', reading: 51 }] } ],
+  pipes: [
+    { id: 'pj_dh', tag: 'RW-H', label: 'Raw water header', from: ['j_p1', 'j_p2'], to: ['j_fm1'], sensors: [{ tag: 'PRESS', widget: 'chart.knob', reading: 2.4 }, { tag: 'FLOW', widget: 'NUMBER_SENSOR', reading: 128 }] },
+    { id: 'pj_fm', tag: 'FD-1', label: 'To the settler', from: ['j_fm1'], to: ['j_ts1'], sensors: [] },
+    { id: 'pj_cl', tag: 'CL-1', label: 'Clarified water', from: ['j_ts1'], to: ['j_mgf1', 'j_mgf2'], sensors: [{ tag: 'TURB', widget: 'NUMBER_SENSOR', reading: 2.8 }] },
+    { id: 'pj_ft', tag: 'FT-1', label: 'Filtered water header', from: ['j_mgf1', 'j_mgf2'], to: ['j_sf1'], sensors: [{ tag: 'PRESS', widget: 'chart.knob', reading: 1.7 }, { tag: 'FLOW', widget: 'NUMBER_SENSOR', reading: 124 }] },
+    { id: 'pj_sf', tag: 'SW-1', label: 'Soft water', from: ['j_sf1'], to: ['j_cf1'], sensors: [] },
+    { id: 'pj_cf', tag: 'SW-2', label: 'To RO', from: ['j_cf1'], to: ['j_ro1'], sensors: [{ tag: 'PRESS', widget: 'chart.knob', reading: 3.4 }] },
+    { id: 'pj_perm', tag: 'PM-1', label: 'RO permeate', from: ['j_ro1'], to: ['j_dp1'], sensors: [{ tag: 'FLOW', widget: 'NUMBER_SENSOR', reading: 90 }] },
+    { id: 'pj_out', tag: 'OUT-1', label: 'Treated water outlet', from: ['j_dp1'], to: [], sensors: [{ tag: 'FRC', widget: 'NUMBER_SENSOR', reading: 0.4 }] },
+    { id: 'pj_ds', tag: 'DS-1', label: 'Hypo line', from: ['j_dt1'], to: ['j_dp1'], sensors: [] } ] };
 /* Every sample also carries plain links, derived from its pipes, for anything that only needs the graph. */
 Object.values(window.SCADA_SAMPLES).forEach((sc) => { sc.links = []; sc.pipes.forEach((p) => p.from.forEach((a) => p.to.forEach((b) => sc.links.push([a, b])))); });
 /* What SCADA hands over later, when an engineer draws something new: a third blower on the
@@ -374,6 +465,9 @@ Object.values(window.SCADA_SAMPLES).forEach((sc) => { sc.links = []; sc.pipes.fo
 window.SCADA_DELTAS = {
   vedanta: { what: 'FP-2, a second filter press', equipment: [{ id: 'v_fp2', tag: 'FP-2', label: 'Filter press 2', scadaType: 'F_PRESS', zone: 'v6', sensors: [{ tag: 'HRS', widget: 'NUMBER_SENSOR', reading: 0 }] }], pipes: [{ id: 'pv_sl3', tag: 'SL-3', label: 'Sludge to press 2', from: ['v_sp1'], to: ['v_fp2'], sensors: [] }] },
   manesar: { what: 'BL-3, a third blower on the aeration header', equipment: [{ id: 'bl3', tag: 'BL-3', label: 'Blower 3', scadaType: 'BLW', zone: 'bio', sensors: [{ tag: 'PRESS', widget: 'chart.knob', reading: 0.57 }, { tag: 'AMP', widget: 'chart.knob', reading: 36 }, { tag: 'TRIP', widget: 'SWITCH_SENSOR', reading: 0 }, { tag: 'HRS', widget: 'NUMBER_SENSOR', reading: 12 }] }], pipes: [{ id: 'pp_air', from: ['bl3'] }] },
+  rudrapur: { what: 'TP-3, a third transfer pump on the header', equipment: [{ id: 'r_p3', tag: 'TP-3', label: 'Transfer pump 3', scadaType: 'SUB_PMP', zone: 'r2', sensors: [{ tag: 'AMP', widget: 'chart.knob', reading: 0 }, { tag: 'HRS', widget: 'NUMBER_SENSOR', reading: 0 }] }], pipes: [{ id: 'pr_su3', tag: 'SU-3', label: 'Suction, TP-3', from: ['r_eq1'], to: ['r_p3'], sensors: [] }, { id: 'pr_dh', from: ['r_p3'] }] },
+  pithampur: { what: 'a pressure transmitter on the air header', equipment: [], pipes: [{ id: 'pq_air', sensors: [{ tag: 'PRESS', widget: 'chart.knob', reading: 0.5 }] }] },
+  jhajjar: { what: 'RO-2, a second RO skid', equipment: [{ id: 'j_ro2', tag: 'RO-2', label: 'RO skid 2', scadaType: 'RO', zone: 'j3', sensors: [{ tag: 'REC', widget: 'NUMBER_SENSOR', reading: 0 }, { tag: 'PIN', widget: 'chart.knob', reading: 0 }] }], pipes: [{ id: 'pj_cf', to: ['j_ro2'] }, { id: 'pj_perm2', tag: 'PM-2', label: 'RO-2 permeate', from: ['j_ro2'], to: ['j_dp1'], sensors: [{ tag: 'FLOW', widget: 'NUMBER_SENSOR', reading: 0 }] }] },
   bawal: { what: 'P-3, a third raw-water pump', equipment: [{ id: 'sc_p3', tag: 'P-3', label: 'Raw water pump 3', scadaType: 'SUB_PMP', zone: 'z1', sensors: [{ tag: 'AMP', widget: 'chart.knob', reading: 0 }, { tag: 'HRS', widget: 'NUMBER_SENSOR', reading: 0 }] }], pipes: [{ id: 'pb_su3', tag: 'SU-3', label: 'Suction, P-3', from: ['sc_bs1'], to: ['sc_p3'], sensors: [] }, { id: 'pb_dh', from: ['sc_p3'] }] },
 };
 Object.values(window.SCADA_DELTAS).forEach((dl) => { dl.links = []; dl.pipes.forEach((p) => (p.from || []).forEach((a) => (p.to || []).forEach((b) => dl.links.push([a, b])))); });

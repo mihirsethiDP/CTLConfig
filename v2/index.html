@@ -67,7 +67,7 @@
   <div class="eyebrow">CloseTheLoop · Configuration · Proposal · v2</div>
   <h1>A machine is configured with what it is joined to.</h1>
   <p class="sub">v1 configured each machine as an island: its own readings, its own alerts, a diagnostic flow that assumed the plant's shape. v2 adds the machine's <b>connections</b> (its discharge pipe, the tank it draws from, its standby), declared by the type, filled from SCADA, confirmed by a person; and replaces diagnostic flows with <b>fix flows that read each plant through those connections</b>. Everything else from v1 stands, and v1 itself is untouched one level up.</p>
-  <div class="meta"><span>9 October 2026</span><span>Mihir Sethi, with Claude</span><span>Bawal WTP and Manesar STP as the worked examples</span></div>
+  <div class="meta"><span>9 October 2026</span><span>Mihir Sethi, with Claude</span><span>Five plants in the estate, a sixth to connect</span></div>
   <div class="cta"><a class="p" href="prototype.html">Open the v2 prototype →</a><a class="s" href="#gap">Read the brainstorm</a><a class="s" href="../index.html">The v1 proposal</a></div>
 </div></div>
 
@@ -228,7 +228,8 @@
 <tr><td>Step 4 · Inherit</td><td>Blocked items: "needs a reading from SCADA"</td><td>Blocked items also say "on its discharge pipe (DH-1)" and why: not drawn, choose first, or no widget on it. A shared header's alert inherits once, about the pair.</td></tr>
 <tr><td>Step 5 · Limits and alerts</td><td>The machine's readings</td><td>Plus the readings on its connections, grouped under it; alerts about its pair listed with it</td></tr>
 <tr><td>Step 8 · Workflows</td><td>Diagnostic per alert, action per schedule</td><td>Fix flow per alert, read on this machine, with the count of skipped steps; action per schedule; causes recorded, not reached</td></tr>
-<tr><td>Equipment page</td><td>Readings, alerts, schedules, work, details</td><td>Plus Connections, first when something needs choosing: four states, the readings on each, what waits on it, Choose or Change</td></tr>
+<tr><td>Equipment tab</td><td>One plant: a tree on the left, the selected thing on the right</td><td>The whole estate as cards, three levels deep: every plant, then a plant's own items and its unit processes, then a unit process's own items and its machines. What is configured at a level sits at that level. A machine opens its own page with a breadcrumb back.</td></tr>
+<tr><td>Machine page</td><td>Readings, alerts, schedules, work, details</td><td>Plus Connections, first when something needs choosing: four states, the readings on each, what waits on it, Choose or Change</td></tr>
 <tr><td>Alert sheet</td><td>Readings on the machine; a diagnostic to open</td><td>Readings on the machine and on its connections; a fix flow to run, previewed as it reads here; gates on the neighbourhood</td></tr>
 <tr><td>Flow editor</td><td>Diagnostic and action flows</td><td>Action flows only, with connection tokens, "only where", readings on a connection, and a read-on-this-machine preview</td></tr>
 <tr><td>Operator app</td><td>Diagnose, then fix, "I know the reason", "That's not it"</td><td>Fix straight away with the plant's tags; skipped steps named; "What was it?" at close; the card shows readings on connections</td></tr>
@@ -239,6 +240,8 @@
 
 <h2 id="howto">Try it</h2>
 <ul>
+  <li><b>The estate as cards.</b> Equipment opens on every plant: Bawal WTP, Vedanta ETP, Rudrapur STP (live, fully inherited), Pithampur ETP (half inherited), Manesar STP (the sample being set up). Open one: its own rounds, milestones, people and SCADA facts sit at the top, its unit processes below as cards. Open a unit process: its own rounds, alerts and pairs at the top, its machines below. Open a machine: everything on it, with the breadcrumb and its neighbours in the strip. Opening a plant's cards switches the whole console to that plant.</li>
+  <li><b>A sixth plant to connect.</b> Help → "Add a new plant from SCADA" → <b>Jhajjar WTP</b>: two raw-water pumps on one header, a settler, two filters on one filtered-water header, a softener, an RO skid, hypo dosing. Watch the connections resolve in step 3, then "Demo" and "Read SCADA again" adds RO-2 and the RO's permeate line becomes a choice.</li>
   <li><b>The choose state.</b> Switch to <b>Bawal WTP</b> in the top bar. Set up → step 3 shows "1 needs a choice": UF-1's permeate line. Or open Equipment → UF Membrane: the Connections section is first, "SCADA draws PM-1 and BW-1; which is its permeate line?". Choose PM-1; the toast says one library item can inherit now; the Inherit banner offers "Permeate flow low".</li>
   <li><b>A reading on a connection.</b> Equipment → Raw water pump 1: Discharge pipe is DH-1 from SCADA with its pressure and flow; "Discharge pressure low — Raw water pump group" is on the pair. Suction is the screen chamber, with no level widget, so "Suction tank empty" waits for one.</li>
   <li><b>The not-drawn state.</b> Switch to <b>Vedanta ETP</b>. Sump pump 1: Suction is Not drawn, with "Choose by hand"; the dialog offers what SCADA drew as joined first and the rest of the plant after. Blower 1: the air header is drawn but has no pressure widget, so "Header pressure high" says so.</li>

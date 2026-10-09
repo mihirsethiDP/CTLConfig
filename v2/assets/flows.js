@@ -190,6 +190,8 @@
     A('f_pump_stop', 'Suction tank empty: stop the pump', ['Submersible pump', 'Progressive cavity pump'], 'fix', ['!Stop the pump before it runs dry', 'Check the level float in {{suction}} by hand', '@standby Confirm the standby ({{standby}}) is also stopped', 'Restart when the level is back above the stop float', '#suction.Level|Record the level in {{suction}}']),
     A('f_blower_header', 'Header pressure high: find the restriction', ['Centrifugal blower'], 'fix', ['Check every drop valve on {{header}} is open to {{basins}}', '?Is bubbling even across the basins?', 'Open the blow-off valve one turn to relieve the header', '@standby Stop the standby ({{standby}}) if both are running into one header', 'Inspect the diffuser lines for a closed isolation valve', '#header.Line pressure|Record the pressure on {{header}} after the change']),
     A('f_uf_fix', 'Low permeate: check feed and backwash', ['Ultrafiltration skid', 'RO skid'], 'fix', ['#feed.Line pressure|Record the feed pressure on {{feed}}', '?Is the feed pump running?', 'Run a manual backwash and a forward flush', '#permeate.Flow|Record the permeate flow on {{permeate}} after the flush', 'If still low, bring the CIP forward and tell the Lead']),
+    A('f_integrity_test', 'Membrane integrity test', ['Membrane bioreactor skid', 'Ultrafiltration skid', 'RO skid'], 'fix', ['Isolate the skid and drain the permeate side', 'Pressurise the feed side with air to the test pressure on the card', '~5|Hold and watch the decay', '#|Record the pressure decay (bar over 5 min)', '?Is the decay inside the limit on the card?', 'Pin the leaking module or fibre and plug it per the manufacturer card', '^Return to service; the Lead signs off']),
+    A('f_weir_level', 'Level the weir and stop the short-circuit', ['Circular clarifier', 'Tube settler'], 'fix', ['!Photograph the overflow along the full weir length', 'Find the low side: where flow is heaviest', 'Loosen the plates and re-level with a water level, 2 mm end to end', 'Clear algae and scale from the notches', '!Photograph the overflow after levelling']),
     A('f_mbr_fix', 'Permeate falling: relax and check', ['Membrane bioreactor skid'], 'fix', ['Stop permeation and relax the membranes', '~10|Let the membranes relax', 'Check the air scour is on and even across the tank', '#permeate.Flow|Record the permeate flow on {{permeate}} after relaxation', 'If still low, bring the CIP forward and tell the Lead']),
   ];
 
@@ -241,6 +243,8 @@
   const SEED = window.SEED;
   SEED.flows = [...ACTION];
   SEED.causes = CAUSES;
+  /* v2: causes that had no fix flow get the generic one. */
+  SEED.causes.forEach((c) => { if (!c.fix && !c.sensorFault && !c.noFault) c.fix = { c_seal: 'f_integrity_test', c_uf_fibre: 'f_integrity_test', c_weir_uneven: 'f_weir_level', c_temp_high: 'f_shock_load' }[c.id] || c.fix; });
   /* Two alerts the library did not have: the screen's differential and the sump flood contact. */
   const scr = SEED.standardSets.find((t) => t.type === 'Mechanical bar screen'); if (scr && !scr.alerts.length) scr.alerts.push({ name: 'Screen differential high', sensorKind: 'Level differential', direction: 'above', limits: { minor: 150, major: 300 } });
   const eqt = SEED.standardSets.find((t) => t.type === 'Equalisation tank'); if (eqt && !eqt.alerts.some((a) => a.name === 'Sump flooding')) eqt.alerts.push({ name: 'Sump flooding', sensorKind: 'Sump flood switch', direction: 'above', limits: { emergency: 1 } });
