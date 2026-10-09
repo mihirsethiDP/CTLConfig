@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CloseTheLoop Configuration — Proposal v2</title>
+<meta name="description" content="v2: a machine is configured with what it is joined to. Named connections declared by the type, filled from SCADA, confirmed by a person; fix flows that read each plant through its connections.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/app.css?v=6">
+<link rel="stylesheet" href="assets/theme-calm.css?v=6">
+<style>
+  body { background: var(--paper); }
+  .doc-top { background: var(--navy); color: #fff; padding: 44px 0 40px; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+  .doc-top .eyebrow { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--teal-deco); font-weight: 700; }
+  .doc-top h1 { font-size: 36px; line-height: 1.15; margin: 10px 0 8px; letter-spacing: -.02em; }
+  .doc-top .sub { font-size: 17px; color: rgba(255,255,255,.8); max-width: 66ch; }
+  .doc-top .meta { margin-top: 18px; font-size: 13px; color: rgba(255,255,255,.65); display: flex; gap: 18px; flex-wrap: wrap; }
+  .doc-top .cta { margin-top: 22px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .doc-top .cta a { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 8px; font-weight: 700; text-decoration: none; }
+  .doc-top .cta a.p { background: var(--teal); color: var(--navy); }
+  .doc-top .cta a.s { border: 1px solid rgba(255,255,255,.4); color: #fff; }
+  .layout { display: grid; grid-template-columns: 220px 1fr; gap: 40px; padding-top: 32px; }
+  .toc { position: sticky; top: 20px; align-self: start; font-size: 13px; }
+  .toc a { display: block; padding: 5px 0; color: var(--ink-2); border-left: 2px solid transparent; padding-left: 10px; }
+  .toc a:hover { color: var(--teal-ink); text-decoration: none; border-color: var(--teal); }
+  .toc .eyebrow { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); padding: 0 0 6px 12px; }
+  article { max-width: 78ch; font-size: 15.5px; line-height: 1.6; padding-bottom: 80px; }
+  article h2 { font-size: 24px; margin: 46px 0 12px; letter-spacing: -.02em; padding-top: 8px; }
+  article h2:first-of-type { margin-top: 8px; }
+  article h3 { font-size: 16.5px; margin: 26px 0 8px; }
+  article p { margin: 0 0 12px; }
+  article ul, article ol { margin: 0 0 14px; padding-left: 22px; }
+  article li { margin-bottom: 6px; }
+  article table { border-collapse: collapse; width: 100%; font-size: 13.5px; margin: 10px 0 18px; background: #fff; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  article th { text-align: left; background: var(--layer-2); padding: 8px 10px; font-size: 11.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); }
+  article td { padding: 8px 10px; border-top: 1px solid var(--line); vertical-align: top; }
+  article code { font-family: var(--mono); font-size: 12.5px; background: var(--layer-2); padding: 1px 5px; border-radius: 4px; }
+  .lines { counter-reset: n; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 8px 0; margin: 12px 0 22px; }
+  .lines div { counter-increment: n; display: grid; grid-template-columns: 34px 1fr; gap: 8px; padding: 8px 16px; border-bottom: 1px solid var(--line); }
+  .lines div:last-child { border-bottom: 0; }
+  .lines div::before { content: counter(n); font-family: var(--mono); color: var(--teal-ink); font-weight: 600; }
+  .callout { border-left: 4px solid var(--teal); background: var(--teal-tint); padding: 12px 16px; border-radius: 0 10px 10px 0; margin: 14px 0 18px; font-size: 14.5px; }
+  .callout.warn { border-color: var(--sev-minor); background: var(--warn-tint); }
+  .callout.err { border-color: var(--sev-emergency); background: var(--err-tint); }
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0 20px; }
+  .compare > div { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; font-size: 13.5px; }
+  .compare .h { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; font-weight: 700; margin-bottom: 6px; }
+  .compare .before .h { color: var(--rust-ink); }
+  .compare .after .h { color: var(--teal-ink); }
+  .compare ul { margin: 0; padding-left: 18px; }
+  .compare li { margin-bottom: 4px; }
+  figure { margin: 16px 0 22px; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 12.5px; color: var(--ink-3); margin-top: 8px; }
+  .pill { display: inline-block; font-family: var(--mono); font-size: 11px; padding: 1px 6px; border-radius: 4px; background: var(--layer-2); border: 1px solid var(--line-2); }
+  .try { display: inline-block; font-size: 12.5px; padding: 4px 10px; border-radius: 6px; background: var(--navy); color: #fff !important; text-decoration: none !important; font-weight: 600; margin: 2px 0; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .box { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; font-size: 13.5px; }
+  .box b.t { display: block; margin-bottom: 4px; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } .toc { position: static; display: none; } .compare, .grid2 { grid-template-columns: 1fr; } .doc-top h1 { font-size: 28px; } }
+</style>
+</head>
+<body>
+<div class="doc-top"><div class="wrap">
+  <div class="eyebrow">CloseTheLoop · Configuration · Proposal · v2</div>
+  <h1>A machine is configured with what it is joined to.</h1>
+  <p class="sub">v1 configured each machine as an island: its own readings, its own alerts, a diagnostic flow that assumed the plant's shape. v2 adds the machine's <b>connections</b> (its discharge pipe, the tank it draws from, its standby), declared by the type, filled from SCADA, confirmed by a person; and replaces diagnostic flows with <b>fix flows that read each plant through those connections</b>. Everything else from v1 stands, and v1 itself is untouched one level up.</p>
+  <div class="meta"><span>9 October 2026</span><span>Mihir Sethi, with Claude</span><span>Bawal WTP and Manesar STP as the worked examples</span></div>
+  <div class="cta"><a class="p" href="prototype.html">Open the v2 prototype →</a><a class="s" href="#gap">Read the brainstorm</a><a class="s" href="../index.html">The v1 proposal</a></div>
+</div></div>
+
+<div class="wrap"><div class="layout">
+<nav class="toc">
+  <div class="eyebrow">Contents</div>
+  <a href="#tenlines">In ten lines</a>
+  <a href="#gap">The gap v1 left</a>
+  <a href="#options">Four ways we considered</a>
+  <a href="#proposal">The proposal: named connections</a>
+  <a href="#alerts">What it changes for alerts</a>
+  <a href="#flows">Dynamic diagnosis, done as fix steps</a>
+  <a href="#diag">Why v2 holds no diagnostic flows</a>
+  <a href="#scada">What v2 asks of SCADA</a>
+  <a href="#library">The library, now with connections</a>
+  <a href="#changes">What changed from v1</a>
+  <a href="#howto">Try it</a>
+  <a href="#open">Still open</a>
+</nav>
+<article>
+
+<h2 id="tenlines">In ten lines</h2>
+<div class="lines">
+  <div><span><b>A type declares its connections.</b> A submersible pump has a suction, a discharge pipe and a standby. A blower has an air header, the basins it aerates and a standby. An MBR skid has a feed and a permeate line. Each says what readings it expects to find there. Written once, in the library.</span></div>
+  <div><span><b>SCADA fills them.</b> Pipes and headers come through as things of their own, with the widgets bound to them and the machines they join. The console walks the drawing: the pipe out of P-1 is its discharge; the machine the suction pipe comes from is its suction; the other pump in the pair is its standby.</span></div>
+  <div><span><b>A person confirms or chooses, never draws.</b> Where SCADA drew two candidates and the type cannot tell which (two outlets from a UF skid: permeate or backwash drain?), the admin chooses once. Where SCADA drew nothing, the connection stays named and empty, and says what it would unlock.</span></div>
+  <div><span><b>An alert can watch a reading on a connection.</b> "Discharge pressure low" lives on the pump and reads the pressure transmitter on the header. The reading stays on the pipe; the alert is about the machine. A header shared by a pair raises the alert about the pair, inherited once.</span></div>
+  <div><span><b>Nothing blocks on the drawing.</b> A library item that needs a reading SCADA has not drawn is offered as blocked, with the reason, the same way v1 handles a missing widget: "needs its suction: not drawn in SCADA, or choose it on the machine". The rest of the machine inherits.</span></div>
+  <div><span><b>A fix flow is written once and read per plant.</b> A step says "Start the standby ({{standby}})". At Bawal that reads "P-2"; after P-3 is drawn, "P-2 or P-3"; at a plant with one pump the step is skipped and the record says so. The plant with three pumps and the plant with one get the same flow and different words.</span></div>
+  <div><span><b>No diagnostic flows in v2.</b> An alert runs a generic fix flow, the first things to try. The cause is recorded when the issue closes: a question, never a tree. Whether a guided diagnosis is needed is still being researched; the model leaves the slot.</span></div>
+  <div><span><b>The library prompt on add now knows the neighbours.</b> When SCADA adds a machine, step 4 says "3 items ready, 1 waiting for the discharge pipe", because the type's connections were resolved the moment the pipes came through.</span></div>
+  <div><span><b>Four states, every one designed.</b> From SCADA · Chosen · Choose (two candidates) · Not drawn. Each has its words, its button and its consequence, on the machine's page, in the detect step, in the inherit step and in the alert sheet.</span></div>
+  <div><span><b>Everything else is v1.</b> Nine steps, limits on the sensor, one Trigger entity underneath, Follows library or Custom, the operator app, the estate. v1 is untouched at <a href="../">/CTLConfig/</a>; v2 is a copy with these changes applied.</span></div>
+</div>
+
+<h2 id="gap">The gap v1 left</h2>
+<p>v1 configures a plant one machine at a time, and a machine's configuration includes only what sits on the machine: its sensor widgets, its alerts, its schedules. That is the right unit for an admin to think in, and it is where v1 stops being enough.</p>
+<h3>1. The reading an alert needs is often next door</h3>
+<p>The most useful alert on a raw-water pump is about its discharge pressure, and the pressure transmitter sits on the header, not on the pump. "Dry run" needs the level in the sump the pump draws from. A blower's trouble shows on the air header it shares with its standby. A UF skid's recovery is permeate flow over feed flow, two different pipes. None of these readings are on the machine, so in v1 none of these alerts can be configured on it. They could be configured on the pipe, if pipes were things, but then they would belong to no machine, and the card, the ladder and the maintenance history would not know whose problem it was.</p>
+<h3>2. A library prompt per equipment type cannot see the neighbours</h3>
+<p>The right moment to offer a machine its alerts is when SCADA adds it. But the type alone ("Submersible pump") says nothing about which pipe is its discharge at this plant. So a library-driven prompt, as we were discussing it, would either offer only the machine's own readings (and miss the alerts that matter), or ask the admin to draw the neighbourhood by hand (and draw the plant twice).</p>
+<h3>3. A diagnostic flow assumes the plant's shape</h3>
+<p>"Is the duty blower running? Start the standby." makes sense at Manesar with two blowers and none at a plant with one. The shape (two pumps or three, a standby or none, a header shared or not) changes the right steps, and v1's flows are written once for a type with no way to know the shape. "Dynamic diagnosis" was the name for wanting the steps to know it. And separately, whether operators need a guided diagnosis at all is being researched; v1 built the console on the assumption that they do.</p>
+<div class="callout">The three are one problem. A machine's configuration needs to know what the machine is joined to, and the library needs a way to say "the reading on its discharge pipe" without naming a pipe.</div>
+
+<h2 id="options">Four ways we considered</h2>
+<table>
+<thead><tr><th>Option</th><th>What it is</th><th>What it gets right</th><th>Where it breaks</th></tr></thead>
+<tbody>
+<tr><td><b>A. Placeholders on every machine</b></td><td>Each machine gets generic slots: inlet pipe and its sensors, outlet pipe and its sensors. The admin fills them.</td><td>Simple to explain. Works with no SCADA at all.</td><td>Generic slots mean nothing: a blower's "outlet" is an air header, a dosing pump's is a chemical line, a clarifier has two. Most slots stay empty, every one is typed by hand, and the plant is drawn twice.</td></tr>
+<tr><td><b>B. Depend on SCADA for the graph</b></td><td>Read pipes and connections from the SCADA view and derive the configuration from them.</td><td>Nothing drawn twice. The drawing is the truth and it is already maintained.</td><td>Drawings are uneven: a header without a widget, a sump not drawn, two outlets the drawing cannot tell apart. Configuration would wait on the drawing being complete, and someone would still have to say which pipe is which when the drawing is ambiguous.</td></tr>
+<tr><td><b>C. A library prompt when a machine is added</b></td><td>The type's set is offered the moment SCADA adds the machine.</td><td>The right moment. Already how v1 inherits.</td><td>The type cannot name neighbours. On its own it offers only what sits on the machine.</td></tr>
+<tr><td><b>D. Configure at the unit-process level</b></td><td>Alerts belong to the unit process; its machines and pipes are all members, so any reading is in reach.</td><td>Every reading is available to every alert.</td><td>Loses the machine as the unit of thought: whose alert, whose card, whose history, whose standby. v1 built the whole console on the machine, and the handoff's Equipment Card needs it.</td></tr>
+</tbody>
+</table>
+<p>None of the four is wrong; each holds a piece. A keeps the idea of a named, finite set of places a machine cares about. B keeps "nothing drawn twice". C keeps the moment. D keeps the reach. The proposal is the combination that keeps all four and drops what breaks in each.</p>
+
+<h2 id="proposal">The proposal: named connections</h2>
+<p><b>The type declares the connections. SCADA fills them. A person confirms or chooses. Nothing waits on either.</b></p>
+<figure>
+<svg viewBox="0 0 760 250" xmlns="http://www.w3.org/2000/svg" font-family="Figtree, system-ui, sans-serif" font-size="13">
+  <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#8a98a6"/></marker></defs>
+  <rect x="24" y="90" width="150" height="56" rx="8" fill="#f2f6f6" stroke="#c9d3d8"/><text x="99" y="113" text-anchor="middle" font-weight="700" fill="#1f2d3a">Sump · EQ-1</text><text x="99" y="132" text-anchor="middle" fill="#5a6b7a" font-size="11.5">Level 61 %</text>
+  <rect x="305" y="90" width="150" height="56" rx="8" fill="#e6f3f3" stroke="#2f8f94" stroke-width="2"/><text x="380" y="113" text-anchor="middle" font-weight="700" fill="#1f2d3a">Pump · P-1</text><text x="380" y="132" text-anchor="middle" fill="#5a6b7a" font-size="11.5">Motor current · Run hours</text>
+  <rect x="305" y="180" width="150" height="46" rx="8" fill="#fff" stroke="#c9d3d8" stroke-dasharray="4 3"/><text x="380" y="199" text-anchor="middle" font-weight="700" fill="#1f2d3a">Pump · P-2</text><text x="380" y="215" text-anchor="middle" fill="#5a6b7a" font-size="11.5">the standby</text>
+  <rect x="586" y="90" width="150" height="56" rx="8" fill="#f2f6f6" stroke="#c9d3d8"/><text x="661" y="113" text-anchor="middle" font-weight="700" fill="#1f2d3a">Filter · MGF-1</text><text x="661" y="132" text-anchor="middle" fill="#5a6b7a" font-size="11.5">Differential pressure</text>
+  <path d="M174 118 H305" stroke="#8a98a6" stroke-width="2" fill="none" marker-end="url(#ar)"/><text x="240" y="108" text-anchor="middle" fill="#5a6b7a" font-size="11.5">SU-1 · no widget</text>
+  <path d="M455 118 H586" stroke="#8a98a6" stroke-width="2" fill="none" marker-end="url(#ar)"/><text x="520" y="108" text-anchor="middle" fill="#5a6b7a" font-size="11.5">DH-1 · Pressure 1.8 bar · Flow</text>
+  <path d="M380 180 V146" stroke="#8a98a6" stroke-width="1.5" fill="none" stroke-dasharray="4 3"/>
+  <text x="99" y="60" text-anchor="middle" fill="#1f2d3a" font-weight="700">suction</text><text x="99" y="76" text-anchor="middle" fill="#5a6b7a" font-size="11.5">expects Level</text>
+  <text x="520" y="60" text-anchor="middle" fill="#1f2d3a" font-weight="700">discharge</text><text x="520" y="76" text-anchor="middle" fill="#5a6b7a" font-size="11.5">expects Line pressure, Flow</text>
+  <text x="610" y="204" fill="#1f2d3a" font-weight="700">standby</text><text x="610" y="220" fill="#5a6b7a" font-size="11.5">the other pump in the pair</text>
+  <text x="24" y="26" fill="#1f2d3a" font-weight="700" font-size="15">What a submersible pump declares, and what SCADA fills in at Bawal</text>
+</svg>
+<figcaption>The type says a pump has a suction, a discharge pipe and a standby, and which readings it expects on each. The drawing supplies DH-1 with its pressure transmitter, P-2 as the standby, and the screen chamber as the suction, which has no level widget, so "Suction tank empty" is offered as blocked with that reason.</figcaption>
+</figure>
+<h3>The rule, in three sentences</h3>
+<ol>
+  <li><b>The library's equipment type declares its connections</b>: a short, named, finite list (a pump: suction, discharge, standby; a blower: air header, basins, standby; a filter: feed, outlet) with the readings it expects on each and the kinds of thing that belong there. These are the only "placeholders" that exist, and each means something.</li>
+  <li><b>SCADA's pipes fill them when the machine comes through</b>, and again every time the drawing is read. A pipe out of the machine is a candidate for an outlet connection; a machine upstream of an inlet pipe is a candidate for an inlet-machine connection; the other members of a detected pair are the standby. Air and chemical lines are never a tank's process feed; an outlet may branch.</li>
+  <li><b>A person chooses only where SCADA is ambiguous</b>, and may bind by hand where SCADA drew nothing. Either way the console never waits: unbound connections are named on the machine with what they would unlock, and the items that need them are offered as blocked, exactly as v1 treats a missing widget.</li>
+</ol>
+<h3>Four states, all designed</h3>
+<table>
+<thead><tr><th>State</th><th>When</th><th>What the admin sees</th><th>What happens to library items that need it</th></tr></thead>
+<tbody>
+<tr><td><b>From SCADA</b></td><td>One candidate, or one that carries the expected reading, or an outlet that branches</td><td>The pipe or machine, its readings now, a Change button</td><td>Inherit normally; shared headers raise the alert about the pair, once</td></tr>
+<tr><td><b>Choose</b></td><td>Two or more candidates the type cannot tell apart (UF-1's two outlets both carry Flow)</td><td>"SCADA draws PM-1 and BW-1; which is its permeate line?" and a Choose button; counted in step 3; an amber dot on the tree</td><td>Blocked: "choose its permeate line first"; one choice unblocks them</td></tr>
+<tr><td><b>Chosen</b></td><td>A person picked it, or bound it by hand</td><td>The target with a "Chosen" chip; kept when SCADA is read again until the drawing is clearer</td><td>Inherit normally</td></tr>
+<tr><td><b>Not drawn</b></td><td>No candidate in the drawing (Vedanta's sump is not drawn; Manesar's sludge pump has no discharge line)</td><td>"Nothing drawn in SCADA: the tank or sump it draws from", what waits on it, a Choose-by-hand button</td><td>Blocked with the reason; the rest of the machine inherits</td></tr>
+</tbody>
+</table>
+<p>A fifth case is a bound connection whose pipe has no widget (Vedanta's air header has no pressure transmitter). It is bound, so nothing to choose; the item is blocked with "AH-1 has no Line pressure widget", which is a message for whoever maintains the drawing.</p>
+<div class="compare">
+  <div class="before"><div class="h">What each option kept</div><ul><li><b>A, placeholders:</b> a named, finite list of places a machine cares about. But declared by the type, once, not typed per machine.</li><li><b>B, SCADA:</b> the drawing fills the list and nothing is drawn twice. But the console never waits on the drawing.</li><li><b>C, prompt on add:</b> the type's set is offered the moment SCADA adds the machine, and now it knows which items are ready and which wait for a connection.</li><li><b>D, unit process:</b> any reading in the neighbourhood is in reach of an alert. But the alert still belongs to the machine.</li></ul></div>
+  <div class="after"><div class="h">What it costs</div><ul><li>The library has one more thing per type to author: the connections and what they expect. Thirty types, two or three lines each.</li><li>SCADA has to hand over pipes and headers as objects (see <a href="#scada">what v2 asks of SCADA</a>). Where it cannot yet, the Not-drawn state carries the plant.</li><li>One more section on the machine's page, one more section in step 3, and a dialog.</li></ul></div>
+</div>
+
+<h2 id="alerts">What it changes for alerts</h2>
+<ul>
+  <li><b>Which reading?</b> The alert sheet lists the machine's own readings first, then the readings on each bound connection under its own heading: "On its discharge pipe (DH-1)". Connections without a reading are listed as not offered, with the reason. The reading stays on the pipe; the alert is about the machine and carries <code>via: 'discharge'</code>.</li>
+  <li><b>A shared header is one alert.</b> "Header pressure high" on an air header both blowers feed is inherited once, about the Blower group, not twice. The issue opens on the pair, the duty unit's card shows it, and the fix flow reads the pair's tags.</li>
+  <li><b>Gates reach the neighbourhood.</b> "Only when" now offers readings on the machine, on its connections and in its unit process, so "discharge pressure low" can be gated on "motor current above 5 A" (the pump is actually running) without a second alert.</li>
+  <li><b>Limits still live on the sensor.</b> A pipe reading has limits like any other; the Limits step lists it under every machine that is joined to it; the library's suggested limits pre-fill it. A pipe reading nobody's connection expects is not counted as a gap.</li>
+  <li><b>The library offers connection alerts.</b> Submersible pump: discharge pressure low, suction tank empty. Blower: header pressure high. UF skid: permeate flow low, feed pressure high. MBR skid: permeate flow low. Filter: feed flow low. Dosing unit: chlorine low on the line it doses. Each with the fix flow it runs.</li>
+  <li><b>The sentence says where.</b> "Opens a Minor issue when Line pressure on AH-1 (its air header) rises above 0.7 bar … The operator runs Blower changeover, duty to standby, and records the cause at close."</li>
+</ul>
+
+<h2 id="flows">Dynamic diagnosis, done as fix steps</h2>
+<p>The question behind "dynamic diagnosis" was: can the steps know whether this plant has two pumps or three? With connections resolved per machine, yes, and without a second copy of the flow.</p>
+<ul>
+  <li><b>A step can name a connection.</b> <code>{{standby}}</code>, <code>{{discharge}}</code>, <code>{{suction}}</code>, <code>{{basins}}</code>, <code>{{self}}</code>. When the flow runs on a machine, each token becomes the tag of what is bound there: "Start the standby ({{standby}})" reads "Start the standby (BL-2)" at Manesar today and "Start the standby (BL-2 or BL-3)" after the engineer draws BL-3 on the header. Two things bound read "AT-1 and AT-2"; a count is <code>{{standby.count}}</code>.</li>
+  <li><b>A step can be conditional on a connection.</b> Marked "only where the machine has a suction", it is skipped at a plant whose pump has none, and the record logs "1 step does not apply at this plant: Check the level in the suction (no suction at this plant)". Skipped, never hidden.</li>
+  <li><b>A reading step can record on a connection.</b> "Record the pressure on {{header}}" binds to the header's pressure transmitter at each plant, so the reading is charted on the right instrument.</li>
+  <li><b>The admin sees the words before the operator does.</b> The alert sheet previews the chosen flow as it will read on this machine, with skipped steps crossed out and the reason beside them; the flow editor has a "read on" picker to preview on any machine of the type; the Workflows step counts "7 steps, 1 skipped here".</li>
+  <li><b>What stays the same</b>: one flow per type in the library, inherited with the type, Follows library or Custom, versions, the operator's step screen.</li>
+</ul>
+<div class="callout">The flow is not dynamic; the plant is. Writing "{{standby}}" once is what lets thirty plants with different shapes run one flow and each read the right names.</div>
+
+<h2 id="diag">Why v2 holds no diagnostic flows</h2>
+<p>v1 bound 28 diagnostic trees to its alerts. v2 removes them, on purpose, for two reasons given in the brief: whether operators need a guided diagnosis at all is under research, and the trees would have to be substantially enriched before they could be trusted. Building the console on an unproven, unfinished component is the wrong order.</p>
+<p>What replaces them, and what it costs:</p>
+<table>
+<thead><tr><th>v1</th><th>v2</th><th>Consequence</th></tr></thead>
+<tbody>
+<tr><td>An alert opens a diagnostic; questions lead to a cause; the cause's fix runs</td><td>An alert runs a <b>fix flow</b>: the first things to try, in order, written once per type, read per plant</td><td>Operators get steps at once. No step depends on a question tree being complete.</td></tr>
+<tr><td>The cause is the conclusion of the tree</td><td>The cause is <b>recorded at close</b>: "What was it?", a short list scoped to the machine's type and unit process, with "not sure" as the default</td><td>Root-cause counts across the estate survive without a tree. A cause marked as a sensor fault still closes the record as one.</td></tr>
+<tr><td>"I know the reason" skips the tree; "That's not it" returns to it</td><td>Both gone. A pre-assigned cause on an alert still runs that cause's fix</td><td>Two fewer things on the operator's screen.</td></tr>
+<tr><td>A cause nominates a fix the tree lands on</td><td>A cause still nominates a fix; it is what the operator is offered next time the cause is recorded</td><td>The Causes page and the cause's "Fixed by" survive unchanged.</td></tr>
+</tbody>
+</table>
+<p><b>What plugs back if the research says yes.</b> The flow model keeps its <code>kind</code>; a diagnostic kind can return as a third thing an alert may run, in front of the fix flow, with the same connection tokens, so a tree's "Is the duty blower running?" can become "Is {{self}} running? Start {{standby}}" and adapt to the plant like the fix steps do. The export carries <code>diagnosisMode: 'record_cause_at_close'</code> so the engine knows which mode a plant is in.</p>
+
+<h2 id="scada">What v2 asks of SCADA</h2>
+<p>v1 read links between machines. v2 needs the pipes themselves, because that is where the readings are. The contract, in full:</p>
+<ul>
+  <li><b>A pipe or header is an object</b> with an id, a tag, a label, the machines it comes from and the machines it goes to (a header has several of each; an outfall has none), and the sensor widgets bound to it.</li>
+  <li><b>Zones and parts</b> as in v1: a zone becomes a unit process; valves, motors and devices stay in the drawing.</li>
+  <li><b>When the drawing changes</b>, the same object with the same id: a third blower added to the header is the header gaining a "from", and the console re-resolves every connection it touches.</li>
+</ul>
+<p>Where SCADA cannot give pipes yet, v2 still works: every connection is Not drawn, the admin binds the ones that matter by hand on the machine's page, and the items that wait on the rest say so. That is the whole fallback, and it is the same screen.</p>
+<p>What the resolver assumes about drawings, stated so it can be argued with: an air line or a chemical line into a tank is not its process feed; an outlet that branches is still the outlet; when two candidates both carry the expected reading, a person decides; a pair's members are each other's standby. Each is one line of code and one line here.</p>
+
+<h2 id="library">The library, now with connections</h2>
+<ul>
+  <li><b>Each equipment type declares its connections</b>: id, name, kind (a pipe, a machine, a peer), direction, the readings expected there, the kinds of machine expected there, and one line of hint. Shown on the type's sheet under "What it is joined to", read-only in v2; authoring is a Global Admin form in the Library PRD.</li>
+  <li><b>A set's alert may say <code>on: 'discharge'</code></b>. It inherits at a plant once the connection is bound and the reading is there; otherwise it is offered as blocked with the reason. Propagation is unchanged: Follows library or Custom, per item.</li>
+  <li><b>The prompt on add now reads</b> "3 items ready, 1 waiting for the discharge pipe", because connections are resolved the moment the pipes come through with the machine.</li>
+  <li><b>Flows are written once with tokens</b> and inherited with the type. The flow editor lists the tokens the type allows and warns when a step names a connection the type does not declare.</li>
+</ul>
+
+<h2 id="changes">What changed from v1, and what did not</h2>
+<table>
+<thead><tr><th>Where</th><th>v1</th><th>v2</th></tr></thead>
+<tbody>
+<tr><td>Step 1 · Connect SCADA</td><td>Links between machines</td><td>Pipes and headers as objects with their widgets; the drawing marks each pipe that carries a reading; the inspector lists pipes and connections</td></tr>
+<tr><td>Step 3 · What SCADA found</td><td>Zones, types, pairs</td><td>Plus section D, Connections: how many were found, and the ones that need a choice, with a Choose button. The step is not done while a choice is pending.</td></tr>
+<tr><td>Step 4 · Inherit</td><td>Blocked items: "needs a reading from SCADA"</td><td>Blocked items also say "on its discharge pipe (DH-1)" and why: not drawn, choose first, or no widget on it. A shared header's alert inherits once, about the pair.</td></tr>
+<tr><td>Step 5 · Limits and alerts</td><td>The machine's readings</td><td>Plus the readings on its connections, grouped under it; alerts about its pair listed with it</td></tr>
+<tr><td>Step 8 · Workflows</td><td>Diagnostic per alert, action per schedule</td><td>Fix flow per alert, read on this machine, with the count of skipped steps; action per schedule; causes recorded, not reached</td></tr>
+<tr><td>Equipment page</td><td>Readings, alerts, schedules, work, details</td><td>Plus Connections, first when something needs choosing: four states, the readings on each, what waits on it, Choose or Change</td></tr>
+<tr><td>Alert sheet</td><td>Readings on the machine; a diagnostic to open</td><td>Readings on the machine and on its connections; a fix flow to run, previewed as it reads here; gates on the neighbourhood</td></tr>
+<tr><td>Flow editor</td><td>Diagnostic and action flows</td><td>Action flows only, with connection tokens, "only where", readings on a connection, and a read-on-this-machine preview</td></tr>
+<tr><td>Operator app</td><td>Diagnose, then fix, "I know the reason", "That's not it"</td><td>Fix straight away with the plant's tags; skipped steps named; "What was it?" at close; the card shows readings on connections</td></tr>
+<tr><td>Export</td><td>Sensors on equipment; procedures branching or linear</td><td>Plus pipes, a reading's pipe, each machine's connections and how each was bound, <code>viaConnection</code> on triggers, <code>diagnosisMode</code></td></tr>
+<tr><td colspan="3"><b>Unchanged:</b> the nine steps and their pattern, limits on the sensor, severity and the ladders, escalation and overrides, maintenance and planning, the estate and the plant switcher, Follows library or Custom, persistence, the help panel, the model toggle. Saved under a different key, so v1 and v2 on one device do not disturb each other.</td></tr>
+</tbody>
+</table>
+
+<h2 id="howto">Try it</h2>
+<ul>
+  <li><b>The choose state.</b> Switch to <b>Bawal WTP</b> in the top bar. Set up → step 3 shows "1 needs a choice": UF-1's permeate line. Or open Equipment → UF Membrane: the Connections section is first, "SCADA draws PM-1 and BW-1; which is its permeate line?". Choose PM-1; the toast says one library item can inherit now; the Inherit banner offers "Permeate flow low".</li>
+  <li><b>A reading on a connection.</b> Equipment → Raw water pump 1: Discharge pipe is DH-1 from SCADA with its pressure and flow; "Discharge pressure low — Raw water pump group" is on the pair. Suction is the screen chamber, with no level widget, so "Suction tank empty" waits for one.</li>
+  <li><b>The not-drawn state.</b> Switch to <b>Vedanta ETP</b>. Sump pump 1: Suction is Not drawn, with "Choose by hand"; the dialog offers what SCADA drew as joined first and the rest of the plant after. Blower 1: the air header is drawn but has no pressure widget, so "Header pressure high" says so.</li>
+  <li><b>Dynamic steps.</b> On <b>Manesar STP</b>: Set up → step 8 → Air Blower 1. Open Equipment → Air Blower 1 → an alert → step 3 and pick "Blower changeover, duty to standby": the preview reads "Start BL-2 from the panel". Then Equipment → the plant → "Read SCADA again" (after "Demo: an engineer draws something new"): BL-3 joins the header, and the same preview reads "Start BL-2 or BL-3".</li>
+  <li><b>A skipped step.</b> On Vedanta, inherit everything, then Operator app → fire "Discharge pressure low — Raw water pump group" at 0.4 bar and start it: "step 1 of 5 · 1 skipped here", and "What happened" says the suction check does not apply at this plant. Close it and answer "What was it?".</li>
+  <li><b>The library.</b> Library → Submersible pump → View: "What it is joined to" lists suction, discharge, standby and what each expects. Flows: fix flows carry a "reads standby, discharge" chip; open one and pick a machine at the top to see how it reads there.</li>
+</ul>
+
+<h2 id="open">Still open</h2>
+<ul>
+  <li><b>Whose alert is a shared header's?</b> v2 raises it about the pair and shows it on the duty unit's card. The alternative is the duty unit itself, with the standby inheriting nothing. The Equipment Card PRD should decide.</li>
+  <li><b>How a hand-made choice survives a re-read.</b> v2 keeps it while the target still exists. Should a clearer drawing override it, and should the admin be told?</li>
+  <li><b>Connections on a unit process.</b> A stage's feed and outlet are as real as a machine's. Not built; the model allows it.</li>
+  <li><b>How many connections per type is too many.</b> v2 declares two or three. The air side of an MBR, a filter's backwash line, a clarifier's scum line are all candidates. The rule should be "only what a library item reads".</li>
+  <li><b>The word.</b> "Connection" is used here; "neighbour", "joined to" and "around it" were considered. Operators and admins should pick.</li>
+  <li><b>The research on diagnosis.</b> If a guided diagnosis is needed, it returns as a third flow kind with the same tokens; if not, the fix flows need the enrichment the diagnostics were going to get.</li>
+  <li><b>Pipe readings in the counts.</b> v2 counts a pipe reading as a gap only when a connection expects it. A pressure transmitter nobody's type cares about is listed but never nags; is that right?</li>
+  <li><b>The SCADA contract.</b> Pipes as objects with from, to and widgets. Needs the SCADA team's yes, and the ids to be stable across edits.</li>
+</ul>
+<p class="muted small" style="margin-top:32px">Sources: the v1 proposal and prototype one level up; the 28 Sep handoff bundle (Configuration PRD, acceptance criteria, Notifications Brief v3.9); the real SCADA equipment and widget list; standard STP, ETP and WTP operating practice for the fix flows. Everything in the prototype is in memory and saved on this device; Reset data restores the start state.</p>
+
+</article>
+</div></div>
+</body>
+</html>

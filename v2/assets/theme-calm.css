@@ -1,0 +1,106 @@
+/* Calm theme: low-saturation, warm-grey surfaces, one muted teal accent, softened severity fills.
+   Loaded last; overrides tokens and the few rules that hard-coded colour. */
+:root {
+  --paper: #f5f6f3;
+  --white: #ffffff;
+  --layer: #ffffff;
+  --layer-2: #eef1ee;
+  --line: #e3e7e3;
+  --line-2: #d3dad6;
+  --ink: #2b3634;
+  --ink-2: #4f5d5a;
+  --ink-3: #7c8987;
+
+  --navy: #3b5652;          /* primary buttons, active chips: deep muted teal-slate */
+  --navy-700: #2f4744;
+  --teal: #8fbbb2;
+  --teal-ink: #3f7d74;
+  --teal-tint: #e8f1ee;
+  --teal-deco: #bcd9d2;
+  --sage: #8fb08a;
+  --rust: #b9705a;
+  --rust-ink: #a85f4a;
+  --focus: #3f7d74;
+
+  --sev-emergency: #b8564f;
+  --sev-major: #cf8f62;
+  --sev-minor: #dcbf72;
+  --sev-caution: #e4dbb0;
+  --ok: #5c8f6b;
+  --ok-tint: #e9f1eb;
+  --warn-tint: #f8f2e4;
+  --warn-ink: #8a6a2a;
+  --err-tint: #f6ebe9;
+  --err-ink: #8f3f38;
+  --info-tint: #eaeff2;
+  --info-ink: #3e5566;
+
+  --shadow: 0 1px 2px rgba(43,54,52,.04), 0 4px 14px rgba(43,54,52,.05);
+  --shadow-lg: 0 10px 32px rgba(43,54,52,.14);
+}
+
+/* Top bar: light, not navy */
+.topbar { background: var(--white); color: var(--ink); border-bottom: 1px solid var(--line); }
+.topbar .brand { color: var(--ink); }
+.topbar .brand svg path { stroke: var(--navy); }
+.topbar .brand svg circle { stroke: var(--teal-ink); }
+.topbar .brand span b { color: var(--teal-ink); }
+.topbar .crumb { color: var(--ink-3); }
+.topbar .crumb b { color: var(--ink); }
+.topbar .persona { color: var(--ink-3); }
+.topbar select { background: var(--white); color: var(--ink); border: 1px solid var(--line-2); }
+.topbar .link { color: var(--ink-2); border-color: var(--line-2); }
+.topbar .link:hover { background: var(--layer-2); }
+.topbar .link.help[aria-pressed=true] { background: var(--teal-tint); color: var(--teal-ink); border-color: transparent; }
+
+/* Severity: dark text on the warm fills, white only on emergency */
+.sev.emergency { color: #fff; } .sev.emergency::before { background: #fff; }
+.sev.major { color: var(--ink); } .sev.major::before { border-bottom-color: var(--ink); }
+.sev.minor, .sev.caution { color: var(--ink); }
+.limits .l { color: var(--ink); }
+.limits .l.emergency { color: #fff; }
+.tier.A { background: var(--navy); border-color: var(--navy); }
+
+/* Notes and chips: softer inks */
+.note { color: var(--info-ink); }
+.note.warn { color: var(--warn-ink); }
+.note.err { color: var(--err-ink); }
+.note.ok { color: #35603f; }
+.chip.warn { color: var(--warn-ink); }
+.chip.err { color: var(--err-ink); }
+.chip.info { color: var(--info-ink); }
+.checks .c.err { color: var(--err-ink); }
+.checks .c.warn { color: var(--warn-ink); }
+.errline { color: var(--err-ink); }
+.warnline { color: var(--warn-ink); }
+.health.ok { border-color: #d3e3d6; }
+.health.err { border-color: #ead0cc; }
+.ready .st.todo { background: var(--sev-minor); }
+.limitrow input.bad { outline-color: #ead0cc; }
+.suggest, .line-card, .item-card { box-shadow: none; }
+.tree .node.sel { background: var(--teal-tint); color: var(--teal-ink); }
+.sidenav a.item.active { background: var(--teal-tint); color: var(--teal-ink); }
+.sidenav a.item .dot { background: var(--sev-minor); }
+.sidenav .dot.err { background: var(--sev-emergency); }
+.toast { background: #2f3e3b; }
+.toast .u { color: var(--teal-deco); }
+.guide p.why { background: var(--teal-tint); color: #2f5f58; }
+
+/* Operator preview: keep it dark (it is the operator's night surface) but slate, not black */
+.preview.dark { background: #26302f; border-color: #3a4745; }
+.preview.dark .cta { background: var(--teal); color: #1c2a28; }
+
+/* Proposal page hero */
+.doc-top { background: var(--navy); }
+.doc-top .eyebrow { color: var(--teal-deco); }
+.doc-top .cta a.p { background: var(--teal); color: #1c2a28; }
+.lines div::before { color: var(--teal-ink); }
+.compare .before .h { color: var(--rust-ink); }
+
+/* Grid placement fix: the status chip must sit in the right column, not auto-place into the first */
+.line-card .t { grid-column: 1; grid-row: 1; }
+.line-card .s { grid-column: 1; grid-row: 2; }
+.line-card .r { grid-column: 2; grid-row: 1 / span 2; }
+.item-card .r { grid-column: 2; grid-row: 1 / span 2; }
+.suggest > div:first-child { grid-column: 1; }
+.suggest .r { grid-column: 2; }
