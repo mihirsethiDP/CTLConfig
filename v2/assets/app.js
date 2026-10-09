@@ -55,7 +55,7 @@ window.CTL = (function () {
   const schedById = (id) => D().schedules.find((s) => s.id === id);
   const workById = (id) => D().conditionWork.find((w) => w.id === id);
   const catalogue = (type) => window.CATALOGUE.find((c) => c.type === type);
-  const subjectName = (sub) => sub.kind === 'plant' ? (D().plant.name || 'the plant') : sub.kind === 'stage' ? stage(sub.id).name : sub.kind === 'group' ? group(sub.id).name : eq(sub.id).name;
+  const subjectName = (sub) => !sub || sub.kind === 'plant' ? (D().plant.name || 'the plant') : sub.kind === 'stage' ? (stage(sub.id) || { name: sub.id }).name : sub.kind === 'group' ? (group(sub.id) || { name: sub.id }).name : (eq(sub.id) || pipe(sub.id) || { name: sub.id }).name;
   const subjectTier = (sub) => sub.kind === 'eq' ? eq(sub.id).tier : 'B';
   const subjectKey = (sub) => sub.kind === 'plant' ? 'plant' : `${sub.kind}:${sub.id}`;
   const parseNode = (key) => key === 'plant' ? { kind: 'plant' } : { kind: key.split(':')[0], id: key.split(':')[1] };
@@ -402,7 +402,7 @@ window.CTL = (function () {
     document.body.classList.toggle('show-model', S.model); renderNav(); persist();
     const { view, rest } = route(); const V = window.CTL_VIEWS;
     const fn = V[view] || V.setup; const main = $('#main');
-    if (!S.loadedRoutes.has(view)) { S.loadedRoutes.add(view); main.innerHTML = skeleton(); setTimeout(() => { main.innerHTML = fn(rest); V.wire(view, rest); }, 350); }
+    if (!S.loadedRoutes.has(view)) { S.loadedRoutes.add(view); main.innerHTML = skeleton(); const stamp = location.hash + '|' + S.plant; setTimeout(() => { if (location.hash + '|' + S.plant !== stamp) return; main.innerHTML = fn(rest); V.wire(view, rest); }, 350); }
     else { main.innerHTML = fn(rest); V.wire(view, rest); }
     renderSheet(); renderGuide(); window.scrollTo({ top: 0 });
   }
@@ -418,7 +418,7 @@ window.CTL = (function () {
 
   function boot() {
     $('#persona').onchange = (e) => { S.persona = e.target.value; S.sheet = null; render(); };
-    $('#reset').onclick = () => { resetData(); S.loadedRoutes = new Set(); location.hash = '#/setup'; render(); toast('Reset. The estate is back to its starting state: Manesar STP, Bawal WTP, Vedanta ETP.'); };
+    $('#reset').onclick = () => { resetData(); S.loadedRoutes = new Set(); location.hash = '#/setup'; render(); toast('Reset. The estate is back to its starting state: five plants, and Jhajjar WTP waiting to be connected.'); };
     $('#guideBtn').onclick = () => setGuide(!S.guide);
     if (!restore()) seedEstate(); render();
   }

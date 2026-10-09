@@ -286,3 +286,10 @@ body.guide-open .body { grid-template-columns: 220px minmax(0, 1fr) 300px; }
 .sibs a:hover { border-color: var(--teal-ink); text-decoration: none; }
 .sibs a.cur { border-color: var(--navy); color: var(--navy); font-weight: 600; }
 @media (max-width: 900px) { .own { grid-template-columns: 1fr; } }
+
+/* ── v2 QA: the main column may shrink; wide tables and the simulate panel scroll or wrap inside it ── */
+.body { grid-template-columns: 220px minmax(0, 1fr); }
+main { min-width: 0; }
+.fs, .card > .bd, .own, .insp { overflow-x: auto; }
+.sim .row, .opside .row { flex-wrap: wrap; }
+@media (max-width: 1200px) { body.guide-open .wiz { grid-template-columns: 1fr; } .wstep { min-width: 0; } .opside, .sim { min-width: 0; overflow-x: auto; } }

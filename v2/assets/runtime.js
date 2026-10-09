@@ -70,7 +70,8 @@ window.CTL_RT = (function () {
     if (home.maintenance) return { refused: `${home.name} is in maintenance mode (${home.maintenance.reason}). Its alerts are paused until it is brought back online.` };
     if (!gateOk(a)) return { refused: `Gated: the alert only counts while ${gateText(a)}, and it is not. Nothing raised.` };
     s.reading = value; if (s.state === 'stale') s.state = 'live';
-    const sev = crossedSev(lim, dir, value);
+    /* an on/off contact fires on ON: the deepest tier it carries */
+    const sev = s.kind === 'status' ? (value >= 1 ? SEVS.slice().reverse().find((k) => lim[k] != null) || null : null) : crossedSev(lim, dir, value);
     const open = rt().records.find((r) => r.kind === 'issue' && r.alertId === a.id && r.status !== 'closed');
     if (!sev) { if (open && a.closes.mode === 'sensor' && (dir === 'below' ? value >= a.closes.back : value <= a.closes.back)) { closeRecord(open, 'resolved', `${s.name} back at ${value} ${s.unit}: the sensor closed it`); return { closed: open }; } return { nothing: open ? `${value} ${s.unit} is inside the limits but not yet past the closing threshold (${a.closes.back} ${s.unit}); the issue stays open.` : `${value} ${s.unit} is inside every limit. Nothing happens.` }; }
     if (open) { if (SEV_RANK[sev] > SEV_RANK[open.severity]) { open.severity = sev; open.clocks = issueClocks(a, sev); open.rungs = [0]; open.reading = value; log(open, `Promoted to ${SEV_LABEL[sev]}: ${s.name} ${value} ${s.unit}; the ladder restarts`); notifyIssue(open, 0); return { promoted: open }; } open.reading = value; log(open, `${s.name} ${value} ${s.unit}, still ${SEV_LABEL[open.severity]}`); return { stillOpen: open }; }
