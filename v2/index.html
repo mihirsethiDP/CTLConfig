@@ -154,7 +154,7 @@
 <table>
 <thead><tr><th>State</th><th>When</th><th>What the admin sees</th><th>What happens to library items that need it</th></tr></thead>
 <tbody>
-<tr><td><b>From SCADA</b></td><td>One candidate, or one that carries the expected reading, or an outlet that branches</td><td>The pipe or machine, its readings now, a Change button</td><td>Inherit normally; shared headers raise the alert about the pair, once</td></tr>
+<tr><td><b>From SCADA</b></td><td>One candidate, or one that carries the expected reading, or an outlet that branches</td><td>The pipe or machine, the readings it carries, a Change button</td><td>Inherit normally; shared headers raise the alert about the pair, once</td></tr>
 <tr><td><b>Choose</b></td><td>Two or more candidates the type cannot tell apart (UF-1's two outlets both carry Flow)</td><td>"SCADA draws PM-1 and BW-1; which is its permeate line?" and a Choose button; counted in step 3; an amber dot on the tree</td><td>Blocked: "choose its permeate line first"; one choice unblocks them</td></tr>
 <tr><td><b>Chosen</b></td><td>A person picked it, or bound it by hand</td><td>The target with a "Chosen" chip; kept when SCADA is read again until the drawing is clearer</td><td>Inherit normally</td></tr>
 <tr><td><b>Not drawn</b></td><td>No candidate in the drawing (Vedanta's sump is not drawn; Manesar's sludge pump has no discharge line)</td><td>"Nothing drawn in SCADA: the tank or sump it draws from", what waits on it, a Choose-by-hand button</td><td>Blocked with the reason; the rest of the machine inherits</td></tr>
@@ -210,6 +210,8 @@
 </ul>
 <p>Where SCADA cannot give pipes yet, v2 still works: every connection is Not drawn, the admin binds the ones that matter by hand on the machine's page, and the items that wait on the rest say so. That is the whole fallback, and it is the same screen.</p>
 <p>What the resolver assumes about drawings, stated so it can be argued with: an air line or a chemical line into a tank is not its process feed; an outlet that branches is still the outlet; when two candidates both carry the expected reading, a person decides; a pair's members are each other's standby. Each is one line of code and one line here.</p>
+
+<div class="callout">Nothing is read from the plant while configuring. The number beside every reading in the prototype is sample data: enough to show units, ranges and what an alert would say, never a value fetched at configuration time. Readings arrive once the plant runs; the operator app simulates them.</div>
 
 <h2 id="library">The library, now with connections</h2>
 <ul>
