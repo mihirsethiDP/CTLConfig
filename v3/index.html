@@ -48,6 +48,7 @@
 <a href="#placeholders">11 · Placeholders</a>
 <a href="#flags">12 · Flags, challenges, questions</a>
 <a href="#sequence">13 · Sequencing</a>
+<a href="#changelog">14 · Change log</a>
 </div></aside>
 
 <main class="doc">
@@ -332,7 +333,7 @@ Round                            { name, workType, every{n,unit}, statutory, ver
 </tbody></table>
 
 <h2 id="flags">12 · Decisions</h2>
-<p>The flags raised on 16 Oct and Mihir's answers the same day. Each row says what the build does as a result. Nothing here is open; the one technical confirmation still needed is in the note at the end and does not block the build.</p>
+<p>The flags raised on 16 Oct and Mihir's answers the same day. Each row says what the build does as a result. Nothing here is open; the one technical confirmation still needed is in the note at the end and does not block the build. What changed in the prototype because of these answers is listed in the <a href="#changelog">change log</a>.</p>
 <table><thead><tr><th>#</th><th>Question</th><th>Decision</th><th>In the build</th></tr></thead><tbody>
 <tr><td>F1</td><td>Freeze the library interface</td><td>Yes, as recommended.</td><td>Version 2026.10, served as a JSON file until the library build exists; additions only (section 8).</td></tr>
 <tr><td>F2</td><td>Who owns control groups</td><td>SCADA has a group and stage identification algorithm with manual override, not properly implemented yet. A manual override is needed regardless.</td><td>Groups and stages come from the drawing or by hand today, with <code>source: scada | custom</code>. When the algorithm lands it proposes them; the console keeps the override of membership and names. Placeholder <code>control-groups</code> reworded.</td></tr>
@@ -363,6 +364,27 @@ Round                            { name, workType, every{n,unit}, statutory, ver
 <li><b>Review, compile, export.</b> The checklist, go-live, the export of section 9 with every alert, formula and missed entry compiled to an engine formula under an upsert key, and a contract test against the engine's schema.</li>
 <li><b>Integrations as they land.</b> The library build behind the interface, the engine's open-record count, SCADA import (with control groups and auto/manual state), the analytical engine, the operator app's entry screen. Each replaces a stub without a shape change. People never enter the console; the engine reads User Center.</li>
 </ol>
+<h2 id="changelog">14 · Change log</h2>
+<h3>16 Oct 2026 · the seventeen decisions applied</h3>
+<ul>
+<li><b>F5 · The analytical engine is the trigger engine.</b> Every alert, computed reading and missed entry compiles to an engine formula in HyperFormula style with an upsert key, so an edit replaces rather than duplicates. The console's grammar accepts MIN, MAX, ABS, SQRT, ROUND, AVERAGE, SUM, IF, AND, OR and comparisons; windows compile to AVERAGE over the past hour, day or shift. Section 7.2 rewritten; the engine box in the diagram renamed.</li>
+<li><b>F6 · Suspect results.</b> A formula whose sample result is not computable or outside its valid range shows "Suspect at sample"; the export carries the flag and the policy of no alert on a suspect result.</li>
+<li><b>F7 · Missed entries</b> fire at the end of the cadence window; no grace.</li>
+<li><b>F8 · Two-sided limits.</b> Two alerts on one reading are allowed when their directions differ. Flipping an alert's direction clears the copied custom tiers so the second alert validates.</li>
+<li><b>F9 · Freeze on open records</b> is out of the console. Archive-on-delete stays.</li>
+<li><b>F11 · Lead rights.</b> The Lead edits limits and alerts, plus the cadence of in-house preventive maintenance.</li>
+<li><b>F12 · Last value.</b> The readings table and drawer show "Last value (sample)"; in the build it is SCADA's last value with its age, read-only. Nothing depends on it.</li>
+<li><b>F14 · Maintenance is one switch.</b> Under maintenance until a date suppresses alerts on the subject and below it; schedules keep running.</li>
+<li><b>F15 · Expected sensors on stages and groups.</b> The library interface gains <code>expects.byProfile</code> and <code>expects.byGroupType</code>; the library check lists stage and group cards with Missing, a prefilled ＋ Add the sensor tag, and Not installed.</li>
+<li><b>F16 · Recorded gaps</b> carry and show the library version they were recorded under.</li>
+<li><b>F1, F2, F3, F4, F10, F13, F17</b> recorded as decided; the control-groups placeholder reworded around SCADA's identification algorithm and the manual override of its result.</li>
+<li><b>Still to confirm, not blocking:</b> the engine's exact syntax for a tag reference, a window such as the past 6 hours, and the age of a tag. The console emits <code>[TAG]</code>, <code>AVERAGE([TAG], "1h")</code> and <code>AGE([TAG]) &gt; "1d"</code> as a proposal; the square brackets stop a hyphenated tag reading as a subtraction.</li>
+</ul>
+<h3>16 Oct 2026 · Plant OS</h3>
+<ul>
+<li>Eight tabs became one tab, Plant OS, with five steps (Shape, Sensors, Alerts, Work, Go live), status dots, Back and Next, History behind a link. Rows carry one line and at most three chips, one action; edit, delete, status and overrides live in the drawer. The library check and the pending decisions are collapsible panels. Four tiles on the estate page; step chips on each plant card.</li>
+<li>Section 3 simplified to one line and six principles. Section 7.3 reworded: the funnel compares installed sensor tags with the library's picture, never values.</li>
+</ul>
 <p class="small muted">v3 · 16 Oct 2026 · prototype and this doc live at <a href="https://mihirsethidp.github.io/CTLConfig/v3/">mihirsethidp.github.io/CTLConfig/v3/</a>. v1 and v2 are unchanged one level up.</p>
 </main>
 </div>
