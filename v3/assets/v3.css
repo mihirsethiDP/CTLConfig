@@ -122,3 +122,16 @@ figure.diag { margin: 12px 0 18px; background: #fff; border: 1px solid var(--lin
 .db.help p { font-size: 13.5px; margin: 0 0 8px; }
 .db.help dl { margin: 0; } .db.help dt { font-weight: 700; font-size: 13px; margin-top: 8px; } .db.help dd { margin: 2px 0 0; font-size: 13px; color: var(--ink-2); }
 .db.help ul { padding-left: 18px; font-size: 13px; margin: 0; } .db.help li { margin-bottom: 5px; }
+/* Plant OS: one tab, five steps */
+.tabs.steps a { display: flex; align-items: center; justify-content: center; gap: 7px; }
+.tabs .dot { width: 9px; height: 9px; border-radius: 50%; background: #b7c1cb; flex: none; }
+.tabs .st-done .dot { background: var(--green-ink); } .tabs .st-attention .dot { background: #f2b705; }
+.tabs a.on .dot { box-shadow: 0 0 0 2px rgba(255, 255, 255, .75); }
+details.disc { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 10px 14px; margin-bottom: 14px; box-shadow: var(--shadow); }
+details.disc summary { cursor: pointer; font-size: 13.5px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; list-style: none; }
+details.disc summary::-webkit-details-marker { display: none; }
+details.disc summary::before { content: '›'; display: inline-block; color: var(--ink-3); font-weight: 700; font-size: 16px; line-height: 1; transition: transform .15s; }
+details.disc[open] summary::before { transform: rotate(90deg); } details.disc[open] summary { margin-bottom: 10px; }
+.stepnav { display: flex; gap: 10px; align-items: center; margin: 18px 0 10px; }
+a.chip { text-decoration: none; } a.chip:hover { text-decoration: none; filter: brightness(.96); }
+.group a { margin-left: 10px; font-size: 12px; text-transform: none; letter-spacing: 0; font-weight: 600; }

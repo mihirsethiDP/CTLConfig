@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Close the Loop · Configuration console · Dev hand-off v3</title>
 <meta name="description" content="What to build now for Close the Loop: the configuration console, its architecture, entity model, screens, contracts, placeholders and open questions.">
-<link rel="stylesheet" href="assets/v3.css?v=10">
+<link rel="stylesheet" href="assets/v3.css?v=11">
 <style>
   .doc .pill { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 999px; background: #eef1f4; color: var(--ink-2); margin-left: 6px; vertical-align: middle; }
   .doc .ac li { margin-bottom: 4px; }
@@ -124,23 +124,24 @@
 
 <h3>5.1 Plants <span class="pill">#/plants</span></h3>
 <ul class="ac">
-<li>Lists every plant the user may see, grouped by workspace, with machine, alert and schedule counts and chips: equipment, limits coverage, alerts, schedules, reach, and Live | Ready to go live | Draft.</li>
+<li>Lists every plant the user may see, grouped by workspace, with machine, alert and schedule counts, the number of steps needing attention, the links Plant OS › and History ›, five step chips (green done, amber needs attention, grey not started; each opens that step) and Live | Ready | Draft.</li>
 <li>Add plant (Site Admin): name, type, capacity, workspace, code, and optionally "start from a drawing" <span class="chip ph sm">SCADA import</span>. From a drawing: zones become unit processes with a detected profile, machines and widgets become machines and readings, two machines of one type in one zone become a control group with duty and standby.</li>
 <li>Edit plant: the same fields. Delete plant: confirm, cascade everything at the plant, audited.</li>
-<li>Search by name. Tiles: plants, machines, alerts active, share of items that follow the library, plants live, placeholders open.</li>
+<li>Search by name. Tiles: plants, machines, alerts active, plants live.</li>
 </ul>
 
-<h3>5.2 Overview <span class="pill">#/plant/:id/overview</span></h3>
+<h3>5.2 Plant OS: one tab, five steps <span class="pill">#/plant/:id</span></h3>
+<p>A plant has one tab, Plant OS, and inside it a flow of five steps shown as the pill bar: 1 Shape, 2 Sensors, 3 Alerts, 4 Work, 5 Go live. Each pill carries a status dot (green done, amber needs attention, grey not started) and a count. Opening a plant lands on the first step that needs attention. Each step ends with Back and Next. History sits behind a link in the header. There is no overview page: the pills are the overview.</p>
+<p><b>Design rules applied, so the screens stay light.</b> Hick's law: one tab, five steps, at most three buttons in a banner, one action per row. Miller's law: rows carry one line of text and at most three chips; counts live in the text, not in chips. Progressive disclosure: the library check and the pending decisions are collapsible panels that open only when they have something to say; edit, delete, status, reset and overrides live in the drawer, not on the row. Jakob's law: the shell, pills, legend, tiles, banner, search, group headers and row cards follow the app's Plants &amp; modules page. Goal-gradient and Zeigarnik: the status dots and the Next button show how far a plant is and what is left. Tesler's law: the complexity that remains (limits, formulas, cadences) sits in drawers with field-level help, not on the lists.</p>
 <ul class="ac">
-<li>Tiles: unit processes, machines, readings with limits of readings that need them, alerts active, schedules active, share that follows the library.</li>
-<li>One "Next" banner computed in this order: no machines → untyped machines → items ready to inherit → readings without limits → nobody reached → drafts → go live → nothing waiting. Each links to its tab or offers Inherit everything | Choose.</li>
-<li>"What the library offers" card: ready, already inherited, blocked (with why), placeholder counts. Inherit everything applies every ready item in up to three passes (formulas wait for their inputs). Choose opens a picker grouped by level with everything ticked.</li>
-<li>"Placeholders at this plant" card lists the open decisions with owners.</li>
+<li>Step status: Shape is done when machines exist and every one has a type; Sensors when nothing is missing against the library and every reading has limits; Alerts when at least one is active and none is a draft or invalid; Work when at least one schedule is active and no programme is missing; Go live when the plant is live (amber when ready).</li>
+<li>Inherit everything applies every offered item in up to three passes (formulas wait for their inputs); it sits in the library check panel and in the Alerts and Work banners. Choose… opens a picker grouped by level with everything ticked.</li>
+<li>Old routes keep working: overview and equipment open Shape, readings and coverage open Sensors, schedules opens Work, review opens Go live, audit opens History.</li>
 </ul>
 
-<h3>5.3 Equipment <span class="pill">#/plant/:id/equipment</span></h3>
+<h3>5.3 Step 1 · Shape <span class="pill">#/plant/:id/shape</span></h3>
 <ul class="ac">
-<li>Grouped by unit process; within each, control groups first (navy chip), then machines. A machine's row: name, tag, duty or standby, its group, type or <span class="chip ph sm">Type not in library</span>, tier, counts, gaps (no type, nothing watched, no programme), chips with Edit and Delete.</li>
+<li>Grouped by unit process; within each, control groups first (navy chip), then machines. A machine's row: name, tag, duty or standby, its group, one line with type, tier, counts and source, and at most three chips: the type (or <span class="chip ph sm">Type not in library</span>), one gap or Watched, an override if any. Clicking the row opens its drawer, which holds Edit, Delete and the override.</li>
 <li>Add, edit, delete unit process (profile from the library). Deleting cascades its groups, machines, readings, alerts and schedules.</li>
 <li>Add, edit, delete control group: name, unit process, members ticked from that unit process's machines. Ticking moves a machine between groups. Deleting a group removes its own readings and the alerts on them; the machines stay, ungrouped.</li>
 <li>Add, edit, delete machine: tag (unique at the plant), name, unit process, control group, library type, tier with reason when it differs from the library, duty or standby of a sibling. Choosing a type for an untyped machine sets its tier to the library's.</li>
@@ -149,18 +150,18 @@
 <li>Search by name, tag or type.</li>
 </ul>
 
-<h3>5.4 Readings and limits <span class="pill">#/plant/:id/readings</span></h3>
+<h3>5.4 Step 2 · Sensors <span class="pill">#/plant/:id/sensors</span></h3>
 <ul class="ac">
-<li>Grouped by subject: the whole plant, then each unit process (its own readings, its control groups' readings, its machines' readings). Columns: reading and tag, kind, values from (SCADA | Entered: cadence and by whom, missed severity | Formula: expression and window), sample value, valid range, limits with Follows library | Custom, Edit, Delete.</li>
+<li>The library check (5.7) sits at the top as a collapsible panel, open when something is missing. Then the readings, grouped by subject: the whole plant, then each unit process (its own readings, its control groups' readings, its machines' readings). Columns: reading and tag, kind, values from (SCADA | Entered: cadence and by whom, missed severity | Formula: expression and window), sample value, valid range, limits with Follows library | Custom. Clicking a row opens its drawer.</li>
 <li>Add, edit, delete reading. The drawer: where it lives (any of the four levels), values come from (SCADA | a person enters it | a formula; a reading imported from SCADA cannot change input), name, tag (made by the console when blank: MAN-…, CALC-…), unit, kind, the input-specific section (7), valid range, limits with direction and four tiers, sample value.</li>
 <li>Every group header has ＋ Sensor tag, adding a SCADA reading on that subject. From the Library check, the same drawer opens prefilled from the library's definition (name, tag prefix, unit, kind, valid range, direction).</li>
 <li>Deleting a reading removes every alert that watches it; a formula that used it loses that input and shows as invalid until rebound.</li>
 <li>Banner: readings without limits, readings that would not pass validation, counts of data inputs <span class="chip ph sm">Manual entry screen</span> and formulas <span class="chip ph sm">Analytical engine</span>.</li>
 </ul>
 
-<h3>5.5 Alerts <span class="pill">#/plant/:id/alerts</span></h3>
+<h3>5.5 Step 3 · Alerts <span class="pill">#/plant/:id/alerts</span></h3>
 <ul class="ac">
-<li>Grouped by unit process (a control group's or machine's alert sits under its unit process) plus "About the whole plant". Row: name, severity tiers, the sentence (reading, direction, entry limit, how it closes, Lead's check, clock overrides), chips: flow reference <span class="chip ph sm">Flows</span>, Follows library | Custom, Open records · frozen, status, Switch off | Activate, Edit, Delete.</li>
+<li>Grouped by unit process (a control group's or machine's alert sits under its unit process) plus "About the whole plant". Row: name with severity tiers, one sentence (reading, direction, entry limit, how it closes, Lead's check, the flow it runs, clock overrides), chips: Muted if overridden, Follows library | Custom, Open records · frozen, status; one action: Activate on a draft. Everything else is in the drawer.</li>
 <li>Add, edit, delete alert. The drawer in five numbered sections: 1 which reading (subject, then the reading: on the subject first, then elsewhere at the plant); 2 when it is a problem (the reading's own limits or custom tiers, hold minutes; for an on/off contact, the severity); 3 how it closes (the reading comes back past a value for n minutes, or the operator declares it fixed); 4 what the operator runs (a library flow reference, a Lead's check); 5 overrides (start-within and fix-within hours, defaulted from the severity). A live sentence restates the whole alert and names who is told at once.</li>
 <li>Activate refuses with the first validation sentence. Saving as active with a gap keeps it as a draft and says why. Delete archives when the alert has or had records.</li>
 <li>Reset to library, on a custom alert that began in the library, replaces it with the library's current version; a version with records is archived rather than removed. The same button exists on schedules and on inherited readings.</li>
@@ -168,16 +169,16 @@
 <li>Inherit… opens the picker filtered to alerts. Search by name or subject.</li>
 </ul>
 
-<h3>5.6 Schedules and rounds <span class="pill">#/plant/:id/schedules</span></h3>
+<h3>5.6 Step 4 · Work <span class="pill">#/plant/:id/work</span></h3>
 <ul class="ac">
-<li>Grouped by the whole plant, then unit process. Row: name, work type chip, Statutory, cadence (and run-hours), counted from, next due, performed by, Lead sign-off, the probe it calibrates, hours, chips: steps reference <span class="chip ph sm">Flows</span>, prevents <span class="chip ph sm">Causes</span>, Follows library | Custom, status, Pause | Activate, Edit, Delete.</li>
+<li>Grouped by the whole plant, then unit process. Row: name with the work type and Statutory, one sentence (cadence and run-hours, counted from, next due, performed by, Lead sign-off, the probe it calibrates, the steps it runs, hours), chips: Paused if under maintenance, Follows library | Custom, status; one action: Activate on a draft. Pause, edit, delete, the steps and the cause it prevents are in the drawer.</li>
 <li>Add, edit, delete schedule. Drawer: 1 what work, on what (plant, unit process, control group, machine; routine | preventive | calibration with its probe); 2 how often (calendar | run-hours | whichever first, every n unit, run-hours and the meter, counted from fixed dates or the last completion, next due, grace days); 3 who and how (our team or a vendor, statutory, Lead sign-off, hours, parts); 4 steps and the cause it prevents (library references).</li>
 <li>A Lead may change only the cadence of in-house preventive maintenance; everything else is read-only for a Lead.</li>
 </ul>
 
-<h3>5.7 Library check <span class="pill">#/plant/:id/coverage</span></h3>
+<h3>5.7 The library check, inside Step 2 <span class="pill">a collapsible panel</span></h3>
 <ul class="ac">
-<li>The funnel, per plant. Tiles: sensors the library expects, installed, missing, recorded as not installed, library items blocked by a miss, items offered and not taken.</li>
+<li>The funnel, per plant, as a panel at the top of Sensors. Its summary line says how many sensors the library expects, how many are installed, recorded as not installed, missing, and how many offered items wait; it opens by itself when something is missing. Machines with every expected sensor installed and nothing offered are not listed.</li>
 <li>One card per machine (and per stage and for the plant): a table of the sensor tags the library expects for its type (tag, unit, kind, and which alerts, run-hours schedules and calibrations need it) against the sensor tags installed as SCADA reports them: Installed | Missing | Not installed with reason, who, when. No value is read from the plant; it is configuration against configuration.</li>
 <li>Missing → <b>＋ Add the sensor tag</b> opens the reading drawer prefilled from the library's definition, on that machine. Missing → <b>Not installed…</b> asks for a reason and records it; the library items that need the sensor become Skipped instead of Blocked, and the export names the gap under <code>knownGaps</code>. <b>Expect it again</b> reverses it.</li>
 <li>Under each card, what the library offers for that subject: Offered (with Inherit), Blocked (with what it needs), Skipped (with the recorded reason), Placeholder (with the pending decision).</li>
@@ -185,14 +186,14 @@
 <li>People are not here. The console shows nothing about the roster, the ladder or quiet hours; they live in User Center.</li>
 </ul>
 
-<h3>5.8 Review and go live <span class="pill">#/plant/:id/review</span></h3>
+<h3>5.8 Step 5 · Go live <span class="pill">#/plant/:id/live</span></h3>
 <ul class="ac">
 <li>Checklist in tab order. Blocking (red): machines exist, every machine typed, every active alert valid, no drafts. Non-blocking (amber): the library check settled, no manual override in force, readings valid, limits complete, every machine with a reading watched, maintenance programme complete, nothing left to inherit.</li>
 <li>Banner: Not live yet (n things) → Almost (activate drafts) → Ready (Go live) → Live (Back to draft). Activate all drafts activates only those that pass validation.</li>
-<li>Download the hand-off JSON (section 9). The same button sits in the plant header.</li>
+<li>Download the hand-off JSON (section 9). Under it, "Decisions still pending": the placeholders as a collapsed list.</li>
 </ul>
 
-<h3>5.9 Audit <span class="pill">#/plant/:id/audit · #/audit</span></h3>
+<h3>5.9 History <span class="pill">#/plant/:id/history · #/audit</span></h3>
 <ul class="ac"><li>Per plant and across the estate: when, who, plant, what, detail; searchable; newest first; 24 months.</li></ul>
 
 <h3>5.10 Library <span class="pill">#/library · read-only</span></h3>
