@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Close the Loop · Configuration console · Dev hand-off v3</title>
 <meta name="description" content="What to build now for Close the Loop: the configuration console, its architecture, entity model, screens, contracts, placeholders and open questions.">
-<link rel="stylesheet" href="assets/v3.css?v=11">
+<link rel="stylesheet" href="assets/v3.css?v=12">
 <style>
   .doc .pill { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 999px; background: #eef1f4; color: var(--ink-2); margin-left: 6px; vertical-align: middle; }
   .doc .ac li { margin-bottom: 4px; }
@@ -82,7 +82,7 @@
 <path class="arrow" d="M450,120 L490,120"/><text class="lbl" x="470" y="112" text-anchor="middle">compile</text>
 <rect class="box" x="490" y="80" width="130" height="80" rx="8"/><text x="555" y="108" text-anchor="middle" font-weight="600">One JSON per plant</text><text class="lbl" x="555" y="126" text-anchor="middle">Triggers · SignalConditions</text><text class="lbl" x="555" y="140" text-anchor="middle">readings · gaps · overrides</text>
 <path class="arrow" d="M620,120 L660,120"/>
-<rect class="box" x="660" y="80" width="130" height="80" rx="8"/><text x="725" y="112" text-anchor="middle" font-weight="600">Rules engine</text><text class="lbl" x="725" y="130" text-anchor="middle">watches readings</text><text class="lbl" x="725" y="144" text-anchor="middle">raises issues and tasks</text>
+<rect class="box" x="660" y="80" width="130" height="80" rx="8"/><text x="725" y="112" text-anchor="middle" font-weight="600">Analytical engine</text><text class="lbl" x="725" y="130" text-anchor="middle">runs the formulas: triggers and computations</text><text class="lbl" x="725" y="144" text-anchor="middle">raises issues and tasks</text>
 <path class="arrow" d="M790,120 L830,120"/>
 <rect class="ph" x="830" y="80" width="110" height="80" rx="8"/><text x="885" y="106" text-anchor="middle" font-weight="600">What follows</text><text class="lbl" x="885" y="124" text-anchor="middle">people are told</text><text class="lbl" x="885" y="138" text-anchor="middle">operator app</text><text class="lbl" x="885" y="152" text-anchor="middle">event log</text>
 <!-- inputs row -->
@@ -108,9 +108,9 @@
 <p>Names as in the prototype's store. Identifiers are opaque strings. Every entity has <code>id</code>, <code>plantId</code> (except Plant), <code>createdAt</code>, and is scoped to one plant.</p>
 <table><thead><tr><th>Entity</th><th>Fields</th><th>Notes</th></tr></thead><tbody>
 <tr><td><b>Plant</b></td><td>name, type (STP | ETP | WTP), capacity, workspace, code, status (draft | live), libraryVersion, siteDefaults {quietFrom, quietTo, hooterOn, hooterSec}, scada {drawn, read, source}</td><td>Workspace and licences stay in User Center. <code>scada</code> is null when entered by hand.</td></tr>
-<tr><td><b>UnitProcess</b></td><td>name, profileId (library profile or null), scadaZone, source (scada | custom), <b>override</b> {mode: mute | maintenance, reason, until, by, since} | null</td><td>A zone of the plant. The profile decides which rounds, inputs and formulas are offered. Sensors drawn on the zone become readings on it.</td></tr>
+<tr><td><b>UnitProcess</b></td><td>name, profileId (library profile or null), scadaZone, source (scada | custom), <b>override</b> {mode: maintenance, reason, until, by, since} | null</td><td>A zone of the plant. The profile decides which rounds, inputs and formulas are offered. Sensors drawn on the zone become readings on it.</td></tr>
 <tr><td><b>ControlGroup</b></td><td>name, unitProcessId, source, override</td><td>Machines that run together. Membership is <code>Equipment.controlGroupId</code>; a machine is in at most one group.</td></tr>
-<tr><td><b>Equipment</b></td><td>tag, name, unitProcessId, controlGroupId, type (library type or null), tier (A | B | C), tierReason, duty (duty | standby), standbyOf, scadaType, source, override, <b>notInstalled</b> [{name, reason, by, since}]</td><td>A tier that differs from the library's requires a reason. A standby counts one tier lower while its duty unit runs. <code>notInstalled</code> records sensors the library expects that this machine does not have.</td></tr>
+<tr><td><b>Equipment</b></td><td>tag, name, unitProcessId, controlGroupId, type (library type or null), tier (A | B | C), tierReason, duty (duty | standby), standbyOf, scadaType, source, override, <b>notInstalled</b> [{name, reason, by, since, libraryVersion}]</td><td>A tier that differs from the library's requires a reason. A standby counts one tier lower while its duty unit runs. <code>notInstalled</code> records sensors the library expects that this machine does not have.</td></tr>
 <tr><td><b>Reading</b></td><td>on {kind: plant | unitProcess | controlGroup | equipment, id}, name, tag, unit, kind (process | analytical | status | meter), <b>input</b> (scada | manual | computed), <b>entry</b> {every {n, unit}, by (l1 | l3), missed (caution | minor | null)}, <b>formula</b> {expr, inputs [{var, readingId}], window (latest | 1h | 24h | shift)}, validMin, validMax, direction (above | below), limits {caution, minor, major, emergency}, limitsSource (library | custom | null), sample, note, source, templateRef</td><td><code>entry</code> only when input is manual; <code>formula</code> only when computed. A meter drives schedules and never an alert. A status reading fires on ON at the severity the alert chooses.</td></tr>
 <tr><td><b>Alert</b></td><td>name, subject {kind, id}, readingId, limitsMode (reading | custom), customLimits, direction, holdMin, closes {mode: reading | operator, back, holdMin}, flowRef, causeRef, verify, clocks {response, deadline} | null, status (draft | active | off | archived), open, hadRecords, source, templateRef, templateName</td><td>One alert watches one reading; the reading may be anywhere at the plant. <code>open</code> is supplied by the engine (placeholder: 0 until then).</td></tr>
 <tr><td><b>Schedule</b></td><td>name, subject, workType (routine | pm | calibration), basis (calendar | meter | either), every {n, unit}, meterHours, meterId, probeId, anchor (fixed | last), nextDue, tolerance, performedBy (in_house | vendor), vendor, statutory, verify, flowRef, causeRef, hours, parts, status, open, hadRecords, source, templateRef</td><td>A calibration needs the probe it calibrates. A run-hours basis needs a meter reading on the machine.</td></tr>
@@ -146,7 +146,7 @@
 <li>Add, edit, delete control group: name, unit process, members ticked from that unit process's machines. Ticking moves a machine between groups. Deleting a group removes its own readings and the alerts on them; the machines stay, ungrouped.</li>
 <li>Add, edit, delete machine: tag (unique at the plant), name, unit process, control group, library type, tier with reason when it differs from the library, duty or standby of a sibling. Choosing a type for an untyped machine sets its tier to the library's.</li>
 <li>＋ Sensor tag on the plant header, on a unit process header, on a group row and on a machine row opens the reading drawer with that subject preset and SCADA as the input. Sensors from the drawing arrive on the machine, on the unit process (zone sensors, pipe sensors with no machine at either end) or on the plant.</li>
-<li>Manual override in the edit drawer of a unit process, a group or a machine: Running normally | Alerts muted | Under maintenance, with an until-date and a reason, audited with who and since when. Rows show the override; alerts under it show Muted; schedules under maintenance show Paused. The nearest override up the chain wins. Validation: reason and date required, date not in the past.</li>
+<li>Manual override in the edit drawer of a unit process, a group or a machine: Running normally | Under maintenance, with an until-date and a reason, audited with who and since when. Rows show it; alerts under it show Maintenance and do not fire; schedules keep running (decision F14). The nearest override up the chain wins. Validation: reason and date required, date not in the past.</li>
 <li>Search by name, tag or type.</li>
 </ul>
 
@@ -161,17 +161,17 @@
 
 <h3>5.5 Step 3 · Alerts <span class="pill">#/plant/:id/alerts</span></h3>
 <ul class="ac">
-<li>Grouped by unit process (a control group's or machine's alert sits under its unit process) plus "About the whole plant". Row: name with severity tiers, one sentence (reading, direction, entry limit, how it closes, Lead's check, the flow it runs, clock overrides), chips: Muted if overridden, Follows library | Custom, Open records · frozen, status; one action: Activate on a draft. Everything else is in the drawer.</li>
+<li>Grouped by unit process (a control group's or machine's alert sits under its unit process) plus "About the whole plant". Row: name with severity tiers, one sentence (reading, direction, entry limit, how it closes, Lead's check, the flow it runs, clock overrides), chips: Maintenance if the subject is under maintenance, Follows library | Custom, status; one action: Activate on a draft. Everything else is in the drawer.</li>
 <li>Add, edit, delete alert. The drawer in five numbered sections: 1 which reading (subject, then the reading: on the subject first, then elsewhere at the plant); 2 when it is a problem (the reading's own limits or custom tiers, hold minutes; for an on/off contact, the severity); 3 how it closes (the reading comes back past a value for n minutes, or the operator declares it fixed); 4 what the operator runs (a library flow reference, a Lead's check); 5 overrides (start-within and fix-within hours, defaulted from the severity). A live sentence restates the whole alert and names who is told at once.</li>
 <li>Activate refuses with the first validation sentence. Saving as active with a gap keeps it as a draft and says why. Delete archives when the alert has or had records.</li>
 <li>Reset to library, on a custom alert that began in the library, replaces it with the library's current version; a version with records is archived rather than removed. The same button exists on schedules and on inherited readings.</li>
-<li>An alert whose subject, or whose subject's group or stage, is overridden shows Muted with the reason and does not fire until the override ends; the export carries <code>suppressedBy</code>.</li>
+<li>An alert whose subject, or whose subject's group or stage, is under maintenance shows Maintenance with the reason and does not fire until it ends; the export carries <code>suppressedBy</code>.</li>
 <li>Inherit… opens the picker filtered to alerts. Search by name or subject.</li>
 </ul>
 
 <h3>5.6 Step 4 · Work <span class="pill">#/plant/:id/work</span></h3>
 <ul class="ac">
-<li>Grouped by the whole plant, then unit process. Row: name with the work type and Statutory, one sentence (cadence and run-hours, counted from, next due, performed by, Lead sign-off, the probe it calibrates, the steps it runs, hours), chips: Paused if under maintenance, Follows library | Custom, status; one action: Activate on a draft. Pause, edit, delete, the steps and the cause it prevents are in the drawer.</li>
+<li>Grouped by the whole plant, then unit process. Row: name with the work type and Statutory, one sentence (cadence and run-hours, counted from, next due, performed by, Lead sign-off, the probe it calibrates, the steps it runs, hours), chips: Follows library | Custom, status; one action: Activate on a draft. Pause, edit, delete, the steps and the cause it prevents are in the drawer.</li>
 <li>Add, edit, delete schedule. Drawer: 1 what work, on what (plant, unit process, control group, machine; routine | preventive | calibration with its probe); 2 how often (calendar | run-hours | whichever first, every n unit, run-hours and the meter, counted from fixed dates or the last completion, next due, grace days); 3 who and how (our team or a vendor, statutory, Lead sign-off, hours, parts); 4 steps and the cause it prevents (library references).</li>
 <li>A Lead may change only the cadence of in-house preventive maintenance; everything else is read-only for a Lead.</li>
 </ul>
@@ -204,7 +204,7 @@
 <table><thead><tr><th>Entity</th><th>Rule</th></tr></thead><tbody>
 <tr><td>Machine</td><td>Tag and name required. Tag unique at the plant. Must be in a unit process. Cannot be its own standby. A tier different from the library's needs a reason.</td></tr>
 <tr><td>Reading</td><td>Name required. Must live on an existing plant, unit process, control group or machine. Valid range low below high (except on/off). Tiers deeper means worse, in the direction set. Every tier inside the valid range. Manual: entry cadence above zero. Computed: expression present; only numbers, + − × ÷, brackets, min max abs sqrt round and identifiers; every identifier bound to an existing reading; not a constant; no self-reference; two formulas cannot feed each other; it computes on probe values.</td></tr>
-<tr><td>Alert</td><td>Name and reading required. At least one tier on the reading or as custom limits. Tiers deeper means worse. Tiers inside what the reading can read. An Emergency fires on the first reading (hold 0). A reading-based close needs a back value on the safe side of the entry limit. Clock override: start-within above zero, fix-within longer. Warn when another alert already watches the reading.</td></tr>
+<tr><td>Alert</td><td>Name and reading required. At least one tier on the reading or as custom limits. Tiers deeper means worse. Tiers inside what the reading can read. An Emergency fires on the first reading (hold 0). A reading-based close needs a back value on the safe side of the entry limit. Clock override: start-within above zero, fix-within longer. Warn when another alert already watches the reading in the same direction; a band (too low and too high) is one alert per direction.</td></tr>
 <tr><td>Schedule</td><td>Name required. Cadence above zero. Next due set. A calibration needs its probe. A run-hours basis needs a meter and hours above zero. A vendor needs a name.</td></tr>
 <tr><td>Control group</td><td>Name required. Must be in a unit process. Members only from that unit process.</td></tr>
 <tr><td>Manual override</td><td>A reason and an until-date; the date not in the past.</td></tr>
@@ -215,30 +215,30 @@
 <h3>7.1 Data inputs: a value a person enters</h3>
 <p>A reading with <code>input: "manual"</code>. The console sets what the library or the person decides: the cadence (every n shifts, days, weeks or months), who enters it (Operator or Lead), what happens when nobody does (nothing, a Caution, or a Minor issue). The operator app owns the entry screen <span class="chip ph sm">Manual entry screen</span>; it writes the value as a reading, after which alerts on it behave like any other.</p>
 <ul>
-<li>A missed entry is an issue of its own: the console exports a <code>missedEntry</code> trigger per manual reading with a missed severity (section 9). The clock is the cadence plus a grace the engine decides (flag F7).</li>
+<li>A missed entry is an issue of its own: the console exports a <code>missedEntry</code> trigger per manual reading with a missed severity (section 9). It fires at the end of the cadence window; no grace period (decision F7).</li>
 <li>A lab value is one sample: alerts on manual readings default to hold 0 and close when the next value is back in band.</li>
 <li>The library offers data inputs by plant type (inlet and outlet COD, BOD, TSS; for an ETP, TDS and oil and grease; for a WTP, raw turbidity and residual chlorine) and by unit process profile (MLSS and SV30 for a biological stage; head loss for filtration). Each comes with its limits and its alert.</li>
 </ul>
-<h3>7.2 Formulas: a value the analytical engine computes</h3>
-<p>A reading with <code>input: "computed"</code>. The console stores the definition; the analytical engine <span class="chip ph sm">Analytical engine</span> evaluates it and writes the result back as that reading, on the same subject. Alerts on it need nothing special.</p>
+<h3>7.2 Formulas and the analytical engine</h3>
+<p>The analytical engine is both the trigger engine and the computation engine (decision F5). Every enabled sensor-level alert becomes an engine formula in the backend; every computed reading is an engine formula; a missed data input is an engine formula on the age of a tag. The console is where people write and edit these in plain terms. The compile step turns each into <code>engine: {dialect: "hyperformula", formula, upsertKey}</code>, and an edit re-sends the same key so the engine replaces rather than duplicates.</p>
 <div class="kv2">
-<span class="k">Grammar</span><span>numbers · <code>+ - * /</code> · brackets · <code>min max abs sqrt round</code> · identifiers (letters, digits, underscore), each bound to one reading</span>
-<span class="k">Inputs</span><span><code>[{var, readingId}]</code>, derived from the identifiers in the expression; bound by the person, or by the library's suggestion when exactly one candidate reading exists</span>
-<span class="k">Window</span><span><code>latest</code> (each input's latest value) · <code>1h</code> · <code>24h</code> · <code>shift</code> (the average of each input over the window, then the expression)</span>
-<span class="k">Result</span><span>a number with the reading's unit and valid range; outside the range the formula is suspect and the engine raises no alert</span>
-<span class="k">Subject</span><span>any level: a plant-wide removal efficiency, a unit-process SVI, a control group's summed motor current, a machine's specific energy</span>
+<span class="k">Dialect</span><span>HyperFormula functions, written in the console as MIN, MAX, ABS, SQRT, ROUND, AVERAGE, SUM, IF, AND, OR, with <code>+ - * / &lt; &gt; =</code> and brackets; identifiers (letters, digits, underscore) are bound to readings</span>
+<span class="k">Windows</span><span><code>latest</code> (the latest value of each input) · <code>1h</code>, <code>24h</code>, <code>shift</code> (AVERAGE of each input over the past window); compiled as <code>AVERAGE([TAG], "1h")</code></span>
+<span class="k">An alert as a formula</span><span><code>[TAG] &gt; 800</code>; with a hold of n minutes <code>MIN([TAG], "5m") &gt; 800</code> (rises) or <code>MAX([TAG], "5m") &lt; 2</code> (falls); an on/off contact <code>[TAG] = 1</code>; the thresholds per severity band travel with it</span>
+<span class="k">A missed entry</span><span><code>AGE([TAG]) &gt; "1d"</code>, fired at the end of the cadence window, no grace (F7)</span>
+<span class="k">Result</span><span>a number with the reading's unit and valid range; outside it, or not computable, the result is <b>suspect</b>: flagged at configuration as Suspect at sample, never an alert at runtime (F6)</span>
+<span class="k">Subject</span><span>any level: a plant-wide removal efficiency, a stage SVI, a group's summed motor current, a machine's specific energy</span>
 <span class="k">Cycles</span><span>a formula may use another formula's result; it may not use its own, and two may not feed each other</span>
 </div>
-<p>Examples the library offers: <code>(inlet_cod - outlet_cod) / inlet_cod * 100</code> as COD removal on the plant; <code>sv30 * 1000 / mlss</code> as SVI on a biological stage; a WTP's turbidity removal mixing one manual input and one SCADA reading. The console also lets a person write any formula, as the seeded "Average line pressure" on Manesar's blower group shows.</p>
-<div class="callout ph"><b>Placeholder.</b> When the engine evaluates (on every input update, or on the window's close), what it does with a missing input (skip the evaluation, write nothing), and whether a formula result feeds another formula in the same cycle, are the analytics build's decisions. The console's contract fixes only the grammar, the window names and the result shape. See flags F5 and F6.</div>
+<p>Examples the library offers: <code>(inlet_cod - outlet_cod) / inlet_cod * 100</code> as COD removal on the plant; <code>sv30 * 1000 / mlss</code> as SVI on a biological stage; a WTP's turbidity removal mixing one data input and one SCADA tag. The console also lets a person write any formula, as the seeded "Average line pressure" on Manesar's blower group shows.</p>
 
 <h3>7.3 The funnel: the perfect picture against the actual plant</h3>
 <p>The library holds the perfect picture of each machine type, stage and plant type: the sensors that should be installed, and every alert, schedule, round, data input and formula that follows from them. A real plant is never the perfect picture: a flow meter was not in the contract, a trip contact was never wired, a stage was built without a probe, a sensor is on order. SCADA reports what is actually installed. The console puts the perfect picture and the actual plant side by side and makes every difference explicit, so that nothing the library expects is silently lost and nothing irrelevant keeps nagging.</p>
 <ul>
-<li><b>Compare.</b> Configuration against configuration; no value is read from the plant. For each machine with a library type: the sensor tags the type expects, against the sensor tags installed on that machine as SCADA reports them. For each stage and for the plant: the rounds, data inputs and formulas the profile and the plant type offer, against what has been taken. For each miss, which library alerts, run-hours schedules and calibrations depend on it.</li>
+<li><b>Compare.</b> Configuration against configuration; no value is read from the plant. For each machine with a library type: the sensor tags the type expects, against the sensor tags installed on that machine as SCADA reports them. For each stage and each group: the sensor tags the library expects by profile and by the members' type (decision F15), against the tags installed on them. For each stage and for the plant: the rounds, data inputs and formulas offered, against what has been taken. For each miss, which library alerts, run-hours schedules and calibrations depend on it.</li>
 <li><b>Settle each miss one of two ways.</b> Add the sensor tag (the sensor exists, SCADA just did not bring it), prefilled from the library's definition. Or record it as not installed, with a reason, by whom, since when.</li>
 <li><b>Consequences of a record.</b> Suggestions that need the sensor move from Blocked to Skipped with the reason shown; they stop counting as pending; the export lists the record under <code>knownGaps</code>; a new library version that still expects the sensor does not re-flag it. Expect it again reverses all of this.</li>
-<li><b>What is not compared yet.</b> Connections (readings on pipes and neighbours) and condition-based work are placeholders; stages and groups have no expected-sensor list in the library data yet (flag F15). The funnel is written so those join as more rows, not as a new screen.</li>
+<li><b>What is not compared yet.</b> Connections (readings on pipes and neighbours) and condition-based work are placeholders. The funnel is written so those join as more rows, not as a new screen.</li>
 </ul>
 
 <h2 id="library">8 · The library interface</h2>
@@ -272,12 +272,13 @@ Round                            { name, workType, every{n,unit}, statutory, ver
   controlGroups: [{ id, name, unitProcessId, members: [equipmentId] }],
   equipment:     [{ id, tag, name, unitProcessId, controlGroupId, type, criticalityTier, tierReason, duty, standbyOf, source, scadaType }],
   readings:      [{ id, tag, name, unit, kind, on, input, entry, formula: { expr, window, inputs: [{var, readingId, tag}] },
+                    engine: { dialect: "hyperformula", formula, upsertKey, suspect },
                     validMin, validMax, defaultZones: { direction, zones: [{severity, threshold}] }, zonesSource, note }],
   roster:        { source: "user-center" },                         // people are not in the console
   knownGaps:     [{ subject, tag, name, reason, by, since }],         // library expectations recorded as not installed
   overrides:     [{ kind, id, name, mode: mute|maintenance, reason, until, by, since }],
   signalConditions: [{ id, readingId, tag, operator, threshold, unit, durationMinutes? }],
-  analyticalEngine: { grammar, formulas: [readingId] },
+  analyticalEngine: { dialect: "hyperformula", grammar, formulas: [readingId], suspectPolicy, note },
   manualInputs: [readingId],
   triggers: [
     { id, ruleName, status, suppressedBy: {kind, id, name, mode, until, reason} | null, outcome: "issue", triggerType: "alert", subject: {kind, id},
@@ -285,13 +286,15 @@ Round                            { name, workType, every{n,unit}, statutory, ver
                        resolutionConditionId, resolutionType: condition|manual },
       inheritsSensorZones, requiresSupervisorVerification, slaOverride: {responseHours, deadlineHours}|null,
       procedureTreeId, preassignedRootCauseId, source, sourceTemplate,
-      placeholders: { gateCondition: null, diagnosis: "not in this build" } },
+      placeholders: { gateCondition: null, diagnosis: "not in this build" },
+      engine: { dialect: "hyperformula", upsertKey, formula, byBand: [{severity, threshold}] } },
     { id, ruleName, status, suppressedBy (maintenance only), outcome: "task", triggerType: "schedule", subject,
       triggerConfig: { recurrenceRule, startAt, workType, dueBasis, meterTagId, meterIntervalHours, meterMinIntervalDays,
                        performedBy, vendorName, toleranceDays, calendarAnchor },
       statutory, requiresSupervisorVerification, displaySensorId, procedureTreeId, preassignedRootCauseId, expectedHours, parts, source, sourceTemplate },
     { id, ruleName, status, outcome: "issue", triggerType: "missedEntry", subject,
-      triggerConfig: { readingId, tag, cadence: {n, unit}, enteredBy, severity } }
+      triggerConfig: { readingId, tag, cadence: {n, unit}, enteredBy, severity, graceMinutes: 0 },
+      engine: { dialect: "hyperformula", upsertKey, formula: "AGE([TAG]) > \"1d\"" } }
   ],
   placeholders: [id]
 }</code></pre>
@@ -302,8 +305,9 @@ Round                            { name, workType, every{n,unit}, statutory, ver
 <tr><td>Add, edit, delete plant; the hooter</td><td>✓</td><td>—</td><td>—</td><td>—</td></tr>
 <tr><td>Manual overrides; library check records</td><td>✓</td><td>✓</td><td>—</td><td>—</td></tr>
 <tr><td>Unit processes, control groups, machines</td><td>✓</td><td>✓</td><td>—</td><td>—</td></tr>
-<tr><td>Readings and limits (all three inputs)</td><td>✓</td><td>✓</td><td>—</td><td>—</td></tr>
-<tr><td>Alerts; schedules; inherit</td><td>✓</td><td>✓</td><td>cadence of in-house preventive maintenance only</td><td>—</td></tr>
+<tr><td>Readings and limits (all three inputs)</td><td>✓</td><td>✓</td><td>✓ (F11)</td><td>—</td></tr>
+<tr><td>Alerts</td><td>✓</td><td>✓</td><td>✓ (F11)</td><td>—</td></tr>
+<tr><td>Schedules; inherit</td><td>✓</td><td>✓</td><td>cadence of in-house preventive maintenance only</td><td>—</td></tr>
 <tr><td>Review, activate, go live, export</td><td>✓</td><td>✓</td><td>—</td><td>—</td></tr>
 <tr><td>People, roles, escalation, quiet hours</td><td colspan="4">not in the console; User Center</td></tr>
 <tr><td>Library</td><td colspan="3">read-only</td><td>authors it, in the library build</td></tr>
@@ -319,42 +323,44 @@ Round                            { name, workType, every{n,unit}, statutory, ver
 <tr><td><code>causes</code></td><td>Root causes</td><td>Schedules</td><td>A reference into the library's cause vocabulary.</td><td>Library build</td></tr>
 <tr><td><code>gates</code></td><td>Compound conditions</td><td>Alerts</td><td>Not in this build; the Trigger carries a null gate.</td><td>Mihir</td></tr>
 <tr><td><code>condition-work</code></td><td>Condition-based work</td><td>Schedules</td><td>Not in this build; the library's condition-based schedules show as placeholders.</td><td>Mihir</td></tr>
-<tr><td><code>frozen</code></td><td>Freeze on open records</td><td>Alerts, Schedules</td><td>Honoured from a count the engine must supply; 0 until then. Archiving on delete already uses it.</td><td>Engine</td></tr>
 <tr><td><code>propagation</code></td><td>Library propagation</td><td>Everything that follows the library</td><td>The console keeps <code>templateRef</code> intact; propagation is the library build's.</td><td>Library build</td></tr>
 <tr><td><code>people</code></td><td>People, roles and the ladder</td><td>Alerts (who is told), Review</td><td>Not in the console. The engine reads the roster from User Center; the console sets severity and per-alert clock overrides only.</td><td>User Center</td></tr>
-<tr><td><code>engine</code></td><td>Analytical engine evaluation</td><td>Readings (formula)</td><td>Stores expression, inputs, window, limits; computes a sample from sample values. Evaluation is the analytics build's.</td><td>Analytics build</td></tr>
-<tr><td><code>entry</code></td><td>Manual entry screen</td><td>Readings (entered by a person)</td><td>Stores cadence, who, missed severity; exports a <code>missedEntry</code> trigger. The screen is the operator app's.</td><td>Operator app</td></tr>
-<tr><td><code>control-groups</code></td><td>Control groups from SCADA</td><td>Equipment</td><td>Entered by hand or derived from the drawing. Whether SCADA or User Center owns the definition is open.</td><td>Mihir + SCADA team</td></tr>
+<tr><td><code>engine</code></td><td>Analytical engine dialect</td><td>Readings (formula), Alerts</td><td>Every alert, formula and missed-entry trigger compiles to an engine formula in HyperFormula style with an upsert key. The exact window and tag syntax is to be confirmed; the console emits a proposed form.</td><td>Analytics team</td></tr>
+<tr><td><code>entry</code></td><td>Manual entry screen</td><td>Readings (entered by a person)</td><td>Stores cadence, who, missed severity; exports a <code>missedEntry</code> trigger that fires at the end of the window, no grace. The screen is the operator app's.</td><td>Operator app</td></tr>
+<tr><td><code>control-groups</code></td><td>Groups and stages detected by SCADA</td><td>Equipment</td><td>SCADA's identification algorithm will propose them; not properly implemented yet. Until then from the drawing or by hand; the manual override of the detection stays in the console either way.</td><td>SCADA team</td></tr>
 <tr><td><code>cycles</code></td><td>Cycles and milestones</td><td>Plant</td><td>Out of this build; milestones show as placeholders on the plant type.</td><td>Mihir</td></tr>
 </tbody></table>
 
-<h2 id="flags">12 · Flags, challenges, questions</h2>
-<p>Raised as a companion, not as blockers. Each has a recommended default so the build does not wait; say if you disagree.</p>
-<div class="q"><span class="flag must">Decide now</span><b>F1 · Freeze the library interface (section 8) this week.</b> Everything the console inherits depends on it. Recommendation: version it as <code>2026.10</code>, implement it as a JSON file served by the console until the library build exists, and forbid changes to existing fields; additions only.</div>
-<div class="q"><span class="flag must">Decide now</span><b>F2 · Who owns control groups.</b> The console lets people define them by hand, and the drawing import derives them from duty and standby pairs. If SCADA already has control groups with their own ids, the import should take them and the console should not allow editing membership. Recommendation: hand-entered now, SCADA-owned when the import contract lands; keep <code>source</code> on the group so the switch is mechanical.</div>
-<div class="q"><span class="flag must">Decide now</span><b>F3 · Which flows an alert runs.</b> The console only stores a reference, which is enough for the build. But the operator app cannot be designed until the research says fix steps or guided diagnosis. Recommendation: fix steps now (v2's model), diagnosis as a later flow type with the same reference.</div>
-<div class="q"><span class="flag should">Default taken</span><b>F4 · Readings on any level.</b> Letting an alert watch any reading at the plant removes the need for v2's connection resolver in this build. The cost: an alert on pump P-1 that watches a header pressure says nothing about why. Recommendation: accept for now; revisit connections when the SCADA import includes pipes.</div>
-<div class="q"><span class="flag ask">Question</span><b>F5 · Where the analytical engine runs and how often.</b> Streaming (on every input update) or batch (at each window close)? For <code>latest</code> windows over manual inputs, batch is enough; for <code>1h</code> over SCADA tags, streaming is costly. Recommendation: evaluate on window close, and on each new value for <code>latest</code>; the console's grammar is the same either way.</div>
-<div class="q"><span class="flag ask">Question</span><b>F6 · Formula results that cannot be computed.</b> Division by zero, an input missing for the whole window, an input outside its valid range. Recommendation: the engine writes nothing for that cycle, raises no alert, and the console shows the last computed value with its age. Never raise an alert on a suspect result.</div>
-<div class="q"><span class="flag ask">Question</span><b>F7 · The missed-entry clock.</b> "Every day by the Operator" needs a deadline: end of day, end of shift, or cadence plus a grace? Recommendation: end of the cadence window plus two hours of grace, configurable later on the reading.</div>
-<div class="q"><span class="flag should">Default taken</span><b>F8 · Two-sided limits (pH, temperature bands).</b> A reading has one direction. A band needs two readings or two alerts. Recommendation: two alerts on one reading, with the duplicate warning relaxed when directions differ. Not built yet; cheap to add.</div>
-<div class="q"><span class="flag should">Default taken</span><b>F9 · Freeze needs the engine's count.</b> The console cannot know how many records an alert has open. Until the engine exposes a count per trigger, the freeze is a no-op and the archive-on-delete rule only fires for seeded items. Recommendation: the engine exposes <code>GET /triggers/{id}/open</code> in its first sprint.</div>
-<div class="q"><span class="flag should">Default taken</span><b>F10 · Soft delete everywhere, hard delete only for items without records.</b> Archived items leave the lists but keep their history; a plant delete cascades. Recommendation as built; the one thing to confirm is whether a deleted plant must keep its audit for 24 months (yes, I assumed).</div>
-<div class="q"><span class="flag ask">Question</span><b>F11 · Lead permissions.</b> The build gives a Lead the cadence of in-house preventive maintenance and nothing else. Site teams may expect a Lead to set limits on readings. Recommendation: keep narrow for launch; widen per plant from User Center later.</div>
-<div class="q"><span class="flag ask">Question</span><b>F12 · Sample values versus live values at configuration time.</b> Nothing is read from the plant while configuring; every number on screen is a sample. When SCADA import exists, showing the last value beside a reading would help a person set limits. Recommendation: a "last value and age" field in the import contract, read-only in the console.</div>
-<div class="q"><span class="flag should">Default taken</span><b>F13 · Plant-level alerts need a subject in the engine.</b> The handoff's Trigger subject was a machine or a stage; this build adds plant and control group. Recommendation: the engine accepts <code>{kind: plant}</code> and <code>{kind: controlGroup, id}</code> as first-class subjects; issues on them show under the plant and under the group's unit process.</div>
+<h2 id="flags">12 · Decisions</h2>
+<p>The flags raised on 16 Oct and Mihir's answers the same day. Each row says what the build does as a result. Nothing here is open; the one technical confirmation still needed is in the note at the end and does not block the build.</p>
+<table><thead><tr><th>#</th><th>Question</th><th>Decision</th><th>In the build</th></tr></thead><tbody>
+<tr><td>F1</td><td>Freeze the library interface</td><td>Yes, as recommended.</td><td>Version 2026.10, served as a JSON file until the library build exists; additions only (section 8).</td></tr>
+<tr><td>F2</td><td>Who owns control groups</td><td>SCADA has a group and stage identification algorithm with manual override, not properly implemented yet. A manual override is needed regardless.</td><td>Groups and stages come from the drawing or by hand today, with <code>source: scada | custom</code>. When the algorithm lands it proposes them; the console keeps the override of membership and names. Placeholder <code>control-groups</code> reworded.</td></tr>
+<tr><td>F3</td><td>Which flow an alert runs</td><td>Fix steps now; diagnosis later as another flow type.</td><td>A library flow reference on the alert, exported as <code>procedureTreeId</code>.</td></tr>
+<tr><td>F4</td><td>An alert on any sensor tag at the plant</td><td>Accepted. The configuration has no dependency on live readings and shows none (F12 is the one read-only aid).</td><td>The alert drawer offers the subject's own tags first, then any at the plant. No connection resolver in this build.</td></tr>
+<tr><td>F5</td><td>The analytical engine</td><td>It is the trigger engine and the computation engine: every enabled sensor-level alert becomes an engine formula in the backend, with HyperFormula functions and selective windows (the past 6 hours). Edits must be handled.</td><td>Every alert, computed reading and missed-entry trigger compiles to <code>engine: {dialect, formula, upsertKey}</code>; an edit re-sends the same key. The console's formula grammar is HyperFormula style (MIN, MAX, AVERAGE, SUM, IF…) with windows (section 7.2).</td></tr>
+<tr><td>F6</td><td>Suspect formula results</td><td>Flag suspects at configuration time; suppress alerts on suspect results at runtime.</td><td>A computed reading whose sample result is not computable or outside its valid range shows Suspect at sample; the export carries <code>engine.suspect</code> and the policy "no alert on a suspect result".</td></tr>
+<tr><td>F7</td><td>Missed entries</td><td>Flag them; no grace period.</td><td>The missedEntry trigger fires at the end of the cadence window; <code>graceMinutes: 0</code>.</td></tr>
+<tr><td>F8</td><td>Two-sided limits</td><td>As recommended.</td><td>Two alerts on one reading are fine when their directions differ; the duplicate warning only fires for the same direction.</td></tr>
+<tr><td>F9</td><td>Freeze on open records</td><td>Not the configuration's concern; it belongs to the plant's live status.</td><td>Removed from the console: no frozen state, no open-record count. Archive-on-delete stays (F10).</td></tr>
+<tr><td>F10</td><td>Soft delete; audit kept 24 months even for deleted plants</td><td>Yes.</td><td>As built.</td></tr>
+<tr><td>F11</td><td>Lead permissions</td><td>A technical lead at a plant may edit alerts and sensor limits.</td><td>The Lead edits readings (limits), alerts, and the cadence of in-house preventive maintenance. Permissions table updated (section 10).</td></tr>
+<tr><td>F12</td><td>Last value beside a reading</td><td>The configuration must not depend on live readings, but a last value helps a lead set limits.</td><td>A read-only last value with its age, from the SCADA import contract, shown beside limits. Nothing in the console depends on it; the prototype shows a sample.</td></tr>
+<tr><td>F13</td><td>Plant and control group as subjects in the engine</td><td>Makes sense.</td><td>Exported as first-class subjects.</td></tr>
+<tr><td>F14</td><td>Manual override</td><td>No auto/manual check. Clients must be able to put a machine or process in maintenance, which suppresses alerts on it.</td><td>One switch: Under maintenance until a date, with a reason, on a stage, group or machine. Alerts on it and below it are suppressed; schedules keep running. Exported as <code>suppressedBy</code>.</td></tr>
+<tr><td>F15</td><td>Library sets by group and stage</td><td>The library will hold expected sensors for control groups and unit processes; when a group is detected, the configuration suggests adding them.</td><td>The library interface gains <code>expects.byProfile</code> and <code>expects.byGroupType</code>; the library check compares stages and groups too and offers ＋ Add the sensor tag prefilled, or Not installed.</td></tr>
+<tr><td>F16</td><td>Recorded gaps across library versions</td><td>As recommended.</td><td>A not-installed record survives library versions and shows "recorded under library vX".</td></tr>
+<tr><td>F17</td><td>Help content ownership</td><td>As recommended.</td><td>Product owns the screens' help; the library build owns the library terms; one file, reviewed each release.</td></tr>
+</tbody></table>
+<div class="callout warn"><b>To confirm with the analytics team, not blocking:</b> the engine's exact syntax for a tag reference, for a window such as AVERAGE over the past 6 hours, and for the age of a tag. The console emits <code>[TAG]</code>, <code>AVERAGE([TAG], "1h")</code> and <code>AGE([TAG]) &gt; "1d"</code> as a proposal; square brackets keep a hyphenated tag from reading as a subtraction.</div>
 
-<div class="q"><span class="flag must">Decide now</span><b>F14 · What "manual override" means.</b> Built as the console's own switch: a stage, group or machine marked Alerts muted or Under maintenance until a date, suppressing alerts (and pausing schedules) below it. If the intent was SCADA's manual mode (the operator takes a machine off auto), that is a reading the engine should watch, not a console setting. Recommendation: keep the console switch as built, and add SCADA's auto/manual state as a status reading when the import contract lands.</div>
-<div class="q"><span class="flag should">Default taken</span><b>F15 · Library sets by control group and by stage.</b> The library data has expectations by equipment type, and rounds, inputs and formulas by plant type and profile, but no expected-sensor list for a group or a stage. The funnel compares machines only. Recommendation: the library build adds <code>expects</code> lists to profiles and, when groups are typed, to group types; the console's check grows rows, not screens.</div>
-<div class="q"><span class="flag ask">Question</span><b>F16 · When the library changes, does a recorded gap stay recorded?</b> Built: yes, a "not installed" record survives library versions and is reversible. The alternative, re-flagging every miss on each library version, would nag plants about sensors they chose not to install. Recommendation: keep records; show "recorded under library vX" so a reviewer can revisit.</div>
-<div class="q"><span class="flag ask">Question</span><b>F17 · Help content ownership.</b> The in-console help (purpose, who may change what, steps, fields, terms, pitfalls) ships as a data file. Who keeps it true as the product moves: product or the library's authors? Recommendation: product owns the screens' help; the library build owns the terms for library concepts; both in the same file, reviewed with every release.</div>
 <h2 id="sequence">13 · Sequencing</h2>
 <ol>
 <li><b>Model and shell.</b> Entities of section 4, CRUD with audit, soft delete and cascade, the shell and the plants list, the persona guard. The library stub from the JSON file. Acceptance: every add, edit, delete in the prototype, with the same validation sentences.</li>
 <li><b>Equipment and readings.</b> Unit processes, control groups, machines (tier, duty, standby); readings with the three inputs, limits, the formula grammar and its validation, the sample computation.</li>
 <li><b>Alerts and schedules.</b> The two drawers, status transitions, inherit (ready, done, blocked, skipped, placeholder; passes), the picker, Reset to library, manual overrides and what they suppress.</li>
 <li><b>Library check.</b> The funnel per plant: expected against present, add-the-tag prefilled from the library, not-installed records with their consequences on suggestions and on the export. The help panel on every screen and drawer.</li>
-<li><b>Review, compile, export.</b> The checklist, go-live, the export of section 9, a contract test against the engine's schema.</li>
+<li><b>Review, compile, export.</b> The checklist, go-live, the export of section 9 with every alert, formula and missed entry compiled to an engine formula under an upsert key, and a contract test against the engine's schema.</li>
 <li><b>Integrations as they land.</b> The library build behind the interface, the engine's open-record count, SCADA import (with control groups and auto/manual state), the analytical engine, the operator app's entry screen. Each replaces a stub without a shape change. People never enter the console; the engine reads User Center.</li>
 </ol>
 <p class="small muted">v3 · 16 Oct 2026 · prototype and this doc live at <a href="https://mihirsethidp.github.io/CTLConfig/v3/">mihirsethidp.github.io/CTLConfig/v3/</a>. v1 and v2 are unchanged one level up.</p>

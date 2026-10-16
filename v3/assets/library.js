@@ -51,3 +51,21 @@ window.LIB_DATA.formulas = {
   },
 };
 window.LIB_DATA.formulaGrammar = { operators: ['+', '-', '*', '/', '( )'], functions: ['min', 'max', 'abs', 'sqrt', 'round'], identifiers: 'letters, digits and _ ; each one bound to a reading', windows: { latest: 'the latest value of each input', '1h': 'the hourly average of each input', '24h': 'the 24-hour average of each input', shift: 'the shift average of each input' } };
+
+/* ── Decision F15: sensors the library expects on a stage (by profile) and on a control group (by its members' type). The check suggests them. ── */
+window.LIB_DATA.expects = {
+  byProfile: {
+    inlet: [{ name: 'Inlet flow', tag: 'FT', unit: 'm³/h', kind: 'process', validMin: 0, validMax: 5000, direction: 'above', sample: 120, usedBy: ['the plant flow balance', 'specific energy'] }],
+    bal: [{ name: 'Tank level', tag: 'LT', unit: '%', kind: 'process', validMin: 0, validMax: 100, direction: 'above', sample: 62, usedBy: ['alert Tank overflow'] }],
+    bio: [{ name: 'Aeration header pressure', tag: 'PT-AIR', unit: 'bar', kind: 'process', validMin: 0, validMax: 2, direction: 'above', sample: 0.55, usedBy: ['alert Diffuser fouling'] }],
+    sep: [{ name: 'Sludge blanket', tag: 'SB', unit: 'm', kind: 'process', validMin: 0, validMax: 5, direction: 'above', sample: 0.8, usedBy: ['alert Blanket rising'] }],
+    filt: [{ name: 'Outlet turbidity', tag: 'TU', unit: 'NTU', kind: 'analytical', validMin: 0, validMax: 100, direction: 'above', sample: 1.4, usedBy: ['Turbidity removal', 'alert Breakthrough'] }],
+  },
+  byGroupType: {
+    'Centrifugal blower': [{ name: 'Header pressure', tag: 'PT-HDR', unit: 'bar', kind: 'process', validMin: 0, validMax: 2, direction: 'above', sample: 0.55, usedBy: ['alert Header pressure high'] }, { name: 'Total airflow', tag: 'FT-AIR', unit: 'm³/h', kind: 'process', validMin: 0, validMax: 10000, direction: 'below', sample: 2400, usedBy: ['alert Airflow low'] }],
+    'Submersible pump': [{ name: 'Header pressure', tag: 'PT-HDR', unit: 'bar', kind: 'process', validMin: 0, validMax: 10, direction: 'below', sample: 2.3, usedBy: ['alert Header pressure low'] }],
+  },
+};
+window.LIB_DATA.formulaGrammar.dialect = 'HyperFormula';
+window.LIB_DATA.formulaGrammar.functions = ['MIN', 'MAX', 'ABS', 'SQRT', 'ROUND', 'AVERAGE', 'SUM', 'IF', 'AND', 'OR'];
+window.LIB_DATA.formulaGrammar.windows = { latest: 'the latest value of each input', '1h': 'AVERAGE over the past hour', '24h': 'AVERAGE over the past 24 hours', shift: 'AVERAGE over the past shift (8 h)' };
