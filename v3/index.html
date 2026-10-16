@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Close the Loop · Configuration console · Dev hand-off v3</title>
 <meta name="description" content="What to build now for Close the Loop: the configuration console, its architecture, entity model, screens, contracts, placeholders and open questions.">
-<link rel="stylesheet" href="assets/v3.css?v=12">
+<link rel="stylesheet" href="assets/v3.css?v=13">
 <style>
   .doc .pill { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 999px; background: #eef1f4; color: var(--ink-2); margin-left: 6px; vertical-align: middle; }
   .doc .ac li { margin-bottom: 4px; }
@@ -66,7 +66,7 @@
 <tr><td>Alerts (what raises an issue) and their closing rule, flow reference, overrides</td><td>Equipment types with expected readings, limits, alerts and schedules</td></tr>
 <tr><td>Schedules and rounds (routine, preventive, calibration), cadence, who performs, sign-off</td><td>Flows (fix steps today; diagnosis if the research says so) and the cause vocabulary</td></tr>
 <tr><td>The library check (the funnel): what the library expects against what the plant has; misses settled by adding the tag or recording "not installed"</td><td>Versioning and propagation to items that follow the library</td></tr>
-<tr><td>Manual overrides (alerts muted, under maintenance) on a stage, a group or a machine; alert clock overrides; the hooter</td><td>Library sets by control group, when the library build defines them (flag F15)</td></tr>
+<tr><td>Manual overrides (under maintenance) on a stage, a group or a machine; alert clock overrides; the hooter</td><td>Library sets by control group, when the library build defines them (flag F15)</td></tr>
 <tr><td>Review checklist, go-live, compile and export, audit (24 months)</td><td>Authoring screens for the Global Admin</td></tr>
 </tbody></table>
 <p><b>The rule between them.</b> The console reads the library through one interface (section 8) and never writes to it. Everything inherited carries <code>source: "library"</code> and a <code>templateRef</code>; the moment a person edits it, it becomes <code>source: "custom"</code> and the library leaves it alone. The library build owns propagation: when a template changes, items that still follow it change. The console only has to keep the reference intact, and it does.</p>
@@ -100,7 +100,7 @@
 <li><b>The engine watches readings, nothing else.</b> A SCADA tag, a value a person enters and a formula's result have the same shape, so an alert never cares where its value came from.</li>
 <li><b>Limits live on the reading.</b> An alert uses them or overrides them for itself.</li>
 <li><b>The library offers, the console inherits, people override.</b> Inherited items keep their template reference; Reset to library goes back. The library check lists every miss between the library's picture and the plant, and lets a miss be recorded as not installed.</li>
-<li><b>Severity is the console's whole say in who is told.</b> People, roles and the ladder are User Center's. A stage, group or machine can be muted or put under maintenance by hand, until a date.</li>
+<li><b>Severity is the console's whole say in who is told.</b> People, roles and the ladder are User Center's. A stage, group or machine can be put under maintenance by hand, until a date; alerts below it stop firing.</li>
 <li><b>Nothing with records is deleted, everything is audited, the export is the whole plant.</b> Delete archives; every change that can wake someone up is logged with before and after; the engine reads the export and never the console's tables.</li>
 </ol>
 
