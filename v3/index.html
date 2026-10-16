@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Close the Loop · Configuration console · Dev hand-off v3</title>
 <meta name="description" content="What to build now for Close the Loop: the configuration console, its architecture, entity model, screens, contracts, placeholders and open questions.">
-<link rel="stylesheet" href="assets/v3.css?v=9">
+<link rel="stylesheet" href="assets/v3.css?v=10">
 <style>
   .doc .pill { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 999px; background: #eef1f4; color: var(--ink-2); margin-left: 6px; vertical-align: middle; }
   .doc .ac li { margin-bottom: 4px; }
@@ -178,7 +178,7 @@
 <h3>5.7 Library check <span class="pill">#/plant/:id/coverage</span></h3>
 <ul class="ac">
 <li>The funnel, per plant. Tiles: sensors the library expects, installed, missing, recorded as not installed, library items blocked by a miss, items offered and not taken.</li>
-<li>One card per machine (and per stage and for the plant): a table of what the library expects for its type (reading, unit, kind, and which alerts, run-hours schedules and calibrations need it) against what the plant has: Installed | Missing | Not installed with reason, who, when.</li>
+<li>One card per machine (and per stage and for the plant): a table of the sensor tags the library expects for its type (tag, unit, kind, and which alerts, run-hours schedules and calibrations need it) against the sensor tags installed as SCADA reports them: Installed | Missing | Not installed with reason, who, when. No value is read from the plant; it is configuration against configuration.</li>
 <li>Missing → <b>＋ Add the sensor tag</b> opens the reading drawer prefilled from the library's definition, on that machine. Missing → <b>Not installed…</b> asks for a reason and records it; the library items that need the sensor become Skipped instead of Blocked, and the export names the gap under <code>knownGaps</code>. <b>Expect it again</b> reverses it.</li>
 <li>Under each card, what the library offers for that subject: Offered (with Inherit), Blocked (with what it needs), Skipped (with the recorded reason), Placeholder (with the pending decision).</li>
 <li>A machine without a type or a stage without a profile is called out: the library cannot say what it should have.</li>
@@ -231,10 +231,10 @@
 <p>Examples the library offers: <code>(inlet_cod - outlet_cod) / inlet_cod * 100</code> as COD removal on the plant; <code>sv30 * 1000 / mlss</code> as SVI on a biological stage; a WTP's turbidity removal mixing one manual input and one SCADA reading. The console also lets a person write any formula, as the seeded "Average line pressure" on Manesar's blower group shows.</p>
 <div class="callout ph"><b>Placeholder.</b> When the engine evaluates (on every input update, or on the window's close), what it does with a missing input (skip the evaluation, write nothing), and whether a formula result feeds another formula in the same cycle, are the analytics build's decisions. The console's contract fixes only the grammar, the window names and the result shape. See flags F5 and F6.</div>
 
-<h3>7.3 The funnel: the library's picture against the plant's</h3>
-<p>The library describes the perfect machine of each type: every reading it should have, every alert, schedule and calibration that follows from those readings. A real plant is never the perfect picture: a flow meter was not in the contract, a trip contact was never wired, a probe is on order. SCADA brings what exists. The console's job is to put the two side by side and make every difference explicit, so that nothing the library expects is silently lost and nothing irrelevant keeps nagging.</p>
+<h3>7.3 The funnel: the perfect picture against the actual plant</h3>
+<p>The library holds the perfect picture of each machine type, stage and plant type: the sensors that should be installed, and every alert, schedule, round, data input and formula that follows from them. A real plant is never the perfect picture: a flow meter was not in the contract, a trip contact was never wired, a stage was built without a probe, a sensor is on order. SCADA reports what is actually installed. The console puts the perfect picture and the actual plant side by side and makes every difference explicit, so that nothing the library expects is silently lost and nothing irrelevant keeps nagging.</p>
 <ul>
-<li><b>Compare.</b> For each machine with a library type: expected readings (from the type) against present readings (same name on that machine). For each miss, which library alerts, run-hours schedules and calibrations depend on it.</li>
+<li><b>Compare.</b> Configuration against configuration; no value is read from the plant. For each machine with a library type: the sensor tags the type expects, against the sensor tags installed on that machine as SCADA reports them. For each stage and for the plant: the rounds, data inputs and formulas the profile and the plant type offer, against what has been taken. For each miss, which library alerts, run-hours schedules and calibrations depend on it.</li>
 <li><b>Settle each miss one of two ways.</b> Add the sensor tag (the sensor exists, SCADA just did not bring it), prefilled from the library's definition. Or record it as not installed, with a reason, by whom, since when.</li>
 <li><b>Consequences of a record.</b> Suggestions that need the sensor move from Blocked to Skipped with the reason shown; they stop counting as pending; the export lists the record under <code>knownGaps</code>; a new library version that still expects the sensor does not re-flag it. Expect it again reverses all of this.</li>
 <li><b>What is not compared yet.</b> Connections (readings on pipes and neighbours) and condition-based work are placeholders; stages and groups have no expected-sensor list in the library data yet (flag F15). The funnel is written so those join as more rows, not as a new screen.</li>
