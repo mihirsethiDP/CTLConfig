@@ -263,3 +263,17 @@ tr.click:focus-visible td { background: #f4f7fb; }
 @media (max-width: 700px) { .drawer .df .grow { flex: 1 1 100%; } }
 .row .chips .chip.amber, td .chip.amber { white-space: normal; text-align: left; max-width: 300px; }
 .fwarn { font-size: 12.5px; color: var(--amber-ink); background: var(--amber-bg); border-radius: 6px; padding: 6px 10px; margin: 4px 0 8px; }
+
+/* ── state signals: a category's states, the states an alert picks, add links, the states editor ── */
+.states { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 8px; }
+.stv { display: inline-flex; align-items: baseline; gap: 5px; font-size: 12.5px; border: 1px solid var(--line-2); background: #fff; border-radius: 999px; padding: 2px 10px; }
+.stv .mono { font-size: 11px; color: var(--ink-3); }
+.statepick { display: flex; flex-wrap: wrap; gap: 4px 18px; margin-bottom: 4px; }
+.statepick .toggle { margin: 0; }
+.addlinks { display: inline-flex; flex-wrap: wrap; gap: 4px 12px; }
+.group .addlinks a { margin-left: 0; }
+.drawer .addlinks { font-size: 12.5px; font-weight: 600; margin-top: 2px; }
+.stategrid .strow { display: grid; grid-template-columns: 70px minmax(110px, 1fr) auto auto; gap: 0 10px; align-items: end; }
+.stategrid .strow .f { margin-bottom: 8px; }
+.stategrid .strow .btn { margin-bottom: 10px; }
+@media (max-width: 560px) { .stategrid .strow { grid-template-columns: 60px 1fr; } }
