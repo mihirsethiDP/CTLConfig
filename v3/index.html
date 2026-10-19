@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Close the Loop · Configuration console · Dev hand-off v3</title>
 <meta name="description" content="What to build now for Close the Loop: the configuration console, its architecture, entity model, screens, contracts, placeholders and open questions.">
-<link rel="stylesheet" href="assets/v3.css?v=25">
+<link rel="stylesheet" href="assets/v3.css?v=28">
 <style>
   .doc .pill { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 999px; background: #eef1f4; color: var(--ink-2); margin-left: 6px; vertical-align: middle; }
   .doc .ac li { margin-bottom: 4px; }
@@ -58,20 +58,21 @@
 <p>The prototype at <a href="prototype.html">prototype.html</a> is the reference for behaviour: five plants seeded at different depths, four personas, every add, edit and delete working, every placeholder shown as a dashed chip where it bites. Where this doc and the prototype disagree, the prototype wins on behaviour and this doc wins on contracts.</p>
 <div class="callout"><b>What the console is.</b> One configuration per plant, in the hierarchy plant → unit process → control group → machine. It holds readings (from SCADA, entered by a person, or computed by a formula), limits, alerts, schedules and rounds, manual overrides, and the library check that compares the library's perfect picture with what the plant actually has. It reads the library; it never edits it. People, roles and escalation live in User Center and are not in the console. It compiles the plant to the shape the rules engine consumes.</div>
 <div class="callout"><b>Helpers for every end user.</b> Every screen has a "How this works ›" link and every drawer a "What do these fields mean? ›" link. Both open the help panel: the purpose of the screen, who may change what, how to do the common things, what every field means, the terms used, and the pitfalls. The content ships as <code>assets/help.js</code> and is part of the build, not an afterthought. Chips carry tooltips; severity tiers explain who is told; fields carry examples; every validation message is a sentence that says what to change.</div>
-<div class="callout warn"><b>What it is not.</b> Not the library (a separate build with its own authoring). Not the rules engine, the notification service, the operator app, the analytical engine that evaluates formulas, or the event log. The console produces their inputs and names what it cannot yet produce.</div>
+<div class="callout warn"><b>What it is not.</b> Not a second build for the library: a Global Admin authors the library inside this console (section 5.10), and plants read the published version. Not the rules engine, the notification service, the operator app, the analytical engine that evaluates formulas, or the event log. The console produces their inputs and names what it cannot yet produce.</div>
 
 <h2 id="groups">2 · Two groups: console and library</h2>
-<table><thead><tr><th>Lives in the console (this build)</th><th>Lives in the library (separate build)</th></tr></thead><tbody>
+<p>Both are built in this console. The configuration is per plant and is edited by the plant's admins. The library is shared by every plant and is edited only by a Global Admin, as a draft that becomes a new version when published.</p>
+<table><thead><tr><th>The configuration (per plant)</th><th>The library (shared; Global Admin)</th></tr></thead><tbody>
 <tr><td>Plants, unit processes, control groups, machines, with add, edit, delete</td><td>Plant types with their rounds, data inputs and formulas</td></tr>
 <tr><td>Readings: SCADA tags, data inputs, formulas; their valid range and limits</td><td>Unit process profiles with their rounds, pairs, data inputs and formulas</td></tr>
 <tr><td>Alerts (what raises an issue) and their closing rule, flow reference, overrides</td><td>Equipment types with expected readings, limits, alerts and schedules</td></tr>
 <tr><td>Schedules and rounds (routine, preventive, calibration), cadence, who performs, sign-off</td><td>Flows (fix steps today; diagnosis if the research says so) and the cause vocabulary</td></tr>
-<tr><td>The library check (the funnel): what the library expects against what the plant has; misses settled by adding the tag or recording "not installed"</td><td>Versioning and propagation to items that follow the library</td></tr>
-<tr><td>Manual overrides (under maintenance) on a stage, a group or a machine; alert clock overrides; the hooter</td><td>Library sets by control group, when the library build defines them (flag F15)</td></tr>
-<tr><td>Review checklist, go-live, compile and export, audit (24 months)</td><td>Authoring screens for the Global Admin</td></tr>
+<tr><td>The library check (the funnel): what the library expects against what the plant has; misses settled by adding the tag or recording "not installed"</td><td>Draft, publish, version history; a plant updates the items it follows when it chooses</td></tr>
+<tr><td>Manual overrides (under maintenance) on a stage, a group or a machine; alert clock overrides; the hooter</td><td>Sensors a stage or a group of machines should have (decision F15)</td></tr>
+<tr><td>Review checklist, go-live, compile and export, audit (24 months)</td><td>Authoring: add, edit, retire and remove, with validation and audit</td></tr>
 </tbody></table>
-<p><b>The rule between them.</b> The console reads the library through one interface (section 8) and never writes to it. Everything inherited carries <code>source: "library"</code> and a <code>templateRef</code>; the moment a person edits it, it becomes <code>source: "custom"</code> and the library leaves it alone. The library build owns propagation: when a template changes, items that still follow it change. The console only has to keep the reference intact, and it does.</p>
-<p><b>Why the console does not wait for the library.</b> It ships with a stub implementing the same interface from a JSON file (the prototype's <code>assets/library.js</code>). The console cannot tell the difference, so it can be built, tested and used on day one. When the library build lands, the stub is swapped.</p>
+<p><b>The rule between them.</b> Plants read the published library through one interface (section 8); only the Global Admin's editor writes to it. Everything inherited carries <code>source: "library"</code> and a <code>templateRef</code>; the moment a plant edits it, it becomes <code>source: "custom"</code> and the library leaves it alone. When a new version is published, new items reach every plant at once as offers in its library check; changes to items a plant already follows wait until that plant is updated (5.10).</p>
+<p><b>Where the library lives.</b> The first version ships as a JSON document (the prototype's <code>assets/library.js</code>), loaded as version 2026.10.16. Every publish stores the whole library as a new version; plants record the version they follow. The read interface in section 8 is the same whether the store is a file or a service.</p>
 
 <h2 id="architecture">3 · Fundamental architecture</h2>
 <figure class="diag"><svg viewBox="0 0 960 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="The library offers to the console; the console compiles one JSON per plant; the rules engine watches readings against it and raises issues and tasks; people, the operator app and the event log follow. The SCADA drawing feeds the console; values from SCADA, people and formulas feed the engine.">
@@ -200,8 +201,16 @@
 <h3>5.9 History <span class="pill">#/plant/:id/history · #/audit</span></h3>
 <ul class="ac"><li>Per plant and across the estate: when, who, plant, what, detail; searchable; newest first; 24 months.</li></ul>
 
-<h3>5.10 Library <span class="pill">#/library · read-only</span></h3>
-<ul class="ac"><li>Shows what the console reads: plant types with rounds, data inputs, formulas and milestones (placeholder); unit process profiles with rounds, inputs, formulas, pairs; equipment types with expected readings, alerts (connection-based ones as placeholders), schedules (condition-based ones as placeholders). Nothing is editable here; the Global Admin's authoring is the library build.</li></ul>
+<h3>5.10 Library <span class="pill">#/library/:section · a Global Admin edits, everyone else reads</span></h3>
+<ul class="ac">
+<li>Five sections as pills: Equipment types, Stages, Plant types, Flows, Versions. Every row opens a drawer; for anyone but a Global Admin the drawer is read-only.</li>
+<li><b>Equipment type drawer:</b> 1 the type (name, tag prefix, criticality, retired); 2 sensors it should have, each with unit, kind, range and <b>preset bands</b> on the coloured band bar (an on/off contact says what it raises; a meter has none); 3 alerts, each watching one of the sensors on the machine or its stage, using that sensor's preset bands, with its fix flow; 4 planned work (routine or preventive, every n units or n run-hours, steps, hours, parts); 5 sensors the group should have when two or more run together. Items are collapsible rows with Remove; ＋ adds one and opens it.</li>
+<li><b>Stage profile drawer:</b> name and keywords (a SCADA zone whose name contains one gets the profile), rounds, sensors the stage should have, data inputs with preset bands, formulas with each name bound by reading name. <b>Plant type drawer:</b> plant-wide rounds, data inputs and formulas. <b>Flow drawer:</b> name, used for (fix, preventive maintenance, round, calibration), machine types, steps one per line.</li>
+<li><b>Draft and publish.</b> The first save starts a draft; the banner counts the changes and offers Review and publish, or Discard draft. Items changed in the draft carry a chip. Saving without a difference records nothing. Publishing shows the changes, takes notes for the plants, and stores the whole library as a new version named by date (v2026.10.19, then v2026.10.19.2 the same day). Alerts take their bands from the sensor's preset at publish.</li>
+<li><b>Rules:</b> names are required and unique within their list; bands deeper means worse and inside the range; an alert must watch a sensor that has preset bands; a type that machines use cannot be renamed or deleted, only retired; a retired type is not offered for new machines and machines that have it show it as needing attention; a profile or flow in use cannot be deleted. Every publish and discard is in the History.</li>
+<li><b>Versions:</b> every published version with date, author, changes and notes, and every plant with the version it follows.</li>
+<li><b>At a plant:</b> when a newer version is published, the plant header and its card say so. Opening it shows exactly what updating changes, only for items that still follow the library: bands on readings, flows on alerts, cadence and run-hours and steps on planned work, criticality on machines without an override. It also lists machines on a retired type, the number of custom items that stay as they are, and new offers waiting in the library check. A Site or Technical Admin applies it; it is audited.</li>
+</ul>
 
 <h2 id="validation">6 · Validation rules</h2>
 <p>Each rule is a sentence the user sees. Save refuses with the first one for machines and readings; alerts and schedules may be saved as drafts with gaps, never activated with them.</p>
@@ -246,14 +255,17 @@
 </ul>
 
 <h2 id="library">8 · The library interface</h2>
-<p>Freeze this now; the console is built against it and the library build implements it. One read-only, versioned document per library version. The prototype's stub is <code>assets/library.js</code>; the shapes below are its shapes.</p>
+<p>Freeze this now. Plants read it; the Global Admin's editor writes a new version of the whole document on each publish. One versioned document per library version. The prototype's stub is <code>assets/library.js</code>; the shapes below are its shapes.</p>
 <pre><code>GET /library/{version}          → { version, plantTypes, unitProcessProfiles, equipmentTypes,
+POST /library/draft               → the Global Admin's draft: a full copy, edited in place, never read by plants
+POST /library/publish             → { version, from, at, by, notes, changes: [string] }   // stores the draft as the new version
+GET  /library/versions            → [{ version, from, at, by, notes, changes }]
                                      manualInputs, formulas, flows, causes, formulaGrammar }
 
 plantTypes[type]                 { type, unitProcesses: [name], rounds: [Round], milestones: [name] }
 unitProcessProfiles[]            { id, name, keywords: [string], rounds: [Round], pairs: [{name, types}] }
-equipmentTypes[]                 { type, archetype, tier: A|B|C, prefix, usedAt,
-                                   readings:  [{ name, tag, unit, kind, validMin, validMax, direction, sample }],
+equipmentTypes[]                 { type, archetype, tier: A|B|C, prefix, usedAt, retired,
+                                   readings:  [{ name, tag, unit, kind, validMin, validMax, direction, sample, preset: { direction, limits } | null }],
                                    alerts:    [{ name, readingKind, on?, direction, limits{…}, flow, cause, scope? }],
                                    schedules: [{ name, workType, basis, every{n,unit}, meterHours, doWhen?, flow, cause, hours, parts }],
                                    connections: [{ name, kind, needs }] }           // placeholder: connections
@@ -315,7 +327,8 @@ Round                            { name, workType, every{n,unit}, statutory, ver
 <tr><td>Schedules; inherit</td><td>✓</td><td>✓</td><td>cadence of in-house preventive maintenance only</td><td>—</td></tr>
 <tr><td>Review, activate, go live, export</td><td>✓</td><td>✓</td><td>—</td><td>—</td></tr>
 <tr><td>People, roles, escalation, quiet hours</td><td colspan="4">not in the console; User Center</td></tr>
-<tr><td>Library</td><td colspan="3">read-only</td><td>authors it, in the library build</td></tr>
+<tr><td>Library: add, edit, retire, publish</td><td colspan="3">read-only</td><td>✓</td></tr>
+<tr><td>Update a plant to a newer library version</td><td>✓</td><td>✓</td><td>—</td><td>—</td></tr>
 </tbody></table>
 <p>Roles come from User Center per plant. The console enforces them on every drawer and every button; read-only drawers still open so a Lead can see the whole configuration.</p>
 
@@ -328,7 +341,7 @@ Round                            { name, workType, every{n,unit}, statutory, ver
 <tr><td><code>causes</code></td><td>Root causes</td><td>Schedules</td><td>A reference into the library's cause vocabulary.</td><td>Library build</td></tr>
 <tr><td><code>gates</code></td><td>Compound conditions</td><td>Alerts</td><td>Not in this build; the Trigger carries a null gate.</td><td>Mihir</td></tr>
 <tr><td><code>condition-work</code></td><td>Condition-based work</td><td>Schedules</td><td>Not in this build; the library's condition-based schedules show as placeholders.</td><td>Mihir</td></tr>
-<tr><td><code>propagation</code></td><td>Library propagation</td><td>Everything that follows the library</td><td>The console keeps <code>templateRef</code> intact; propagation is the library build's.</td><td>Library build</td></tr>
+<tr><td><code>propagation</code></td><td>Library propagation</td><td>Everything that follows the library</td><td>Decided: per plant and on demand. Publishing never changes a plant by itself; the plant's Update applies the new version to items that follow the library. Automatic propagation is not planned.</td><td>Product</td></tr>
 <tr><td><code>people</code></td><td>People, roles and the ladder</td><td>Alerts (who is told), Review</td><td>Not in the console. The engine reads the roster from User Center; the console sets severity and per-alert clock overrides only.</td><td>User Center</td></tr>
 <tr><td><code>engine</code></td><td>Analytical engine dialect</td><td>Readings (formula), Alerts</td><td>Every alert, formula and missed-entry trigger compiles to an engine formula in HyperFormula style with an upsert key. The exact window and tag syntax is to be confirmed; the console emits a proposed form.</td><td>Analytics team</td></tr>
 <tr><td><code>entry</code></td><td>Manual entry screen</td><td>Readings (entered by a person)</td><td>Stores cadence, who, missed severity; exports a <code>missedEntry</code> trigger that fires at the end of the window, no grace. The screen is the operator app's.</td><td>Operator app</td></tr>
@@ -369,6 +382,13 @@ Round                            { name, workType, every{n,unit}, statutory, ver
 <li><b>Integrations as they land.</b> The library build behind the interface, the engine's open-record count, SCADA import (with control groups and auto/manual state), the analytical engine, the operator app's entry screen. Each replaces a stub without a shape change. People never enter the console; the engine reads User Center.</li>
 </ol>
 <h2 id="changelog">14 · Change log</h2>
+<h3>19 Oct 2026 · library authoring in the console</h3>
+<ul>
+<li>A Global Admin edits the library on the Library page: equipment types with their sensors, preset bands, alerts, planned work and group sensors; stage profiles with rounds, sensors, data inputs and formulas; plant types; flows. Changes go into a draft; Review and publish makes a new version; Versions lists them.</li>
+<li>Each sensor in the library now carries its preset bands; the alert on it uses them.</li>
+<li>Plants see a newer version in their header and card, see exactly what updating changes, and apply it when ready. Custom items never change.</li>
+<li>Drawers keep their scroll position, open items and focus when they re-render.</li>
+</ul>
 <h3>19 Oct 2026 · QA pass</h3>
 <ul>
 <li>A scripted sweep of every page, persona, drawer and action, plus an independent code review, found 33 defects; all are fixed and re-tested. The ones that change behaviour:
