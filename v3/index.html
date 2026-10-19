@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Close the Loop · Configuration console · Dev hand-off v3</title>
 <meta name="description" content="What to build now for Close the Loop: the configuration console, its architecture, entity model, screens, contracts, placeholders and open questions.">
-<link rel="stylesheet" href="assets/v3.css?v=28">
+<link rel="stylesheet" href="assets/v3.css?v=31">
 <style>
   .doc .pill { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 999px; background: #eef1f4; color: var(--ink-2); margin-left: 6px; vertical-align: middle; }
   .doc .ac li { margin-bottom: 4px; }
@@ -207,9 +207,9 @@
 <li><b>Equipment type drawer:</b> 1 the type (name, tag prefix, criticality, retired); 2 sensors it should have, each with unit, kind, range and <b>preset bands</b> on the coloured band bar (an on/off contact says what it raises; a meter has none); 3 alerts, each watching one of the sensors on the machine or its stage, using that sensor's preset bands, with its fix flow; 4 planned work (routine or preventive, every n units or n run-hours, steps, hours, parts); 5 sensors the group should have when two or more run together. Items are collapsible rows with Remove; ＋ adds one and opens it.</li>
 <li><b>Stage profile drawer:</b> name and keywords (a SCADA zone whose name contains one gets the profile), rounds, sensors the stage should have, data inputs with preset bands, formulas with each name bound by reading name. <b>Plant type drawer:</b> plant-wide rounds, data inputs and formulas. <b>Flow drawer:</b> name, used for (fix, preventive maintenance, round, calibration), machine types, steps one per line.</li>
 <li><b>Draft and publish.</b> The first save starts a draft; the banner counts the changes and offers Review and publish, or Discard draft. Items changed in the draft carry a chip. Saving without a difference records nothing. Publishing shows the changes, takes notes for the plants, and stores the whole library as a new version named by date (v2026.10.19, then v2026.10.19.2 the same day). Alerts take their bands from the sensor's preset at publish.</li>
-<li><b>Rules:</b> names are required and unique within their list; bands deeper means worse and inside the range; an alert must watch a sensor that has preset bands; a type that machines use cannot be renamed or deleted, only retired; a retired type is not offered for new machines and machines that have it show it as needing attention; a profile or flow in use cannot be deleted. Every publish and discard is in the History.</li>
+<li><b>Rules:</b> names are required and unique within their list; bands deeper means worse and inside the range; an alert must watch a sensor that has preset bands, and a sensor has at most one alert; a published type keeps its name (SCADA, flows and stage profiles refer to it) and can only be retired; once plants use a type, profile or plant type, the names of its sensors, alerts, planned work, rounds, data inputs and formulas are locked, because plants follow them by name (to rename, add a new one and remove the old); renaming a sensor in an unused type carries its alerts along; a retired type is not offered for new machines and machines that have it show it as needing attention; a profile or flow in use cannot be deleted. Publishing is refused while the draft removes a type, profile or flow that plants use. The change list is a comparison of the draft with the published library, so an edit undone by hand leaves no change, and a draft with no difference is dropped. Every publish and discard is in the History.</li>
 <li><b>Versions:</b> every published version with date, author, changes and notes, and every plant with the version it follows.</li>
-<li><b>At a plant:</b> when a newer version is published, the plant header and its card say so. Opening it shows exactly what updating changes, only for items that still follow the library: bands on readings, flows on alerts, cadence and run-hours and steps on planned work, criticality on machines without an override. It also lists machines on a retired type, the number of custom items that stay as they are, and new offers waiting in the library check. A Site or Technical Admin applies it; it is audited.</li>
+<li><b>At a plant:</b> when a newer version is published, the plant header and its card say so. Opening it shows exactly what updating changes, only for items that still follow the library: bands on readings (the library alert on the reading re-derives its closing value; removed bands switch that alert off), flows on alerts, cadence and run-hours (removed run-hours mean calendar only) and steps on planned work, the steps of flows the plant runs (a plant keeps the steps it had until it updates), criticality on machines without an override. It also lists machines on a retired type, the number of custom items that stay as they are, and new offers waiting in the library check. A Site or Technical Admin applies it; it is audited.</li>
 </ul>
 
 <h2 id="validation">6 · Validation rules</h2>
@@ -382,6 +382,20 @@ Round                            { name, workType, every{n,unit}, statutory, ver
 <li><b>Integrations as they land.</b> The library build behind the interface, the engine's open-record count, SCADA import (with control groups and auto/manual state), the analytical engine, the operator app's entry screen. Each replaces a stub without a shape change. People never enter the console; the engine reads User Center.</li>
 </ol>
 <h2 id="changelog">14 · Change log</h2>
+<h3>19 Oct 2026 · library editor QA</h3>
+<ul>
+<li>A browser sweep with real typing and clicking, and an independent code review, found 19 defects in the library editor and the drawers; all are fixed and re-tested. The ones that change behaviour:
+<ul>
+<li>Clicking Save right after typing in a field (bands in particular) was sometimes lost, and Tab could pull focus back. Fixed in every drawer.</li>
+<li>Updating a plant could leave its library alerts with an invalid closing value. Fixed: the alert follows its reading's new bands.</li>
+<li>Names that plants follow are locked once plants use the item, and published types keep their name.</li>
+<li>A plant keeps the flow steps it runs until it updates; the update lists the step changes.</li>
+<li>Removed bands and removed run-hours reach plants on update.</li>
+<li>The draft's change list is now a real comparison; saving untouched items, including flows, records nothing.</li>
+<li>Publishing is refused while the draft removes something plants use.</li>
+<li>Also fixed: one alert per sensor; retired types are never given out by the drawing import; stale formula bindings; escaping of quotes and pipes in names; a shift cadence; local-date version names.</li>
+</ul></li>
+</ul>
 <h3>19 Oct 2026 · library authoring in the console</h3>
 <ul>
 <li>A Global Admin edits the library on the Library page: equipment types with their sensors, preset bands, alerts, planned work and group sensors; stage profiles with rounds, sensors, data inputs and formulas; plant types; flows. Changes go into a draft; Review and publish makes a new version; Versions lists them.</li>
