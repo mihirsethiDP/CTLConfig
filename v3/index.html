@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Close the Loop · Configuration console · Dev hand-off v3</title>
 <meta name="description" content="What to build now for Close the Loop: the configuration console, its architecture, entity model, screens, contracts, placeholders and open questions.">
-<link rel="stylesheet" href="assets/v3.css?v=13">
+<link rel="stylesheet" href="assets/v3.css?v=14">
 <style>
   .doc .pill { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 999px; background: #eef1f4; color: var(--ink-2); margin-left: 6px; vertical-align: middle; }
   .doc .ac li { margin-bottom: 4px; }
@@ -111,6 +111,7 @@
 <tr><td><b>Plant</b></td><td>name, type (STP | ETP | WTP), capacity, workspace, code, status (draft | live), libraryVersion, siteDefaults {quietFrom, quietTo, hooterOn, hooterSec}, scada {drawn, read, source}</td><td>Workspace and licences stay in User Center. <code>scada</code> is null when entered by hand.</td></tr>
 <tr><td><b>UnitProcess</b></td><td>name, profileId (library profile or null), scadaZone, source (scada | custom), <b>override</b> {mode: maintenance, reason, until, by, since} | null</td><td>A zone of the plant. The profile decides which rounds, inputs and formulas are offered. Sensors drawn on the zone become readings on it.</td></tr>
 <tr><td><b>ControlGroup</b></td><td>name, unitProcessId, source, override</td><td>Machines that run together. Membership is <code>Equipment.controlGroupId</code>; a machine is in at most one group.</td></tr>
+<tr><td><b>PlantFlow</b></td><td>baseId (the library flow), name, stepList [string], editedBy, templateRef</td><td>A plant's own copy of a library flow. Alerts and schedules keep referencing the library id; the resolver returns the plant's copy when one exists, the library's steps otherwise.</td></tr>
 <tr><td><b>Equipment</b></td><td>tag, name, unitProcessId, controlGroupId, type (library type or null), tier (A | B | C), tierReason, duty (duty | standby), standbyOf, scadaType, source, override, <b>notInstalled</b> [{name, reason, by, since, libraryVersion}]</td><td>A tier that differs from the library's requires a reason. A standby counts one tier lower while its duty unit runs. <code>notInstalled</code> records sensors the library expects that this machine does not have.</td></tr>
 <tr><td><b>Reading</b></td><td>on {kind: plant | unitProcess | controlGroup | equipment, id}, name, tag, unit, kind (process | analytical | status | meter), <b>input</b> (scada | manual | computed), <b>entry</b> {every {n, unit}, by (l1 | l3), missed (caution | minor | null)}, <b>formula</b> {expr, inputs [{var, readingId}], window (latest | 1h | 24h | shift)}, validMin, validMax, direction (above | below), limits {caution, minor, major, emergency}, limitsSource (library | custom | null), sample, note, source, templateRef</td><td><code>entry</code> only when input is manual; <code>formula</code> only when computed. A meter drives schedules and never an alert. A status reading fires on ON at the severity the alert chooses.</td></tr>
 <tr><td><b>Alert</b></td><td>name, subject {kind, id}, readingId, limitsMode (reading | custom), customLimits, direction, holdMin, closes {mode: reading | operator, back, holdMin}, flowRef, causeRef, verify, clocks {response, deadline} | null, status (draft | active | off | archived), open, hadRecords, source, templateRef, templateName</td><td>One alert watches one reading; the reading may be anywhere at the plant. <code>open</code> is supplied by the engine (placeholder: 0 until then).</td></tr>
@@ -125,7 +126,7 @@
 
 <h3>5.1 Plants <span class="pill">#/plants</span></h3>
 <ul class="ac">
-<li>Lists every plant the user may see, grouped by workspace, with machine, alert and schedule counts, the number of steps needing attention, the links Plant OS › and History ›, five step chips (green done, amber needs attention, grey not started; each opens that step) and Live | Ready | Draft.</li>
+<li>Lists every plant the user may see, grouped by workspace, with machine, alert and schedule counts, the number of steps needing attention, the links Plant OS › and History ›, the steps that need attention as amber chips (each opens that step) or "All steps settled", how many steps are not started, and Live | Ready | Draft.</li>
 <li>Add plant (Site Admin): name, type, capacity, workspace, code, and optionally "start from a drawing" <span class="chip ph sm">SCADA import</span>. From a drawing: zones become unit processes with a detected profile, machines and widgets become machines and readings, two machines of one type in one zone become a control group with duty and standby.</li>
 <li>Edit plant: the same fields. Delete plant: confirm, cascade everything at the plant, audited.</li>
 <li>Search by name. Tiles: plants, machines, alerts active, plants live.</li>
@@ -137,6 +138,7 @@
 <ul class="ac">
 <li>Step status: Shape is done when machines exist and every one has a type; Sensors when nothing is missing against the library and every reading has limits; Alerts when at least one is active and none is a draft or invalid; Work when at least one schedule is active and no programme is missing; Go live when the plant is live (amber when ready).</li>
 <li>Inherit everything applies every offered item in up to three passes (formulas wait for their inputs); it sits in the library check panel and in the Alerts and Work banners. Choose… opens a picker grouped by level with everything ticked.</li>
+<li>Attention first. Every step has a toggle All | Needs attention n, an amber banner that counts the reasons (3 × No limits yet · 2 × Draft, not firing), and rows that need attention carry an amber edge and one amber chip saying why, sorted to the top of their group. Rows that are fine carry only their status. One rule decides it for every list: <code>attentionOf(kind, item)</code> in the store.</li>
 <li>Old routes keep working: overview and equipment open Shape, readings and coverage open Sensors, schedules opens Work, review opens Go live, audit opens History.</li>
 </ul>
 
@@ -154,7 +156,7 @@
 <h3>5.4 Step 2 · Sensors <span class="pill">#/plant/:id/sensors</span></h3>
 <ul class="ac">
 <li>The library check (5.7) sits at the top as a collapsible panel, open when something is missing. Then the readings, grouped by subject: the whole plant, then each unit process (its own readings, its control groups' readings, its machines' readings). Columns: reading and tag, kind, values from (SCADA | Entered: cadence and by whom, missed severity | Formula: expression and window), sample value, valid range, limits with Follows library | Custom. Clicking a row opens its drawer.</li>
-<li>Add, edit, delete reading. The drawer: where it lives (any of the four levels), values come from (SCADA | a person enters it | a formula; a reading imported from SCADA cannot change input), name, tag (made by the console when blank: MAN-…, CALC-…), unit, kind, the input-specific section (7), valid range, limits with direction and four tiers, sample value.</li>
+<li>Add, edit, delete reading. The drawer: where it lives (any of the four levels), values come from (SCADA | a person enters it | a formula; a reading imported from SCADA cannot change input), name, tag (made by the console when blank: MAN-…, CALC-…), unit, kind, the input-specific section (7), valid range, the severity bands as the same coloured bar as on alerts with their direction, and the last value.</li>
 <li>Every group header has ＋ Sensor tag, adding a SCADA reading on that subject. From the Library check, the same drawer opens prefilled from the library's definition (name, tag prefix, unit, kind, valid range, direction).</li>
 <li>Deleting a reading removes every alert that watches it; a formula that used it loses that input and shows as invalid until rebound.</li>
 <li>Banner: readings without limits, readings that would not pass validation, counts of data inputs <span class="chip ph sm">Manual entry screen</span> and formulas <span class="chip ph sm">Analytical engine</span>.</li>
@@ -163,7 +165,8 @@
 <h3>5.5 Step 3 · Alerts <span class="pill">#/plant/:id/alerts</span></h3>
 <ul class="ac">
 <li>Grouped by unit process (a control group's or machine's alert sits under its unit process) plus "About the whole plant". Row: name with severity tiers, one sentence (reading, direction, entry limit, how it closes, Lead's check, the flow it runs, clock overrides), chips: Maintenance if the subject is under maintenance, Follows library | Custom, status; one action: Activate on a draft. Everything else is in the drawer.</li>
-<li>Add, edit, delete alert. The drawer in five numbered sections: 1 which reading (subject, then the reading: on the subject first, then elsewhere at the plant); 2 when it is a problem (the reading's own limits or custom tiers, hold minutes; for an on/off contact, the severity); 3 how it closes (the reading comes back past a value for n minutes, or the operator declares it fixed); 4 what the operator runs (a library flow reference, a Lead's check); 5 overrides (start-within and fix-within hours, defaulted from the severity). A live sentence restates the whole alert and names who is told at once.</li>
+<li>Add, edit, delete alert. The drawer: one sentence of the alert with its severity in colour; 1 which reading (subject, then the reading: the subject's own first, then any at the plant); 2 severity bands, a coloured bar Normal → Caution → Minor → Major → Emergency showing the sensor's preset thresholds. By default the alert uses the sensor's bands (read-only here; change them on the reading and every alert follows) or switches to custom bands for this alert alone. A sensor without bands offers "Use the library preset" in one click; 3 hold and close on one line; 4 the flow, with its steps in view and Edit for this plant; More, collapsed: a Lead's check and the clocks; Status. For an on/off contact, section 2 is the severity to raise.</li>
+<li>Flow quick view: the flow name on an alert row or a schedule row opens its steps. Edit for this plant saves a copy of the flow for this plant only, audited, with Back to the library version; the alert's export carries the plant's steps under <code>procedure</code>.</li>
 <li>Activate refuses with the first validation sentence. Saving as active with a gap keeps it as a draft and says why. Delete archives when the alert has or had records.</li>
 <li>Reset to library, on a custom alert that began in the library, replaces it with the library's current version; a version with records is archived rather than removed. The same button exists on schedules and on inherited readings.</li>
 <li>An alert whose subject, or whose subject's group or stage, is under maintenance shows Maintenance with the reason and does not fire until it ends; the export carries <code>suppressedBy</code>.</li>
@@ -271,6 +274,7 @@ Round                            { name, workType, every{n,unit}, statutory, ver
   plant: { id, name, type, capacity, workspace, status, siteDefaults },
   unitProcesses: [{ id, name, profileId }],
   controlGroups: [{ id, name, unitProcessId, members: [equipmentId] }],
+  flows:         [{ id, baseId, name, steps: [string], editedBy }],          // this plant's edited copies of library flows
   equipment:     [{ id, tag, name, unitProcessId, controlGroupId, type, criticalityTier, tierReason, duty, standbyOf, source, scadaType }],
   readings:      [{ id, tag, name, unit, kind, on, input, entry, formula: { expr, window, inputs: [{var, readingId, tag}] },
                     engine: { dialect: "hyperformula", formula, upsertKey, suspect },
@@ -286,7 +290,7 @@ Round                            { name, workType, every{n,unit}, statutory, ver
       triggerConfig: { observationConditionId, observationPolls, severityBands: [{conditionId, severity}],
                        resolutionConditionId, resolutionType: condition|manual },
       inheritsSensorZones, requiresSupervisorVerification, slaOverride: {responseHours, deadlineHours}|null,
-      procedureTreeId, preassignedRootCauseId, source, sourceTemplate,
+      procedureTreeId, procedure: { source: library|plant, id, name, steps }, preassignedRootCauseId, source, sourceTemplate,
       placeholders: { gateCondition: null, diagnosis: "not in this build" },
       engine: { dialect: "hyperformula", upsertKey, formula, byBand: [{severity, threshold}] } },
     { id, ruleName, status, suppressedBy (maintenance only), outcome: "task", triggerType: "schedule", subject,
@@ -365,6 +369,13 @@ Round                            { name, workType, every{n,unit}, statutory, ver
 <li><b>Integrations as they land.</b> The library build behind the interface, the engine's open-record count, SCADA import (with control groups and auto/manual state), the analytical engine, the operator app's entry screen. Each replaces a stub without a shape change. People never enter the console; the engine reads User Center.</li>
 </ol>
 <h2 id="changelog">14 · Change log</h2>
+<h3>19 Oct 2026 · lighter, attention first, severity bands, flows per plant</h3>
+<ul>
+<li>A lighter shell: compact plant header with Edit and History as links, the stepper labelled Plant OS in line, smaller rows and tiles, no shadows.</li>
+<li>Attention first on every step: a toggle All | Needs attention, an amber banner that counts the reasons, rows marked and sorted; plant cards name only the steps that need attention. Source chips became plain text in the row's sentence.</li>
+<li>The alert drawer rebuilt around the severity band bar (Normal → Caution → Minor → Major → Emergency, in colour). An alert inherits the sensor's preset bands by default; custom bands are an explicit switch; a sensor without bands gets the library preset in one click. Hold and close on one line; a Lead's check and the clocks collapsed under More. The readings drawer uses the same bar.</li>
+<li>Flows: every library flow has steps; a quick view opens from any alert or schedule row and from the drawer; Edit for this plant saves a plant-level copy, audited, reversible; the export carries the plant's steps.</li>
+</ul>
 <h3>16 Oct 2026 · the seventeen decisions applied</h3>
 <ul>
 <li><b>F5 · The analytical engine is the trigger engine.</b> Every alert, computed reading and missed entry compiles to an engine formula in HyperFormula style with an upsert key, so an edit replaces rather than duplicates. The console's grammar accepts MIN, MAX, ABS, SQRT, ROUND, AVERAGE, SUM, IF, AND, OR and comparisons; windows compile to AVERAGE over the past hour, day or shift. Section 7.2 rewritten; the engine box in the diagram renamed.</li>
