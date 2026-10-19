@@ -276,4 +276,4 @@ tr.click:focus-visible td { background: #f4f7fb; }
 .stategrid .strow { display: grid; grid-template-columns: 70px minmax(110px, 1fr) auto auto; gap: 0 10px; align-items: end; }
 .stategrid .strow .f { margin-bottom: 8px; }
 .stategrid .strow .btn { margin-bottom: 10px; }
-@media (max-width: 560px) { .stategrid .strow { grid-template-columns: 60px 1fr; } }
+@media (max-width: 560px) { .stategrid .strow { grid-template-columns: 60px 1fr; } .stategrid .strow > .f:nth-child(3) { grid-column: 1 / -1; } .stategrid .strow > .btn { grid-column: 1 / -1; justify-self: start; } }
