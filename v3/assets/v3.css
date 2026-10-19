@@ -218,3 +218,13 @@ details.item[open] > summary { border-bottom: 1px solid var(--line); background:
 .sec .st .n { font-weight: 500; color: var(--ink-3); margin-left: 4px; }
 .row.retired { opacity: .6; }
 a.chip#libUpdate { text-decoration: none; }
+/* library: the stat cards are the filters */
+.tiles.filters { grid-template-columns: repeat(auto-fit, minmax(78px, 1fr)); gap: 8px; margin: 0 0 14px; }
+a.tile.filter { text-decoration: none; color: inherit; cursor: pointer; transition: border-color .12s, box-shadow .12s, background .12s; padding: 9px 11px; }
+a.tile.filter:hover { border-color: var(--navy); box-shadow: 0 2px 8px rgba(30, 47, 65, .12); text-decoration: none; }
+a.tile.filter .v { font-size: 20px; }
+a.tile.filter .l { font-size: 10px; line-height: 1.25; }
+a.tile.filter.on { background: linear-gradient(135deg, #1e2f41 0%, #34506e 100%); border-color: #1e2f41; color: #fff; box-shadow: 0 2px 8px rgba(30, 47, 65, .25); }
+a.tile.filter.on .v, a.tile.filter.on .l { color: #fff; } a.tile.filter.on .l { opacity: .85; }
+.idline { font-size: 11px; color: var(--ink-3); font-weight: 400; letter-spacing: 0; text-transform: none; margin-left: 6px; }
+.hint-row.idline { margin: 8px 0 0; }
