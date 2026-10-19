@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Close the Loop · Configuration console · Dev hand-off v3</title>
 <meta name="description" content="What to build now for Close the Loop: the configuration console, its architecture, entity model, screens, contracts, placeholders and open questions.">
-<link rel="stylesheet" href="assets/v3.css?v=32">
+<link rel="stylesheet" href="assets/v3.css?v=33">
 <style>
   .doc .pill { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 999px; background: #eef1f4; color: var(--ink-2); margin-left: 6px; vertical-align: middle; }
   .doc .ac li { margin-bottom: 4px; }
@@ -125,6 +125,7 @@
 
 <h2 id="screens">5 · Screens and acceptance criteria</h2>
 <p>The shell is the DigitalPaani app's: navy top bar with the persona switch, breadcrumb, the legend strip, a lede sentence, stat tiles, a banner with the next action, a search box, uppercase group headers, white row cards with title, sub-line links and chips on the right. Phone width: cards stack, chips wrap, no horizontal scroll.</p>
+<p><b>Where an item came from.</b> Every plant item (stage, control group, machine, reading, alert, schedule) starts its row, and its drawer's sub-line, with a squared origin tag: <b>Library</b> (purple, a book) when it is inherited from the library and linked by library ID; <b>SCADA</b> (blue, a signal) when the SCADA drawing brought it; <b>Added here</b> (teal, a plus) when a person added it at this plant. A hand-added row also gets a faint teal wash; amber attention takes precedence when both apply. The tag is squared so it never reads as a status chip, has a fixed width so names line up, and its tooltip says what it means. The toolbar of each step shows the counts per origin. Readings added from the library check are Library; data inputs and formulas offered by the library are Library; calibrations the library makes for every probe are Library. An item that began in the library but is no longer in it is shown as Added here, with "no longer follows the library" in its sub-line. Local changes on an inherited item show in purple in the sub-line ("local name").</p>
 
 <h3>5.1 Plants <span class="pill">#/plants</span></h3>
 <ul class="ac">
@@ -388,6 +389,12 @@ Round                            { lid, name, workType, every{n,unit}, statutory
 <li><b>Integrations as they land.</b> The library build behind the interface, the engine's open-record count, SCADA import (with control groups and auto/manual state), the analytical engine, the operator app's entry screen. Each replaces a stub without a shape change. People never enter the console; the engine reads User Center.</li>
 </ol>
 <h2 id="changelog">14 · Change log</h2>
+<h3>19 Oct 2026 · inherited and hand-added items look different</h3>
+<ul>
+<li>Every row and drawer at a plant starts with an origin tag: Library (purple), SCADA (blue) or Added here (teal). Rows added by hand also get a faint teal wash.</li>
+<li>Each step's toolbar counts its items by origin. The legend on the Plants page explains the three tags.</li>
+<li>The sub-line no longer repeats "follows the library" or "added at this plant"; it keeps only local changes and "no longer follows the library".</li>
+</ul>
 <h3>19 Oct 2026 · library IDs and filter cards</h3>
 <ul>
 <li>Every library item has a library ID that never changes. Every inherited item at a plant has its own plant ID and links to the library item by library ID. Matching, updates, Not installed records and Reset to library all go by library ID.</li>

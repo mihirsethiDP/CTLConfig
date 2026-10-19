@@ -27,6 +27,7 @@ window.CTL3_HELP = {
     'Preventive maintenance': 'Wear-out work on a machine, counted from the last service, usually with a Lead\'s sign-off.',
     'Calibration': 'Work on a probe so its reading can be trusted. It names the probe it calibrates.',
     'Run-hours': 'A cadence counted on the machine\'s run-hours meter instead of, or as well as, the calendar.',
+    'Where it came from': 'Every row and drawer at a plant starts with a tag. Library (purple): inherited from the library and linked to it. SCADA (blue): inherited from the SCADA drawing. Added here (teal): added by hand at this plant; the library and SCADA leave it alone. The counts next to the search box add them up for the step.',
     'Library ID': 'The permanent ID of a library item, such as T-centrifugal-blower/A-line-pressure-high. It never changes, so the item can be renamed freely.',
     'Plant ID': 'The ID of an item at a plant. An inherited item has its own plant ID and links to its library item by the library ID, so the plant can name and change it independently.',
     'Local change': 'A field a plant changed on an inherited item (its name, flow or cadence). That field stops following the library; every other field still does. Reset to library clears it.',

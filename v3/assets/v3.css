@@ -228,3 +228,20 @@ a.tile.filter.on { background: linear-gradient(135deg, #1e2f41 0%, #34506e 100%)
 a.tile.filter.on .v, a.tile.filter.on .l { color: #fff; } a.tile.filter.on .l { opacity: .85; }
 .idline { font-size: 11px; color: var(--ink-3); font-weight: 400; letter-spacing: 0; text-transform: none; margin-left: 6px; }
 .hint-row.idline { margin: 8px 0 0; }
+/* origin: where a plant item came from (library, SCADA, added here); squared tags so they never read as status chips */
+.origin { display: inline-flex; align-items: center; gap: 4px; flex: none; box-sizing: border-box; min-width: 88px; height: 19px; padding: 0 7px 0 5px; border-radius: 4px; border: 1px solid; font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; line-height: 1; white-space: nowrap; vertical-align: middle; }
+.origin svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.origin.lib { background: #efe9fd; color: #4b2fa8; border-color: #d6c9f6; }
+.origin.scada { background: #e4eefa; color: #1c4f8a; border-color: #c3d8f0; }
+.origin.own { background: #dcf3ee; color: #0b6157; border-color: #a6dccf; }
+td > .origin { display: flex; width: max-content; margin: 0 0 4px; }
+.group .origin { margin-right: 8px; min-width: 0; }
+.dh .sub .origin { margin-right: 6px; }
+.okey { display: inline-flex; gap: 12px; align-items: center; flex-wrap: wrap; font-size: 12px; color: var(--ink-3); }
+.okey-i { display: inline-flex; align-items: center; gap: 5px; } .okey-i .origin { min-width: 0; } .okey-i b { color: var(--ink); font-weight: 600; }
+.legend .lg-origin { display: inline-flex; gap: 4px; align-items: center; flex-wrap: wrap; } .legend .origin { min-width: 0; }
+.localch { color: #4b2fa8; font-weight: 600; }
+@media (max-width: 900px) { .origin { min-width: 0; } .okey { width: 100%; } }
+.row.own:not(.att) { background: linear-gradient(90deg, #e2f5f0 0%, #ffffff 40%); border-color: #bfe5db; }
+.row.own:not(.att):hover { background: linear-gradient(90deg, #d4f0e8 0%, #fbfcfe 45%); border-color: #0b6157; }
+tr.own:not(.att) td { background: #eef9f6; }
