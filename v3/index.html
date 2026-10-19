@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Close the Loop · Configuration console · Dev hand-off v3</title>
 <meta name="description" content="What to build now for Close the Loop: the configuration console, its architecture, entity model, screens, contracts, placeholders and open questions.">
-<link rel="stylesheet" href="assets/v3.css?v=23">
+<link rel="stylesheet" href="assets/v3.css?v=25">
 <style>
   .doc .pill { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 999px; background: #eef1f4; color: var(--ink-2); margin-left: 6px; vertical-align: middle; }
   .doc .ac li { margin-bottom: 4px; }
@@ -369,6 +369,26 @@ Round                            { name, workType, every{n,unit}, statutory, ver
 <li><b>Integrations as they land.</b> The library build behind the interface, the engine's open-record count, SCADA import (with control groups and auto/manual state), the analytical engine, the operator app's entry screen. Each replaces a stub without a shape change. People never enter the console; the engine reads User Center.</li>
 </ol>
 <h2 id="changelog">14 · Change log</h2>
+<h3>19 Oct 2026 · QA pass</h3>
+<ul>
+<li>A scripted sweep of every page, persona, drawer and action, plus an independent code review, found 33 defects; all are fixed and re-tested. The ones that change behaviour:
+<ul>
+<li>The hand-off export no longer crashes on an alert without a reading. Such alerts cannot be saved, and old ones are listed under <code>incompleteAlerts</code>.</li>
+<li>Deleting a stage cleans up whatever watched its readings.</li>
+<li>Reset to library restores a reading in place, so formulas and alerts on it keep working.</li>
+<li>Saving without a change no longer detaches an item from the library or writes an audit row.</li>
+<li>The Lead edits bands, alerts, fix flows and in-house PM cadence only. Inherit offers and flow editing respect that.</li>
+<li>Lab values are not counted as probes needing calibration. A probe on any stage can be calibrated.</li>
+<li>Work lists the machines without a programme and the probes without calibration as rows, each opening a prefilled schedule.</li>
+<li>Reading tags are unique at a plant, and inherited data inputs get a stage suffix, so each engine formula refers to the right tag.</li>
+<li>One inherit pass cannot create the same stage alert twice.</li>
+<li>Maintenance whose date has passed is cleared and never blocks a save.</li>
+<li>The audit records the status an item ends with.</li>
+<li>Reset data gives the same plants every time.</li>
+<li>People, reach and quiet hours are gone from the seed and the export.</li>
+<li>Usability: Esc closes the help, a dialog or the drawer. Search and the attention filter reset when the step changes. Filtered lists say what they show. Go live names its blockers and says when a live plant still has drafts. An unknown plant link returns to the list. Adding from a drawing fills name, type and capacity. The step pills and rows stack on a phone.</li>
+</ul></li>
+</ul>
 <h3>19 Oct 2026 · lighter, attention first, severity bands, flows per plant</h3>
 <ul>
 <li>Alignment and gradients: the library check and the readings tables use fixed column widths, so "Installed here", the actions and every readings column line up across all cards and groups; row chips and chevrons share one right-hand column. Gradients mark rank only: the top bar, the plant header band, the current step pill, primary buttons, the lead colour of each banner, card headers in the library check, rows that need attention, and a green-to-red severity scale over the band bar.</li>
