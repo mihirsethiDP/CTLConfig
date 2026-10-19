@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Close the Loop · Configuration console · Dev hand-off v3</title>
 <meta name="description" content="What to build now for Close the Loop: the configuration console, its architecture, entity model, screens, contracts, placeholders and open questions.">
-<link rel="stylesheet" href="assets/v3.css?v=35">
+<link rel="stylesheet" href="assets/v3.css?v=36">
 <style>
   .doc .pill { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 999px; background: #eef1f4; color: var(--ink-2); margin-left: 6px; vertical-align: middle; }
   .doc .ac li { margin-bottom: 4px; }
@@ -200,8 +200,8 @@
 
 <h3>5.8 Step 5 · Go live <span class="pill">#/plant/:id/live</span></h3>
 <ul class="ac">
-<li>Checklist in tab order. Blocking (red): machines exist, every machine typed, every active alert valid, no drafts. Non-blocking (amber): the library check settled, no manual override in force, readings valid, limits complete, every machine with a reading watched, maintenance programme complete, nothing left to inherit.</li>
-<li>Banner: Not live yet (n things) → Almost (activate drafts) → Ready (Go live) → Live (Back to draft). Activate all drafts activates only those that pass validation.</li>
+<li>Checklist in tab order. Blocking (red): machines exist, every machine typed, every active alert valid, at least one active alert (a valid draft alert counts as on its way: Activate all drafts clears it), no drafts. Non-blocking (amber): the library check settled, no manual override in force, readings valid, limits complete, every machine with a reading watched, maintenance programme complete, nothing left to inherit.</li>
+<li>Banner: Not live yet (n things) → Almost (activate drafts) → Ready (Go live) → Live (Back to draft). Activate all drafts activates only those that pass validation. Go live asks first, naming what will fire (active alerts, active schedules, missed-entry triggers) and how many drafts stay silent; Back to draft asks first and says that nothing fires while the plant is a draft. Both are audited. A plant with no active alert is never shown as Ready, on its card or its step.</li>
 <li>Download the hand-off JSON (section 9). Under it, "Decisions still pending": the placeholders as a collapsed list.</li>
 </ul>
 
@@ -397,6 +397,11 @@ Round                            { lid, name, workType, every{n,unit}, statutory
 <li><b>Integrations as they land.</b> The library interface served by the platform, the engine's open-record count for archive-on-delete, SCADA import (with control groups), the analytical engine, the operator app's entry screen. Each replaces a stub without a shape change. People never enter the console; the engine reads User Center.</li>
 </ol>
 <h2 id="changelog">14 · Change log</h2>
+<h3>19 Oct 2026 · go-live rules</h3>
+<ul>
+<li>Going live needs at least one active alert; a plant with none shows Not live yet (or Almost, when a valid draft alert can be activated) and is never marked Ready.</li>
+<li>Go live and Back to draft each ask for confirmation, saying what will fire or stop.</li>
+</ul>
 <h3>19 Oct 2026 · whole-prototype QA</h3>
 <ul>
 <li>A browser pass through every screen, persona and flow, plus independent reviews of the store, the UI code and this doc, found about 60 defects and 25 doc errors. All defects below are fixed and re-tested; the doc is corrected throughout.</li>
