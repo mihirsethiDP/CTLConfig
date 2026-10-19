@@ -197,3 +197,12 @@ details.disc .card .table { border: 0; } details.disc .card .tablewrap { border:
 .row.att:hover { background: linear-gradient(90deg, #fff3cc 0%, #fbfcfe 45%); }
 /* the severity scale over the band bar: green to red, so rank reads before the numbers */
 .sevscale { display: flex; justify-content: space-between; font-size: 10px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); margin: 8px 0 3px; padding-bottom: 5px; background-image: linear-gradient(90deg, #4caf50 0%, #4caf50 18%, #f2c94c 32%, #f2994a 55%, #eb5757 78%, #b71c1c 100%); background-size: 100% 4px; background-repeat: no-repeat; background-position: left bottom; }
+/* QA: phone layout */
+@media (max-width: 900px) { .row { grid-template-columns: minmax(0, 1fr); } .row .chips { justify-content: flex-start; flex-wrap: wrap; } }
+@media (max-width: 700px) {
+  .steps-wrap { flex-direction: column; align-items: stretch; gap: 6px; }
+  .steps-wrap .tabs.steps { flex-wrap: wrap; border-radius: 14px; gap: 2px; }
+  .steps-wrap .tabs.steps a { flex: 1 1 auto; min-width: max-content; padding: 7px 10px; }
+  .plant-head { padding: 12px 14px; } .plant-head .acts { padding-top: 0; }
+  .attseg { margin-top: 2px; }
+}
