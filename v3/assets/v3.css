@@ -172,3 +172,28 @@ tr.click { cursor: pointer; } tr.click:hover td { background: #f3f6f9; } tr.clic
 .drawer .dh h2 { font-size: 17px; } .sec { border-top: 1px solid var(--line); padding-top: 10px; margin-top: 14px; } .sec .st { color: var(--navy); }
 .btn.primary { box-shadow: 0 1px 2px rgba(30, 47, 65, .2); }
 @media (max-width: 700px) { .pagetitle, .plant-head h1 { font-size: 20px; } .steptitle { font-size: 16px; } }
+/* v3.5 · alignment and gradients for hierarchy */
+/* fixed column grids so every card and every group lines up */
+.table.fixed { table-layout: fixed; } .table.fixed td, .table.fixed th { overflow-wrap: anywhere; }
+.table.cov col.c-exp { width: 46%; } .table.cov col.c-inst { width: 22%; } .table.cov col.c-act { width: 32%; } .table.cov td:last-child { text-align: right; white-space: normal; } .table.cov td:last-child .btn { margin: 2px 0 2px 4px; }
+.table.rd col.c-name { width: 23%; } .table.rd col.c-kind { width: 9%; } .table.rd col.c-from { width: 21%; } .table.rd col.c-val { width: 11%; } .table.rd col.c-range { width: 10%; } .table.rd col.c-lim { width: 22%; } .table.rd col.c-chev { width: 44px; }
+.tablewrap .table.fixed { min-width: 760px; } .tablewrap .table.cov { min-width: 560px; }
+.row { grid-template-columns: minmax(0, 1fr) auto; } .row .chips { flex-wrap: nowrap; } @media (max-width: 900px) { .row .chips { flex-wrap: wrap; } }
+.steps-wrap .tabs.steps a { min-width: 0; }
+/* gradients that mark rank: the page's own header, the current step, primary actions, the lead colour of a banner, card headers */
+.topbar { background: linear-gradient(90deg, #1a2939 0%, #1e2f41 45%, #2a4360 100%); }
+.plant-head { background: linear-gradient(135deg, #ffffff 0%, #f1f5fa 60%, #e6edf5 100%); border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; }
+.pagetitle { background: linear-gradient(90deg, #1e2f41, #3d5f86); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.steptitle { position: relative; padding-left: 12px; } .steptitle::before { content: ''; position: absolute; left: 0; top: 3px; bottom: 3px; width: 4px; border-radius: 2px; background: linear-gradient(180deg, #2a4360, #5b85b5); }
+.tabs a.on { background: linear-gradient(135deg, #1e2f41 0%, #34506e 100%); box-shadow: 0 2px 6px rgba(30, 47, 65, .25); }
+.btn.primary { background: linear-gradient(135deg, #1e2f41 0%, #34506e 100%); border-color: #1e2f41; } .btn.primary:hover { background: linear-gradient(135deg, #16222f 0%, #2a4360 100%); }
+.banner.warn { background: linear-gradient(90deg, #fff1c7 0%, #fffaf0 70%); } .banner.ok { background: linear-gradient(90deg, #d8f0df 0%, #f4fbf6 70%); } .banner.err { background: linear-gradient(90deg, #fbd9d5 0%, #fff6f5 70%); } .banner:not(.warn):not(.ok):not(.err) { background: linear-gradient(90deg, #e0ecfa 0%, #f6f9fd 70%); }
+.tile { background: linear-gradient(180deg, #ffffff 0%, #f6f8fb 100%); }
+details.disc .card { padding: 0; overflow: hidden; } details.disc .card h3 { margin: 0; padding: 10px 14px; background: linear-gradient(90deg, #eef3f8 0%, #ffffff 80%); border-bottom: 1px solid var(--line); font-size: 14px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; } details.disc .card > *:not(h3) { margin-left: 14px; margin-right: 14px; } details.disc .card > .tablewrap { margin: 10px 14px; } details.disc .card > :last-child { margin-bottom: 12px; }
+details.disc .card .table { border: 0; } details.disc .card .tablewrap { border: 1px solid var(--line); border-radius: 8px; }
+.group { border-bottom: 0; background-image: linear-gradient(90deg, #c9d3dd 0%, rgba(201, 211, 221, 0) 85%); background-size: 100% 1px; background-repeat: no-repeat; background-position: left bottom; }
+.drawer .dh { background: linear-gradient(180deg, #eef3f8 0%, #ffffff 100%); }
+.row.att { background: linear-gradient(90deg, #fff8e1 0%, #ffffff 40%); }
+.row.att:hover { background: linear-gradient(90deg, #fff3cc 0%, #fbfcfe 45%); }
+/* the severity scale over the band bar: green to red, so rank reads before the numbers */
+.sevscale { display: flex; justify-content: space-between; font-size: 10px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); margin: 8px 0 3px; padding-bottom: 5px; background-image: linear-gradient(90deg, #4caf50 0%, #4caf50 18%, #f2c94c 32%, #f2994a 55%, #eb5757 78%, #b71c1c 100%); background-size: 100% 4px; background-repeat: no-repeat; background-position: left bottom; }

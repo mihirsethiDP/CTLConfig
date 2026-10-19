@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Close the Loop · Configuration console · Dev hand-off v3</title>
 <meta name="description" content="What to build now for Close the Loop: the configuration console, its architecture, entity model, screens, contracts, placeholders and open questions.">
-<link rel="stylesheet" href="assets/v3.css?v=16">
+<link rel="stylesheet" href="assets/v3.css?v=19">
 <style>
   .doc .pill { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 999px; background: #eef1f4; color: var(--ink-2); margin-left: 6px; vertical-align: middle; }
   .doc .ac li { margin-bottom: 4px; }
@@ -371,6 +371,7 @@ Round                            { name, workType, every{n,unit}, statutory, ver
 <h2 id="changelog">14 · Change log</h2>
 <h3>19 Oct 2026 · lighter, attention first, severity bands, flows per plant</h3>
 <ul>
+<li>Alignment and gradients: the library check and the readings tables use fixed column widths, so "Installed here", the actions and every readings column line up across all cards and groups; row chips and chevrons share one right-hand column. Gradients mark rank only: the top bar, the plant header band, the current step pill, primary buttons, the lead colour of each banner, card headers in the library check, rows that need attention, and a green-to-red severity scale over the band bar.</li>
 <li>Visual hierarchy: a real page title on every page (the plant's name, Plants, Library, History), a step title under the stepper ("Step 2 of 5 · Sensors"), group headers with a rule that chunk the lists, banners that lead with their colour, tiles with a navy edge. Rows read as links: navy titles, a chevron at the right, a hover lift; table rows the same. Drawer sections separated by rules with navy section titles.</li>
 <li>A lighter shell: compact plant header with Edit and History as links, the stepper labelled Plant OS in line, smaller rows and tiles, no shadows.</li>
 <li>Attention first on every step: a toggle All | Needs attention, an amber banner that counts the reasons, rows marked and sorted; plant cards name only the steps that need attention. Source chips became plain text in the row's sentence.</li>
