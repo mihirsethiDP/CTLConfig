@@ -245,3 +245,12 @@ td > .origin { display: flex; width: max-content; margin: 0 0 4px; }
 .row.own:not(.att) { background: linear-gradient(90deg, #e2f5f0 0%, #ffffff 40%); border-color: #bfe5db; }
 .row.own:not(.att):hover { background: linear-gradient(90deg, #d4f0e8 0%, #fbfcfe 45%); border-color: #0b6157; }
 tr.own:not(.att) td { background: #eef9f6; }
+/* the origin counts are filters */
+.okey { gap: 4px; }
+button.okey-i { font: inherit; font-size: 12px; color: var(--ink-3); background: transparent; border: 1px solid transparent; border-radius: 8px; padding: 3px 7px 3px 4px; cursor: pointer; transition: background .12s, border-color .12s, opacity .12s; }
+button.okey-i:hover:not(:disabled) { background: #fff; border-color: var(--line-2); }
+button.okey-i:focus-visible { outline: 2px solid var(--navy); outline-offset: 1px; }
+button.okey-i:disabled { cursor: default; opacity: .45; }
+button.okey-i.on { background: #fff; border-color: var(--navy); box-shadow: 0 0 0 1px var(--navy) inset, 0 2px 6px rgba(30, 47, 65, .12); }
+.okey.filtering button.okey-i:not(.on) { opacity: .5; } .okey.filtering button.okey-i:not(.on):hover:not(:disabled) { opacity: 1; }
+.okx { margin-left: 2px; font-size: 14px; line-height: 1; color: var(--navy); font-weight: 700; }
