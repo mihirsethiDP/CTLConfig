@@ -225,3 +225,60 @@ window.SCADA_DELTAS = {
   manesar: { what: 'BL-3, a third blower on the aeration header', equipment: [{ id: 'bl3', tag: 'BL-3', label: 'Blower 3', scadaType: 'BLW', zone: 'bio', sensors: [{ tag: 'PRESS', widget: 'chart.knob', reading: 0.57 }, { tag: 'AMP', widget: 'chart.knob', reading: 36 }, { tag: 'TRIP', widget: 'SWITCH_SENSOR', reading: 0 }, { tag: 'HRS', widget: 'NUMBER_SENSOR', reading: 12 }] }], links: [['bl3', 'at1'], ['bl3', 'at2']] },
   bawal: { what: 'P-3, a third raw-water pump', equipment: [{ id: 'sc_p3', tag: 'P-3', label: 'Raw water pump 3', scadaType: 'SUB_PMP', zone: 'z1', sensors: [{ tag: 'AMP', widget: 'chart.knob', reading: 0 }, { tag: 'HRS', widget: 'NUMBER_SENSOR', reading: 0 }] }], links: [['sc_bs1', 'sc_p3'], ['sc_p3', 'sc_mgf1']] },
 };
+
+/* ── 7. A real SCADA layout → the model above ───────────────────────────────────────────────
+   A layout is the drawing itself (assets/layout-*.js): elements for machines, joints, inlet and outlet points
+   and sensor widgets, and two kinds of link. A Pipe carries flow from its source to its target; a dashed
+   standard.Link binds a sensor widget to the machine it reads. The console keeps the machines, follows pipes
+   through joints and valves to find which machine feeds which, and hangs each widget on its machine.
+   What a real layout does not carry, the console fills in, and the Connect step says so:
+   · tags: the drawing has none, so a machine's tag comes from its label (Reactor Feed Pump - 1 → RFP-1);
+   · zones: the drawing's ZONE cells are inlet and outlet points, not process areas, so machines are grouped
+     by the words in their labels, in flow order (LAYOUT_ZONES); step 3 shows how each stage was found;
+   · widget codes: an ON/OFF widget is the machine's run status (RUN), a Level widget its level (LVL). */
+window.LAYOUT_ZONES = [
+  ['inlet', 'Inlet and screening', /screen chamber|bar screen|\binlet\b/i],
+  ['eq', 'Oil and grease, equalisation', /\boil\b|grease|\beqt\b|equali|sump pit|reactor feed/i],
+  ['bio', 'MBBR reactors', /mbbr|aeration/i],
+  ['sep', 'Tube settlers', /settler|clarifier|re-?circulation/i],
+  ['cl', 'Chlorination', /chlorine/i],
+  ['filt', 'Pressure filtration', /filter feed|\bmgf\b|\bacf\b/i],
+  ['uv', 'UV disinfection', /\buv\b/i],
+  ['tw', 'Treated water storage and reuse', /treated water|irrigation|flushing/i],
+  ['uf', 'Ultrafiltration', /\buf\b|hypo/i],
+  ['sludge', 'Sludge handling', /sludge|screw press|poly|centrifuge/i],
+];
+window.LAYOUT_WIDGET_CODES = { SWITCH_SENSOR: 'RUN', LEVEL_SENSOR: 'LVL' };
+window.SCADA_SENSOR_MAP.RUN = 'Run status';
+window.scadaFromLayout = function (doc, meta) {
+  const cells = (doc.layout || doc).cells || [];
+  const text = (c) => String((c.attrs && c.attrs.label && c.attrs.label.text) || '').replace(/\s+/g, ' ').trim();
+  const els = cells.filter((c) => c.type !== 'Pipe' && c.type !== 'standard.Link'); const byCell = {}; els.forEach((c) => { byCell[c.id] = c; });
+  const kindOf = (c) => (window.SCADA_WIDGETS[c.type] ? 'widget' : window.SCADA_KIND[c.type] || 'equipment');
+  const used = new Set(), prefixOf = {};
+  const tagFor = (label) => {
+    const m = label.match(/^(.*?)[\s-]*(\d+)$/); const stem = (m ? m[1] : label).trim().toLowerCase(); const words = (m ? m[1] : label).split(/[\s&/,-]+/).filter(Boolean);
+    let ab = words.length === 1 ? words[0].toUpperCase().slice(0, 5) : words.map((w) => (/^[A-Z]{2,4}$/.test(w) ? w : w[0].toUpperCase())).join('');
+    if (ab.length > 6) ab = words.map((w) => w[0].toUpperCase()).join('');
+    /* two different names never share a prefix: Sump Pit is SP, Sludge Pit SLP, Screw Press SCP-1 */
+    if (prefixOf[ab] && prefixOf[ab] !== stem && words.length > 1) ab = words[0].slice(0, 2).toUpperCase() + words.slice(1).map((w) => w[0].toUpperCase()).join('');
+    const ab0 = ab; for (let k = 2; prefixOf[ab] && prefixOf[ab] !== stem; k++) ab = ab0 + k;
+    prefixOf[ab] = stem;
+    let tag = m ? `${ab}-${m[2]}` : ab; const base = tag; for (let k = 2; used.has(tag); k++) tag = `${base}.${k}`; used.add(tag); return tag;
+  };
+  const zoneFor = (label) => { const z = window.LAYOUT_ZONES.find(([, , re]) => re.test(label)); return z ? z[0] : 'other'; };
+  const equipment = els.filter((c) => ['equipment', 'part', 'device'].includes(kindOf(c))).map((c) => ({ id: c.equipmentId, cell: c.id, tag: tagFor(text(c)), label: text(c), scadaType: c.type, zone: 'z_' + zoneFor(text(c)), sensors: [] }));
+  const eqByCell = {}; equipment.forEach((e) => { eqByCell[e.cell] = e; });
+  cells.filter((c) => c.type === 'standard.Link').forEach((l) => { const w = byCell[l.source && l.source.id], e = eqByCell[l.target && l.target.id]; if (!w || !e || kindOf(w) !== 'widget') return; const num = (e.label.match(/(\d+)$/) || [])[1]; e.sensors.push({ tag: window.LAYOUT_WIDGET_CODES[w.type] || w.type, widget: w.type, reading: w.type === 'LEVEL_SENSOR' ? (w.level ?? 0) : (num && +num % 2 === 0 ? 0 : 1) }); });
+  const out = {}; cells.filter((c) => c.type === 'Pipe').forEach((p) => { const s = p.source && p.source.id, t = p.target && p.target.id; if (s && t) (out[s] = out[s] || []).push(t); });
+  const isMachine = (c) => !!c && kindOf(c) === 'equipment'; const passes = (c) => !!c && (kindOf(c) === 'structure' || kindOf(c) === 'part');
+  const links = [], seen = new Set();
+  els.filter(isMachine).forEach((m) => { const stack = [...(out[m.id] || [])], vis = new Set([m.id]); while (stack.length) { const id = stack.pop(); if (vis.has(id)) continue; vis.add(id); const c = byCell[id]; if (isMachine(c)) { const k = `${m.equipmentId}>${c.equipmentId}`; if (!seen.has(k)) { seen.add(k); links.push([m.equipmentId, c.equipmentId]); } } else if (passes(c)) stack.push(...(out[id] || [])); } });
+  const zoneIds = new Set(equipment.map((e) => e.zone));
+  const zones = [...window.LAYOUT_ZONES.map(([id, name]) => ({ id: 'z_' + id, name })), { id: 'z_other', name: 'Other machines' }].filter((z) => zoneIds.has(z.id));
+  const plantCell = els.find((c) => c.type === 'PLANT_EQUIPMENT');
+  return { name: meta.name, type: meta.type, capacity: meta.capacity || '', drawn: String(doc.updatedAt || '').slice(0, 10), zones, equipment, links,
+    fromLayout: { version: doc.version, cells: cells.length, site: plantCell ? text(plantCell) : null, boundaries: els.filter((c) => kindOf(c) === 'zone').map((c) => text(c)), widgets: els.filter((c) => kindOf(c) === 'widget').length } };
+};
+/* DigitalPaani: the real export of an MBBR sewage plant with tertiary filtration, UF and water reuse. */
+if (window.SCADA_LAYOUTS && window.SCADA_LAYOUTS.digitalpaani) window.SCADA_SAMPLES.digitalpaani = window.scadaFromLayout(window.SCADA_LAYOUTS.digitalpaani, { name: 'DigitalPaani', type: 'STP' });
