@@ -61,6 +61,15 @@ window.CATALOGUE = [
     { name: 'Residual chlorine', tag: 'FRC', unit: 'mg/L', kind: 'analytical', valid: [0, 10], direction: 'below', reading: 0.4 } ] },
   { type: 'Progressive cavity pump', archetype: 'rotating', tier: 'C', expects: ['mechanical PM'], prefix: 'SP', sensors: [
     { name: 'Run hours', tag: 'HRS', unit: 'h', kind: 'meter', valid: [0, 999999], direction: null, reading: 40 } ] },
+  /* Centrifugal: pump and motor on separate shafts joined by a coupling. Monobloc: the impeller sits on the motor shaft, no coupling. */
+  { type: 'Centrifugal pump', archetype: 'rotating', tier: 'B', expects: ['mechanical PM'], prefix: 'P', sensors: [
+    { name: 'Run status', tag: 'RUN', unit: '', kind: 'status', valid: [0, 1], direction: 'above', reading: 1 },
+    { name: 'Motor current', tag: 'AMP', unit: 'A', kind: 'process', valid: [0, 60], direction: 'above', reading: 18 },
+    { name: 'Run hours', tag: 'HRS', unit: 'h', kind: 'meter', valid: [0, 999999], direction: null, reading: 60 } ] },
+  { type: 'Monobloc pump', archetype: 'rotating', tier: 'B', expects: ['mechanical PM'], prefix: 'P', sensors: [
+    { name: 'Run status', tag: 'RUN', unit: '', kind: 'status', valid: [0, 1], direction: 'above', reading: 1 },
+    { name: 'Motor current', tag: 'AMP', unit: 'A', kind: 'process', valid: [0, 40], direction: 'above', reading: 12 },
+    { name: 'Run hours', tag: 'HRS', unit: 'h', kind: 'meter', valid: [0, 999999], direction: null, reading: 60 } ] },
   { type: 'Submersible pump', archetype: 'rotating', tier: 'B', expects: ['mechanical PM'], prefix: 'P', sensors: [
     { name: 'Motor current', tag: 'AMP', unit: 'A', kind: 'process', valid: [0, 40], direction: 'above', reading: 14 },
     { name: 'Run hours', tag: 'HRS', unit: 'h', kind: 'meter', valid: [0, 999999], direction: null, reading: 60 } ] },
@@ -97,7 +106,7 @@ window.SCADA_PALETTE = [
   ['CLARIFIER', 'Clarifier Tank', 'equipment', 'Circular clarifier'], ['T_SETTLER', 'Tube settler', 'equipment', 'Tube settler'], ['DAF', 'Dissolved Air Floatation', 'equipment', 'DAF unit'],
   ['ACF_MGF', 'ACF/MGF', 'equipment', 'Multigrade filter'], ['CARTRIDGE_FILTER', 'Cartridge Filter', 'equipment', 'Cartridge filter'], ['UF_MEM', 'UF Membrane', 'equipment', 'Ultrafiltration skid'], ['RO', 'RO', 'equipment', 'RO skid'], ['SOFTNER', 'Softner', 'equipment', 'Softener'],
   ['D_PMP', 'Dosing Pump', 'equipment', 'Hypochlorite dosing unit'], ['DOS_TANK', 'Dosing Tank', 'equipment', 'Dosing tank'], ['UV', 'UV', 'equipment', 'UV unit'], ['OZONATOR', 'Ozonator', 'equipment', 'Ozonator'], ['GAS_TONNER', 'Gas Tonner', 'equipment', 'Gas chlorinator'],
-  ['PMP', 'Pump', 'equipment', 'Progressive cavity pump'], ['SUB_PMP', 'Submersible Pump', 'equipment', 'Submersible pump'], ['BT_PMP', 'Booster Pump', 'equipment', 'Submersible pump'],
+  ['PMP', 'Pump', 'equipment', null], ['SUB_PMP', 'Submersible Pump', 'equipment', 'Submersible pump'], ['BT_PMP', 'Booster Pump', 'equipment', 'Submersible pump'],
   ['OS_TANK_AG', 'Agitator', 'equipment', 'Mixer'], ['FLASH_MIXER', 'Flash Mixer', 'equipment', 'Mixer'], ['FLOCCULATION', 'Flocculation', 'equipment', 'Mixer'], ['STATIC_MIXER', 'Static Mixer', 'structure', null],
   ['SC_PRESS', 'Screw Press', 'equipment', 'Screw press'], ['F_PRESS', 'Filter Press', 'equipment', 'Filter press'],
   ['COOLING_TOWER', 'Cooling Tower', 'equipment', 'Cooling tower'], ['AIR_COMPRESSURE', 'Air Compressor', 'equipment', 'Air compressor'], ['CAVITATOR', 'Cavitator', 'equipment', null],
@@ -106,6 +115,9 @@ window.SCADA_PALETTE = [
 ].map(([code, name, kind, type]) => ({ code, name, kind, type }));
 window.SCADA_TYPE_MAP = {}; window.SCADA_PALETTE.forEach((p) => { if (p.kind === 'equipment' && p.type) window.SCADA_TYPE_MAP[p.code] = p.type; });
 window.SCADA_KIND = {}; window.SCADA_PALETTE.forEach((p) => { window.SCADA_KIND[p.code] = p.kind; });
+/* A drawing code that covers more than one library type: the drawing cannot say which, so the console asks for each machine
+   and never remembers one answer for the code. A SCADA model that knows the type says so with the machine's own type. */
+window.SCADA_ASK = { PMP: ['Monobloc pump', 'Centrifugal pump'] };
 
 /* SCADA sensor widgets → readings. The widget says how it is drawn; the label says what it measures. */
 window.SCADA_WIDGETS = { LEVEL_SENSOR: 'Level widget', NUMBER_SENSOR: 'Number widget', 'chart.knob': 'Gauge', SWITCH_SENSOR: 'Switch' };
@@ -138,6 +150,8 @@ window.PLANT_PROFILES = {
 
 /* ── 5. Standard sets for the new library types (alerts and schedules each type inherits) ──── */
 window.SEED.standardSets.push(
+  { id: 't_cfpump', type: 'Centrifugal pump', usedAt: 0, alerts: [{ name: 'Motor current high', sensorKind: 'Motor current', direction: 'above', limits: { caution: 40, minor: 45 } }], schedules: [{ name: 'Coupling alignment and gland check', workType: 'pm', basis: 'calendar', every: { n: 3, unit: 'month' } }, { name: 'Bearing and seal service', workType: 'pm', basis: 'either', every: { n: 6, unit: 'month' }, meterHours: 4000 }] },
+  { id: 't_mbpump', type: 'Monobloc pump', usedAt: 0, alerts: [{ name: 'Motor current high', sensorKind: 'Motor current', direction: 'above', limits: { caution: 28, minor: 32 } }], schedules: [{ name: 'Mechanical seal and bearing check', workType: 'pm', basis: 'either', every: { n: 6, unit: 'month' }, meterHours: 3000 }] },
   { id: 't_subpump', type: 'Submersible pump', usedAt: 38, alerts: [{ name: 'Motor current high', sensorKind: 'Motor current', direction: 'above', limits: { caution: 28, minor: 32 } }], schedules: [{ name: 'Bearing and seal service', workType: 'pm', basis: 'either', every: { n: 6, unit: 'month' }, meterHours: 600 }] },
   { id: 't_mcc', type: 'Control panel (MCC)', usedAt: 29, alerts: [{ name: 'Incomer tripped', sensorKind: 'Incomer trip', direction: 'above', limits: { emergency: 1 } }], schedules: [{ name: 'Thermal and tightness inspection', workType: 'pm', basis: 'calendar', every: { n: 3, unit: 'month' } }] },
   { id: 't_mbbr', type: 'MBBR reactor', usedAt: 14, alerts: [{ name: 'DO low', sensorKind: 'Dissolved oxygen', direction: 'below', limits: { minor: 2.0, major: 1.0 }, flow: 'f_lowdo', scope: 'unitProcess' }], schedules: [{ name: 'Media and diffuser inspection', workType: 'pm', basis: 'calendar', every: { n: 6, unit: 'month' } }] },
@@ -196,7 +210,7 @@ window.SCADA_SAMPLES = {
       { id: 'mgf1', tag: 'MGF-1', label: 'ACF/MGF', scadaType: 'ACF_MGF', zone: 'filt', sensors: [{ tag: 'DP', widget: 'NUMBER_SENSOR', reading: 0.9 }] },
       { id: 'uf1', tag: 'UF-1', label: 'UF Membrane', scadaType: 'UF_MEM', zone: 'filt', sensors: [{ tag: 'REC', widget: 'NUMBER_SENSOR', reading: 78 }, { tag: 'PIN', widget: 'chart.knob', reading: 2.1 }] },
       { id: 'cdu', tag: 'CDU-1', label: 'Hypo dosing pump', scadaType: 'D_PMP', zone: 'dis', sensors: [{ tag: 'FRC', widget: 'NUMBER_SENSOR', reading: 0.5 }, { tag: 'TLVL', widget: 'LEVEL_SENSOR', reading: 42 }, { tag: 'HRS', widget: 'NUMBER_SENSOR', reading: 1200 }] },
-      { id: 'sp1', tag: 'SP-1', label: 'Sludge pump', scadaType: 'PMP', zone: 'sludge', sensors: [{ tag: 'HRS', widget: 'NUMBER_SENSOR', reading: 310 }] } ],
+      { id: 'sp1', tag: 'SP-1', label: 'Sludge pump', scadaType: 'PMP', type: 'Progressive cavity pump', zone: 'sludge', sensors: [{ tag: 'HRS', widget: 'NUMBER_SENSOR', reading: 310 }] } ],
     links: [['bs1', 'eq1'], ['eq1', 'at1'], ['eq1', 'at2'], ['bl1', 'at1'], ['bl1', 'at2'], ['bl2', 'at1'], ['bl2', 'at2'], ['at1', 'cl1'], ['at2', 'cl1'], ['cl1', 'mbr1'], ['mbr1', 'mgf1'], ['mgf1', 'uf1'], ['uf1', 'cdu'], ['cl1', 'sp1']] },
 };
 /* Vedanta ETP: an effluent plant with a collection sump, neutralisation, an anaerobic stage,
@@ -215,7 +229,7 @@ window.SCADA_SAMPLES.vedanta = { name: 'Vedanta ETP', type: 'ETP', capacity: '20
     { id: 'v_bl2', tag: 'BL-2', label: 'Blower 2', scadaType: 'BLW', zone: 'v4', sensors: [{ tag: 'PRESS', widget: 'chart.knob', reading: 0 }, { tag: 'HRS', widget: 'NUMBER_SENSOR', reading: 2400 }] },
     { id: 'v_ts1', tag: 'TS-1', label: 'Tube settler', scadaType: 'T_SETTLER', zone: 'v5', sensors: [{ tag: 'BLK', widget: 'NUMBER_SENSOR', reading: 0.9 }] },
     { id: 'v_fp1', tag: 'FP-1', label: 'Filter press', scadaType: 'F_PRESS', zone: 'v6', sensors: [{ tag: 'HRS', widget: 'NUMBER_SENSOR', reading: 410 }] },
-    { id: 'v_sp1', tag: 'SP-1', label: 'Sludge pump', scadaType: 'PMP', zone: 'v6', sensors: [{ tag: 'HRS', widget: 'NUMBER_SENSOR', reading: 520 }] },
+    { id: 'v_sp1', tag: 'SP-1', label: 'Sludge pump', scadaType: 'PMP', type: 'Progressive cavity pump', zone: 'v6', sensors: [{ tag: 'HRS', widget: 'NUMBER_SENSOR', reading: 520 }] },
     { id: 'v_v1', tag: 'V-7', label: 'Three way Valve', scadaType: 'VALVE_3', zone: 'v2', sensors: [] } ],
   links: [['v_p1', 'v_eq1'], ['v_p2', 'v_eq1'], ['v_dt1', 'v_eq1'], ['v_eq1', 'v_an1'], ['v_an1', 'v_sbr'], ['v_bl1', 'v_sbr'], ['v_bl2', 'v_sbr'], ['v_sbr', 'v_ts1'], ['v_ts1', 'v_sp1'], ['v_sp1', 'v_fp1']] };
 /* What SCADA hands over later, when an engineer draws something new: a third blower on the
@@ -235,7 +249,11 @@ window.SCADA_DELTAS = {
    · tags: the drawing has none, so a machine's tag comes from its label (Reactor Feed Pump - 1 → RFP-1);
    · zones: the drawing's ZONE cells are inlet and outlet points, not process areas, so machines are grouped
      by the words in their labels, in flow order (LAYOUT_ZONES); step 3 shows how each stage was found;
-   · widget codes: an ON/OFF widget is the machine's run status (RUN), a Level widget its level (LVL). */
+   · widget codes: an ON/OFF widget is the machine's run status (RUN), a Level widget its level (LVL);
+   · tank types: the drawing code says what a tank looks like (a diffuser tank has air diffusers), not what it is for. An
+     equalisation tank is often aerated to keep solids moving, so a tank's name decides first (LAYOUT_TYPE_RULES);
+   · pump types: a PMP is drawn the same whether it is a monobloc or a centrifugal pump, and the export carries no pump type,
+     so each pump is asked in step 3 (SCADA_ASK). */
 window.LAYOUT_ZONES = [
   ['inlet', 'Inlet and screening', /screen chamber|bar screen|\binlet\b/i],
   ['eq', 'Oil and grease, equalisation', /\boil\b|grease|\beqt\b|equali|sump pit|reactor feed/i],
@@ -247,6 +265,11 @@ window.LAYOUT_ZONES = [
   ['tw', 'Treated water storage and reuse', /treated water|irrigation|flushing/i],
   ['uf', 'Ultrafiltration', /\buf\b|hypo/i],
   ['sludge', 'Sludge handling', /sludge|screw press|poly|centrifuge/i],
+];
+window.LAYOUT_TYPE_RULES = [
+  { codes: ['OS_TANK', 'OS_TANK_DF', 'OS_TANK_SP', 'TANK', 'OP_TANK', 'CP_TANK'], test: /\beqt\b|equali|balanc/i, type: 'Equalisation tank' },
+  { codes: ['OS_TANK', 'OS_TANK_DF', 'OS_TANK_SP', 'TANK', 'OP_TANK', 'CP_TANK'], test: /aerat|\bsbr\b/i, type: 'Aeration basin' },
+  { codes: ['OS_TANK', 'OS_TANK_SP', 'TANK', 'OP_TANK', 'CP_TANK'], test: /./, type: 'Process tank' },
 ];
 window.LAYOUT_WIDGET_CODES = { SWITCH_SENSOR: 'RUN', LEVEL_SENSOR: 'LVL' };
 window.SCADA_SENSOR_MAP.RUN = 'Run status';
@@ -266,8 +289,9 @@ window.scadaFromLayout = function (doc, meta) {
     prefixOf[ab] = stem;
     let tag = m ? `${ab}-${m[2]}` : ab; const base = tag; for (let k = 2; used.has(tag); k++) tag = `${base}.${k}`; used.add(tag); return tag;
   };
+  const typeFor = (c) => { const r = window.LAYOUT_TYPE_RULES.find((x) => x.codes.includes(c.type) && x.test.test(text(c))); return r ? { type: r.type } : {}; };
   const zoneFor = (label) => { const z = window.LAYOUT_ZONES.find(([, , re]) => re.test(label)); return z ? z[0] : 'other'; };
-  const equipment = els.filter((c) => ['equipment', 'part', 'device'].includes(kindOf(c))).map((c) => ({ id: c.equipmentId, cell: c.id, tag: tagFor(text(c)), label: text(c), scadaType: c.type, zone: 'z_' + zoneFor(text(c)), sensors: [] }));
+  const equipment = els.filter((c) => ['equipment', 'part', 'device'].includes(kindOf(c))).map((c) => ({ id: c.equipmentId, cell: c.id, tag: tagFor(text(c)), label: text(c), scadaType: c.type, zone: 'z_' + zoneFor(text(c)), sensors: [], ...typeFor(c) }));
   const eqByCell = {}; equipment.forEach((e) => { eqByCell[e.cell] = e; });
   cells.filter((c) => c.type === 'standard.Link').forEach((l) => { const w = byCell[l.source && l.source.id], e = eqByCell[l.target && l.target.id]; if (!w || !e || kindOf(w) !== 'widget') return; const num = (e.label.match(/(\d+)$/) || [])[1]; e.sensors.push({ tag: window.LAYOUT_WIDGET_CODES[w.type] || w.type, widget: w.type, reading: w.type === 'LEVEL_SENSOR' ? (w.level ?? 0) : (num && +num % 2 === 0 ? 0 : 1) }); });
   const out = {}; cells.filter((c) => c.type === 'Pipe').forEach((p) => { const s = p.source && p.source.id, t = p.target && p.target.id; if (s && t) (out[s] = out[s] || []).push(t); });

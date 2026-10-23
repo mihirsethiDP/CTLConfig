@@ -120,8 +120,8 @@ window.CTL = (function () {
   function addScadaEquipment(se, log) {
     const d = D(); const kind = scadaKind(se.scadaType); const pal = palette(se.scadaType);
     if (kind !== 'equipment') { S.scada.skipped.push({ id: se.id, tag: se.tag, label: se.label, code: se.scadaType, kind, zone: se.zone }); return null; }
-    const type = window.SCADA_TYPE_MAP[se.scadaType] || null; const cat = type ? catalogue(type) : null;
-    const e = { id: se.id, name: se.label, tag: se.tag, stage: se.zone, type: type || `${pal ? pal.name : se.scadaType} (not in the library)`, scadaType: se.scadaType, unmapped: !type, archetype: cat ? cat.archetype : 'unknown', tier: cat ? cat.tier : 'B', status: 'running', expects: cat ? cat.expects.slice() : [], cycles: !!(cat && cat.cycles) };
+    const ask = !se.type && window.SCADA_ASK[se.scadaType] ? window.SCADA_ASK[se.scadaType] : null; const type = (se.type && catalogue(se.type) ? se.type : null) || (ask ? null : window.SCADA_TYPE_MAP[se.scadaType] || null); const cat = type ? catalogue(type) : null;
+    const e = { id: se.id, name: se.label, tag: se.tag, stage: se.zone, type: type || (ask ? `${pal ? pal.name : se.scadaType}: ${ask.join(' or ').toLowerCase()}?` : `${pal ? pal.name : se.scadaType} (not in the library)`), scadaType: se.scadaType, unmapped: !type, ...(ask ? { askType: ask.slice() } : {}), archetype: cat ? cat.archetype : 'unknown', tier: cat ? cat.tier : 'B', status: 'running', expects: cat ? cat.expects.slice() : [], cycles: !!(cat && cat.cycles) };
     if (cat && cat.sensors.some((s) => s.kind === 'meter') && se.sensors.some((s) => s.tag === 'HRS')) e.meter = `${se.id}_HRS`;
     d.equipment.push(e);
     se.sensors.forEach((ss) => { const nm = window.SCADA_SENSOR_MAP[ss.tag] || ss.tag; const def = cat && cat.sensors.find((x) => x.name === nm); d.sensors.push({ id: `${se.id}_${ss.tag}`, name: nm, tag: `${ss.tag}-${se.tag}`, scadaTag: ss.tag, widget: ss.widget, unit: def ? def.unit : '', on: 'eq:' + se.id, kind: def ? def.kind : (ss.widget === 'SWITCH_SENSOR' ? 'status' : 'process'), expr: def ? def.expr : undefined, valid: def ? def.valid.slice() : (ss.widget === 'SWITCH_SENSOR' ? [0, 1] : [0, 1000]), reading: ss.reading, state: 'live', direction: def ? def.direction : 'above', limits: null, fromScada: true }); });
@@ -135,8 +135,8 @@ window.CTL = (function () {
     e.type = type; e.unmapped = false; e.archetype = cat.archetype; if (!e.tierReason) e.tier = cat.tier; e.expects = cat.expects.slice(); e.cycles = !!cat.cycles;
     d.sensors.filter((s) => s.on === 'eq:' + e.id).forEach((s) => { const def = cat.sensors.find((x) => x.name === s.name); if (def && s.fromScada) { s.unit = def.unit; s.kind = def.kind; s.valid = def.valid.slice(); if (!s.limits) s.direction = def.direction; } });
     if (cat.sensors.some((s) => s.kind === 'meter') && d.sensors.some((s) => s.on === 'eq:' + e.id && s.name === 'Run hours')) e.meter = `${e.id}_HRS`;
-    if (e.scadaType) { window.SCADA_TYPE_MAP[e.scadaType] = type; const p = palette(e.scadaType); if (p) p.type = type; else window.SCADA_PALETTE.push({ code: e.scadaType, name: e.scadaType, kind: 'equipment', type }); }
-    let also = 0; d.equipment.filter((x) => x.id !== e.id && x.unmapped && x.scadaType === e.scadaType).forEach((x) => { mapType(x, type); also++; });
+    const asks = e.askType || window.SCADA_ASK[e.scadaType]; if (e.scadaType && !asks) { window.SCADA_TYPE_MAP[e.scadaType] = type; const p = palette(e.scadaType); if (p) p.type = type; else window.SCADA_PALETTE.push({ code: e.scadaType, name: e.scadaType, kind: 'equipment', type }); }
+    let also = 0; if (!asks) d.equipment.filter((x) => x.id !== e.id && x.unmapped && x.scadaType === e.scadaType).forEach((x) => { mapType(x, type); also++; });
     d.stages.forEach((st) => { if (!st.profile) { const t = d.equipment.find((x) => x.stage === st.id && profileForType(x.type)); if (t) { const p = profileForType(t.type); st.profile = p.id; st.name = p.name; st.detectedBy = 'types'; } } });
     detectGroups(); return { was, also };
   }
