@@ -10,7 +10,7 @@ v4 is the v3 configuration console in v1's design. Everything v3 does carries ov
 
 Files:
 
-- `prototype.html` — the console. It saves in the browser under its own key (`ctl4.v2`), separate from v3.
+- `prototype.html` — the console. It saves in the browser under its own key (`ctl4.v3`), separate from v3.
 - `index.html` — the hand-off doc, the same as v3's in v1's proposal-page design, with a v4 note and change-log entry.
 - `assets/library.js`, `assets/store.js`, `assets/help.js` — v3's, unchanged except the storage key and `consoleVersion: "v4"` in the export.
 - `assets/ui.js` — v3's screens with v1's shell: the top bar, side navigation, wizard rail, check rows and guide panel.
