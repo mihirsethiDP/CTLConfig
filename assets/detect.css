@@ -1,0 +1,18 @@
+/* Step 3 · What SCADA found: one collapsible card per SCADA zone (the unit process), its machines nested inside. Colours only via tokens: theme-calm.css overrides every one. */
+.upcard { background: var(--layer); border: 1px solid var(--line); border-radius: var(--r-md); margin-bottom: 12px; }
+.upcard > summary.uph { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: start; padding: 12px 14px 12px 32px; cursor: pointer; list-style: none; position: relative; }
+.upcard > summary.uph::-webkit-details-marker { display: none; }
+.upcard > summary.uph::before { content: '▸'; position: absolute; left: 14px; top: 12px; color: var(--ink-3); font-size: 13px; line-height: 20px; transition: transform .15s ease; }
+.upcard[open] > summary.uph::before { transform: rotate(90deg); }
+.upcard > summary.uph:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; border-radius: var(--r-md); }
+.uph .zn { font-weight: 700; font-size: 14px; line-height: 20px; }
+.uph .sub { font-size: 12px; color: var(--ink-3); }
+.uph .chips { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; align-self: center; }
+.upcard .upb { padding: 0 14px 12px; overflow-x: auto; }
+.upcard .upb > .f { margin-bottom: 8px; }
+.upcard .upb > .f select { max-width: 320px; }
+.uplib { font-size: 12.5px; color: var(--ink-2); padding: 8px 10px; background: var(--layer-2); border-radius: 8px; margin: 8px 0; line-height: 1.8; }
+.pairblk { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; border: 1px dashed var(--teal-ink); background: var(--teal-tint); border-radius: 8px; padding: 8px 10px; margin: 8px 0; font-size: 12.5px; }
+.upcard .tbl.detect { margin-top: 6px; }
+.upcard .tbl.detect td .warnink { margin-top: 3px; }
+@media (max-width: 900px) { .upcard > summary.uph { grid-template-columns: 1fr; } .uph .chips { justify-content: flex-start; } }

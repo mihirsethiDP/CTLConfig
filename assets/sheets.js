@@ -15,7 +15,7 @@ window.CTL_SHEETS = (function () {
 
   /* ── alert ───────────────────────────────────────────────────── */
   function alert(el) {
-    const d = D(), sub = parseNode(S.node), isNew = !S.sheet.id, ro = !(S.mode === 'new' || can('equipment'));
+    const d = D(), sub = parseNode(S.node), isNew = !S.sheet.id, ro = false;
     if (!S.sheet.draft) S.sheet.draft = isNew ? { id: uid('a'), name: '', subject: sub, sensor: null, limits: 'sensor', custom: { caution: null, minor: null, major: null, emergency: null }, direction: 'below', holdMin: 0, closes: { mode: 'sensor', back: null, holdMin: 15 }, flow: null, cause: null, verify: false, status: 'draft', open: 0 } : clone(alertById(S.sheet.id));
     const a = S.sheet.draft; const frozen = a.open > 0;
     const cands = sensorsOf(a.subject).filter((s) => s.kind !== 'meter');
@@ -115,9 +115,8 @@ window.CTL_SHEETS = (function () {
     const d = D(), sub = parseNode(S.node), isNew = !S.sheet.id;
     if (!S.sheet.draft) S.sheet.draft = isNew ? { id: uid('s'), name: '', subject: sub, workType: S.sheet.presetCal ? 'calibration' : 'routine', probe: S.sheet.presetCal || null, flow: null, basis: 'calendar', every: { n: 1, unit: S.sheet.presetCal ? 'month' : 'week' }, meter: null, anchor: 'fixed', nextDue: '2026-10-06', performedBy: 'in_house', statutory: false, verify: false, status: 'draft', open: 0 } : clone(schedById(S.sheet.id));
     const sc = S.sheet.draft;
-    const leadOk = S.persona === 'lead' && !isNew && sc.workType === 'pm' && sc.performedBy !== 'vendor';
-    const ro = !(S.mode === 'new' || can('equipment')) && !leadOk;
-    const lock = (f) => ro || (leadOk && !['every', 'nextDue', 'meter', 'tolerance', 'flow'].includes(f));
+    const ro = false;
+    const lock = () => ro;
     const STEPS = ['What work?', 'How often?', 'Review'];
     const go = (n) => { if (n < 1 || n > 3) return; setStep(n); draw(); };
     const errs = () => { const out = []; if (!sc.name.trim()) out.push('Give it a name.'); if (sc.workType === 'calibration' && !sc.probe) out.push('Say which probe it calibrates.'); if (sc.basis !== 'calendar' && !sc.meter) out.push('A run-hours schedule needs a meter.'); if (sc.workType === 'pm' && sc.subject.kind !== 'eq') out.push('Preventive maintenance needs a machine.'); if (sc.verify && !leads().length) out.push('Sign-off needs a Lead on the roster.'); return out; };
@@ -126,9 +125,8 @@ window.CTL_SHEETS = (function () {
       const actions = d.flows.filter((f) => f.status === 'published' && f.kind === 'action'); const probes = sensorsOf(sc.subject).filter((s) => s.kind === 'analytical'); const meters = sensorsOf(sc.subject).filter((s) => s.kind === 'meter');
       if (sc.workType === 'calibration' && sc.probe && !sc.name) sc.name = sensor(sc.probe).name + ' calibration';
       let body = '', foot = '';
-      const leadNote = leadOk ? `<div class="note teal" style="margin-bottom:12px"><span><b>Lead edit.</b> Cadence, next due, meter, tolerance and flow. ${sc.open ? `Today's occurrence is unchanged; this applies from the next one.` : 'Applies from the next occurrence.'}</span></div>` : (S.persona === 'lead' && !isNew) ? `<div class="note" style="margin-bottom:12px"><span>${sc.workType === 'calibration' ? 'Calibration cadence is set by the Technical Admin.' : sc.performedBy === 'vendor' ? 'This comes from a vendor contract; the Technical Admin edits it.' : 'Read-only.'}</span></div>` : '';
       if (step === 1) {
-        body = `<div id="failSlot"></div>${leadNote}<div class="q">What kind of work is it?</div><div class="qh">One of three. It decides the chip on the operator's card.</div>
+        body = `<div id="failSlot"></div><div class="q">What kind of work is it?</div><div class="qh">One of three. It decides the chip on the operator's card.</div>
           <div class="pick">${[['routine', 'Routine check', 'A reading round, a refill, a sample. Planned, not maintenance.'], ['pm', 'Preventive maintenance', 'Greasing, servicing, cleaning. Counts toward the machine\'s maintenance programme.'], ['calibration', 'Calibration', 'A probe is checked against a reference. Shows on the sensor too.']].map(([v, t, s]) => `<label class="${sc.workType === v ? 'sel' : ''}"><input type="radio" name="wt" value="${v}" ${sc.workType === v ? 'checked' : ''} ${lock('workType') ? 'disabled' : ''}><div><b>${t}</b><span>${s}</span></div></label>`).join('')}</div>
           ${sc.workType === 'calibration' ? `<div class="f" style="margin-top:14px"><label class="l">Which probe?</label><select id="sProbe" ${lock('probe') ? 'disabled' : ''}><option value="">—</option>${probes.map((p) => `<option value="${p.id}" ${sc.probe === p.id ? 'selected' : ''}>${esc(p.name)} · ${esc(p.tag)}</option>`).join('')}</select>${!probes.length ? '<div class="errline">No probe on this machine. Calibration belongs on the machine the probe sits on.</div>' : ''}</div>` : ''}
           <div class="f" style="margin-top:14px"><label class="l">Name</label><input type="text" id="sName" value="${esc(sc.name)}" placeholder="${sc.workType === 'pm' ? 'Bearing service' : sc.workType === 'calibration' ? 'DO probe calibration' : 'Weekly backwash'}" ${lock('name') ? 'disabled' : ''}></div>
@@ -147,14 +145,14 @@ window.CTL_SHEETS = (function () {
       } else {
         const e = errs();
         const sentence = `<b>${esc(sc.name || 'This schedule')}</b> is ${WT_LABEL[sc.workType].toLowerCase()} on <b>${esc(subjectName(sc.subject))}</b>${sc.probe ? ` for <b>${esc(sensor(sc.probe).name)}</b>` : ''}, <b>${esc(every(sc))}</b>${sc.basis !== 'meter' ? (sc.anchor === 'last' ? ' from the last completion' : ' on fixed dates') : ''}, next on <b>${esc(sc.nextDue)}</b>, done by ${sc.performedBy === 'vendor' ? `<b>${esc(sc.vendor || 'a vendor')}</b>` : 'our team'}. The operator ${sc.flow && flow(sc.flow) ? `follows <b>${esc(flow(sc.flow).name)}</b>` : 'marks it done'}${sc.verify ? ' and a Lead signs off' : ''}.${sc.cause && cause(sc.cause) ? ` It is logged against <b>${esc(cause(sc.cause).name)}</b>.` : ''} It must start within <b>${fmtH(c.start)}</b> and finish within <b>${fmtH(c.deadline)}</b>, from ${sc.statutory ? 'the statutory rule' : `tier ${tier} and the cadence`}.`;
-        body = `<div id="failSlot"></div>${leadNote}<div class="q">Does this read right?</div><div class="qh">Nothing is planned until you activate.</div><div class="sentence">${sentence}</div>
+        body = `<div id="failSlot"></div><div class="q">Does this read right?</div><div class="qh">Nothing is planned until you activate.</div><div class="sentence">${sentence}</div>
           ${e.length ? `<div class="note err" style="margin-bottom:12px"><span><b>${plural(e.length, 'thing')} to fix first.</b> ${e.map(esc).join(' ')}</span></div>` : ''}
           ${!sc.flow ? '<div class="warnline">! No steps attached. The operator sees open → done.</div>' : ''}
           <div class="fs" style="margin-top:12px"><label class="toggle"><input type="checkbox" id="sStat" ${sc.statutory ? 'checked' : ''} ${lock('statutory') ? 'disabled' : ''}> <span>Statutory: required by law or consent. Overdue the moment it is due.</span></label><label class="toggle" style="margin-top:8px"><input type="checkbox" id="sVerify" ${sc.verify ? 'checked' : ''} ${lock('verify') ? 'disabled' : ''}> <span>A Lead signs off before it closes</span></label></div>
           <details class="adv" open><summary>Who is told</summary><div>${toldBlock(taskLadder(sc, tier))}<div class="h">Quiet by design. Louder only as it gets late${tier === 'A' || sc.statutory ? ', and sooner because this is tier A' : ''}.</div></div></details>
           <details class="adv"><summary>If something is missing</summary><div class="fallbacks">${sc.basis !== 'calendar' ? '<div><b>If the meter goes quiet:</b> the calendar leg takes over and the list says so.</div>' : ''}<div><b>If it is still open when the next one is due:</b> no duplicate; the miss is recorded against the open one.</div><div><b>If the machine is in maintenance mode:</b> the next occurrence still comes; the machine\'s alerts pause, not its work.</div>${sc.performedBy === 'vendor' ? '<div><b>If the vendor misses a visit:</b> it goes overdue in their name and counts on the vendor scorecard.</div>' : ''}</div></details>
-          <div class="model" style="margin-top:12px"><div class="fs" style="font-family:var(--mono);font-size:11px">Trigger { outcome:'task', triggerType:'schedule', workType:'${sc.workType === 'pm' ? 'preventive_maintenance' : sc.workType === 'calibration' ? 'calibration' : 'routine_check'}', dueBasis:'${sc.basis}', calendarAnchor:'${sc.anchor === 'last' ? 'from_last_service' : 'fixed'}', performedBy:'${sc.performedBy}'${sc.statutory ? ', statutory:true' : ''}${sc.probe ? `, displaySensorId:'${sc.probe}'` : ''} } · clocks ${fmtH(c.start)} / ${fmtH(c.deadline)}${leadOk ? ' · grant approve.schedule' : ''}</div></div>`;
-        foot = ro ? `<span class="grow">Read-only.</span><button class="btn" data-cancel>Close</button>` : `<span class="grow">Step 3 of 3</span>${!isNew && !leadOk ? '<button class="btn ghost danger" data-delete>Delete</button>' : ''}${!isNew ? `<button class="btn" data-pause>${sc.status === 'paused' ? 'Resume' : 'Pause'}</button>` : ''}${backBtn()}${leadOk ? '' : '<button class="btn" data-draft>Save draft</button>'}<button class="btn primary" data-activate ${e.length ? 'disabled' : ''}>${leadOk ? 'Save from next occurrence' : sc.status === 'active' ? 'Save' : 'Activate'}</button>`;
+          <div class="model" style="margin-top:12px"><div class="fs" style="font-family:var(--mono);font-size:11px">Trigger { outcome:'task', triggerType:'schedule', workType:'${sc.workType === 'pm' ? 'preventive_maintenance' : sc.workType === 'calibration' ? 'calibration' : 'routine_check'}', dueBasis:'${sc.basis}', calendarAnchor:'${sc.anchor === 'last' ? 'from_last_service' : 'fixed'}', performedBy:'${sc.performedBy}'${sc.statutory ? ', statutory:true' : ''}${sc.probe ? `, displaySensorId:'${sc.probe}'` : ''} } · clocks ${fmtH(c.start)} / ${fmtH(c.deadline)}</div></div>`;
+        foot = ro ? `<span class="grow">Read-only.</span><button class="btn" data-cancel>Close</button>` : `<span class="grow">Step 3 of 3</span>${!isNew ? '<button class="btn ghost danger" data-delete>Delete</button>' : ''}${!isNew ? `<button class="btn" data-pause>${sc.status === 'paused' ? 'Resume' : 'Pause'}</button>` : ''}${backBtn()}<button class="btn" data-draft>Save draft</button><button class="btn primary" data-activate ${e.length ? 'disabled' : ''}>${sc.status === 'active' ? 'Save' : 'Activate'}</button>`;
       }
       sheetFrame(el, isNew ? `New schedule on ${esc(subjectName(sc.subject))}` : esc(sc.name), `${cap(sc.subject.kind === 'eq' ? 'machine' : sc.subject.kind)} · ${esc(subjectName(sc.subject))}${!isNew ? ` · <span class="chip ${sc.status === 'active' ? 'ok' : 'draft'}">${cap(sc.status)}</span>` : ''}`, body, foot, stepRail(STEPS, step));
       $('.sb', el).classList.add('narrow'); railWire(el, go); stepFoot(el, step, 3, { go });
@@ -178,9 +176,9 @@ window.CTL_SHEETS = (function () {
       $('#sParts', el) && ($('#sParts', el).oninput = (e) => { sc.parts = e.target.value; });
       $('#sStat', el) && ($('#sStat', el).onchange = (e) => { sc.statutory = e.target.checked; draw(); });
       $('#sVerify', el) && ($('#sVerify', el).onchange = (e) => { sc.verify = e.target.checked; draw(); });
-      const doSave = (status, btn) => { sc.status = status; commit(el, btn, () => { if (!isNew && schedById(sc.id).source === 'library' && JSON.stringify({ ...schedById(sc.id), status: 0 }) !== JSON.stringify({ ...sc, status: 0 })) sc.source = 'custom'; if (isNew) d.schedules.push(sc); else Object.assign(schedById(sc.id), sc); audit(`${isNew ? 'Added' : 'Saved'} schedule ${sc.name} on ${subjectName(sc.subject)}${leadOk ? ' from the equipment card' : ''}`, `${WT_LABEL[sc.workType]} · ${every(sc)} · next ${sc.nextDue}`); }, () => { closeSheet(); render(); toast(leadOk ? 'Saved. Applies from the next occurrence.' : status === 'active' ? `<b>${esc(sc.name)}</b> is active. Next due ${esc(sc.nextDue)}.` : 'Saved as a draft.'); }); };
+      const doSave = (status, btn) => { sc.status = status; commit(el, btn, () => { if (!isNew && schedById(sc.id).source === 'library' && JSON.stringify({ ...schedById(sc.id), status: 0 }) !== JSON.stringify({ ...sc, status: 0 })) sc.source = 'custom'; if (isNew) d.schedules.push(sc); else Object.assign(schedById(sc.id), sc); audit(`${isNew ? 'Added' : 'Saved'} schedule ${sc.name} on ${subjectName(sc.subject)}`, `${WT_LABEL[sc.workType]} · ${every(sc)} · next ${sc.nextDue}`); }, () => { closeSheet(); render(); toast(status === 'active' ? `<b>${esc(sc.name)}</b> is active. Next due ${esc(sc.nextDue)}.` : 'Saved as a draft.'); }); };
       $('[data-draft]', el)?.addEventListener('click', (e) => doSave('draft', e.currentTarget));
-      $('[data-activate]', el)?.addEventListener('click', (e) => doSave(leadOk ? schedById(sc.id).status : 'active', e.currentTarget));
+      $('[data-activate]', el)?.addEventListener('click', (e) => doSave('active', e.currentTarget));
       $('[data-pause]', el)?.addEventListener('click', (e) => commit(el, e.currentTarget, () => { const t = schedById(sc.id); t.status = t.status === 'paused' ? 'active' : 'paused'; audit(`${t.status === 'paused' ? 'Paused' : 'Resumed'} ${t.name}`, ''); }, () => { closeSheet(); render(); toast('Done. A paused schedule emits nothing new; an open occurrence stays open.'); }));
       $('[data-delete]', el)?.addEventListener('click', () => { const i = d.schedules.findIndex((x) => x.id === sc.id); const r = d.schedules.splice(i, 1)[0]; audit(`Deleted schedule ${sc.name}`, ''); closeSheet(); render(); toast(`Deleted ${esc(sc.name)}.`, () => d.schedules.splice(i, 0, r)); });
     }
@@ -189,7 +187,7 @@ window.CTL_SHEETS = (function () {
 
   /* ── condition-based work ────────────────────────────────────── */
   function work(el) {
-    const d = D(), sub = parseNode(S.node), isNew = !S.sheet.id, ro = !(S.mode === 'new' || can('equipment'));
+    const d = D(), sub = parseNode(S.node), isNew = !S.sheet.id, ro = false;
     if (!S.sheet.draft) S.sheet.draft = isNew ? { id: uid('w'), name: '', subject: sub, sensor: null, doWhen: null, doneWhen: null, flow: null, escalate: null, status: 'draft', open: 0 } : clone(workById(S.sheet.id));
     const w = S.sheet.draft; const cands = sensorsOf(w.subject).filter((s) => s.kind === 'process' || s.kind === 'computed' || s.kind === 'analytical');
     if (!w.sensor && cands.length) w.sensor = cands[0].id;
@@ -242,7 +240,7 @@ window.CTL_SHEETS = (function () {
 
   /* ── sensor (limits) ─────────────────────────────────────────── */
   function sensorSheet(el) {
-    const d = D(), ro = !(S.mode === 'new' || can('equipment')); const s = clone(sensor(S.sheet.id)); const home = sensorHome(s);
+    const d = D(), ro = false; const s = clone(sensor(S.sheet.id)); const home = sensorHome(s);
     const users = d.alerts.filter((a) => a.sensor === s.id); const frozenUsers = users.filter((a) => a.open > 0 && a.limits === 'sensor');
     const sug = suggestedLimitsSafe(s);
     function draw() {
@@ -267,7 +265,7 @@ window.CTL_SHEETS = (function () {
       segWire(el, 'snDir', (v) => { s.direction = v; draw(); });
       $$('[data-lim]', el).forEach((i) => i.onchange = () => { if (!s.limits) s.limits = { caution: null, minor: null, major: null, emergency: null }; s.limits[i.dataset.lim] = i.value === '' ? null : +i.value; draw(); });
       $('[data-usesug]', el)?.addEventListener('click', (e) => { e.preventDefault(); s.limits = { ...sug.lim }; s.direction = sug.dir; draw(); });
-      $('[data-trust]', el)?.addEventListener('click', () => { window.CTL_RT.trustAgain(sensor(s.id), PERSONA[S.persona].who); closeSheet(); render(); toast(`${esc(s.name)} is trusted again. Its alerts resume; the sensor-fault issue is closed.`); });
+      $('[data-trust]', el)?.addEventListener('click', () => { window.CTL_RT.trustAgain(sensor(s.id), PERSONA.global.who); closeSheet(); render(); toast(`${esc(s.name)} is trusted again. Its alerts resume; the sensor-fault issue is closed.`); });
       segWire(el, 'snBy', (v) => { s.calibration = v === 'vendor' ? { ...(s.calibration || {}), by: 'vendor', every: (s.calibration && s.calibration.every) || 'monthly' } : (s.calibration ? { ...s.calibration, by: 'in_house' } : null); draw(); });
       $('#snVendor', el) && ($('#snVendor', el).oninput = (e) => { s.calibration.vendor = e.target.value; });
       $('#snEnd', el) && ($('#snEnd', el).onchange = (e) => { s.calibration.contractEnd = e.target.value || null; });
@@ -303,7 +301,7 @@ window.CTL_SHEETS = (function () {
 
   /* ── flow editor ─────────────────────────────────────────────── */
   function flowSheet(el) {
-    const d = D(), isNew = !S.sheet.id, ro = !(S.mode === 'new' || can('flows'));
+    const d = D(), isNew = !S.sheet.id, ro = false;
     if (!S.sheet.draft) S.sheet.draft = isNew ? { id: uid('f'), name: '', kind: S.sheet.newKind || 'action', forType: null, forTypes: [], forStage: null, use: S.sheet.newKind === 'diagnostic' ? 'diagnostic' : 'fix', version: 1, status: 'draft', steps: [] } : clone(flow(S.sheet.id));
     const f = S.sheet.draft; if (!f.forTypes) f.forTypes = f.forType ? [f.forType] : [];
     const USE_LABEL = { pm: 'Maintenance (a scheduled service)', fix: 'Fix (resolves a cause)', round: 'Round (a routine check)', calibration: 'Calibration', condition: 'Condition-based job' };
@@ -348,7 +346,7 @@ window.CTL_SHEETS = (function () {
 
   /* ── cause ───────────────────────────────────────────────────── */
   function causeSheet(el) {
-    const d = D(), isNew = !S.sheet.id, ro = !(S.mode === 'new' || can('flows')); const c = isNew ? { id: uid('c'), name: '', stage: null, type: null, types: [], fix: null } : clone(cause(S.sheet.id)); if (!c.types) c.types = c.type ? [c.type] : [];
+    const d = D(), isNew = !S.sheet.id, ro = false; const c = isNew ? { id: uid('c'), name: '', stage: null, type: null, types: [], fix: null } : clone(cause(S.sheet.id)); if (!c.types) c.types = c.type ? [c.type] : [];
     const dx = d.flows.filter((f) => f.kind === 'diagnostic' && f.steps.some((st) => Object.values(st.answers || {}).some((a) => a.t === 'cause' && a.id === c.id)));
     const tasks = [...d.schedules.filter((s) => s.cause === c.id).map((s) => s.name + ' on ' + subjectName(s.subject)), ...d.conditionWork.filter((w) => w.cause === c.id).map((w) => w.name)];
     const libTasks = d.standardSets.flatMap((t) => t.schedules.filter((s) => s.cause === c.id).map((s) => `${s.name} (${t.type})`));
@@ -366,7 +364,7 @@ window.CTL_SHEETS = (function () {
 
   /* ── person ──────────────────────────────────────────────────── */
   function person(el) {
-    const d = D(), isNew = !S.sheet.id, edit = S.mode === 'new' || can('people'); const p = isNew ? { id: uid('p'), name: '', role: 'l1', grant: null, phone: { verified: false, channel: null }, major: 'now', quiet: '22:00–06:00' } : clone(d.people.find((x) => x.id === S.sheet.id));
+    const d = D(), isNew = !S.sheet.id, edit = true; const p = isNew ? { id: uid('p'), name: '', role: 'l1', grant: null, phone: { verified: false, channel: null }, major: 'now', quiet: '22:00–06:00' } : clone(d.people.find((x) => x.id === S.sheet.id));
     const body = `<div id="failSlot"></div><div class="f"><label class="l">Name</label><input type="text" id="pName" value="${esc(p.name)}" ${edit ? '' : 'disabled'}><div class="errline hide" id="pErr">✕ Give their name.</div></div>
       <div class="f"><span class="l">Role at this plant</span><div class="seg" id="pRole">${['l1', 'l3', 'l4', 'regular'].map((r) => `<button data-v="${r}" aria-pressed="${p.role === r}" ${edit ? '' : 'disabled'}>${ROLE_LABEL[r]}</button>`).join('')}</div><div class="h">Operators do the work. Leads approve and close. A Senior Lead oversees many plants. A client viewer reads.</div></div>
       <details class="adv"><summary>Admin grant</summary><div><div class="seg" id="pGrant"><button data-v="" aria-pressed="${!p.grant}" ${edit ? '' : 'disabled'}>None</button>${['people', 'tech', 'fullsite'].map((g) => `<button data-v="${g}" aria-pressed="${p.grant === g}" ${edit ? '' : 'disabled'}>${GRANT_LABEL[g]}</button>`).join('')}</div><div class="h">People Admin owns the roster and site defaults. Technical Admin owns equipment, alerts, schedules and flows.</div></div></details>
@@ -380,7 +378,7 @@ window.CTL_SHEETS = (function () {
 
   /* ── equipment: what SCADA fixed, what the library decided, what you may change ── */
   function equipmentSheet(el) {
-    const d = D(), ro = !(S.mode === 'new' || can('equipment'));
+    const d = D(), ro = false;
     const src = S.sheet.id ? eq(S.sheet.id) : null;
     if (!src) { sheetFrame(el, 'Machines come from SCADA', '', `<div class="empty2"><b>Nothing to add here</b><p>Draw the machine in SCADA, bind its sensor widgets, then Read SCADA again. It arrives with its type, its readings and its connections, and the library takes it from there.</p></div>`, '<button class="btn" data-cancel>Close</button>'); $('[data-cancel]', el).onclick = closeSheet; return; }
     const e = clone(src); const pal = C.palette(e.scadaType); const st = stage(e.stage);
@@ -419,7 +417,7 @@ window.CTL_SHEETS = (function () {
 
   /* ── library type: the set every plant of this type follows ── */
   function libType(el) {
-    const d = D(), type = S.sheet.type, cat = C.catalogue(type), edit = can('standards');
+    const d = D(), type = S.sheet.type, cat = C.catalogue(type), edit = true;
     let t = d.standardSets.find((x) => x.type === type);
     if (!t) { t = { id: uid('t'), type, usedAt: 0, alerts: [], schedules: [], fresh: true }; }
     const w = clone(t); const here = d.equipment.filter((e) => e.type === type);

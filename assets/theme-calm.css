@@ -47,7 +47,6 @@
 .topbar .brand span b { color: var(--teal-ink); }
 .topbar .crumb { color: var(--ink-3); }
 .topbar .crumb b { color: var(--ink); }
-.topbar .persona { color: var(--ink-3); }
 .topbar select { background: var(--white); color: var(--ink); border: 1px solid var(--line-2); }
 .topbar .link { color: var(--ink-2); border-color: var(--line-2); }
 .topbar .link:hover { background: var(--layer-2); }

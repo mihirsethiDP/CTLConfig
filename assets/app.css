@@ -79,7 +79,6 @@ p { margin: 0; }
 .topbar .crumb { color: rgba(255,255,255,.75); font-size: 13px; }
 .topbar .crumb b { color: #fff; font-weight: 600; }
 .topbar .spacer { flex: 1; }
-.topbar .persona { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: rgba(255,255,255,.8); }
 .topbar select {
   background: rgba(255,255,255,.1); color: #fff; border: 1px solid rgba(255,255,255,.25);
   border-radius: 6px; padding: 5px 8px; font-size: 12.5px;
@@ -367,9 +366,6 @@ body.show-model .model { display: block; }
 .model-pill { display: none; font-family: var(--mono); font-size: 10.5px; color: var(--teal-ink); background: var(--teal-tint); padding: 1px 6px; border-radius: 4px; }
 body.show-model .model-pill { display: inline-block; }
 
-/* ── Persona banners ───────────────────────────────────────── */
-.persona-note { margin-bottom: 14px; }
-
 /* ── Responsive ────────────────────────────────────────────── */
 @media (max-width: 1000px) {
   .body { grid-template-columns: 1fr; }
@@ -382,7 +378,7 @@ body.show-model .model-pill { display: inline-block; }
   main { padding: 16px; }
 }
 @media (max-width: 640px) {
-  .topbar .crumb, .topbar .persona span { display: none; }
+  .topbar .crumb { display: none; }
   .f.inline { grid-template-columns: 1fr; }
   .limitgrid { grid-template-columns: 90px 1fr 1fr; }
 }

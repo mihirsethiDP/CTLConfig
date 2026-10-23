@@ -239,3 +239,11 @@ body.guide-open .body { grid-template-columns: 220px minmax(0, 1fr) 300px; }
 @media (max-width: 1499px) { .insp { position: static; } }
 @media (max-width: 900px) { .phases { grid-template-columns: 1fr; } }
 @media (max-width: 1100px) { .libgrid { grid-template-columns: 1fr; } }
+
+/* v3: two tabs in the top bar (Config · What's enabled) and the side note on the read-only tab */
+.topbar .tabs { display: inline-flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--layer-2); border: 1px solid var(--line); }
+.topbar .tabs .tab { font-size: 13px; font-weight: 600; line-height: 1.2; padding: 5px 12px; border-radius: 999px; color: var(--ink-2); }
+.topbar .tabs .tab:hover { color: var(--ink); text-decoration: none; }
+.topbar .tabs .tab[aria-current="page"] { background: var(--teal-tint); color: var(--teal-ink); }
+.sidenav .navnote { padding: 4px 10px 10px; font-size: 12.5px; color: var(--ink-3); line-height: 1.45; }
+@media (max-width: 640px) { .topbar .tabs .tab { padding: 5px 10px; } }
