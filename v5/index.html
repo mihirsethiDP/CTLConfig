@@ -1,0 +1,620 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CloseTheLoop Configuration — v5</title>
+<meta name="description" content="v5 of the configuration console: the library is the database's 56 equipment types, detection reads the type stored on each node, there are no unit processes or control groups, and alerts read only what is on the equipment.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/app.css?v=1">
+<link rel="stylesheet" href="assets/theme-calm.css?v=1">
+<style>
+  body { background: var(--paper); }
+  .doc-top { background: var(--navy); color: var(--white); padding: 44px 0 40px; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+  .doc-top .eyebrow { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--teal-deco); font-weight: 700; }
+  .doc-top h1 { font-size: 36px; line-height: 1.15; margin: 10px 0 8px; letter-spacing: -.02em; }
+  .doc-top .sub { font-size: 17px; color: rgba(255,255,255,.8); max-width: 66ch; }
+  .doc-top .meta { margin-top: 18px; font-size: 13px; color: rgba(255,255,255,.65); display: flex; gap: 18px; flex-wrap: wrap; }
+  .doc-top .cta { margin-top: 22px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .doc-top .cta a { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 8px; font-weight: 700; text-decoration: none; }
+  .doc-top .cta a.p { background: var(--teal); color: var(--navy); }
+  .doc-top .cta a.s { border: 1px solid rgba(255,255,255,.4); color: var(--white); }
+  .layout { display: grid; grid-template-columns: 220px 1fr; gap: 40px; padding-top: 32px; }
+  .toc { position: sticky; top: 20px; align-self: start; font-size: 13px; }
+  .toc a { display: block; padding: 5px 0; color: var(--ink-2); border-left: 2px solid transparent; padding-left: 10px; }
+  .toc a:hover { color: var(--teal-ink); text-decoration: none; border-color: var(--teal); }
+  .toc .eyebrow { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); padding: 0 0 6px 12px; }
+  article { min-width: 0; max-width: 860px; font-size: 15.5px; line-height: 1.6; padding-bottom: 80px; }
+  article > p, article > ul, article > ol, article > h3, article > .callout, article > .lines, article > .grid2 { max-width: 78ch; }
+  article h2 { font-size: 24px; margin: 46px 0 12px; letter-spacing: -.02em; padding-top: 8px; }
+  article h2:first-of-type { margin-top: 8px; }
+  article h3 { font-size: 16.5px; margin: 26px 0 8px; }
+  article p { margin: 0 0 12px; }
+  article ul, article ol { margin: 0 0 14px; padding-left: 22px; }
+  article li { margin-bottom: 6px; }
+  article table { border-collapse: collapse; width: 100%; font-size: 13.5px; margin: 10px 0 18px; background: var(--white); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  article th { text-align: left; background: var(--layer-2); padding: 8px 10px; font-size: 11.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); }
+  article td { padding: 8px 10px; border-top: 1px solid var(--line); vertical-align: top; }
+  article code { font-family: var(--mono); font-size: 12.5px; background: var(--layer-2); padding: 1px 5px; border-radius: 4px; }
+  .tablewrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 10px 0 18px; }
+  .tablewrap table { margin: 0; }
+  table.lib { font-size: 12.5px; min-width: 780px; }
+  table.lib td { padding: 7px 8px; }
+  table.lib td:first-child { font-weight: 600; white-space: nowrap; }
+  table.lib code, table.ac code { font-size: 11.5px; }
+  table.ac td:first-child { font-family: var(--mono); font-size: 12px; color: var(--teal-ink); font-weight: 600; white-space: nowrap; width: 64px; }
+  .lines { counter-reset: n; background: var(--white); border: 1px solid var(--line); border-radius: 12px; padding: 8px 0; margin: 12px 0 22px; }
+  .lines div { counter-increment: n; display: grid; grid-template-columns: 34px 1fr; gap: 8px; padding: 8px 16px; border-bottom: 1px solid var(--line); }
+  .lines div:last-child { border-bottom: 0; }
+  .lines div::before { content: counter(n); font-family: var(--mono); color: var(--teal-ink); font-weight: 600; }
+  .callout { border-left: 4px solid var(--teal); background: var(--teal-tint); padding: 12px 16px; border-radius: 0 10px 10px 0; margin: 14px 0 18px; font-size: 14.5px; }
+  .callout.warn { border-color: var(--sev-minor); background: var(--warn-tint); }
+  .callout.err { border-color: var(--sev-emergency); background: var(--err-tint); }
+  .pill { display: inline-block; font-family: var(--mono); font-size: 11px; padding: 1px 6px; border-radius: 4px; background: var(--layer-2); border: 1px solid var(--line-2); }
+  .try { display: inline-block; font-size: 12.5px; padding: 4px 10px; border-radius: 6px; background: var(--navy); color: var(--white) !important; text-decoration: none !important; font-weight: 600; margin: 2px 0; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0 18px; }
+  .box { background: var(--white); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; font-size: 13.5px; }
+  .box b.t { display: block; margin-bottom: 4px; }
+  .muted { color: var(--ink-3); }
+  /* how v5 shows a reading on a connection: quiet, dashed, never amber (same tokens as the console's builder.css) */
+  .chip.npchip { background: var(--layer-2); color: var(--ink-3); border: 1px dashed var(--line-2); font-weight: 500; font-size: 10.5px; padding: 0 7px; }
+  tr.np td { color: var(--ink-3); background: var(--layer-2); }
+  .npline { font-size: 12.5px; color: var(--ink-3); }
+  .npline b { color: var(--ink-2); font-weight: 600; }
+  /* a type whose content the owner must confirm: quiet, dotted, the line to confirm is its title (as builder.css .chip.confirm) */
+  .chip.cf { background: var(--layer-2); color: var(--ink-3); border-style: dotted; font-weight: 500; font-size: 10.5px; padding: 0 7px; cursor: help; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } .toc { position: static; display: none; } .grid2 { grid-template-columns: 1fr; } .doc-top h1 { font-size: 28px; } }
+  @media (max-width: 600px) { .wrap { padding: 0 16px; } .doc-top { padding: 32px 0 30px; } }
+</style>
+</head>
+<body>
+<div class="doc-top"><div class="wrap">
+  <div class="eyebrow">CloseTheLoop · Configuration · v5</div>
+  <h1>The database's equipment types. Alerts on the equipment.</h1>
+  <p class="sub">v5 is the current v1 console with one library: the 56 equipment types the database already has, under their own names. A machine's type is the type stored on its node. Alerts read what is on the equipment; anything on a pipe waits for the next phase. There are no unit processes and no control groups.</p>
+  <div class="meta"><span>26 October 2026</span><span>Mihir Sethi, with Claude</span><span>Built from v1; v1, v2, v3 and v4 are unchanged</span></div>
+  <div class="cta"><a class="p" href="prototype.html">Open the v5 prototype →</a><a class="s" href="#why">The four asks</a><a class="s" href="#ac">Acceptance criteria</a><a class="s" href="../index.html">The v1 proposal</a></div>
+</div></div>
+
+<div class="wrap"><div class="layout">
+<nav class="toc">
+  <div class="eyebrow">Contents</div>
+  <a href="#why">Why v5</a>
+  <a href="#library">The library</a>
+  <a href="#drawing">Drawing elements and widgets</a>
+  <a href="#detect">Detection: one rule</a>
+  <a href="#rule">Alerts on the equipment only</a>
+  <a href="#screens">The screens</a>
+  <a href="#next">Not in v5, and the next phase</a>
+  <a href="#ac">Acceptance criteria</a>
+  <a href="#open">Open questions</a>
+  <a href="#howto">Using the prototype</a>
+  <a href="#changes">26 Oct 2026: what changed</a>
+</nav>
+
+<article>
+
+<h2 id="why">Why v5</h2>
+<p>Four asks, 26 October 2026. v5 does these four things and nothing else.</p>
+<div class="tablewrap"><table>
+  <tr><th>#</th><th>The ask</th><th>What v5 does</th></tr>
+  <tr><td>1</td><td>"The detection is not working right. Create a library using the equipment types that we have in our database and keep it restricted to that only. The detection should also be based on that."</td><td>The library's equipment types are the database's 56 equipment node types, one for one, under the database's own names. A machine's type is the type stored on its node. Nothing is guessed from a label. Nothing asks. The form never changes a type. <a href="#detect">Detection</a>.</td></tr>
+  <tr><td>2</td><td>"We'll work on bifurcating the equipments later."</td><td>No database type is split. Pump is one type, whatever its form says. Database equipment is not sorted into machines, parts or structures: every database equipment type is an equipment type here.</td></tr>
+  <tr><td>3</td><td>"v5 does not cater to unit processes and control groups. It only caters to plant types and equipment types."</td><td>Two levels: plant type and equipment type. No unit processes and no control groups in the data, the library, the screens, the help or the export. <a href="#next">Not in v5</a>.</td></tr>
+  <tr><td>4</td><td>"Alerts will be based on the equipment only. Not on the pipe that is coming out of the equipment. E.g. for centrifugal blowers you came up with a 'Line pressure high' alert which cannot be the case in this phase … Clean this up and keep it targeted for the next phase."</td><td>Every alert and every condition-based job reads a reading on the equipment. Whatever needs a reading on a pipe is kept on its type as "Next phase: connections" and alerts on nothing. <a href="#rule">The rule</a>.</td></tr>
+</table></div>
+<p>v5 is built from the current v1: the console at the site root as it stood on 26 October, with its Config and What's enabled tabs, the nine setup steps, the every-machine lists with attention chips, and the library fed by SCADA's equipment form. v1 stays as it is. v5 lives in <code>/v5/</code>, has its own copy of every file, and saves under its own key, so the two never share data.</p>
+<div class="callout">The equipment-type, plant-type, reading, form-rule, new-type and to-confirm tables on this page, and the counts beside them, are generated from the files the v5 prototype runs (<code>assets/catalogue.js</code> and <code>assets/flows.js</code>), not typed by hand. The other tables were written by hand against the running prototype. If the page and the prototype disagree, the prototype is right and the page is stale.</div>
+
+<h2 id="library">The library: plant types and the database's equipment types</h2>
+<p>Two levels. Nothing between them.</p>
+<div class="grid2">
+  <div class="box"><b class="t">1 · Plant type</b>STP, ETP, WTP. Gives the plant-wide rounds and milestones. Lists the equipment types such a plant usually has, as a guide. It adds no machine and no alert.</div>
+  <div class="box"><b class="t">2 · Equipment type</b>The database's 56 equipment node types, one for one, in the database's order, under the database's names with their typos kept (Softner, Cass Basin, Vtg Chamber, QUADSON EVAPORATOR). Each gives the readings a machine of the type has on it, alerts on those readings with limits, schedules with cadence, a monthly calibration for each probe, its flows and causes, and what it reads from the SCADA form. What needs a connection waits on the type, in plain sight.</div>
+</div>
+<p>In numbers: 56 equipment types, each with a standard set (49 alerts and 61 schedules in all). 39 readings: 23 on the equipment, 16 on a connection. 22 types keep something for the next phase. 100 flows (17 diagnostic, 83 action) and 62 causes, all written for database types, the whole plant, or any equipment. 14 more flows and 12 causes are written and kept aside, not installed, because each needs a reading on a connection: 10 diagnostics for alerts that wait on a type, 2 plant-wide diagnostics (an odour complaint, outlet BOD or COD high) that only an alert on the plant's inlet or outlet could open, the turbidity meter calibration and the chlorine dose adjustment, and the causes only those flows reach. 24 types carry a muted <span class="chip cf" title="The type's content is a reasoned guess; the chip's title says what to confirm">to confirm</span> chip: their content, or a limit in it, is a reasoned guess for the owner to check. <a href="#confirm">The list</a>.</p>
+
+<h3>Plant types</h3>
+<div class="tablewrap"><table>
+  <tr><th>Type</th><th>Rounds</th><th>Milestones</th><th>Usual equipment types</th></tr>
+<tr><td>STP</td><td>Daily logbook round <span class="muted">· every day</span><br>Monthly compliance sample <span class="muted">· every month</span><br>Hooter function test <span class="muted">· every 3 months</span><br>Weekly housekeeping round <span class="muted">· every week</span></td><td>Zero overdue tasks this week<br>90 days without an Emergency</td><td>Mechanical Screen, Screen Chamber Tank, Oil &amp; Grease Tank, Open Skeleton Tank, Submersible Pump, Pump, Blower, Diffuser Tank, MBBR, Tube settler, Clarifier Tank, ACF/MGF, Dosing Pump, Dosing Tank, UV, Screw Press</td></tr>
+<tr><td>ETP</td><td>Daily logbook round <span class="muted">· every day</span><br>Monthly compliance sample <span class="muted">· every month</span><br>Hooter function test <span class="muted">· every 3 months</span></td><td>Zero overdue tasks this week</td><td>Screen Chamber Tank, Oil &amp; Grease Tank, Open Skeleton Tank, Agitator, Dosing Pump, Dosing Tank, Flash Mixer, Flocculation, Anaerobic Tank, SBR, Blower, Tube settler, Submersible Pump, Pump, Filter Press</td></tr>
+<tr><td>WTP</td><td>Daily logbook round <span class="muted">· every day</span><br>Weekly bacteriological sample <span class="muted">· every week</span><br>Hooter function test <span class="muted">· every 3 months</span></td><td>30 days of outlet within limits</td><td>Mechanical Screen, Submersible Pump, Pump, Flash Mixer, Flocculation, Clarifier Tank, ACF/MGF, Softner, UF Membrane, RO, Cartridge Filter, Dosing Pump, Dosing Tank, Gas Tonner, Overhead Tank</td></tr>
+</table></div>
+<p>The Daily logbook round is the same for every STP and ETP, written for any plant: the inlet and outlet totalisers, everything that should run is running, tanks at their usual level, chemical tanks above their marks, outlet pH and chlorine by kit, the sample and notes. Every number in it is typed by hand, so it never reads one plant's sensors. A WTP runs its own Water plant daily logbook round, on raw and treated water, with no aeration or sludge steps.</p>
+
+<h3 id="types">Every equipment type</h3>
+<p>56 rows, in the database's order. <i>Reads on the equipment</i> is what a machine of the type usually has on it. <i>Alerts</i> and <i>Schedules</i> are the type's standard set. <i>Next phase</i> is what was taken out because it needs a reading on a connection. A machine inherits an alert only when SCADA drew the reading it needs; otherwise the alert waits and the screens say which reading is missing. Three kinds of alert behave differently:</p>
+<ul>
+  <li><b>Only where SCADA draws the reading.</b> An open tank's pH high, pH low and Sump flooding. Without a pH probe or a flood switch they are simply not part of that machine: not waiting, not missing, never amber.</li>
+  <li><b>Only while the machine runs.</b> UV intensity low, and a VFD pump's Running below minimum speed: a stopped machine reads zero, so the alert watches only while its Run status is ON.</li>
+  <li><b>On/off alerts</b> (a trip, a flood switch, a lamp fault, a chlorine leak) fire when the contact goes ON, the moment it reaches its limit of 1.</li>
+</ul>
+<p>Hover a <span class="chip cf" title="The type's content is a reasoned guess; the chip's title says what to confirm">to confirm</span> chip for what to confirm.</p>
+<div class="tablewrap"><table class="lib">
+  <tr><th>Database name</th><th>Code</th><th>Reads on the equipment</th><th>Alerts</th><th>Schedules</th><th>Next phase: connections</th></tr>
+<tr><td>Tank</td><td><code>TANK</code></td><td>Level <span class="muted">%</span></td><td>Level high <span class="muted">· Caution &gt; 85 %, Major &gt; 95 %</span></td><td>Tank cleaning <span class="muted">· every 6 months</span></td><td><span class="muted">none</span></td></tr>
+<tr><td>Tank 2</td><td><code>TANK_2</code></td><td>Level <span class="muted">%</span></td><td>Level high <span class="muted">· Caution &gt; 85 %, Major &gt; 95 %</span></td><td>Tank cleaning <span class="muted">· every 6 months</span></td><td><span class="muted">none</span></td></tr>
+<tr><td>Open Process Tank</td><td><code>OP_TANK</code></td><td>Level <span class="muted">%</span></td><td>Level high <span class="muted">· Caution &gt; 85 %, Major &gt; 95 %</span></td><td>Tank cleaning <span class="muted">· every 6 months</span></td><td><span class="muted">none</span></td></tr>
+<tr><td>Closed Process Tank</td><td><code>CP_TANK</code></td><td>Level <span class="muted">%</span></td><td>Level high <span class="muted">· Caution &gt; 85 %, Major &gt; 95 %</span></td><td>Tank cleaning <span class="muted">· every 6 months</span></td><td><span class="muted">none</span></td></tr>
+<tr><td>Clarifier Tank</td><td><code>CLARIFIER</code></td><td>Sludge blanket <span class="muted">m</span><br>Run status</td><td>Sludge blanket high <span class="muted">· Minor &gt; 1.2 m</span></td><td>Scraper drive service <span class="muted">· every 6 months</span><br><span class="muted">+ a monthly calibration for each probe</span></td><td>Outlet turbidity <span class="muted">(in the water leaving over the weir)</span></td></tr>
+<tr><td>Open Skeleton Tank <span class="chip cf" title="pH limits to confirm: high at 8.5 (Minor) and 9.5 (Major) from v1, low at 6.0 (Minor) and 5.5 (Major), new.">to confirm</span></td><td><code>OS_TANK</code></td><td>Level <span class="muted">%</span><br>Sump flood switch<br>pH <span class="muted">pH</span></td><td>Level high <span class="muted">· Caution &gt; 85 %, Major &gt; 95 %</span><br>pH high <span class="muted">· Minor &gt; 8.5 pH, Major &gt; 9.5 pH, only where SCADA draws the reading</span><br>pH low <span class="muted">· Minor &lt; 6 pH, Major &lt; 5.5 pH, only where SCADA draws the reading</span><br>Sump flooding <span class="muted">· when ON, Emergency, only where SCADA draws the reading</span></td><td>Tank cleaning <span class="muted">· every 6 months</span><br><span class="muted">+ a monthly calibration for each probe</span></td><td><span class="muted">none</span></td></tr>
+<tr><td>Submersible Tank</td><td><code>OS_TANK_SP</code></td><td>Level <span class="muted">%</span><br>Sump flood switch</td><td>Level high <span class="muted">· Caution &gt; 85 %, Major &gt; 95 %</span><br>Sump flooding <span class="muted">· when ON, Emergency, only where SCADA draws the reading</span></td><td>Tank cleaning <span class="muted">· every 6 months</span></td><td><span class="muted">none</span></td></tr>
+<tr><td>Screen Chamber Tank</td><td><code>OS_TANK_SC</code></td><td><span class="muted">none</span></td><td><span class="muted">none</span></td><td>Weekly screen inspection <span class="muted">· every week</span></td><td>Level differential <span class="muted">(upstream against downstream of the screen)</span><br>alert Screen differential high</td></tr>
+<tr><td>Diffuser Tank <span class="chip cf" title="MLSS limits to confirm: high at 4500 mg/L (Minor, from v1), low at 2000 mg/L (Minor, new).">to confirm</span></td><td><code>OS_TANK_DF</code></td><td>Dissolved oxygen <span class="muted">mg/L</span><br>MLSS <span class="muted">mg/L</span><br>Temperature <span class="muted">°C</span></td><td>DO low <span class="muted">· Minor &lt; 2 mg/L, Major &lt; 1 mg/L, Emergency &lt; 0.5 mg/L</span><br>MLSS high <span class="muted">· Minor &gt; 4500 mg/L</span><br>MLSS low <span class="muted">· Minor &lt; 2000 mg/L</span><br>Temperature high <span class="muted">· Caution &gt; 35 °C, Minor &gt; 38 °C, only where SCADA draws the reading</span></td><td>SV30 settling test <span class="muted">· every day</span><br><span class="muted">+ a monthly calibration for each probe</span></td><td><span class="muted">none</span></td></tr>
+<tr><td>Agitator <span class="chip cf" title="The current limit (Minor at 24 A) is a guess: the form has no motor rating to work it out from.">to confirm</span></td><td><code>OS_TANK_AG</code></td><td>Run status<br>Motor current <span class="muted">A</span></td><td>Motor current high <span class="muted">· Minor &gt; 24 A</span></td><td>Gearbox and bearing service <span class="muted">· every 6 months</span></td><td><span class="muted">none</span></td></tr>
+<tr><td>Oil &amp; Grease Tank</td><td><code>SH_TANK</code></td><td>Level <span class="muted">%</span></td><td>Level high <span class="muted">· Caution &gt; 85 %, Major &gt; 95 %</span></td><td>Skimmer belt and scraper check <span class="muted">· every month</span><br>Oil removal round <span class="muted">· every week</span><br>Desludging <span class="muted">· every 3 months</span></td><td><span class="muted">none</span></td></tr>
+<tr><td>Dosing Tank</td><td><code>DOS_TANK</code></td><td>Level <span class="muted">%</span></td><td>Chemical tank low <span class="muted">· Caution &lt; 25 %, Minor &lt; 10 %</span></td><td>Chemical refill <span class="muted">· every week</span></td><td><span class="muted">none</span></td></tr>
+<tr><td>Overhead Tank</td><td><code>OVERHEAD_T</code></td><td>Level <span class="muted">%</span></td><td>Level high <span class="muted">· Caution &gt; 85 %, Major &gt; 95 %</span></td><td>Tank cleaning <span class="muted">· every 6 months</span></td><td><span class="muted">none</span></td></tr>
+<tr><td>Anaerobic Tank</td><td><code>ANAEROBIC_TANK</code></td><td>pH <span class="muted">pH</span><br>Temperature <span class="muted">°C</span></td><td>pH low <span class="muted">· Minor &lt; 6.5 pH, Major &lt; 6 pH</span></td><td>Desludging <span class="muted">· every 6 months</span><br><span class="muted">+ a monthly calibration for each probe</span></td><td><span class="muted">none</span></td></tr>
+<tr><td>SBR <span class="chip cf" title="MLSS limits to confirm: high at 4500 mg/L (Minor, from v1), low at 2000 mg/L (Minor, new).">to confirm</span></td><td><code>SBR_TANK</code></td><td>Dissolved oxygen <span class="muted">mg/L</span><br>MLSS <span class="muted">mg/L</span><br>Temperature <span class="muted">°C</span></td><td>DO low <span class="muted">· Minor &lt; 2 mg/L, Major &lt; 1 mg/L, Emergency &lt; 0.5 mg/L</span><br>MLSS high <span class="muted">· Minor &gt; 4500 mg/L</span><br>MLSS low <span class="muted">· Minor &lt; 2000 mg/L</span><br>Temperature high <span class="muted">· Caution &gt; 35 °C, Minor &gt; 38 °C, only where SCADA draws the reading</span></td><td>SV30 settling test <span class="muted">· every day</span><br><span class="muted">+ a monthly calibration for each probe</span></td><td><span class="muted">none</span></td></tr>
+<tr><td>Cass Basin <span class="chip cf" title="MLSS limits to confirm: high at 4500 mg/L (Minor, from v1), low at 2000 mg/L (Minor, new).">to confirm</span></td><td><code>CASS_BASIN</code></td><td>Dissolved oxygen <span class="muted">mg/L</span><br>MLSS <span class="muted">mg/L</span><br>Temperature <span class="muted">°C</span></td><td>DO low <span class="muted">· Minor &lt; 2 mg/L, Major &lt; 1 mg/L, Emergency &lt; 0.5 mg/L</span><br>MLSS high <span class="muted">· Minor &gt; 4500 mg/L</span><br>MLSS low <span class="muted">· Minor &lt; 2000 mg/L</span><br>Temperature high <span class="muted">· Caution &gt; 35 °C, Minor &gt; 38 °C, only where SCADA draws the reading</span></td><td>SV30 settling test <span class="muted">· every day</span><br><span class="muted">+ a monthly calibration for each probe</span></td><td><span class="muted">none</span></td></tr>
+<tr><td>Pump</td><td><code>PMP</code></td><td>Run status<br>Motor current <span class="muted">A</span><br>Speed <span class="muted">%</span><br>Run hours <span class="muted">h</span></td><td>Motor current high <span class="muted">· Caution &gt; 40 A, Minor &gt; 45 A</span></td><td>Bearing and seal service <span class="muted">· every 6 months or 4000 run-hours</span></td><td>Discharge pressure <span class="muted">(on the discharge line)</span><br>Flow <span class="muted">(in the delivery line)</span><br>alert Discharge pressure low<br>Discharge pressure limits from the Maximum Head answer</td></tr>
+<tr><td>Submersible Pump <span class="chip cf" title="Bearing and seal service every 6 months or 4000 run-hours, as for Pump; v1 said 600 run-hours, likely a slip.">to confirm</span></td><td><code>SUB_PMP</code></td><td>Run status<br>Motor current <span class="muted">A</span><br>Speed <span class="muted">%</span><br>Run hours <span class="muted">h</span></td><td>Motor current high <span class="muted">· Caution &gt; 28 A, Minor &gt; 32 A</span></td><td>Bearing and seal service <span class="muted">· every 6 months or 4000 run-hours</span></td><td>Discharge pressure <span class="muted">(on the discharge line)</span><br>Flow <span class="muted">(in the delivery line)</span><br>Discharge pressure limits from the Maximum Head answer</td></tr>
+<tr><td>Dosing Pump</td><td><code>D_PMP</code></td><td>Run status<br>Speed <span class="muted">%</span><br>Run hours <span class="muted">h</span></td><td><span class="muted">none</span></td><td>Dosing pump service <span class="muted">· every 3 months</span><br>Calibration of dose rate <span class="muted">· every 3 months</span></td><td>Residual chlorine <span class="muted">(in the outlet water, downstream of the dose)</span><br>Flow <span class="muted">(on the dosing line)</span><br>Discharge pressure <span class="muted">(on the discharge line)</span><br>alert Residual chlorine low<br>Discharge pressure limits from the Maximum Head answer</td></tr>
+<tr><td>Booster Pump <span class="chip cf" title="New type, content guessed: treated as a centrifugal pump, with current limits at 40 A and 45 A (the form has no motor rating) and a bearing and seal service every 6 months or 4000 run-hours.">to confirm</span></td><td><code>BT_PMP</code></td><td>Run status<br>Motor current <span class="muted">A</span><br>Run hours <span class="muted">h</span></td><td>Motor current high <span class="muted">· Caution &gt; 40 A, Minor &gt; 45 A</span></td><td>Bearing and seal service <span class="muted">· every 6 months or 4000 run-hours</span></td><td>Discharge pressure <span class="muted">(on the delivery header)</span></td></tr>
+<tr><td>Blower</td><td><code>BLW</code></td><td>Run status<br>Trip contact<br>Motor current <span class="muted">A</span><br>Run hours <span class="muted">h</span></td><td>Motor current high <span class="muted">· Caution &gt; 44 A, Minor &gt; 48 A</span><br>Blower tripped <span class="muted">· when ON, Emergency</span></td><td>Bearing service <span class="muted">· every 6 months or 500 run-hours</span><br>Clean intake filter <span class="muted">· when Motor current passes 42 A, done below 38 A</span></td><td>Line pressure <span class="muted">(on the discharge line)</span><br>alert Line pressure high</td></tr>
+<tr><td>Mini Blower</td><td><code>M_BLW</code></td><td>Run status<br>Trip contact<br>Motor current <span class="muted">A</span><br>Run hours <span class="muted">h</span></td><td>Blower tripped <span class="muted">· when ON, Emergency</span></td><td>Bearing service <span class="muted">· every 6 months or 500 run-hours</span><br>Clean intake filter <span class="muted">· every month</span></td><td>Line pressure <span class="muted">(on the discharge line)</span><br>alert Line pressure high</td></tr>
+<tr><td>Motor <span class="chip cf" title="New type, content guessed: run, trip, current and run-hours readings, a Major alert on a trip, and an insulation and bearing check every 6 months or 4000 run-hours.">to confirm</span></td><td><code>MOTOR</code></td><td>Run status<br>Trip contact<br>Motor current <span class="muted">A</span><br>Run hours <span class="muted">h</span></td><td>Motor tripped <span class="muted">· when ON, Major</span></td><td>Motor insulation and bearing check <span class="muted">· every 6 months or 4000 run-hours</span></td><td><span class="muted">none</span></td></tr>
+<tr><td>Air Compressor</td><td><code>AIR_COMPRESSURE</code></td><td>Run status<br>Run hours <span class="muted">h</span></td><td><span class="muted">none</span></td><td>Compressor service <span class="muted">· every 6 months or 1000 run-hours</span></td><td>Line pressure <span class="muted">(on the air line from the receiver)</span><br>alert Air pressure low</td></tr>
+<tr><td>Two way Valve <span class="chip cf" title="New type, content guessed: the valve position is an open or closed contact, and the valve is stroked every 3 months.">to confirm</span></td><td><code>VALVE_2</code></td><td>Valve position</td><td><span class="muted">none</span></td><td>Valve stroke check <span class="muted">· every 3 months</span></td><td><span class="muted">none</span></td></tr>
+<tr><td>Three way Valve <span class="chip cf" title="New type, content guessed: the valve position is an open or closed contact, and the valve is stroked every 3 months.">to confirm</span></td><td><code>VALVE_3</code></td><td>Valve position</td><td><span class="muted">none</span></td><td>Valve stroke check <span class="muted">· every 3 months</span></td><td><span class="muted">none</span></td></tr>
+<tr><td>Screw Press</td><td><code>SC_PRESS</code></td><td>Run status<br>Motor current <span class="muted">A</span><br>Run hours <span class="muted">h</span></td><td>Motor current high <span class="muted">· Minor &gt; 30 A</span></td><td>Screw and screen service <span class="muted">· every 6 months or 500 run-hours</span></td><td>Flow <span class="muted">(on the sludge feed line)</span></td></tr>
+<tr><td>Filter Press</td><td><code>F_PRESS</code></td><td>Run status<br>Run hours <span class="muted">h</span></td><td><span class="muted">none</span></td><td>Hydraulic and cloth inspection <span class="muted">· every 6 months or 400 run-hours</span></td><td>Inlet pressure <span class="muted">(on the sludge feed line; it shows when the press is full)</span></td></tr>
+<tr><td>Softner</td><td><code>SOFTNER</code></td><td><span class="muted">none</span></td><td><span class="muted">none</span></td><td>Brine tank salt top-up <span class="muted">· every week</span></td><td>Throughput <span class="muted">(totalled by a flow meter on the outlet line)</span><br>Outlet hardness <span class="muted">(in the soft water leaving the softener)</span><br>Regenerate softener<br>Regeneration point from the OBR answer<br>Auto valves: confirm the regeneration, not do it</td></tr>
+<tr><td>ACF/MGF</td><td><code>ACF_MGF</code></td><td><span class="muted">none</span></td><td><span class="muted">none</span></td><td>Weekly backwash <span class="muted">· every week</span></td><td>Differential pressure <span class="muted">(across the filter's inlet and outlet)</span><br>alert Backwash not keeping up<br>Backwash when pressure builds<br>Auto valves: confirm the pressure backwash, not do it</td></tr>
+<tr><td>Ozonator <span class="chip cf" title="Guessed: the trip contact is taken as the air dryer's dew-point trip; confirm what trips the ozonator.">to confirm</span></td><td><code>OZONATOR</code></td><td>Run status<br>Trip contact<br>Run hours <span class="muted">h</span></td><td>Ozonator tripped <span class="muted">· when ON, Major</span></td><td>Generator service <span class="muted">· every 6 months</span></td><td><span class="muted">none</span></td></tr>
+<tr><td>MBBR</td><td><code>MBBR</code></td><td>Dissolved oxygen <span class="muted">mg/L</span></td><td>DO low <span class="muted">· Minor &lt; 2 mg/L, Major &lt; 1 mg/L</span></td><td>Media and diffuser inspection <span class="muted">· every 6 months</span><br><span class="muted">+ a monthly calibration for each probe</span></td><td><span class="muted">none</span></td></tr>
+<tr><td>MBR</td><td><code>MBR</code></td><td><span class="muted">none</span></td><td><span class="muted">none</span></td><td>Quarterly CIP <span class="muted">· every 3 months</span></td><td>Permeability <span class="muted">(worked out from the permeate flow and the pressure, both on the lines)</span><br>Trans-membrane pressure <span class="muted">(across the membrane, feed side to permeate side)</span><br>Outlet turbidity <span class="muted">(in the permeate)</span><br>alert Permeability falling<br>alert Outlet turbidity high<br>Pressure limits from the Design TMP answer</td></tr>
+<tr><td>Tube settler</td><td><code>T_SETTLER</code></td><td>Sludge blanket <span class="muted">m</span></td><td>Sludge blanket high <span class="muted">· Minor &gt; 1 m</span></td><td>Tube module cleaning <span class="muted">· every 3 months</span><br><span class="muted">+ a monthly calibration for each probe</span></td><td><span class="muted">none</span></td></tr>
+<tr><td>UF Membrane</td><td><code>UF_MEM</code></td><td><span class="muted">none</span></td><td><span class="muted">none</span></td><td>Quarterly CIP <span class="muted">· every 3 months</span></td><td>Inlet pressure <span class="muted">(on the feed line)</span><br>Trans-membrane pressure <span class="muted">(across the membrane, feed side to permeate side)</span><br>Recovery <span class="muted">(permeate flow over feed flow, both on the lines)</span><br>alert Recovery low<br>alert Inlet pressure high</td></tr>
+<tr><td>RO</td><td><code>RO</code></td><td><span class="muted">none</span></td><td><span class="muted">none</span></td><td>Membrane CIP <span class="muted">· every 3 months</span></td><td>Inlet pressure <span class="muted">(on the high-pressure feed line)</span><br>Recovery <span class="muted">(permeate flow over feed flow, both on the lines)</span><br>Permeate conductivity <span class="muted">(in the permeate line)</span><br>alert Recovery low<br>alert Inlet pressure high</td></tr>
+<tr><td>UV <span class="chip cf" title="UV intensity limits are the usual lamp-replacement point, not the maker's figure: Minor below 70%, Major below 60%, only while the UV runs.">to confirm</span></td><td><code>UV</code></td><td>Run status<br>Lamp fault<br>UV intensity <span class="muted">%</span><br>Run hours <span class="muted">h</span></td><td>UV lamp fault <span class="muted">· when ON, Major</span><br>UV intensity low <span class="muted">· Minor &lt; 70 %, Major &lt; 60 %, only while the machine runs</span></td><td>Lamp and sleeve replacement <span class="muted">· every 12 months</span></td><td><span class="muted">none</span></td></tr>
+<tr><td>Dissolved Air Floatation <span class="chip cf" title="The current limit (Minor at 30 A) is a guess: the form has no motor rating to work it out from.">to confirm</span></td><td><code>DAF</code></td><td>Run status<br>Motor current <span class="muted">A</span></td><td>Motor current high <span class="muted">· Minor &gt; 30 A</span></td><td>Saturator and scraper service <span class="muted">· every 6 months</span></td><td><span class="muted">none</span></td></tr>
+<tr><td>Flash Mixer <span class="chip cf" title="The current limit (Minor at 24 A) is a guess: the form has no motor rating to work it out from.">to confirm</span></td><td><code>FLASH_MIXER</code></td><td>Run status<br>Motor current <span class="muted">A</span></td><td>Motor current high <span class="muted">· Minor &gt; 24 A</span></td><td>Gearbox and bearing service <span class="muted">· every 6 months</span></td><td><span class="muted">none</span></td></tr>
+<tr><td>Flocculation <span class="chip cf" title="The current limit (Minor at 24 A) is a guess: the form has no motor rating to work it out from.">to confirm</span></td><td><code>FLOCCULATION</code></td><td>Run status<br>Motor current <span class="muted">A</span></td><td>Motor current high <span class="muted">· Minor &gt; 24 A</span></td><td>Gearbox and paddle check <span class="muted">· every 6 months</span></td><td><span class="muted">none</span></td></tr>
+<tr><td>Static Mixer</td><td><code>STATIC_MIXER</code></td><td><span class="muted">none</span></td><td><span class="muted">none</span></td><td>Element inspection <span class="muted">· every 6 months</span></td><td><span class="muted">none</span></td></tr>
+<tr><td>Rotary Drum</td><td><code>ROTARY_DRUM</code></td><td>Run status<br>Trip contact</td><td>Screen drive tripped <span class="muted">· when ON, Major</span></td><td>Weekly screen inspection <span class="muted">· every week</span></td><td>Level differential <span class="muted">(upstream against downstream of the screen)</span><br>alert Screen differential high</td></tr>
+<tr><td>Grit Chamber</td><td><code>GRIT_CHAMBER</code></td><td><span class="muted">none</span></td><td><span class="muted">none</span></td><td>Grit removal <span class="muted">· every week</span></td><td><span class="muted">none</span></td></tr>
+<tr><td>Grit Classifier <span class="chip cf" title="New type, content guessed: a screw classifier with a run status, and a screw and gearbox check every 3 months.">to confirm</span></td><td><code>GRIT_CLASSIFIER</code></td><td>Run status</td><td><span class="muted">none</span></td><td>Classifier screw and gearbox check <span class="muted">· every 3 months</span></td><td><span class="muted">none</span></td></tr>
+<tr><td>Mechanical Screen</td><td><code>MECHANICAL_SCREEN</code></td><td>Run status<br>Trip contact</td><td>Screen drive tripped <span class="muted">· when ON, Major</span></td><td>Weekly screen inspection <span class="muted">· every week</span></td><td>Level differential <span class="muted">(upstream against downstream of the screen)</span><br>alert Screen differential high</td></tr>
+<tr><td>Cartridge Filter</td><td><code>CARTRIDGE_FILTER</code></td><td><span class="muted">none</span></td><td><span class="muted">none</span></td><td>Cartridge replacement <span class="muted">· every month</span></td><td>Differential pressure <span class="muted">(across the housing's inlet and outlet)</span><br>alert Cartridge choked</td></tr>
+<tr><td>Cascade Aerator</td><td><code>CASCADE_AREATOR</code></td><td><span class="muted">none</span></td><td><span class="muted">none</span></td><td>Steps cleaning <span class="muted">· every month</span></td><td><span class="muted">none</span></td></tr>
+<tr><td>Cooling Tower</td><td><code>COOLING_TOWER</code></td><td>Run status</td><td><span class="muted">none</span></td><td>Fill and fan service <span class="muted">· every 6 months</span></td><td>Cooling water temperature <span class="muted">(in the water leaving the tower)</span><br>alert Outlet temperature high</td></tr>
+<tr><td>Hydro Cyclone <span class="chip cf" title="New type, content guessed: an apex and liner check every 3 months.">to confirm</span></td><td><code>HYDROCYCLONE</code></td><td><span class="muted">none</span></td><td><span class="muted">none</span></td><td>Cyclone apex and liner check <span class="muted">· every 3 months</span></td><td>Inlet pressure <span class="muted">(on the feed line to the cyclone)</span></td></tr>
+<tr><td>Cavitator <span class="chip cf" title="New type, content guessed: treated as a nozzle or orifice-plate unit with run, trip and run-hours readings, a Major alert on a trip, and a service every 6 months.">to confirm</span></td><td><code>CAVITATOR</code></td><td>Run status<br>Trip contact<br>Run hours <span class="muted">h</span></td><td>Cavitator tripped <span class="muted">· when ON, Major</span></td><td>Cavitator service <span class="muted">· every 6 months</span></td><td><span class="muted">none</span></td></tr>
+<tr><td>Gas Tonner <span class="chip cf" title="Guessed: the scale reads the chlorine left (net; a full tonner holds about 900 kg), so Caution at 150 kg and Minor at 90 kg; the leak detector beside the tonner is taken as its reading.">to confirm</span></td><td><code>GAS_TONNER</code></td><td>Tonner net weight <span class="muted">kg</span><br>Chlorine leak</td><td>Tonner nearly empty <span class="muted">· Caution &lt; 150 kg, Minor &lt; 90 kg</span><br>Chlorine leak <span class="muted">· when ON, Emergency</span></td><td>Tonner change <span class="muted">· every 2 weeks</span></td><td>Residual chlorine <span class="muted">(in the outlet water, downstream of the dose)</span><br>alert Residual chlorine low</td></tr>
+<tr><td>Vtg Chamber <span class="chip cf" title="New type, content guessed: a chamber cleaned like a tank every 6 months.">to confirm</span></td><td><code>VTG_CHAMBER</code></td><td><span class="muted">none</span></td><td><span class="muted">none</span></td><td>Chamber cleaning <span class="muted">· every 6 months</span></td><td><span class="muted">none</span></td></tr>
+<tr><td>Sabre <span class="chip cf" title="New type, content guessed: a sensing device, wiped and checked every month; what it reads arrives as widgets.">to confirm</span></td><td><code>BIG_SABRE</code></td><td><span class="muted">none</span></td><td><span class="muted">none</span></td><td>Device clean and check <span class="muted">· every month</span></td><td><span class="muted">none</span></td></tr>
+<tr><td>Small Sabre <span class="chip cf" title="New type, content guessed: a sensing device, wiped and checked every month; what it reads arrives as widgets.">to confirm</span></td><td><code>MINI_SABRE</code></td><td><span class="muted">none</span></td><td><span class="muted">none</span></td><td>Device clean and check <span class="muted">· every month</span></td><td><span class="muted">none</span></td></tr>
+<tr><td>QUADSON EVAPORATOR <span class="chip cf" title="New type, content guessed: a heated evaporator with a run status, descaled and inspected every 3 months.">to confirm</span></td><td><code>QUADSON_EVAPORATOR</code></td><td>Run status</td><td><span class="muted">none</span></td><td>Evaporator descaling and inspection <span class="muted">· every 3 months</span></td><td><span class="muted">none</span></td></tr>
+<tr><td>Bio Health Tracker <span class="chip cf" title="New type, content guessed: a sensing device, wiped and checked every month; what it reads arrives as widgets.">to confirm</span></td><td><code>BIO_HEALTH_TRACKER</code></td><td><span class="muted">none</span></td><td><span class="muted">none</span></td><td>Device clean and check <span class="muted">· every month</span></td><td><span class="muted">none</span></td></tr>
+</table></div>
+<p>15 types have no reading on the equipment at all: Screen Chamber Tank, Softner, ACF/MGF, MBR, UF Membrane, RO, Static Mixer, Grit Chamber, Cartridge Filter, Cascade Aerator, Hydro Cyclone, Vtg Chamber, Sabre, Small Sabre, Bio Health Tracker. Each still gets its calendar work. For the filters and membranes, everything worth an alert sits across the inlet and the outlet, so it waits for the next phase.</p>
+
+<h3>What the library reads from SCADA's form</h3>
+<p>The form's answers add limits, work and notes to a machine, and a pump on a VFD also gets a Running below minimum speed alert, which watches only while the pump runs. They never change its type. A motor rating puts the current limits at 100%, 105% and 115% of full load (about 1.82 A per kW at 415 V), widens the reading's valid range to twice full load so a real overload is never taken for a sensor fault, and on a Blower moves the intake filter job to 95% of full load, done below 85%. v5 adds no question of its own to the database's form.</p>
+<div class="tablewrap"><table>
+  <tr><th>Equipment type</th><th>What it reads</th></tr>
+<tr><td>Tank <code>TANK</code></td><td>Shape and size → volume</td></tr>
+<tr><td>Tank 2 <code>TANK_2</code></td><td>Shape and size → volume</td></tr>
+<tr><td>Open Process Tank <code>OP_TANK</code></td><td>Shape and size → volume</td></tr>
+<tr><td>Closed Process Tank <code>CP_TANK</code></td><td>Shape and size → volume</td></tr>
+<tr><td>Clarifier Tank <code>CLARIFIER</code></td><td>Shape and size → volume</td></tr>
+<tr><td>Screen Chamber Tank <code>OS_TANK_SC</code></td><td>Shape and size → volume · Overflow → chip</td></tr>
+<tr><td>Submersible Tank <code>OS_TANK_SP</code></td><td>Shape and size → volume · Overflow → chip</td></tr>
+<tr><td>Diffuser Tank <code>OS_TANK_DF</code></td><td>Shape and size → volume · Overflow → chip · Diffuser material → cleaning cadence</td></tr>
+<tr><td>Open Skeleton Tank <code>OS_TANK</code></td><td>Shape and size → volume · Overflow → chip · Diffuser material → cleaning cadence</td></tr>
+<tr><td>Agitator <code>OS_TANK_AG</code></td><td>Remote control → chip</td></tr>
+<tr><td>Oil &amp; Grease Tank <code>SH_TANK</code></td><td>Shape and size → volume</td></tr>
+<tr><td>Dosing Tank <code>DOS_TANK</code></td><td>Volume → kept</td></tr>
+<tr><td>Tube settler <code>T_SETTLER</code></td><td>Volume → kept</td></tr>
+<tr><td>Pump <code>PMP</code></td><td>Type → noted on the pump · Type Screw Pump → stator and rotor check · VFD → expects a speed reading, alerted while it runs · Motor rating → current limits · Remote control → chip</td></tr>
+<tr><td>Submersible Pump <code>SUB_PMP</code></td><td>Type → noted on the pump · Type → cutter check when it is a cutter pump · VFD → expects a speed reading, alerted while it runs · Motor rating → current limits · Remote control → chip</td></tr>
+<tr><td>Dosing Pump <code>D_PMP</code></td><td>VFD → expects a speed reading, alerted while it runs · Remote control → chip</td></tr>
+<tr><td>Blower <code>BLW</code></td><td>Motor rating → current limits · Motor rating → intake filter job at 95% and 85% of full load · RPM → kept · Remote control → chip</td></tr>
+<tr><td>Two way Valve <code>VALVE_2</code></td><td>Type of valve → noted on the valve · Remote control → chip</td></tr>
+<tr><td>Three way Valve <code>VALVE_3</code></td><td>Type → noted on the valve · Remote control → chip</td></tr>
+<tr><td>Screw Press <code>SC_PRESS</code></td><td>Motor rating → current limits · Auto cleaning → confirm the wash, not do it · Poly dosing → weekly poly refill</td></tr>
+<tr><td>Filter Press <code>F_PRESS</code></td><td>Poly dosing → weekly poly refill · Number of plates → parts note</td></tr>
+<tr><td>ACF/MGF <code>ACF_MGF</code></td><td>Auto valves → confirm, not do</td></tr>
+<tr><td>UF Membrane <code>UF_MEM</code></td><td>Backwash cycle → daily cycle check</td></tr>
+<tr><td>MBR <code>MBR</code></td><td>Design flux → kept · Diffuser material → cleaning cadence</td></tr>
+<tr><td>MBBR <code>MBBR</code></td><td>Fill fraction → kept · Media quantity → monthly media loss check · Diffuser material → cleaning cadence</td></tr>
+</table></div>
+
+<h3>Where v1's types went</h3>
+<p>v1 had 41 equipment types of its own. Each one's content moved onto the database types it describes. Its names are gone.</p>
+<div class="tablewrap"><table>
+  <tr><th>v1 type</th><th>Now part of</th></tr>
+  <tr><td>Centrifugal blower</td><td>Blower, Mini Blower</td></tr>
+  <tr><td>Aeration basin</td><td>Diffuser Tank, SBR, Cass Basin</td></tr>
+  <tr><td>MBBR reactor · Anaerobic tank</td><td>MBBR · Anaerobic Tank</td></tr>
+  <tr><td>Equalisation tank</td><td>Open Skeleton Tank (level, flood switch, pH, cleaning) and Submersible Tank (level, flood switch)</td></tr>
+  <tr><td>Process tank</td><td>Tank, Tank 2, Open Process Tank, Closed Process Tank, Overhead Tank</td></tr>
+  <tr><td>Oil and grease trap</td><td>Oil &amp; Grease Tank</td></tr>
+  <tr><td>Mechanical bar screen</td><td>Mechanical Screen, Rotary Drum, Screen Chamber Tank</td></tr>
+  <tr><td>Grit chamber · Cascade aerator · Static mixer</td><td>Grit Chamber · Cascade Aerator · Static Mixer</td></tr>
+  <tr><td>Circular clarifier · Tube settler</td><td>Clarifier Tank · Tube settler</td></tr>
+  <tr><td>Membrane bioreactor skid · Ultrafiltration skid · RO skid</td><td>MBR · UF Membrane · RO</td></tr>
+  <tr><td>Multigrade filter · Softener · Cartridge filter</td><td>ACF/MGF · Softner · Cartridge Filter</td></tr>
+  <tr><td>Hypochlorite dosing unit, Dosing pump · Dosing tank</td><td>Dosing Pump · Dosing Tank</td></tr>
+  <tr><td>UV unit · Ozonator · Gas chlorinator</td><td>UV · Ozonator · Gas Tonner</td></tr>
+  <tr><td>Centrifugal, Monobloc, Multistage and Progressive cavity pump</td><td>Pump (one type; the form's Type is noted on the pump)</td></tr>
+  <tr><td>Submersible pump</td><td>Submersible Pump</td></tr>
+  <tr><td>Mixer · Flocculator</td><td>Agitator, Flash Mixer · Flocculation</td></tr>
+  <tr><td>Screw press · Filter press · DAF unit</td><td>Screw Press · Filter Press · Dissolved Air Floatation</td></tr>
+  <tr><td>Air compressor · Cooling tower</td><td>Air Compressor · Cooling Tower</td></tr>
+  <tr><td>Anoxic tank, Sludge holding tank, Chlorine contact tank, Control panel (MCC)</td><td>Dropped: the database has no such type. The MCC trip stays as a cause any equipment can land on, and its thermal inspection as a plant-wide flow.</td></tr>
+</table></div>
+<p>Twelve database types had nothing in v1: Booster Pump, Motor, Two way Valve, Three way Valve, Grit Classifier, Hydro Cyclone, Cavitator, Vtg Chamber, QUADSON EVAPORATOR, Sabre, Small Sabre and Bio Health Tracker. Their content was written for v5 and needs checking; each card carries the <span class="chip cf" title="The type's content is a reasoned guess; the chip's title says what to confirm">to confirm</span> chip. <a href="#confirm">What to confirm</a>.</p>
+
+<h2 id="drawing">Drawing elements and widgets</h2>
+<p>The database's palette has 67 node types: 56 equipment types, 4 drawing elements that sit in the equipment category, 5 widgets, and 2 the console ignores.</p>
+<h3>The four drawing elements</h3>
+<div class="tablewrap"><table>
+  <tr><th>Code</th><th>Name</th><th>What it is</th><th>What v5 does with it</th></tr>
+  <tr><td><code>PLANT_EQUIPMENT</code></td><td>Plant</td><td>The plant itself. Its label is the site label.</td><td>Shows the site label. DigitalPaani's says Ireo Uptown.</td></tr>
+  <tr><td><code>ZONE</code></td><td>ZONE</td><td>An inlet or outlet point of the drawing.</td><td>Counts it as an inlet or outlet point. DigitalPaani has 10: Inlet, To SHT, For Irrigation and seven more.</td></tr>
+  <tr><td><code>JOINS</code></td><td>Joint</td><td>Where pipes meet.</td><td>Follows pipes through it, so the drawing connects machine to machine. DigitalPaani has 38.</td></tr>
+  <tr><td><code>BUILDING</code></td><td>Building</td><td>A building outline.</td><td>Counts it.</td></tr>
+</table></div>
+<p>None of the four is a machine. None inherits anything. Steps 1 and 3 say so in one line: <i>Drawn, not equipment: 38 joints · 10 inlet and outlet points · the plant label (Ireo Uptown). They inherit nothing.</i></p>
+<h3>Widgets</h3>
+<div class="tablewrap"><table>
+  <tr><th>Code</th><th>Name</th><th>What it becomes</th></tr>
+  <tr><td><code>LEVEL_SENSOR</code></td><td>Level Sensor</td><td>A level reading on the equipment it is linked to</td></tr>
+  <tr><td><code>chart.knob</code></td><td>Gauge</td><td>A reading on the equipment it is linked to</td></tr>
+  <tr><td><code>SWITCH_SENSOR</code></td><td>Switch</td><td>An on/off reading on the equipment it is linked to</td></tr>
+  <tr><td><code>NUMBER_SENSOR</code></td><td>Number Widget</td><td>A reading on the equipment it is linked to</td></tr>
+  <tr><td><code>TABLE_WIDGET</code></td><td>Table Widget</td><td>Readings on the equipment it is linked to</td></tr>
+  <tr><td><code>LABEL_WIDGET</code></td><td>Label Widget</td><td>A text label. Ignored.</td></tr>
+  <tr><td><code>ASSET_EQUIPMENT</code></td><td>Saved templates</td><td>Saved drawings. Ignored.</td></tr>
+</table></div>
+<p>A widget is linked to a machine by a dashed link in the drawing. In the sample drawings its tag says which reading it is: <code>RUN</code> is Run status, <code>AMP</code> Motor current, <code>LVL</code> Level, <code>PRESS</code> Line pressure. The real DigitalPaani export carries no widget tags, so there the reading comes from the widget's kind: a Switch is the machine's Run status and a Level Sensor its Level. A type can read a tag its own way: a Cooling Tower reads <code>TEMP</code> as Cooling water temperature, the water leaving the tower.</p>
+<p>When the reading is on a connection, the widget still arrives, marked next phase. So does a reading of the water (temperature, pH, dissolved oxygen, MLSS, ORP, level, sludge blanket) linked to a machine whose type does not carry that reading, such as a temperature on a Blower or a pH on a Dosing Pump: it is taken as read in the water around the machine, not on it. <a href="#rule">The rule</a>.</p>
+<h3>Codes in the question file only</h3>
+<p><code>OH_TANK</code>, <code>CS_TANK</code>, <code>GAUGE_SENSOR</code>, <code>GROUP</code> and <code>SIREN</code> have questions in the question file but are not in the palette, and the database gives them no display name. They are not equipment types here. The Library's Database tab lists them by code, as "no display name in the database (question file only)". <code>GROUP</code> is a database code; it is not a control group.</p>
+<h3>Pipes</h3>
+<p>Pipes are read so the drawing shows what feeds what. In v5 they carry no reading and no alert. DigitalPaani has 96 connections.</p>
+
+<h2 id="detect">Detection: one rule</h2>
+<div class="callout"><b>The stored equipment type wins over the shape drawn.</b> A machine's type is the equipment type stored on its SCADA node. When none is stored, it is the code of the shape it was drawn with. The library entry with that code is the machine's type, under the database's name.</div>
+<p>That is all of it. Nothing is guessed from a label or a name. Nothing asks. No answer is remembered for a code. The SCADA form is read for what it says about the machine; a form answer never changes the type. Two edge cases:</p>
+<ul>
+  <li>A drawing element (Plant, ZONE, Joint, Building) is not a machine.</li>
+  <li>A code the database does not have becomes a machine marked <i>not in the database</i>. It inherits nothing, and step 9 says so. It should not happen.</li>
+</ul>
+<h3>Worked example: DigitalPaani</h3>
+<p>The real layout export stores an equipment type on three nodes. All three store <code>OS_TANK</code>.</p>
+<div class="tablewrap"><table>
+  <tr><th>Tag</th><th>Label</th><th>Drawn with</th><th>Stored type</th><th>v5 says</th><th>v1 said</th></tr>
+  <tr><td>SC</td><td>Screen Chamber</td><td>Screen Chamber Tank <code>OS_TANK_SC</code></td><td><code>OS_TANK</code></td><td>Open Skeleton Tank, drawn as Screen Chamber Tank</td><td>Mechanical bar screen</td></tr>
+  <tr><td>EQTT-1</td><td>EQT Tank - 1</td><td>Diffuser Tank <code>OS_TANK_DF</code></td><td><code>OS_TANK</code></td><td>Open Skeleton Tank, drawn as Diffuser Tank</td><td>Equalisation tank, from its name</td></tr>
+  <tr><td>EQTT-2</td><td>EQT Tank - 2</td><td>Diffuser Tank <code>OS_TANK_DF</code></td><td><code>OS_TANK</code></td><td>Open Skeleton Tank, drawn as Diffuser Tank</td><td>Equalisation tank, from its name</td></tr>
+  <tr><td>RFP-1</td><td>Reactor Feed Pump - 1</td><td>Pump <code>PMP</code></td><td>none</td><td>Pump, as its type</td><td>Asked: monobloc pump or centrifugal pump?</td></tr>
+  <tr><td>FFP-1</td><td>Filter Feed Pump - 1</td><td>Pump <code>PMP</code></td><td>none</td><td>Pump; the form's MonoBlock is noted on it</td><td>Monobloc pump, from the form</td></tr>
+</table></div>
+<p>The other 63 machines store no other type, so each is the type it was drawn with. v1 read the plant as 58 machines: 39 in 16 library types, and 19 pumps it could not type and asked about. v5 reads 66 machines of 13 database types and asks nothing. The 8 two-way valves are machines now, because Two way Valve is a database equipment type.</p>
+<p>Step 3 says so on each of the three rows: "Drawn as Screen Chamber Tank: its own library items are not inherited; the stored type wins." SC therefore gets the Open Skeleton Tank's Level high and tank cleaning, not the Screen Chamber Tank's weekly screen inspection. <a href="#open">Open questions</a> asks whether that stored type is meant.</p>
+<p>The EQT tanks still read their form. Shape and size give about 216 m³. The diffuser answers add a Diffuser cleaning every six months, from the Open Skeleton Tank's form rule. The form adds work. It does not change the type.</p>
+<p>The export has no tags, so each tag is made from the label, as in v1: Reactor Feed Pump - 1 becomes RFP-1. The export has no form answers either; the DigitalPaani answers are v1's stand-ins until the equipment records come with the drawing.</p>
+<div class="callout warn"><b>What went.</b> Guessing a pump's type, typing tanks by name, the pump question on step 3, the type select on step 3 and on the equipment sheet, "remember this for every plant", a form answer that changes the type, and reading the drawing's inlet and outlet points as process areas.</div>
+
+<h2 id="rule">Alerts on the equipment only</h2>
+<div class="callout"><b>An alert reads a reading on the equipment. Never the pipe coming out of it.</b> The same holds for condition-based work: a job that starts when a reading passes a value. Calendar schedules and run-hour schedules are fine.</div>
+<p>A reading is <b>on the equipment</b> when its sensor sits on or in the machine and measures the machine's own state or what it holds: run status, trip, auto/manual, motor current, speed, run hours, vibration, bearing or winding temperature, valve position, lamp fault or UV intensity, level in a tank, a flood switch, a probe in the tank's contents (DO, pH, MLSS, ORP, temperature), sludge blanket, the level or weight of a chemical container. A chemical tank's level belongs to the Dosing Tank, which carries Chemical tank low; the Dosing Pump that draws from it carries no tank level.</p>
+<p>A reading is <b>on a connection</b> when it measures the water in a pipe, or a difference between two connections: line, discharge, suction or inlet pressure; flow and totals; differential pressure across a filter; pressure across a membrane; permeability; recovery; outlet quality; level across a screen; cooling water in and out. These come with the next phase. So does a reading of the water linked to a machine whose type does not carry it (a temperature on a Blower, a pH on a Dosing Pump), with the note "read in the water around it, not on the machine; comes with connections".</p>
+<h3>Every reading, classified</h3>
+<p>39 readings: 23 on the equipment, 16 on a connection. The widget tag is the one SCADA's widgets carry.</p>
+<div class="tablewrap"><table>
+  <tr><th>Reading</th><th>Widget tag</th><th>Unit</th><th>Where</th><th>Why it is on a connection</th></tr>
+<tr><td>Run status</td><td><code>RUN</code></td><td></td><td>On the equipment</td><td></td></tr>
+<tr><td>Trip contact</td><td><code>TRIP</code></td><td></td><td>On the equipment</td><td></td></tr>
+<tr><td>Auto / manual</td><td><code>AM</code></td><td></td><td>On the equipment</td><td></td></tr>
+<tr><td>Motor current</td><td><code>AMP</code></td><td>A</td><td>On the equipment</td><td></td></tr>
+<tr><td>Speed</td><td><code>SPD</code></td><td>%</td><td>On the equipment</td><td></td></tr>
+<tr><td>Run hours</td><td><code>HRS</code></td><td>h</td><td>On the equipment</td><td></td></tr>
+<tr><td>Vibration</td><td><code>VIB</code></td><td>mm/s</td><td>On the equipment</td><td></td></tr>
+<tr><td>Bearing temperature</td><td><code>BTEMP</code></td><td>°C</td><td>On the equipment</td><td></td></tr>
+<tr><td>Winding temperature</td><td><code>WTEMP</code></td><td>°C</td><td>On the equipment</td><td></td></tr>
+<tr><td>Valve position</td><td><code>POS</code></td><td></td><td>On the equipment</td><td></td></tr>
+<tr><td>Lamp fault</td><td><code>LAMP</code></td><td></td><td>On the equipment</td><td></td></tr>
+<tr><td>UV intensity</td><td><code>UVI</code></td><td>%</td><td>On the equipment</td><td></td></tr>
+<tr><td>Level</td><td><code>LVL</code></td><td>%</td><td>On the equipment</td><td></td></tr>
+<tr><td>Sump flood switch</td><td><code>FLOOD</code></td><td></td><td>On the equipment</td><td></td></tr>
+<tr><td>Dissolved oxygen</td><td><code>DO</code></td><td>mg/L</td><td>On the equipment</td><td></td></tr>
+<tr><td>MLSS</td><td><code>MLSS</code></td><td>mg/L</td><td>On the equipment</td><td></td></tr>
+<tr><td>pH</td><td><code>PH</code></td><td>pH</td><td>On the equipment</td><td></td></tr>
+<tr><td>ORP</td><td><code>ORP</code></td><td>mV</td><td>On the equipment</td><td></td></tr>
+<tr><td>Temperature</td><td><code>TEMP</code></td><td>°C</td><td>On the equipment</td><td></td></tr>
+<tr><td>Sludge blanket</td><td><code>BLK</code></td><td>m</td><td>On the equipment</td><td></td></tr>
+<tr><td>Chemical tank level</td><td><code>TLVL</code></td><td>%</td><td>On the equipment</td><td></td></tr>
+<tr><td>Tonner net weight</td><td><code>WT</code></td><td>kg</td><td>On the equipment</td><td></td></tr>
+<tr><td>Chlorine leak</td><td><code>LEAK</code></td><td></td><td>On the equipment</td><td></td></tr>
+<tr class="np"><td>Line pressure</td><td><code>PRESS</code></td><td>bar</td><td><span class="chip npchip">next phase · on a connection</span></td><td>on the discharge line or header</td></tr>
+<tr class="np"><td>Discharge pressure</td><td><code>DPRESS</code></td><td>bar</td><td><span class="chip npchip">next phase · on a connection</span></td><td>on the discharge line</td></tr>
+<tr class="np"><td>Suction pressure</td><td><code>SPRESS</code></td><td>bar</td><td><span class="chip npchip">next phase · on a connection</span></td><td>on the suction line</td></tr>
+<tr class="np"><td>Inlet pressure</td><td><code>PIN</code></td><td>bar</td><td><span class="chip npchip">next phase · on a connection</span></td><td>on the feed line</td></tr>
+<tr class="np"><td>Flow</td><td><code>FLOW</code></td><td>m³/h</td><td><span class="chip npchip">next phase · on a connection</span></td><td>in the pipe, from a flow meter</td></tr>
+<tr class="np"><td>Throughput</td><td><code>THR</code></td><td>m³</td><td><span class="chip npchip">next phase · on a connection</span></td><td>totalled by a flow meter on the outlet line</td></tr>
+<tr class="np"><td>Differential pressure</td><td><code>DP</code></td><td>bar</td><td><span class="chip npchip">next phase · on a connection</span></td><td>across the filter's inlet and outlet</td></tr>
+<tr class="np"><td>Trans-membrane pressure</td><td><code>TMP</code></td><td>bar</td><td><span class="chip npchip">next phase · on a connection</span></td><td>across the membrane, feed side to permeate side</td></tr>
+<tr class="np"><td>Permeability</td><td><code>PERM</code></td><td>LMH/bar</td><td><span class="chip npchip">next phase · on a connection</span></td><td>worked out from the permeate flow and the pressure, both on the lines</td></tr>
+<tr class="np"><td>Recovery</td><td><code>REC</code></td><td>%</td><td><span class="chip npchip">next phase · on a connection</span></td><td>permeate flow over feed flow, both on the lines</td></tr>
+<tr class="np"><td>Outlet turbidity</td><td><code>TURB</code></td><td>NTU</td><td><span class="chip npchip">next phase · on a connection</span></td><td>in the outlet water</td></tr>
+<tr class="np"><td>Residual chlorine</td><td><code>FRC</code></td><td>mg/L</td><td><span class="chip npchip">next phase · on a connection</span></td><td>in the outlet water, downstream of the dose</td></tr>
+<tr class="np"><td>Outlet hardness</td><td><code>HARD</code></td><td>ppm</td><td><span class="chip npchip">next phase · on a connection</span></td><td>in the outlet water</td></tr>
+<tr class="np"><td>Permeate conductivity</td><td><code>COND</code></td><td>µS/cm</td><td><span class="chip npchip">next phase · on a connection</span></td><td>in the permeate line</td></tr>
+<tr class="np"><td>Level differential</td><td><code>DH</code></td><td>mm</td><td><span class="chip npchip">next phase · on a connection</span></td><td>upstream against downstream of the screen</td></tr>
+<tr class="np"><td>Cooling water temperature</td><td><code>CWT</code></td><td>°C</td><td><span class="chip npchip">next phase · on a connection</span></td><td>in the water leaving the tower</td></tr>
+</table></div>
+<h3>What a next-phase reading looks like</h3>
+<p>SCADA drew it and linked it to the machine, so it arrives. It is shown, and it is quiet. Here is Air Blower 1 at Manesar, on the equipment page:</p>
+<div class="tablewrap"><table>
+  <tr><th>Reading</th><th>Now</th><th>Limits</th></tr>
+  <tr class="np"><td><b>Line pressure</b> <span class="muted">PRESS-BL1</span> <span class="chip npchip">next phase · on a connection</span><br><span class="npline">on the discharge line or header</span></td><td>0.58 bar</td><td>no limits until the next phase</td></tr>
+  <tr><td><b>Motor current</b> <span class="muted">AMP-BL1 · Gauge</span></td><td>49 A</td><td>Caution &gt; 44 A · Minor &gt; 48 A</td></tr>
+  <tr><td><b>Trip contact</b> <span class="muted">TRIP-BL1 · Switch</span></td><td>OFF</td><td>on/off contact</td></tr>
+</table></div>
+<p class="npline"><b>Next phase: connections</b> — Line pressure (on the discharge line) · alert Line pressure high</p>
+<ul>
+  <li>It is grey, with a dashed chip. Never amber.</li>
+  <li>It has no limits and no button, and clicking it does nothing. A read-only sheet for it is built (its value, what it is, where it is, which next-phase alerts wait for it, "Limits and alerts on connections come with the next phase", only Close), but no screen opens it yet.</li>
+  <li>It is never offered when adding an alert, a condition-based job, a flow's reading step, a computed reading's inputs, or a library alert. Typing its tag into a formula is refused, with the reason.</li>
+  <li>It is never a gap. It never shows as "limits missing" or "not enabled yet". What's enabled lists it under "Comes with the next phase".</li>
+  <li>The runtime refuses to fire an alert on it. The export lists it, per machine, under what waits for connections.</li>
+</ul>
+<h3>The blower's Line pressure high</h3>
+<p>v1's Centrifugal blower watched Line pressure (Minor above 0.65 bar, Major above 0.85 bar), and Manesar had it active on BL-1 as its open issue. The pressure is measured on the discharge line, a connection. In v5:</p>
+<ul>
+  <li>The Blower type reads Run status, Trip contact, Motor current and Run hours. Its alerts are Motor current high (Caution above 44 A, Minor above 48 A) and Blower tripped (Emergency, when the trip contact goes ON). A motor rating on the form replaces 44 and 48 A with limits worked out from full load.</li>
+  <li>Line pressure and Line pressure high sit in the Blower's <i>Next phase: connections</i> box: "on the discharge line" and "needs the discharge line, a connection".</li>
+  <li>Manesar's BL-1 still shows its Line pressure widget, muted. Its open issue is now Motor current high at 49 A, Minor. BL-1 and BL-2 are 22 kW blowers on their forms (40 A full load), so 44 A and 48 A are 110% and 120% of full load and its usual 38.2 A is normal.</li>
+  <li>The Blower line pressure high diagnostic is written and kept aside with the other flows that wait for connections, listed on the Library's Database tab under "Flows waiting for connections".</li>
+</ul>
+<p>17 sample widgets sit on a connection and arrive marked next phase. Bawal: BS-1 level differential, MGF-1 differential pressure, SF-1 throughput, UF-1 recovery and inlet pressure, DP-1 residual chlorine. Manesar: BS-1 level differential, BL-1 and BL-2 line pressure, MBR-1 permeability and outlet turbidity, MGF-1 differential pressure, UF-1 recovery and inlet pressure, CDU-1 residual chlorine. Vedanta: BL-1 and BL-2 line pressure.</p>
+<p>The plant has no alerts of its own: an alert on the plant would read its inlet or outlet, which are connections. Plant-wide rounds and milestones stay.</p>
+
+<h2 id="screens">The screens</h2>
+<p>The shell is v1's: two tabs (Config and What's enabled), the side navigation, the plant switcher in the top bar, ? Help, Reset data. These are the screens v5 changed.</p>
+<div class="grid2">
+  <div class="box"><b class="t">The nine steps</b>Unchanged in name and order: Connect SCADA · People who can be reached · What SCADA found · Inherit from the library · Limits and alerts · Escalation and overrides · Maintenance and tasks · Workflows · Review and go live. The home page shows the next step, with the nine in three groups beneath it. <a class="try" href="prototype.html#/setup">Try it</a></div>
+  <div class="box"><b class="t">Step 1 · Connect SCADA</b>The drawing has one column per equipment type, in the order the drawing shows them; a type with more than ten machines wraps into further columns under one heading. Click a machine: its equipment type and code, "drawn as" when that differs, the form's answers, its readings (next-phase ones muted) and its connections. Under the drawing, the one line of things drawn that are not equipment. <a class="try" href="prototype.html#/setup/scada">Try it</a></div>
+  <div class="box"><b class="t">Step 3 · What SCADA found</b>One card per equipment type found: database name, code, machine count, tier. Inside: what the library gives the type (readings, alerts with limits, schedules), a quiet "Next phase: connections" line, and the machines: tag, name, "drawn as" with the form line, readings from widgets, what is blocked because SCADA did not draw a reading, and the tier with a change link. Then the drawn-not-equipment line. A type whose content is a guess shows the <span class="chip cf" title="The type's content is a reasoned guess; the chip's title says what to confirm">to confirm</span> chip. A machine drawn as another type says the stored type wins and its drawn type's items are not inherited. An item that applies only where its reading is drawn is left out, not listed as blocked, when SCADA did not draw it. No selects. No questions. <a class="try" href="prototype.html#/setup/detect">Try it</a></div>
+  <div class="box"><b class="t">Steps 4, 5, 7 and 8 · Every machine, attention first</b>The plant first, then each equipment type as a row with its machine count and an amber "n need attention" chip, then its machines as v1's closed rows with attention chips. <i>All | Needs attention</i> narrows the list. Every machine ends with its quiet next-phase list. On step 5 the plant row says alerts are on the equipment only; next-phase readings are muted rows with no button. Step 5 counts the machines at least one alert watches, and how many more the library could watch now. On step 8 a type's causes sit once on its type row. <a class="try" href="prototype.html#/setup/inherit">Inherit</a> <a class="try" href="prototype.html#/setup/alerts">Limits and alerts</a></div>
+  <div class="box"><b class="t">Steps 6 and 9</b>Step 6 reads one alert and one schedule at a time, as in v1. A machine's tier says "From the library" or "Overridden" with the reason. Step 9's checks include "Every machine SCADA drew is one of the database's equipment types". <a class="try" href="prototype.html#/setup/escalation">Escalation</a> <a class="try" href="prototype.html#/setup/review">Go live</a></div>
+  <div class="box"><b class="t">Equipment page</b>The tree is plant › equipment type › machine; type rows fold. Search matches name, tag, type, code, "drawn as" or a reading. The plant page carries rounds, milestones and manual readings; its Add offers schedules only. A type page shows what the library gives the type, its next-phase box and its machines. A machine page shows readings (next-phase ones muted), alerts, schedules, jobs and Details: database type and code, drawn as, tier with override, the form's answers. <a class="try" href="prototype.html#/equipment/plant">Plant</a> <a class="try" href="prototype.html#/equipment/type:BLW">Blower</a> <a class="try" href="prototype.html#/equipment/eq:bl1">Air Blower 1</a> <span class="muted">The Blower and Air Blower 1 links need Manesar STP, where the console opens after Reset data.</span></div>
+  <div class="box"><b class="t">Library</b>Three tabs. <b>Equipment types</b>: 56 cards in the database's order, each with Edit and, where it has one, a "Next phase: connections" box. <b>Plant types</b>: STP, ETP, WTP with rounds, milestones and usual equipment types. <b>Database</b>: the 67 palette rows with codes and question counts, every widget tag and the reading it becomes (connection ones muted), the question-file-only codes by code, and the flows and causes waiting for connections. A type whose content is a guess carries the <span class="chip cf" title="The type's content is a reasoned guess; the chip's title says what to confirm">to confirm</span> chip; its title says what to confirm. Edit a type and the change reaches every plant that follows it; Custom items are left alone. <a class="try" href="prototype.html#/library/types">Types</a> <a class="try" href="prototype.html#/library/database">Database</a></div>
+  <div class="box"><b class="t">What's enabled</b>The second tab. Read-only, derived from Config. Four counts, who alerts reach first, the plant-wide rounds and milestones, then one block per equipment type with a card per machine: <b>Watched for</b>, <b>Planned work</b>, in amber <b>Not enabled yet</b> with the reason, and in grey <b>Comes with the next phase</b>, which never counts as not enabled. <i>Everything | Not enabled yet</i> keeps only the gaps. One type, or one machine, can be shown alone. <a class="try" href="prototype.html#/enabled">Try it</a> <a class="try" href="prototype.html#/enabled/type:BLW">Blowers only</a> <span class="muted">On Manesar STP.</span></div>
+  <div class="box"><b class="t">Flows and causes</b>A flow says which equipment types it is written for, or the whole plant. Causes are grouped by equipment type (this plant's first), then plant-wide, then any equipment. A new cause must say where it happens. <a class="try" href="prototype.html#/flows">Flows</a> <a class="try" href="prototype.html#/flows/causes">Causes</a></div>
+  <div class="box"><b class="t">Sheets</b>A new alert or condition-based job opened away from a machine asks which machine, with machines grouped by equipment type. Either offers only readings on the equipment, and lists the machine's connection readings in a quiet box. A schedule can be on a machine or on the plant. A manual reading sits on a machine, or on the plant as a lab value recorded in rounds that takes no limits; a name that is a connection reading, such as Line pressure, is refused. On an on/off alert, Try a reading fires when the contact is ON. The equipment sheet shows the type read-only, with "drawn as"; you can change the name, the tier (with a reason) and maintenance mode.</div>
+</div>
+<p>People &amp; alerts, the operator app, Maintenance, Estate and Activity work as in v1, with the plant grouped by equipment type where they list machines.</p>
+
+<h2 id="next">Not in v5, and what the next phase brings</h2>
+<div class="tablewrap"><table>
+  <tr><th>Not in v5</th><th>What that means here</th></tr>
+  <tr><td>Unit processes</td><td>No stages, no process areas, no unit-process library, rounds, alerts or criticality rules. A plant is its plant type and its machines. Zones in the sample drawings are ignored.</td></tr>
+  <tr><td>Control groups</td><td>No duty/standby pairs, no group alerts, no standby tiers. A machine's tier comes from its type, or an override with a reason.</td></tr>
+  <tr><td>Splitting a database type</td><td>Pump is one type. Its form's Type (MonoBlock, Screw Pump, Centrifugal Pump …) is noted on the machine; a Screw Pump answer adds a stator and rotor check, the way a cutter pump gets a cutter check.</td></tr>
+  <tr><td>What a tank or pump is for</td><td>No Service question. Equalisation, aeration, chlorine contact and the like are unit processes by another name, so v5 neither asks for them nor keeps them on a machine, a chip or the export.</td></tr>
+  <tr><td>Connections</td><td>Pipes are drawn and read, but carry no reading and no alert. Every reading on a pipe, and every alert or job that needs one, waits on its type.</td></tr>
+</table></div>
+<h3>The next phase: connections</h3>
+<p>What already waits for it, in the prototype:</p>
+<ul>
+  <li>22 equipment types with readings, alerts or jobs in their <i>Next phase: connections</i> box. The library table above lists each one.</li>
+  <li>16 readings classified as on a connection, each with the reason.</li>
+  <li>14 flows written and kept aside: 10 diagnostics for alerts that wait on a type, among them Blower line pressure high, Filter differential pressure high and UF recovery low or pressure high; the 2 plant-wide diagnostics, Odour complaint and Outlet BOD or COD high, which only an alert on the plant's inlet or outlet could open; the turbidity meter calibration; and the chlorine dose adjustment.</li>
+  <li>12 causes only those flows reach, among them a weir out of level, UF fibre breakage and hypochlorite that has lost its strength. The Library's Database tab lists them under "Causes waiting for connections".</li>
+  <li>17 sample widgets already drawn on connections, waiting to be used. A Cooling Tower's water temperature, and any reading of the water linked to a machine whose type does not carry it, wait the same way.</li>
+  <li>Form rules that need a connection: Maximum Head (discharge pressure limits on pumps), OBR (the softener's regeneration point by volume), Design TMP (the MBR's pressure limits), and auto valves that regenerate on volume or backwash on pressure.</li>
+</ul>
+<p>How connections are modelled is not decided here.</p>
+
+<h2 id="ac">Acceptance criteria</h2>
+<p>Each one is a single check against the prototype. They run on the four sample plants after Reset data.</p>
+<h3>Detection</h3>
+<div class="tablewrap"><table class="ac">
+  <tr><th>ID</th><th>Criterion</th></tr>
+  <tr><td>V5-1</td><td>A machine's equipment type is the type stored on its SCADA node; when none is stored, it is the code it was drawn with.</td></tr>
+  <tr><td>V5-2</td><td>DigitalPaani's SC, EQTT-1 and EQTT-2 are Open Skeleton Tanks, each showing "drawn as" Screen Chamber Tank (<code>OS_TANK_SC</code>) or Diffuser Tank (<code>OS_TANK_DF</code>).</td></tr>
+  <tr><td>V5-3</td><td>A machine whose stored type matches its drawn code shows no "drawn as".</td></tr>
+  <tr><td>V5-4</td><td>No step, page or sheet asks for a machine's equipment type or offers a type select.</td></tr>
+  <tr><td>V5-5</td><td>No SCADA form answer changes a type: DigitalPaani's FFP-1 (form Type MonoBlock) is a Pump with MonoBlock noted on it.</td></tr>
+  <tr><td>V5-6</td><td>Renaming a machine on its equipment sheet leaves its equipment type unchanged.</td></tr>
+  <tr><td>V5-7</td><td>Plant, ZONE, Joint and Building nodes never become machines; steps 1 and 3 count them on one "Drawn, not equipment" line.</td></tr>
+  <tr><td>V5-8</td><td>A node whose code the database does not have becomes a machine marked "not in the database" that inherits nothing, and step 9 flags it.</td></tr>
+  <tr><td>V5-9</td><td>A drawing without tags gets each tag from its label: Reactor Feed Pump - 1 becomes RFP-1.</td></tr>
+  <tr><td>V5-10</td><td>DigitalPaani's step 1 reads "66 machines of 13 equipment types · 38 readings · 49 drawn, not equipment · 96 connections".</td></tr>
+</table></div>
+<h3>The library</h3>
+<div class="tablewrap"><table class="ac">
+  <tr><th>ID</th><th>Criterion</th></tr>
+  <tr><td>V5-11</td><td>The Equipment types tab shows exactly 56 cards, one per database equipment node type, in the database's order.</td></tr>
+  <tr><td>V5-12</td><td>Every type carries the database's display name verbatim, including Softner, Cass Basin, Vtg Chamber and QUADSON EVAPORATOR.</td></tr>
+  <tr><td>V5-13</td><td>No type exists that the database does not have: no Centrifugal blower, Aeration basin, Equalisation tank or Monobloc pump.</td></tr>
+  <tr><td>V5-14</td><td>Each type card shows its readings on the equipment, alerts with limits, schedules with cadence, form rules, and a "Next phase: connections" box when it has next-phase items.</td></tr>
+  <tr><td>V5-15</td><td>The Plant types tab shows STP, ETP and WTP, each with rounds, milestones and usual equipment types, and no alerts.</td></tr>
+  <tr><td>V5-16</td><td>The Database tab lists 67 palette rows, every widget tag with its reading, the 5 question-file-only codes by code, the 14 flows under "Flows waiting for connections" and the 12 causes under "Causes waiting for connections".</td></tr>
+  <tr><td>V5-17</td><td>Editing a type's schedule cadence reaches every machine of that type at every plant that follows the library; Custom items keep their values.</td></tr>
+</table></div>
+<h3>Alerts on the equipment only</h3>
+<div class="tablewrap"><table class="ac">
+  <tr><th>ID</th><th>Criterion</th></tr>
+  <tr><td>V5-18</td><td>Every library alert and condition-based job reads a reading its type has on the equipment; none reads one of the 16 connection readings.</td></tr>
+  <tr><td>V5-19</td><td>A widget whose reading is on a connection arrives as a reading, muted, with the chip "next phase · on a connection" and "no limits until the next phase".</td></tr>
+  <tr><td>V5-20</td><td>A next-phase reading is never offered in the alert, condition-based job, flow reading step, computed reading or library alert pickers.</td></tr>
+  <tr><td>V5-21</td><td>Manesar BL-1's Line pressure row has no button and opens nothing on step 5 or the equipment page; BL-1's new-alert sheet lists it only in its quiet next-phase box.</td></tr>
+  <tr><td>V5-22</td><td>A next-phase reading never counts as a gap: not limits missing, not Not enabled yet, not a step 9 warning.</td></tr>
+  <tr><td>V5-23</td><td>Line pressure high appears only in the Blower and Mini Blower next-phase boxes, never as an alert at any plant.</td></tr>
+  <tr><td>V5-24</td><td>No alert sits on the plant; the plant carries rounds and other schedules (never preventive maintenance), milestones, and manual or computed readings.</td></tr>
+  <tr><td>V5-25</td><td>Firing an alert whose reading is next phase is refused with "… is read on a connection. It waits for the next phase and raises nothing yet."</td></tr>
+  <tr><td>V5-26</td><td>The exported record has no unit processes or groups, gives each machine its drawn code, database type and "drawn as", marks next-phase readings, and lists per machine what waits for connections.</td></tr>
+</table></div>
+<h3>The screens</h3>
+<div class="tablewrap"><table class="ac">
+  <tr><th>ID</th><th>Criterion</th></tr>
+  <tr><td>V5-27</td><td>The nine setup steps keep v1's titles and order.</td></tr>
+  <tr><td>V5-28</td><td>Step 3 shows one card per equipment type found at the plant (DigitalPaani: 13), then the "Drawn, not equipment" line, with no select anywhere.</td></tr>
+  <tr><td>V5-29</td><td>Steps 4, 5, 7 and 8 list the plant, then each equipment type with its machines as closed rows; Needs attention hides rows with nothing waiting.</td></tr>
+  <tr><td>V5-30</td><td>The Equipment tree is plant › equipment type › machine, and each type opens a type page.</td></tr>
+  <tr><td>V5-31</td><td>What's enabled shows one block per equipment type with a card per machine, and next-phase items only under "Comes with the next phase".</td></tr>
+  <tr><td>V5-32</td><td>The Causes tab groups causes by equipment type, then plant-wide, then any equipment.</td></tr>
+  <tr><td>V5-33</td><td>No screen or help text says unit process, control group, zone, pair, duty, standby or stage; the Database tab may show the codes ZONE and GROUP.</td></tr>
+</table></div>
+<h3>Added after review</h3>
+<div class="tablewrap"><table class="ac">
+  <tr><th>ID</th><th>Criterion</th></tr>
+  <tr><td>V5-38</td><td>On Manesar, firing Blower tripped on BL-1 or Sump flooding on EQ-1 with the contact ON (1) opens an Emergency issue; the export writes the condition as <code>== 1</code>.</td></tr>
+  <tr><td>V5-39</td><td>No form, chip, library card, Database tab line or export field mentions a Service question.</td></tr>
+  <tr><td>V5-40</td><td>The Dosing Pump carries no tank level and no Chemical tank low; Chemical tank low sits on the Dosing Tank's Level only.</td></tr>
+  <tr><td>V5-41</td><td>An Open Skeleton Tank without a pH probe or a flood switch shows no pH or flooding item at all, neither waiting nor blocked: DigitalPaani's CCT lists Level high and Tank cleaning only.</td></tr>
+  <tr><td>V5-42</td><td>UV intensity low, and Running below minimum speed on a pump whose form says VFD, watch only while the machine's Run status is ON.</td></tr>
+  <tr><td>V5-43</td><td>A Cooling Tower's <code>TEMP</code> widget arrives as Cooling water temperature, next phase; a <code>TEMP</code> widget on a Blower, or a <code>PH</code> widget on a Dosing Pump, arrives next phase with "read in the water around it, not on the machine; comes with connections".</td></tr>
+  <tr><td>V5-44</td><td>The Equipment types tab shows 24 "to confirm" chips, each titled with the line to confirm; step 3 shows the same chip on those types' cards.</td></tr>
+  <tr><td>V5-45</td><td>The Daily logbook round reads no sensor: every number in it is typed by hand, and a WTP runs the Water plant daily logbook round.</td></tr>
+</table></div>
+<h3>Saving</h3>
+<div class="tablewrap"><table class="ac">
+  <tr><th>ID</th><th>Criterion</th></tr>
+  <tr><td>V5-34</td><td>v5 saves the estate in the browser under <code>ctl5.estate.v1</code> and the help panel's state under <code>ctl5.guide</code>.</td></tr>
+  <tr><td>V5-35</td><td>v5 never reads or writes v1's <code>ctl.estate.v5</code>; changing a plant in v5 leaves v1 as it was.</td></tr>
+  <tr><td>V5-36</td><td>A saved estate in any other shape is refused and the four sample plants load instead.</td></tr>
+  <tr><td>V5-37</td><td>The estate survives a reload; Reset data restores Bawal WTP, Vedanta ETP, DigitalPaani and Manesar STP, and opens on Manesar STP.</td></tr>
+</table></div>
+
+<h2 id="open">Open questions</h2>
+<h3>Content written for types v1 never had</h3>
+<p>These twelve database types had nothing in v1. What they have now is a reasonable guess, not plant knowledge. Five are the least certain: what are Vtg Chamber, QUADSON EVAPORATOR, Sabre, Small Sabre and Bio Health Tracker, and what should each watch?</p>
+<div class="tablewrap"><table>
+  <tr><th>Type</th><th>Reads on the equipment</th><th>Alerts</th><th>Schedules</th></tr>
+<tr><td>Booster Pump <code>BT_PMP</code></td><td>Run status<br>Motor current<br>Run hours</td><td>Motor current high <span class="muted">· Caution &gt; 40 A, Minor &gt; 45 A</span></td><td>Bearing and seal service <span class="muted">· every 6 months or 4000 run-hours</span></td></tr>
+<tr><td>Motor <code>MOTOR</code></td><td>Run status<br>Trip contact<br>Motor current<br>Run hours</td><td>Motor tripped <span class="muted">· when ON, Major</span></td><td>Motor insulation and bearing check <span class="muted">· every 6 months or 4000 run-hours</span></td></tr>
+<tr><td>Two way Valve <code>VALVE_2</code></td><td>Valve position</td><td><span class="muted">none</span></td><td>Valve stroke check <span class="muted">· every 3 months</span></td></tr>
+<tr><td>Three way Valve <code>VALVE_3</code></td><td>Valve position</td><td><span class="muted">none</span></td><td>Valve stroke check <span class="muted">· every 3 months</span></td></tr>
+<tr><td>Grit Classifier <code>GRIT_CLASSIFIER</code></td><td>Run status</td><td><span class="muted">none</span></td><td>Classifier screw and gearbox check <span class="muted">· every 3 months</span></td></tr>
+<tr><td>Hydro Cyclone <code>HYDROCYCLONE</code></td><td><span class="muted">none</span></td><td><span class="muted">none</span></td><td>Cyclone apex and liner check <span class="muted">· every 3 months</span></td></tr>
+<tr><td>Cavitator <code>CAVITATOR</code></td><td>Run status<br>Trip contact<br>Run hours</td><td>Cavitator tripped <span class="muted">· when ON, Major</span></td><td>Cavitator service <span class="muted">· every 6 months</span></td></tr>
+<tr><td>Vtg Chamber <code>VTG_CHAMBER</code></td><td><span class="muted">none</span></td><td><span class="muted">none</span></td><td>Chamber cleaning <span class="muted">· every 6 months</span></td></tr>
+<tr><td>QUADSON EVAPORATOR <code>QUADSON_EVAPORATOR</code></td><td>Run status</td><td><span class="muted">none</span></td><td>Evaporator descaling and inspection <span class="muted">· every 3 months</span></td></tr>
+<tr><td>Sabre <code>BIG_SABRE</code></td><td><span class="muted">none</span></td><td><span class="muted">none</span></td><td>Device clean and check <span class="muted">· every month</span></td></tr>
+<tr><td>Small Sabre <code>MINI_SABRE</code></td><td><span class="muted">none</span></td><td><span class="muted">none</span></td><td>Device clean and check <span class="muted">· every month</span></td></tr>
+<tr><td>Bio Health Tracker <code>BIO_HEALTH_TRACKER</code></td><td><span class="muted">none</span></td><td><span class="muted">none</span></td><td>Device clean and check <span class="muted">· every month</span></td></tr>
+</table></div>
+<h3 id="confirm">Everything marked to confirm</h3>
+<p>The <span class="chip cf" title="The type's content is a reasoned guess; the chip's title says what to confirm">to confirm</span> chip on the library card and on the step 3 card carries one of these lines. The twelve types above are here, and so is every limit the builders had to guess.</p>
+<div class="tablewrap"><table>
+  <tr><th>Type</th><th>What to confirm</th></tr>
+<tr><td>Open Skeleton Tank <code>OS_TANK</code></td><td>pH limits to confirm: high at 8.5 (Minor) and 9.5 (Major) from v1, low at 6.0 (Minor) and 5.5 (Major), new.</td></tr>
+<tr><td>Diffuser Tank <code>OS_TANK_DF</code></td><td>MLSS limits to confirm: high at 4500 mg/L (Minor, from v1), low at 2000 mg/L (Minor, new).</td></tr>
+<tr><td>Agitator <code>OS_TANK_AG</code></td><td>The current limit (Minor at 24 A) is a guess: the form has no motor rating to work it out from.</td></tr>
+<tr><td>SBR <code>SBR_TANK</code></td><td>MLSS limits to confirm: high at 4500 mg/L (Minor, from v1), low at 2000 mg/L (Minor, new).</td></tr>
+<tr><td>Cass Basin <code>CASS_BASIN</code></td><td>MLSS limits to confirm: high at 4500 mg/L (Minor, from v1), low at 2000 mg/L (Minor, new).</td></tr>
+<tr><td>Submersible Pump <code>SUB_PMP</code></td><td>Bearing and seal service every 6 months or 4000 run-hours, as for Pump; v1 said 600 run-hours, likely a slip.</td></tr>
+<tr><td>Booster Pump <code>BT_PMP</code></td><td>New type, content guessed: treated as a centrifugal pump, with current limits at 40 A and 45 A (the form has no motor rating) and a bearing and seal service every 6 months or 4000 run-hours.</td></tr>
+<tr><td>Motor <code>MOTOR</code></td><td>New type, content guessed: run, trip, current and run-hours readings, a Major alert on a trip, and an insulation and bearing check every 6 months or 4000 run-hours.</td></tr>
+<tr><td>Two way Valve <code>VALVE_2</code></td><td>New type, content guessed: the valve position is an open or closed contact, and the valve is stroked every 3 months.</td></tr>
+<tr><td>Three way Valve <code>VALVE_3</code></td><td>New type, content guessed: the valve position is an open or closed contact, and the valve is stroked every 3 months.</td></tr>
+<tr><td>Ozonator <code>OZONATOR</code></td><td>Guessed: the trip contact is taken as the air dryer's dew-point trip; confirm what trips the ozonator.</td></tr>
+<tr><td>UV <code>UV</code></td><td>UV intensity limits are the usual lamp-replacement point, not the maker's figure: Minor below 70%, Major below 60%, only while the UV runs.</td></tr>
+<tr><td>Dissolved Air Floatation <code>DAF</code></td><td>The current limit (Minor at 30 A) is a guess: the form has no motor rating to work it out from.</td></tr>
+<tr><td>Flash Mixer <code>FLASH_MIXER</code></td><td>The current limit (Minor at 24 A) is a guess: the form has no motor rating to work it out from.</td></tr>
+<tr><td>Flocculation <code>FLOCCULATION</code></td><td>The current limit (Minor at 24 A) is a guess: the form has no motor rating to work it out from.</td></tr>
+<tr><td>Grit Classifier <code>GRIT_CLASSIFIER</code></td><td>New type, content guessed: a screw classifier with a run status, and a screw and gearbox check every 3 months.</td></tr>
+<tr><td>Hydro Cyclone <code>HYDROCYCLONE</code></td><td>New type, content guessed: an apex and liner check every 3 months.</td></tr>
+<tr><td>Cavitator <code>CAVITATOR</code></td><td>New type, content guessed: treated as a nozzle or orifice-plate unit with run, trip and run-hours readings, a Major alert on a trip, and a service every 6 months.</td></tr>
+<tr><td>Gas Tonner <code>GAS_TONNER</code></td><td>Guessed: the scale reads the chlorine left (net; a full tonner holds about 900 kg), so Caution at 150 kg and Minor at 90 kg; the leak detector beside the tonner is taken as its reading.</td></tr>
+<tr><td>Vtg Chamber <code>VTG_CHAMBER</code></td><td>New type, content guessed: a chamber cleaned like a tank every 6 months.</td></tr>
+<tr><td>Sabre <code>BIG_SABRE</code></td><td>New type, content guessed: a sensing device, wiped and checked every month; what it reads arrives as widgets.</td></tr>
+<tr><td>Small Sabre <code>MINI_SABRE</code></td><td>New type, content guessed: a sensing device, wiped and checked every month; what it reads arrives as widgets.</td></tr>
+<tr><td>QUADSON EVAPORATOR <code>QUADSON_EVAPORATOR</code></td><td>New type, content guessed: a heated evaporator with a run status, descaled and inspected every 3 months.</td></tr>
+<tr><td>Bio Health Tracker <code>BIO_HEALTH_TRACKER</code></td><td>New type, content guessed: a sensing device, wiped and checked every month; what it reads arrives as widgets.</td></tr>
+</table></div>
+<h3>New limits and new alerts</h3>
+<div class="tablewrap"><table>
+  <tr><th>Question</th><th>What v5 does now</th><th>Needs</th></tr>
+  <tr><td>UV intensity low</td><td>Minor below 70 %, Major below 60 %, only while the UV runs</td><td>Owner check</td></tr>
+  <tr><td>Tonner nearly empty</td><td>Caution below 150 kg, Minor below 90 kg on the Tonner net weight: the scale is taken to read the chlorine left (a full tonner holds about 900 kg). A gross scale would read outside the valid range and be refused as a sensor fault.</td><td>Owner check: net or gross</td></tr>
+  <tr><td>pH low and MLSS low</td><td>New beside v1's high limits: pH low (Minor below 6.0, Major below 5.5) on Open Skeleton Tank; MLSS low (Minor below 2000 mg/L) on Diffuser Tank, SBR and Cass Basin.</td><td>Owner check</td></tr>
+  <tr><td>Alerts new in v5</td><td>Chlorine leak (Emergency) on Gas Tonner. Motor tripped, Cavitator tripped and Screen drive tripped (Major). Like every on/off alert, each fires when its contact goes ON.</td><td>Owner check</td></tr>
+  <tr><td>Fixed current limits</td><td>Agitator, Flash Mixer and Flocculation alert above 24 A, Dissolved Air Floatation above 30 A. Their forms ask no motor rating, so nothing scales these to the motor.</td><td>Owner check, or leave the limit to each plant</td></tr>
+  <tr><td>Submersible Pump service</td><td>Bearing and seal service every 6 months or 4000 run-hours, as for Pump. v1 said 600 run-hours, about 25 days of running.</td><td>Owner check</td></tr>
+  <tr><td>Blower intake filter</td><td>The Clean intake filter job starts at 42 A and is done below 38 A, below the 44 A Caution. A motor rating moves it to 95% and 85% of full load: 38 A and 34 A on a 22 kW blower.</td><td>Owner check</td></tr>
+  <tr><td>Mini Blower motor current</td><td>No current alert: its form asks no motor rating to size one, and v5 no longer borrows another type's limits. A Mini Blower's current widget shows as a reading with no limits.</td><td>Keep, or give it limits</td></tr>
+  <tr><td>One Pump for every pump</td><td>Pump carries v1's centrifugal pump limits (Caution above 40 A, Minor above 45 A) unless the form gives a motor rating.</td><td>Confirm until types are split</td></tr>
+</table></div>
+<h3>Flagged by the builders</h3>
+<div class="tablewrap"><table>
+  <tr><th>Question</th><th>What v5 does now</th><th>Needs</th></tr>
+  
+  <tr><td>Water readings on a tank whose type does not list them</td><td>A reading taken in the water inside a tank stays on the tank, even when the tank's type does not list it (a level widget on an MBBR, a pH probe in a Diffuser Tank): it arrives as a reading on the equipment with no library limit, to be set by hand. Only a machine that is not a vessel (a pump, a blower, a membrane) reads the water around it as next phase.</td><td>Confirm, or give those types the reading</td></tr>
+  <tr><td>Screen Chamber stored as Open Skeleton Tank</td><td>DigitalPaani's SC stores <code>OS_TANK</code>, so it gets the Open Skeleton Tank's set and not the Screen Chamber Tank's weekly screen inspection. The stored value may be a database default rather than a decision.</td><td>Ask the database team</td></tr>
+  <tr><td>Generic tank types carry more than v1's Process tank</td><td>Open Skeleton Tank has Level, a flood switch and pH. pH and flooding now apply only where SCADA draws the reading, so DigitalPaani's eight open tanks wait only for Level, on the four with no level widget. Its 22 pumps still wait for Motor current.</td><td>Keep, or thin the generic tank sets</td></tr>
+  <tr><td>The SV30 settling test</td><td>It belonged to v1's Biological unit process. It now sits on Diffuser Tank, SBR and Cass Basin as a daily round; the plant logbook round no longer repeats it.</td><td>Confirm</td></tr>
+  <tr><td>Probe calibration</td><td>The aeration sets no longer list DO probe calibration, because the console adds a monthly calibration for every probe.</td><td>Confirm</td></tr>
+  <tr><td>ACF/MGF backwash</td><td>"Auto valves" now marks the calendar Weekly backwash as automatic. Backwash on differential pressure waits for the next phase.</td><td>Confirm</td></tr>
+  <tr><td>Milestones that read the water</td><td>The WTP milestone "30 days of outlet within limits" reads the outlet, a connection. Manesar's "DO held above 2.5 mg/L for 24 hours" reads a tank. Milestones never notify, so both stay.</td><td>Keep, or move the outlet one to the next phase</td></tr>
+  <tr><td>Machines with nothing on the equipment</td><td>A machine whose type has readings on the equipment, but which SCADA drew none for, counts as having nothing to watch, and the Equipment nav goes amber: Bawal's and Manesar's BS-1 (only a level differential, a connection), Bawal's V-1 and Vedanta's V-7 (valves with no widget) and 24 machines at DigitalPaani. A machine whose type has no reading on the equipment, such as an ACF/MGF, a UF Membrane or an MBR, is not flagged.</td><td>Amber, or quiet</td></tr>
+  <tr><td>Running or stopped</td><td>Only Run status or Motor current at zero means stopped; v1 also read line pressure. Vedanta's BL-2 now shows as running.</td><td>Confirm</td></tr>
+  <tr><td>Manesar's sample</td><td>The open issue is Motor current high on BL-1 at 49 A (was Line pressure high). BL-2 is tier A like the library, since standby tiers are gone; the override demo moved to SP-1. Three activity rows were reworded to match. Its six alerts on connection readings (line pressure, permeability, outlet turbidity, residual chlorine, UF recovery, filter differential pressure) and the pressure-based backwash job are gone: 11 alerts became 6, and DO low now sits on AT-2. Three readings were added to match its drawing (BS-1's level differential, next phase, and run hours on CDU-1 and SP-1). Its blowers are 22 kW on their forms; the dosing unit's weekly job is now Chemical refill, and its tank level is a reading of Manesar's own, with no library alert.</td><td>Confirm</td></tr>
+  <tr><td>Sample drawings</td><td>Bawal V-1 and Vedanta V-7 now sit in the pipe chain, since valves are machines. Bawal and Vedanta DT-1's level widget tag is <code>LVL</code>, so the dosing tank's own level alert works. v1's drawings typed the Manesar and Vedanta SP-1 by hand as a progressive cavity pump; v5 has no such override, so each is a Pump whose form says Screw Pump, which adds the stator and rotor check.</td><td>Confirm</td></tr>
+  <tr><td>Where a cause happens</td><td>A new cause must name an equipment type, any equipment, or the whole plant; sensor-fault and no-fault causes are exempt. v1 allowed none.</td><td>Confirm</td></tr>
+  <tr><td>Field names behind the model toggle</td><td>On screen, "Show the model underneath" now says <code>inheritsSensorLimits</code>, <code>promotion</code>, <code>defaultLimits</code> and <code>bands</code>; the exported record still says <code>inheritsSensorZones</code>.</td><td>Pick one name</td></tr>
+  <tr><td>A next-phase reading's own sheet</td><td>A read-only sheet for a reading on a connection is built, but next-phase rows are not clickable, so no screen opens it.</td><td>Make the rows open it, or drop the sheet</td></tr>
+  <tr><td>Picking items before inheriting</td><td>The sheet that let you untick a type's items before inheriting is gone; it wrote limits its own way. Inherit the set, then switch off or delete what does not apply.</td><td>Confirm</td></tr>
+  <tr><td>A tier kept without a reason</td><td>The equipment sheet asks for a reason only when the new tier differs from both the library and the current tier, so a machine already overridden without a reason saves as it is.</td><td>Confirm</td></tr>
+  <tr><td>Older colours</td><td>The console's own stylesheets still carry v1's fixed colours in places; only the rules v5 added use the colour tokens.</td><td>Later</td></tr>
+  <tr><td>Phone width</td><td>The console's shell overflows below about 550 px, as v1's does.</td><td>Later</td></tr>
+</table></div>
+
+<h2 id="howto">Using the prototype</h2>
+<ul>
+  <li>Open <a href="prototype.html">prototype.html</a>. After Reset data it opens on Manesar STP. Switch plants from the top bar. Everything is editable as the Global Admin for now; the foot of the side nav says so. If this browser opened v5 before the review fixes, press Reset data once: a saved estate keeps the library it was saved with.</li>
+  <li>The estate is saved in this browser under its own key and survives a reload. <b>Reset data</b> in the top bar restores the four sample plants. v1's saved data is never touched.</li>
+  <li><b>? Help</b> opens a panel that follows the screen and the step. It holds the demo switches: make the next save fail, add a new plant from SCADA, show the model underneath.</li>
+  <li>Detection: switch to <b>DigitalPaani</b>, open step 1 and click EQT Tank - 1 in the drawing. It says Open Skeleton Tank <code>OS_TANK</code>, drawn as Diffuser Tank <code>OS_TANK_DF</code>, with its form and "about 216 m³". Read the drawn-not-equipment line under the drawing. Then step 3: 13 cards, SC and both EQT tanks inside Open Skeleton Tank with the line that the stored type wins, the Open Skeleton Tank, Two way Valve and UV cards' <span class="chip cf" title="The type's content is a reasoned guess; the chip's title says what to confirm">to confirm</span> chips, no select anywhere, and the Pump card's grey next-phase line.</li>
+  <li>The equipment-only rule: on <b>Manesar</b>, step 5, open Air Blower 1. Line pressure is grey with the dashed chip and no button. On the equipment page, add an alert to Air Blower 1: the sheet offers Motor current and Trip contact, and lists Line pressure in a quiet box. Then Library → Blower: the next-phase box holds Line pressure high.</li>
+  <li>SCADA changes: on Manesar, step 1, press "Demo: an engineer draws something new in SCADA", then "Read SCADA again". BL-3 joins the Blower column, and its Line pressure arrives muted.</li>
+  <li>A plant from scratch: on <b>Bawal WTP</b>, step 1, press Disconnect. Then Help → Add a new plant from SCADA, connect Bawal WTP, read step 3 (ten equipment types, the Cavitator a Cavitator as drawn), press "Inherit everything" on step 4, and walk the rest with <i>Needs attention</i> on.</li>
+  <li>Then the <b>What's enabled</b> tab: per equipment type, what each machine is watched for, its planned work, what is not enabled yet and why, and what comes with the next phase.</li>
+  <li>The Library's <b>Database</b> tab is the palette as the database has it: every code, name and question count, the widgets and what each becomes, and the flows and causes waiting for connections.</li>
+</ul>
+
+<h2 id="changes">26 Oct 2026: what changed</h2>
+<p>v5, built from the current v1 the same day. What changed against v1, in a line or two each.</p>
+<ul>
+  <li><b>The library is the database's equipment types.</b> 56 types, one per database equipment node type, under its own names and order. v1's 41 types are gone; their content moved onto the database types they describe. <a href="#library">The library</a>.</li>
+  <li><b>Detection is one rule.</b> The stored equipment type wins over the shape drawn. No guessing from names, no pump question, no type select, no remembered answers; the form never changes a type. <a href="#detect">Detection</a>.</li>
+  <li><b>Drawing elements are not machines.</b> Plant, ZONE, Joint and Building are counted on one line and inherit nothing. Valves are machines. Pipes are followed through joints. <a href="#drawing">Drawing elements</a>.</li>
+  <li><b>Alerts on the equipment only.</b> Every reading is classified as on the equipment or on a connection. Connection items moved to each type's "Next phase: connections" box; connection widgets arrive muted and never alert. <a href="#rule">The rule</a>.</li>
+  <li><b>No unit processes, no control groups.</b> Steps 3, 4, 5, 7 and 8, the equipment tree, What's enabled and the Causes tab are grouped by equipment type; each flow says which equipment types it is written for, or the whole plant. The help is rewritten without stage, zone, pair or standby words. <a href="#screens">The screens</a>.</li>
+  <li><b>The library page</b> has three tabs: Equipment types, Plant types, Database.</li>
+  <li><b>Flows</b>: 100 installed (17 diagnostic, 83 action) and 62 causes, all by database type; 14 flows and 12 causes kept aside for the next phase.</li>
+  <li><b>Own storage.</b> v5 saves under <code>ctl5.estate.v1</code> and loads its files with <code>?v=1</code>. v1 is untouched.</li>
+</ul>
+<h3>After review, the same day</h3>
+<ul>
+  <li><b>On/off alerts fire.</b> A trip, a flood switch, a lamp fault or a chlorine leak fires when the contact goes ON; before, a contact at 1 never crossed a limit of 1. The export writes these as <code>== 1</code>.</li>
+  <li><b>No Service question.</b> It listed unit processes under another name. Gone from every form, chip, card and the export.</li>
+  <li><b>The Dosing Pump carries no tank level.</b> Chemical tank low lives on the Dosing Tank's Level only.</li>
+  <li><b>Alerts that fit the machine.</b> An open tank's pH and flooding apply only where SCADA draws the reading. UV intensity low and Running below minimum speed watch only while the machine runs. pH and MLSS each have a high and a low alert in the library (a machine gets the high one today; <a href="#open">open questions</a>).</li>
+  <li><b>Water readings.</b> A Cooling Tower's temperature widget is its cooling water, a connection. A water reading linked to a machine whose type does not carry it waits for the next phase.</li>
+  <li><b>Current limits from the motor rating</b> widen the reading's valid range, so a big motor's real overload opens an issue instead of being refused as a sensor fault.</li>
+  <li><b>Manesar's blowers</b> are 22 kW on their forms, which fits their 44 A and 48 A limits. The Blower's intake filter job starts at 42 A, below the Caution, and the motor rating tunes it.</li>
+  <li><b>Logbook rounds</b> read no sensor and fit any plant; a WTP has its own.</li>
+  <li><b>Flows and causes set aside.</b> The two plant-wide diagnostics, the chlorine dose adjustment and the 12 causes only next-phase flows reach moved out of the installed library: 100 flows and 62 causes are installed. The outlet BOD or COD diagnostic now asks about the clarifier weir.</li>
+  <li><b>Database wording kept.</b> The question-file-only codes are shown by code, with no invented names. The Oil &amp; Grease Tank, MBBR and Tube settler forms ask "Breath", as the database does, and the volume reads it.</li>
+  <li><b>To confirm.</b> 24 types carry a muted chip with the line the owner should check. Submersible Pump service moved to 4000 run-hours; the tonner reading is its net weight.</li>
+  <li><b>Readings on the plant</b> are lab values recorded in rounds: they take no limits and are never a gap. The manual reading sheet refuses a connection reading's name.</li>
+  <li><b>Screens.</b> Step 3 says when the stored type wins over the drawn one. What's enabled can show one machine. Step 1 can remove an empty plant. The person sheet refuses an edit or a removal only when it would leave the plant without the reachable Operator or Lead it had, and says so on the sheet. The help for step 8, the equipment page and the manual reading sheet matches the screens.</li>
+</ul>
+<p class="muted small" style="margin-top:32px">Sources: the owner's asks of 26 Oct 2026; the database's equipment questions by node type (the palette table with 67 node types and their question counts); the real DigitalPaani layout export (drawing version 157); the v1 console and its proposal page.</p>
+
+</article>
+</div></div>
+</body>
+</html>
