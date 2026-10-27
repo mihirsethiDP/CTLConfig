@@ -1,0 +1,19 @@
+/* Step 3 · What SCADA found: one collapsible card per database equipment type, its machines inside. Colours only via tokens: theme-calm.css overrides every one. */
+.tcard { background: var(--layer); border: 1px solid var(--line); border-radius: var(--r-md); margin-bottom: 12px; }
+.tcard > summary.uph { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: start; padding: 12px 14px 12px 32px; cursor: pointer; list-style: none; position: relative; }
+.tcard > summary.uph::-webkit-details-marker { display: none; }
+.tcard > summary.uph::before { content: '▸'; position: absolute; left: 14px; top: 12px; color: var(--ink-3); font-size: 13px; line-height: 20px; transition: transform .15s ease; }
+.tcard[open] > summary.uph::before { transform: rotate(90deg); }
+.tcard > summary.uph:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; border-radius: var(--r-md); }
+.tcard .uph .tn { font-weight: 700; font-size: 14px; line-height: 20px; }
+.tcard .uph .sub { font-size: 12px; color: var(--ink-3); }
+.tcard .uph .chips { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; align-self: center; }
+.tcard .upb { padding: 0 14px 12px; overflow-x: auto; }
+.tlib { font-size: 12.5px; color: var(--ink-2); padding: 8px 10px; background: var(--layer-2); border-radius: 8px; margin: 0 0 8px; line-height: 1.9; }
+.tlib > div > b { display: inline-block; min-width: 168px; font-weight: 600; color: var(--ink); }
+.tcard .tbl.detect { margin-top: 6px; }
+.tcard .tbl.detect td .warnink { margin-top: 3px; }
+.tcard .tbl.detect td .np { margin-top: 3px; }
+.health.warn { background: var(--warn-tint); border-color: var(--sev-minor); }
+.health.warn .ic { background: var(--sev-minor); }
+@media (max-width: 900px) { .tcard > summary.uph { grid-template-columns: 1fr; } .tcard .uph .chips { justify-content: flex-start; } .tlib > div > b { display: block; min-width: 0; } }

@@ -1,0 +1,107 @@
+/* v6: the issues file on screen (library Issues and Tasks tabs, the Database tab's tables, 'Issues it can diagnose'), the new
+   kinds of work (routine work, manual testing), schedule notes, and the folds steps 7 and 8 fill when opened. Tokens only. */
+
+/* the new kinds of work: quiet, and distinct from maintenance (teal) and calibration (info) */
+.chip.wt-work { background: var(--layer-2); color: var(--ink-2); border-color: var(--line-2); }
+.chip.wt-test { background: var(--white); color: var(--teal-ink); border-color: var(--teal-deco); border-style: dashed; }
+.cal .occ.work { background: var(--layer-2); color: var(--ink-2); }
+.cal .occ.test { background: var(--white); color: var(--teal-ink); box-shadow: inset 0 0 0 1px var(--teal-deco); }
+
+/* what a cadence cannot say, under it */
+.schnote { margin-top: 2px; line-height: 1.45; }
+.line-card .s .schnote { font-size: 12px; }
+
+/* a fold not yet opened holds nothing; its summary says what is inside */
+details[data-fold] > [data-fold-in]:empty { display: none; }
+
+/* step 8: a type's causes, folded on its row */
+.cfold { margin: 4px 0 2px; }
+.cfold > summary { cursor: pointer; font-size: 12.5px; color: var(--ink-2); padding: 4px 0; }
+.cfold > summary .small { margin-right: 4px; letter-spacing: .02em; }
+.cfold[open] > summary { margin-bottom: 4px; }
+
+/* the library's tabs wrap on a narrow screen */
+.seg.libtabs { flex-wrap: wrap; max-width: 100%; }
+
+/* the type filter above the Issues and Tasks tabs */
+.fchips { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 4px; }
+.fchip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border: 1px solid var(--line-2); border-radius: 999px; background: var(--white); color: var(--ink-2); font-size: 12.5px; font-weight: 600; }
+.fchip:hover { text-decoration: none; border-color: var(--teal); }
+.fchip .cnt { font-family: var(--mono); font-size: 11px; color: var(--ink-3); }
+.fchip.on { background: var(--navy); border-color: var(--navy); color: var(--white); }
+.fchip.on .cnt { color: var(--white); opacity: .8; }
+
+/* an issue or a general task: a card that opens */
+.icard, .tkcard { scroll-margin-top: 72px; background: var(--layer); border: 1px solid var(--line); border-radius: var(--r-md); margin-bottom: 8px; }
+.icard > summary, .tkcard > summary { display: block; padding: 10px 14px 10px 30px; cursor: pointer; list-style: none; position: relative; }
+.icard > summary::-webkit-details-marker, .tkcard > summary::-webkit-details-marker { display: none; }
+.icard > summary::before, .tkcard > summary::before { content: '▸'; position: absolute; left: 12px; top: 10px; color: var(--ink-3); font-size: 13px; line-height: 20px; transition: transform .15s ease; }
+.icard[open] > summary::before, .tkcard[open] > summary::before { transform: rotate(90deg); }
+.icard > summary:focus-visible, .tkcard > summary:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; border-radius: var(--r-md); }
+.icard .ih, .tkcard .ih { line-height: 1.4; }
+.icard .ih b, .tkcard .ih b { font-size: 13.5px; }
+.icard .ih .muted { font-size: 12.5px; }
+.icard summary .chips, .tkcard summary .chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
+.icard .ib, .tkcard .ib { padding: 4px 14px 12px 30px; border-top: 1px dashed var(--line); }
+.icard .lbl, .tkcard .lbl, .logicbox .lbl { font-size: 11.5px; color: var(--ink-3); letter-spacing: .04em; margin: 12px 0 6px; }
+.icard .det { padding: 6px 0; border-bottom: 1px dashed var(--line); font-size: 12.5px; }
+.icard .det:last-of-type { border-bottom: 0; }
+.icard .det .chips, .icard .causes .chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; align-items: center; }
+.icard .det .np { font-size: 12px; }
+a.chip { cursor: pointer; }
+a.chip.tlink { color: var(--teal-ink); border-color: var(--teal-deco); white-space: normal; text-align: left; }
+a.chip.tlink:hover { text-decoration: none; background: var(--teal-tint); }
+.icard .causes { margin: 0; padding-left: 20px; font-size: 12.5px; }
+.icard .causes > li { padding: 6px 0; border-bottom: 1px dashed var(--line); }
+.icard .causes > li:last-child { border-bottom: 0; }
+.icard .causes .ct { line-height: 1.45; }
+.fixfold { margin-top: 6px; }
+.fixfold > summary { cursor: pointer; font-size: 12px; font-weight: 600; color: var(--teal-ink); }
+.fixfold > [data-fold-in] { padding: 6px 0 2px; }
+.fsteps { margin: 0; padding-left: 20px; font-size: 12.5px; line-height: 1.5; }
+.fsteps > li { margin: 3px 0; }
+.flink { font-size: 12px; color: var(--ink-2); margin-top: 2px; }
+.flink a { font-weight: 600; }
+.icard .src, .tkcard .src { margin-top: 10px; }
+.tkcard .tkgrid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 4px 18px; }
+.tkcard .cad { font-size: 12.5px; margin-bottom: 6px; }
+.ptype { font-size: 12px; font-weight: 700; color: var(--ink-2); margin: 12px 0 6px; }
+
+/* the machine page and the type page: the issues it can diagnose */
+.issrow { padding: 7px 0; border-bottom: 1px dashed var(--line); font-size: 13px; }
+.issrow:last-child { border-bottom: 0; }
+.issrow .small { margin-top: 2px; }
+
+/* the library's type card: the issues file in one line, and the run logic the file gives */
+.rcaline { margin: -2px 0 10px; color: var(--ink-2); }
+.rcaline a { font-weight: 600; }
+.logicbox { margin-top: 12px; padding: 4px 12px 10px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--layer-2); }
+.logicbox .lg { margin-top: 6px; }
+.logicbox .lg b { font-size: 12.5px; }
+
+/* the Database tab: where the issues file landed */
+.rcamaps .mapfold { border-top: 1px dashed var(--line); padding: 8px 0; }
+.rcamaps .mapfold:first-of-type { margin-top: 10px; }
+.rcamaps .mapfold > summary { cursor: pointer; font-size: 13px; }
+.rcamaps .mapb { margin-top: 8px; overflow-x: auto; }
+.maptbl td { vertical-align: top; }
+
+/* a flow card's links to general tasks and issues */
+.line-card .flinks { margin-top: 4px; }
+
+/* What's enabled: the problems a machine's type can diagnose */
+.encard .endx { font-size: 12px; color: var(--ink-3); margin-top: 2px; }
+
+@media (max-width: 700px) {
+  .icard .ib, .tkcard .ib { padding-left: 14px; }
+  .tkcard .tkgrid { grid-template-columns: 1fr; }
+}
+
+/* the Causes tab: an equipment type with no machine at this plant is a fold, filled when opened */
+.csec-h { margin: 18px 0 4px; }
+details.csec > summary.sh { cursor: pointer; list-style: none; padding: 6px 0; margin-bottom: 0; }
+details.csec > summary.sh::-webkit-details-marker { display: none; }
+details.csec > summary.sh h2::before { content: '▸ '; color: var(--ink-3); }
+details.csec[open] > summary.sh h2::before { content: '▾ '; }
+details.csec[open] > summary.sh { margin-bottom: 8px; }
+details.csec > summary.sh:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: var(--r-md); }

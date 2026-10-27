@@ -1,0 +1,35 @@
+/* Builder steps 4, 5, 7 and 8: 'The plant', then every equipment type in drawing order with its machines as collapsible rows, an attention filter above. Colours come from the tokens so theme-calm.css decides them. */
+.mrow { border: 1px solid var(--line); border-radius: var(--r-md); margin: 6px 0 6px 14px; background: var(--layer); }
+.mrow > summary { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1.2fr); gap: 10px; align-items: center; padding: 9px 12px 9px 26px; cursor: pointer; list-style: none; position: relative; }
+.mrow > summary::-webkit-details-marker { display: none; }
+.mrow > summary::before { content: '▸'; position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 12px; color: var(--ink-3); transition: transform .15s; }
+.mrow[open] > summary::before { transform: translateY(-50%) rotate(90deg); }
+.mrow.attn { border-left: 3px solid var(--sev-minor); }
+.mrow .mn b { font-size: 13px; }
+.mrow .mt { font-size: 12.5px; color: var(--ink-2); }
+.mrow .mc { display: flex; flex-wrap: wrap; gap: 4px; }
+.mrow .mb { padding: 4px 12px 12px; border-top: 1px dashed var(--line); }
+.mrow .mb .actions { margin: 8px 0; }
+.trow, .prow { margin-top: 14px; }
+.trow .uph, .prow .uph { font-weight: 700; font-size: 13px; }
+.trow .uph .chips, .prow .uph .chips { display: inline-flex; flex-wrap: wrap; gap: 4px; vertical-align: middle; margin-left: 4px; font-weight: 400; }
+.trow .upb, .prow .upb { font-size: 12.5px; color: var(--ink-2); padding: 4px 0 2px 14px; }
+.hid { display: none; }
+/* The next phase: whatever needs a reading on a connection, kept quiet and never amber */
+.np { color: var(--ink-3); }
+div.np { font-size: 12px; margin-top: 8px; line-height: 1.6; }
+div.np > b { font-weight: 600; color: var(--ink-2); }
+tr.np td { color: var(--ink-3); background: var(--layer-2); }
+tr.np td b { font-weight: 500; }
+.chip.npchip { background: var(--layer-2); color: var(--ink-3); border: 1px dashed var(--line-2); font-weight: 500; font-size: 10.5px; padding: 0 7px; }
+/* library content the owner must confirm (step 3 card, library card): quiet, the line to confirm is its title */
+.chip.confirm { background: var(--layer-2); color: var(--ink-3); border-style: dotted; font-weight: 500; font-size: 10.5px; padding: 0 7px; cursor: help; }
+.npbox { margin-top: 12px; padding: 10px 12px; border: 1px dashed var(--line-2); border-radius: var(--r-md); background: var(--layer-2); }
+.npbox > b { display: block; margin-bottom: 2px; }
+.npbox .small { margin-top: 3px; }
+/* drawn, not equipment: one quiet line under the drawing and under step 3 */
+.h.drawn { margin-top: 10px; }
+/* the equipment page: a machine's details in two columns */
+.detgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 24px; font-size: 13px; padding-top: 8px; }
+.chipwrap { display: flex; flex-wrap: wrap; gap: 4px; }
+@media (max-width: 900px) { .mrow > summary { grid-template-columns: 1fr; gap: 4px; } .detgrid { grid-template-columns: 1fr; } }

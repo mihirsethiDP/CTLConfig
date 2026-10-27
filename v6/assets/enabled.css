@@ -1,0 +1,28 @@
+/* What's enabled: read-only page, by equipment type. Tokens only, so the calm theme applies. */
+.enwrap .enkpis { margin-bottom: 10px; }
+.enwrap .kpi .v .of { color: var(--ink-3); font-size: 14px; font-family: var(--font); font-weight: 500; }
+.enwrap .enreach { font-size: 12.5px; color: var(--ink-2); margin: 0 0 12px; }
+.enwrap .enbar { margin-bottom: 14px; }
+.enwrap .enfocus { font-size: 12.5px; color: var(--ink-2); margin: 0 0 10px; }
+.enwrap .enfocus.warnink { color: var(--warn-ink); }
+.enwrap .fs.enup > .t .small { font-weight: 400; }
+.enwrap .fs.enup > .t .chip { font-weight: 600; }
+.encard { border: 1px solid var(--line); border-radius: var(--r-md); padding: 10px 12px; margin: 8px 0; background: var(--layer); }
+.encard .enh { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; font-weight: 600; }
+.encard .enh .muted, .encard .enh .warnink { font-weight: 500; }
+.encard .enl, .enl.enown { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 6px; font-size: 12.5px; }
+.enl.enown { padding: 4px 0 8px; margin-bottom: 4px; border-bottom: 1px dashed var(--line); }
+.enl > div > b { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); margin-bottom: 3px; }
+.enl ul { margin: 0; padding-left: 16px; }
+.enl li { margin: 2px 0; }
+.enl .sev { margin-left: 4px; font-size: 10.5px; padding: 1px 7px; }
+.enl .no { color: var(--warn-ink); }
+.enl .no > b { color: var(--warn-ink); }
+.ennone { font-size: 12.5px; color: var(--ink-3); margin-top: 4px; }
+.enfoot { font-size: 12px; color: var(--ink-3); margin-top: 8px; }
+@media (max-width: 900px) { .encard .enl, .enl.enown { grid-template-columns: 1fr; } }
+.encard .ennext { margin-top: 8px; padding-top: 6px; border-top: 1px dashed var(--line); }
+.encard .ennext > b { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); margin-bottom: 3px; font-weight: 600; }
+.encard .ennext ul { margin: 0; padding-left: 16px; }
+.encard .ennext li { margin: 2px 0; }
+.enwrap .fs.enup > .t .mono { margin: 0 6px; font-weight: 400; }
