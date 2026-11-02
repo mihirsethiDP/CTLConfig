@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CloseTheLoop Configuration v7</title>
+<meta name="description" content="Two clickable studies of configuring CloseTheLoop, side by side: the recommended approach (v7/1) and Alex's model as drafted (v7/2), with every challenge between them and what each one builds.">
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="1/assets/decisions7.css?v=3">
+<style>
+  /* The look and tokens of v7/1's hand-off doc, in light and dark. The table of challenges uses decisions7.css. */
+  :root {
+    color-scheme: light;
+    --bg: #f7f8f6; --surface: #ffffff; --surface-2: #f3f5f3; --line: #e6e9e6; --line-2: #d5dbd7;
+    --ink: #25302e; --ink-2: #4e5a57; --ink-3: #5f6b68;
+    --accent: #377068; --accent-strong: #2e5e57; --accent-tint: #eaf3f0;
+    --dk-accent: #377068;   /* links in the shared cards: 5:1 or better on every light surface here */
+    --ok-ink: #2f6a40; --ok-tint: #e8f2ea;
+    --v1: #2e5e57; --v1-line: #b9d3cc; --v2: #5a4f86; --v2-tint: #f0eef7; --v2-line: #cdc7e2;
+    --btn: #33504c; --btn-hover: #283f3c; --btn-ink: #ffffff;
+    --font: "Figtree", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+    --r: 10px; --r-lg: 14px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #121817; --surface: #1a2120; --surface-2: #212a28; --line: #2d3735; --line-2: #3b4745;
+      --ink: #e4eae8; --ink-2: #bcc6c3; --ink-3: #97a39f;
+      --accent: #7fc0b5; --accent-strong: #a2d6cc; --accent-tint: #1d3330;
+      --ok-ink: #95d1a4; --ok-tint: #1c3224;
+      --v1: #a2d6cc; --v1-line: #35554f; --v2: #c3b9ec; --v2-tint: #27233a; --v2-line: #4a4468;
+      --btn: #7fc0b5; --btn-hover: #a2d6cc; --btn-ink: #10201d;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #121817; --surface: #1a2120; --surface-2: #212a28; --line: #2d3735; --line-2: #3b4745;
+    --ink: #e4eae8; --ink-2: #bcc6c3; --ink-3: #97a39f;
+    --accent: #7fc0b5; --accent-strong: #a2d6cc; --accent-tint: #1d3330;
+    --ok-ink: #95d1a4; --ok-tint: #1c3224;
+    --v1: #a2d6cc; --v1-line: #35554f; --v2: #c3b9ec; --v2-tint: #27233a; --v2-line: #4a4468;
+    --btn: #7fc0b5; --btn-hover: #a2d6cc; --btn-ink: #10201d;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; scroll-padding-top: 20px; }
+  body { margin: 0; font: 400 16px/1.65 var(--font); color: var(--ink); background: var(--bg); -webkit-font-smoothing: antialiased; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; text-underline-offset: 2px; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+  .wrap { max-width: 1160px; margin: 0 auto; padding: 0 28px; }
+  p { margin: 0 0 14px; }
+  .muted { color: var(--ink-3); }
+  .small { font-size: 13.5px; }
+  h2 { font-size: 26px; line-height: 1.25; margin: 56px 0 14px; letter-spacing: -.02em; font-weight: 700; }
+  section > p, section > ul { max-width: 76ch; }
+  ul { margin: 0 0 16px; padding-left: 22px; }
+  li { margin-bottom: 6px; }
+
+  /* top */
+  .top { background: var(--surface); border-bottom: 1px solid var(--line); padding: 46px 0 38px; }
+  .eyebrow { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent-strong); font-weight: 700; }
+  .top h1 { font-size: 38px; line-height: 1.15; margin: 10px 0 12px; letter-spacing: -.02em; max-width: 24ch; font-weight: 700; }
+  .top .sub { font-size: 18px; color: var(--ink-2); max-width: 70ch; margin: 0; }
+  .meta { margin-top: 18px; font-size: 13px; color: var(--ink-3); display: flex; gap: 6px 20px; flex-wrap: wrap; }
+  .cta { margin-top: 22px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .btn, .cta a { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 9px; font-weight: 600; font-size: 14.5px; line-height: 1.2; text-decoration: none; }
+  .btn.p, .cta a.p { background: var(--btn); color: var(--btn-ink); }
+  .btn.p:hover, .cta a.p:hover { background: var(--btn-hover); text-decoration: none; }
+  .btn.s, .cta a.s { border: 1px solid var(--line-2); color: var(--ink-2); background: var(--surface); }
+  .btn.s:hover, .cta a.s:hover { border-color: var(--accent); color: var(--accent-strong); text-decoration: none; }
+
+  /* the two prototypes */
+  .two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; margin-top: 36px; }
+  .vcard { background: var(--surface); border: 1px solid var(--line); border-top: 4px solid var(--v1-line); border-radius: var(--r-lg); padding: 20px 24px 22px; min-width: 0; display: flex; flex-direction: column; }
+  .vcard.v2 { border-top-color: var(--v2-line); }
+  .vc-h { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+  .vc-n { font: 600 14px var(--mono); color: var(--v1); }
+  .v2 .vc-n { color: var(--v2); }
+  .vcard h2 { margin: 0; font-size: 21px; letter-spacing: -.01em; }
+  .vcard p { margin: 10px 0 0; color: var(--ink-2); }
+  .vcard ul { margin: 10px 0 0; padding-left: 20px; font-size: 15px; color: var(--ink-2); }
+  .vcard li { margin-bottom: 4px; }
+  .vc-go { margin-top: auto; padding-top: 18px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .wip { display: inline-block; padding: 1px 8px; border: 1px dashed var(--v2-line); border-radius: 5px; font-size: 13px; font-weight: 600; color: var(--v2); background: var(--v2-tint); }
+  .wip-note { font-size: 14px; color: var(--ink-2); }
+
+  /* every challenge */
+  .lead-link { display: inline-block; margin: 2px 0 14px; font-weight: 600; }
+  .ov .dd-table td:nth-child(2) { min-width: 15em; }
+  .ov .dd-q2 { display: block; font-size: 12.5px; color: var(--dk-ink-3); margin-top: 2px; }
+  .sd { display: inline-block; padding: 0 7px; border-radius: 4px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .sd-same { color: var(--ok-ink); background: var(--ok-tint); }
+  .sd-diff { color: var(--v2); background: var(--v2-tint); }
+  .ov-more { margin-top: 12px; font-size: 14.5px; color: var(--ink-2); }
+
+  /* the story */
+  .tw { overflow-x: auto; margin: 12px 0 8px; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); }
+  table.story { border-collapse: collapse; width: 100%; font-size: 14.5px; line-height: 1.5; }
+  table.story th { text-align: left; background: var(--surface-2); padding: 8px 12px; font-size: 11.5px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); }
+  table.story td { padding: 9px 12px; border-top: 1px solid var(--line); vertical-align: top; }
+  table.story td:first-child { font: 600 13px var(--mono); color: var(--accent-strong); width: 3em; }
+  .foot { margin: 64px 0 0; padding: 18px 0 56px; border-top: 1px solid var(--line); font-size: 13.5px; color: var(--ink-3); }
+  .foot p { margin: 0 0 6px; }
+
+  @media (max-width: 760px) {
+    .two { grid-template-columns: minmax(0, 1fr); }
+  }
+  @media (max-width: 720px) {
+    .ov .dd-table td:nth-child(2) { min-width: 0; }
+    table.story td, table.story th { padding-left: 10px; padding-right: 10px; }
+  }
+  @media (max-width: 640px) {
+    .wrap { padding: 0 16px; }
+    .top { padding: 32px 0 28px; }
+    .top h1 { font-size: 29px; }
+    .top .sub { font-size: 16.5px; }
+    body { font-size: 15.5px; }
+    h2 { font-size: 23px; margin-top: 44px; }
+    .vcard { padding: 16px 16px 18px; }
+  }
+  @media print {
+    .cta, .vc-go { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="top"><div class="wrap">
+  <div class="eyebrow">CloseTheLoop · Configuration · v7</div>
+  <h1>Two ways to configure CloseTheLoop, side by side.</h1>
+  <p class="sub">Both prototypes walk the same story on the same four plants and the same clock. They differ only where the recommended approach and Alex's configuration model differ, and each of those places is a challenge in the challenges doc, answered both ways.</p>
+  <div class="meta"><span>2 November 2026</span><span>Owner: Mihir Sethi, with Claude</span><span id="ov-count">Every challenge loads from the decisions file</span><span>v1 to v6 are unchanged</span></div>
+  <div class="cta">
+    <a class="p" href="challenges.html">Read the challenges doc →</a>
+    <a class="s" href="1/prototype.html#/plants">Open v7/1</a>
+    <a class="s" href="#challenges">Every challenge</a>
+  </div>
+</div></header>
+
+<main class="wrap">
+<section class="two" aria-label="The two prototypes">
+  <article class="vcard v1" aria-labelledby="v1-h">
+    <div class="vc-h"><span class="vc-n">v7/1</span><h2 id="v1-h">The recommended approach</h2></div>
+    <p>Takes a plant from the library to live running, end to end, in plain words. Where Alex's model, v6 or Mihir's earlier direction disagree, it takes the better option and says why on a card.</p>
+    <ul>
+      <li>Each tank holds its own readings, issues and tasks.</li>
+      <li>One checklist feeds Readiness, go live and Coverage.</li>
+      <li>New alerts run a quiet trial; a real Emergency during commissioning still reaches the Leads, with no call and no hooter.</li>
+      <li>Every value a plant changes is kept with its reason, and a library change shows where it lands before it is published.</li>
+    </ul>
+    <div class="vc-go"><a class="btn p" href="1/prototype.html#/plants">Open the prototype</a><a class="btn s" href="1/index.html">Read the hand-off</a></div>
+  </article>
+  <article class="vcard v2" aria-labelledby="v2-h">
+    <div class="vc-h"><span class="vc-n">v7/2</span><h2 id="v2-h">Alex's model as drafted</h2><span class="wip" id="v72-state">In build</span></div>
+    <p>Alex's configuration model, built as Alex drafted it, costs included, so the two can be compared screen by screen. Only what Alex's model changes is changed, and it is never quietly improved with v7/1's recommendations. Where the drafts are silent or say two things, v7/2 takes the reading Alex's own ranked principles favour, and the challenges doc lists each one.</p>
+    <ul>
+      <li>Equipment grouped into treatment steps (Alex's unit processes, stages and control groups).</li>
+      <li>A new plant set up in two review passes: first its structure, then what each part watches.</li>
+      <li>Nothing is sent to anyone until the plant is Live, Emergencies included.</li>
+      <li>Library versions a plant can stay on, and Alex's words on screen.</li>
+    </ul>
+    <div class="vc-go" id="v72-go"><span class="wip-note">The prototype and its hand-off will open from here once they are built. Until then, every card in the challenges doc says what v7/2 will build.</span></div>
+  </article>
+</section>
+
+<section id="same" aria-labelledby="same-h">
+  <h2 id="same-h">What is the same in both</h2>
+  <ul>
+    <li>The four plants: DigitalPaani, read from its real SCADA layout, and three sample plants, Vedanta ETP, Manesar STP and Bawal WTP, each carrying the same part of the story.</li>
+    <li>One story clock, starting Thu 29 Oct 2026, 09:00, and the same twelve moments from the library to a library change.</li>
+    <li>Sample readings, generated the same way every time, and one engine that counts trial firings and opens issues.</li>
+    <li>The database's 56 equipment types under their stored names, and the workbook's 31 issues, 183 root causes with their fixes and 75 general tasks.</li>
+    <li>The same challenge cards, from one shared file, and your calls on them: a call made anywhere shows everywhere in this browser.</li>
+  </ul>
+</section>
+
+<section id="compare" aria-labelledby="compare-h">
+  <h2 id="compare-h">How to compare</h2>
+  <p>Start with the challenges doc: each card says what v7/1 builds and what v7/2 builds, with links to the same place in each prototype. Inside a prototype, a quiet "Decisions on this screen" note under the page header names the challenges that arise there and links to them.</p>
+  <p>Once v7/2 is built, each prototype's story will open the same moment in the other version in its own tab. The two keep separate stories, so resetting one does not touch the other; your calls are shared.</p>
+</section>
+
+<section id="challenges" class="ov" aria-labelledby="challenges-h">
+  <h2 id="challenges-h">Every challenge</h2>
+  <p>Each row is one challenge: what each prototype builds, whether they build the same thing, and your call if you made one. The full card, with the options and a call to mark, is in the challenges doc.</p>
+  <a class="lead-link" href="challenges.html">Open the challenges doc →</a>
+  <div id="ov-table"><p class="muted">Loading from the decisions file…</p><noscript><p>The table is drawn from <code>1/assets/decisions7.js</code> and needs JavaScript. The <a href="challenges.html">challenges doc</a> has every card.</p></noscript></div>
+  <p class="ov-more" id="ov-more"></p>
+</section>
+
+<section id="story" aria-labelledby="story-h">
+  <h2 id="story-h">The story in both</h2>
+  <p>The same twelve moments, each named in its own prototype's words.</p>
+  <div class="tw"><table class="story">
+    <thead><tr><th scope="col">n</th><th scope="col">v7/1</th><th scope="col">v7/2</th></tr></thead>
+    <tbody id="story-rows">
+      <tr><td>1</td><td><a href="1/prototype.html#/library">The library</a></td><td id="v72-ch-1">The library</td></tr>
+      <tr><td>2</td><td><a href="1/prototype.html#/p/digitalpaani/scada">A new plant from SCADA</a></td><td id="v72-ch-2">A new plant from the survey</td></tr>
+      <tr><td>3</td><td><a href="1/prototype.html#/p/digitalpaani/library">What the library brings</a></td><td id="v72-ch-3">The bindings pass</td></tr>
+      <tr><td>4</td><td><a href="1/prototype.html#/p/digitalpaani">Readiness</a></td><td id="v72-ch-4">Readiness</td></tr>
+      <tr><td>5</td><td><a href="1/prototype.html#/p/vedanta/alert/a_3d">Trial and tuning</a></td><td id="v72-ch-5">Trial and tuning</td></tr>
+      <tr><td>6</td><td><a href="1/prototype.html#/p/vedanta/issue/is_5m">Safety in commissioning</a></td><td id="v72-ch-6">Safety in commissioning</td></tr>
+      <tr><td>7</td><td><a href="1/prototype.html#/p/vedanta">Go live</a></td><td id="v72-ch-7">Go live</td></tr>
+      <tr><td>8</td><td><a href="1/prototype.html#/p/manesar/issue/is_2z">Live operation</a></td><td id="v72-ch-8">Live operation</td></tr>
+      <tr><td>9</td><td><a href="1/prototype.html#/p/manesar">Coverage</a></td><td id="v72-ch-9">Coverage</td></tr>
+      <tr><td>10</td><td><a href="1/prototype.html#/library/OS_TANK_DF">A library change</a></td><td id="v72-ch-10">A library change</td></tr>
+      <tr><td>11</td><td><a href="1/prototype.html#/differences">Differences from the library</a></td><td id="v72-ch-11">Deviations</td></tr>
+      <tr><td>12</td><td><a href="1/prototype.html#/decisions">Decisions</a></td><td id="v72-ch-12">Decisions</td></tr>
+    </tbody>
+  </table></div>
+  <p class="muted small" id="story-note">v7/2's chapters link here once it is built.</p>
+</section>
+</main>
+
+<div class="wrap"><footer class="foot">
+  <p>Prototypes for a decision, not products. Every count comes from sample readings, generated the same way every time.</p>
+  <p>Earlier versions stay as they were: <a href="../index.html">the first proposal</a>, <a href="../v2/index.html">v2</a>, <a href="../v3/index.html">v3</a>, <a href="../v4/index.html">v4</a>, <a href="../v5/index.html">v5</a> and <a href="../v6/index.html">v6</a>.</p>
+</footer></div>
+
+<script src="1/assets/decisions7.js?v=3"></script>
+<script>
+/* The v7 overview: reads the shared decision file (1/assets/decisions7.js) and draws the table of every challenge.
+   Links into v7/2 appear only once V7DEC.V72_READY is true; until then v7/2 is named as in build, never linked. */
+window.V7_PAGE = 'overview';
+(function () {
+  'use strict';
+  var D = window.V7DEC, cards = window.V7_DECISIONS;
+  var $ = function (id) { return document.getElementById(id); };
+  var fill = function (id, html) { var el = $(id); if (el) el.innerHTML = html; };
+  if (!D || !Array.isArray(cards)) {
+    fill('ov-table', '<p>The decisions file (1/assets/decisions7.js) did not load. The <a href="challenges.html">challenges doc</a> has every card.</p>');
+    return;
+  }
+  var esc = D.esc;
+  var plural = function (n, one, many) { return n + ' ' + (n === 1 ? one : (many || one + 's')); };
+  var ready = D.V72_READY === true;
+  var chal = function (id) { return D.challengesHref(id); };
+
+  /* v7/2's links, once it is built (story routes as v7/2 will name them) */
+  var V72_STORY = { 1: '#/library', 2: '#/p/digitalpaani/review/structure', 3: '#/p/digitalpaani/review/bindings', 4: '#/p/digitalpaani',
+    5: '#/p/vedanta/trigger/a_3d', 6: '#/p/vedanta/trigger/a_3f', 7: '#/p/vedanta', 8: '#/p/manesar/trigger/a_do_at2', 9: '#/p/manesar',
+    10: '#/library/templates/tpl_up_activated-sludge_mlss-low', 11: '#/deviations', 12: '#/decisions' };
+  if (ready) {
+    var st = $('v72-state'); if (st) st.hidden = true;
+    fill('v72-go', '<a class="btn p" href="' + esc(D.hrefFor('2', '#/plants')) + '">Open the prototype</a><a class="btn s" href="' + esc(D.docHref('2')) + '">Read the hand-off</a>');
+    Object.keys(V72_STORY).forEach(function (n) {
+      var el = $('v72-ch-' + n); if (el && el.innerHTML) el.innerHTML = '<a href="' + esc(D.hrefFor('2', V72_STORY[n])) + '">' + el.innerHTML + '</a>';
+    });
+    fill('story-note', 'Each chapter opens the same moment in each prototype.');
+  }
+
+  /* every challenge */
+  function callCell(d) {
+    var a = D.answerOf(d.id);
+    if (!a) return D.noteOf(d.id) ? '<span class="dk-chip dk-c-muted">Note only</span>' : '<span class="dd-none">—</span>';
+    var name = a.opt === 'other' ? 'Something else' : 'Option ' + (a.opt + 1);
+    return a.opt === D.recommendedIndex(d) ? '<span class="dk-chip dk-c-ok">' + esc(name) + ', as recommended</span>' : '<span class="dk-chip dk-c-call" title="' + esc(D.optionText(d, a.opt)) + '">' + esc(name) + '</span>';
+  }
+  function draw() {
+    var c = D.counts();
+    var rows = cards.map(function (d) {
+      var id = esc(d.id); var s = D.sevOf(d); var b1 = D.builds(d, '1'); var b2 = D.builds(d, '2');
+      var arose = D.aroseOf(d); var first = arose === D.ARISINGS[0];
+      return '<tr><td data-label="Card"><a class="dd-ref" href="' + esc(chal(d.id)) + '">' + id + '</a></td>'
+        + '<td data-label="Question"><a class="dd-qref" href="' + esc(chal(d.id)) + '">' + esc(D.shortOf(d)) + '</a><span class="dd-q2">' + esc(d.title) + '</span>' + (first ? '' : '<span class="dd-arose-s">Arose: ' + esc(arose) + '</span>') + '</td>'
+        + '<td data-label="Severity"><span class="dd-sev dd-sev-' + esc(s.tone) + '" title="' + esc(s.key) + '">' + esc(s.short) + '</span></td>'
+        + '<td data-label="v7/1 builds">' + (b1 ? esc(b1) : '<span class="dd-none">—</span>') + '</td>'
+        + '<td data-label="v7/2 builds">' + (b2 ? esc(b2) : '<span class="dd-none">Not written yet</span>') + '</td>'
+        + '<td data-label="Same or differs">' + (d.both === true ? '<span class="sd sd-same">Same</span>' : '<span class="sd sd-diff">Differs</span>') + '</td>'
+        + '<td data-label="Your call">' + callCell(d) + '</td>'
+        + '<td data-label="Read"><a href="' + esc(chal(d.id)) + '">Read the card →</a></td></tr>';
+    }).join('');
+    fill('ov-table', '<div class="dd" data-dd-mode="overview"><p class="dd-count">' + plural(c.all, 'challenge') + ' · ' + c.same + ' built the same in both · <b>' + c.answered + '</b> answered' + (c.differs ? ' · ' + c.differs + ' differ from the recommendation' : '') + '</p>'
+      + '<div class="dd-tw"><table class="dd-table"><thead><tr>' + ['Card', 'Question', 'Severity', 'v7/1 builds', 'v7/2 builds', 'Same or differs', 'Your call', 'Read'].map(function (t) { return '<th scope="col">' + esc(t) + '</th>'; }).join('') + '</tr></thead><tbody>' + rows + '</tbody></table></div></div>');
+  }
+  draw();
+  D.onExternalChange(draw);
+
+  var rs = Array.isArray(window.V7_READINGS) ? window.V7_READINGS : [];
+  var conf = rs.filter(function (r) { return r && r.confirm === true; }).length;
+  fill('ov-count', plural(cards.length, 'challenge') + ' · ' + plural(rs.length, 'reading') + ' v7/2 takes');
+  fill('ov-more', (rs.length ? 'Where Alex\'s drafts are silent or say two things, v7/2 takes ' + plural(rs.length, 'reading') + (conf ? ', ' + conf + ' of them for Mihir to confirm' : '') + ': <a href="' + esc(chal('readings')) + '">read them in the challenges doc →</a> ' : '')
+    + 'Calls about the study itself, such as how the markers read, which screens carry them and whether they can be hidden, are at <a href="' + esc(chal('study')) + '">the end of the doc</a>.');
+}());
+</script>
+</body>
+</html>

@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ui7 preview (stub core)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/v7.css?v=1">
+</head>
+<body>
+<!-- Builder B2's visual check: the shell, kit and own pages on the stub core (tests/ui7.stub.js). Not part of the app. -->
+<div id="app"></div>
+<script>window.V7_NO_V6_SHELL = true;</script>
+<script src="../assets/data.js?v=1"></script>
+<script src="../assets/layout-digitalpaani.js?v=1"></script>
+<script src="../assets/catalogue.js?v=1"></script>
+<script src="../assets/flows.js?v=1"></script>
+<script src="../assets/rca.js?v=1"></script>
+<script src="../assets/app.js?v=1"></script>
+<script src="../assets/runtime.js?v=1"></script>
+<script src="ui7.stub.js?v=1"></script>
+<script src="../assets/ui7.js?v=1"></script>
+<script>
+  /* a kit gallery on #/kit, so every component can be looked at */
+  (function () {
+    const U = V7UI;
+    U.route('kit', () => U.page({
+      crumbs: [{ label: 'All Plants', href: '#/plants' }, { label: 'Kit' }],
+      title: 'DO — AT-2', sub: 'Every component of the kit, on one page.',
+      chips: [U.chip('STP', { mono: true }), U.stateChip('live'), U.sampleTag()],
+      actions: [U.btn('Change limits', { act: 'kit-sheet', kind: 'primary' }), U.btn('Open a modal', { act: 'kit-modal' })],
+      tabs: [{ id: 'readings', label: 'Readings', href: '#/kit', count: 4 }, { id: 'issues', label: 'Issues', href: '#/kit', count: 1 }, { id: 'tasks', label: 'Tasks', href: '#/kit', count: 3 }, { id: 'details', label: 'Details', href: '#/kit' }],
+      active: 'readings',
+      body: [
+        U.banner('Go live is blocked: one library proposal is undecided.', { tone: 'bad', action: U.btn('Decide it', { href: '#/plants', small: true }) }),
+        U.card({ title: 'Dissolved oxygen', sub: 'DO-AT2 · SCADA', actions: [U.btn('Change limits', { act: 'kit-sheet' })], body:
+          U.bandBar({ dir: 'below', bands: { caution: 2.5, minor: 2.0, major: 1.0, emergency: 0.5 }, value: 1.8, valid: [0, 8], unit: 'mg/L' })
+          + '<p style="margin-top:8px">' + ['caution', 'minor', 'major', 'emergency'].map((b) => U.sev(b)).join(' ') + '</p>'
+          + '<p style="margin-top:8px">' + [{ chip: 'lib', value: 2 }, { chip: 'form', chipText: 'From the SCADA form: 22 kW motor', value: 40 }, { chip: 'changed', chipText: 'Changed here · Tuned for this plant', value: 1.5, libValue: 2 }, { chip: 'libchanged', value: 1.5, libValue: 1.8, base: 2 }, { chip: 'none' }, { chip: 'next' }].map(U.sourceChip).join(' ') + '</p>' }),
+        U.card({ title: 'Motor current', sub: 'AMP-BL1', tone: 'warn', body: U.bandBar({ dir: 'above', bands: { caution: 40, minor: 42, major: 46 }, value: 49, valid: [0, 80], unit: 'A' }) + U.bandBar({ dir: 'above', bands: { caution: 85, minor: 88, major: 95, emergency: 98 }, value: 62, valid: [0, 100], unit: '%' }) }),
+        U.section('Alerts', U.table({ cols: [{ label: 'Alert', key: 'n' }, { label: 'State', key: 's' }, { label: 'Band now', key: 'b' }, { label: 'Trial firings a day', key: 'r', cls: 'num' }], rows: [
+          { n: 'DO low — AT-2', s: U.stateChip('on'), b: U.bandBar({ dir: 'below', bands: { minor: 2, major: 1, emergency: 0.5 }, value: 1.8, valid: [0, 8], compact: true }), r: '6.1', _href: '#/plants' },
+          { n: 'Level high — EQ-1', s: U.stateChip('trial'), b: U.bandBar({ dir: 'above', bands: { caution: 85, major: 95 }, value: 91, valid: [0, 100], compact: true }), r: '12.4' },
+          { n: 'MLSS low — SBR-1', s: U.stateChip('draft'), b: '', r: null },
+          { n: 'Blower tripped — BL-2', s: U.stateChip('off'), b: '', r: '0' }] }), { sub: 'A table with links, chips and mini band bars.' }),
+        U.card({ title: 'What SCADA found', sub: '3 of 13 types accepted', actions: [U.btn('Accept all', { act: 'kit-toast', kind: 'primary' })], body: U.progress(3, 13) + U.list([{ title: 'Blower', sub: '2 pieces of equipment', chips: [U.chip('Accepted', { tone: 'ok' })], href: '#/plants', right: U.btn('Open', { href: '#/plants', small: true }) }, { title: 'Open Skeleton Tank', sub: 'Drawn as Screen Chamber Tank, stored as Open Skeleton Tank — fix it in SCADA, then read again', tone: 'warn', right: U.btn('Accept', { act: 'kit-toast', small: true }) }, { title: 'Pump', sub: 'Needs a Motor current reading', tone: 'muted', chips: [U.chip('Next phase', { tone: 'next' })] }]) }),
+        U.card({ title: 'Facts', body: U.kv([['Stored type', 'Open Skeleton Tank'], ['Drawn as', 'Screen Chamber Tank'], ['Tier', U.chip('B · Essential') + ' ' + U.sourceChip({ chip: 'lib', value: 'B' })], ['Last done', null]]) }),
+        U.stats([{ value: '3', label: 'blockers', tone: 'bad' }, { value: '6', label: 'gaps', tone: 'warn' }, { value: '41', label: 'tasks a day' }]),
+        U.filters([{ label: 'All', href: '#/kit', on: true, count: 12 }, { label: 'Library changed since', href: '#/kit', count: 2 }, { label: 'Review due', href: '#/kit', count: 1 }]),
+        U.note('Grouping equipment into treatment steps, and readings on pipes between equipment — next phase.', 'next'),
+        U.empty('No issues at this equipment yet.', U.btn('Report a problem', { act: 'kit-toast' })),
+        U.phone(U.card({ title: 'BL-1 · Blower', body: U.bandBar({ dir: 'above', bands: { caution: 40, minor: 42, major: 46 }, value: 43, valid: [0, 80], unit: 'A' }) + U.btn('Report a problem', { act: 'kit-toast', kind: 'primary' }) }), { caption: 'Phone view: the same page, one decision per screen.' }),
+      ].join(''),
+      aside: U.card({ title: 'Where it lands', sub: 'Reaches 3 plants · 7 values change', body: U.list([{ title: 'Manesar STP', sub: 'Minor 2.0 → 1.8 mg/L' }, { title: 'Vedanta ETP', sub: 'Keeps its own value; will show Library changed since' }]), actions: [U.btn('Publish', { act: 'kit-toast', kind: 'primary' })] }),
+    }));
+    U.on('kit-toast', () => { U.toast('Accepted 2 Blowers. Their alerts are On trial.', { undo: () => {} }); return false; });
+    U.on('kit-sheet', () => { U.openSheet({ title: 'Change limits', sub: 'DO — AT-2 · falls below', body: U.field({ label: 'Minor', html: '<input type="number" value="2.0" step="0.1">', hint: 'From the library: 2.0 mg/L' }) + U.field({ label: 'Why', html: U.radios({ name: 'why', value: 'tuned', options: [{ value: 'tuned', label: 'Tuned for this plant', sub: 'Review in 6 months' }, { value: 'fornow', label: 'For now, until …', sub: 'Goes back to the library value on that date' }] }) }) + U.field({ label: 'Note', html: '<textarea></textarea>' }), foot: U.btn('Cancel', { act: 'ui:close', data: { what: 'sheet' }, kind: 'ghost' }) + U.btn('Save', { act: 'kit-toast', kind: 'primary' }) }); return false; });
+    U.on('kit-modal', () => { U.modal({ title: 'Go live at Vedanta ETP?', body: U.list(['Alerts reach people: 23 alerts go from On trial to On', 'Calls and the hooter start now', 'Tasks start: 41 a day (233 if every pump gets its own — to confirm)']), foot: U.btn('Cancel', { act: 'ui:close', data: { what: 'modal' }, kind: 'ghost' }) + U.btn('Go live', { act: 'kit-toast', kind: 'primary' }) }); return false; });
+  }());
+  V7UI.start();
+</script>
+</body>
+</html>

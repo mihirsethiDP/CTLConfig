@@ -1,0 +1,80 @@
+/* v7 · lib7.css — the library list, Where it lands + Publish, and the Differences rows. Builder B5.
+   Loaded by lib7.js through V7UI.addCss. Uses v7.css tokens only. */
+
+/* ── library list ───────────────────────────────────────────────────────── */
+.lib-howto { color: var(--ink-2); font-size: 13.5px; max-width: 72ch; }
+.lib-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+.lib-tools input[type=search] { flex: 1 1 240px; max-width: 340px; }
+.lib-fams > .sec + .sec { margin-top: 28px; }
+.lib-used { font-size: 12.5px; color: var(--ink-3); margin-top: 2px; }
+.pg-lib .lib-fams .t { table-layout: fixed; }
+.pg-lib .lib-fams .t th:nth-child(1) { width: 32%; }
+.pg-lib .lib-fams .t th:nth-child(2) { width: 26%; }
+.pg-lib .lib-fams .t th:nth-child(3) { width: 20%; }
+.pg-lib .lib-fams .t th:nth-child(4) { width: 14%; }
+.pg-lib .lib-fams .t th:nth-child(5) { width: 8%; }
+.t tr.lib-unused td { color: var(--ink-3); }
+.t tr.lib-unused td a { color: var(--ink-2); }
+
+/* ── type page aside: Where it lands, Publish, the type's library card ───── */
+.lib-aside > .card + .card { margin-top: 14px; }
+/* the aside is sticky in v7.css: keep Publish reachable when the panel is taller than the screen */
+.pg-aside > .lib-aside { max-height: calc(100vh - var(--tb-h) - 40px); overflow-y: auto; overscroll-behavior: contain; padding: 1px 2px 2px 1px; scrollbar-width: thin; }
+.wl .card-b > * + * { margin-top: 12px; }
+.wl .card-h, .wl-draft .card-h { padding: 16px 18px 0; }
+.wl .card-b, .wl-draft .card-b { padding: 12px 18px 16px; }
+.wl .card-f, .wl-draft .card-f { padding: 10px 18px; }
+.wl .card-s { color: var(--ink-2); }
+.wl-p { border-top: 1px solid var(--line); padding-top: 12px; }
+.wl-ph { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-weight: 600; }
+.wl-ph a { color: var(--ink); }
+.wl-k { font-size: 12.5px; color: var(--ink-3); margin-top: 8px; }
+.wl-l { list-style: none; margin-top: 4px; }
+.wl-l li { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 10px; padding: 3px 0; font-size: 13px; }
+.wl-w { color: var(--ink-2); min-width: 0; }
+a.wl-w { color: var(--accent); }
+.wl-v { font: 500 12.5px var(--mono); color: var(--ink); white-space: nowrap; }
+.wl-x { flex: 1 0 100%; font-size: 12px; color: var(--ink-3); }
+.wl-diffs li { justify-content: flex-start; }
+.wl-diffs .wl-w { color: var(--ink); }
+.wl-more { margin-top: 2px; }
+.wl-more summary { cursor: pointer; font-size: 12.5px; color: var(--accent); list-style: none; }
+.wl-more summary::-webkit-details-marker { display: none; }
+.wl-n { font-size: 13px; color: var(--ink-2); margin-top: 8px; }
+.wl-pub { border-top: 1px solid var(--line); padding-top: 14px; }
+.wl-pub textarea { min-height: 64px; }
+.wl-sg { list-style: none; }
+.wl-sg li + li { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+.wl-sg p + p { margin-top: 2px; }
+
+/* ── differences ────────────────────────────────────────────────────────── */
+.dif-wrap > * + * { margin-top: 14px; }
+.dif-wrap > .filters + * { margin-top: 12px; }
+.dif-only { font-size: 13px; color: var(--ink-2); }
+.difs { list-style: none; }
+.dif { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 20px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.dif:last-child { border-bottom: 0; }
+.dif.tone-warn { box-shadow: inset 3px 0 0 var(--warn); padding-left: 12px; }
+.dif.tone-muted .dif-main { opacity: .7; }
+.dif-main > * + * { margin-top: 3px; }
+.dif-t { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; font-weight: 500; }
+.dif-t a { color: var(--ink); }
+.dif-t a:hover { color: var(--accent); }
+.dif-v { display: flex; flex-wrap: wrap; gap: 2px 18px; font-size: 13.5px; color: var(--ink-2); }
+.dif-v b { font: 500 13px var(--mono); color: var(--ink); }
+.dif-was { color: var(--warn-ink); font-size: 13px; }
+.dif-why { font-size: 13px; color: var(--ink-2); }
+.dif-m { font-size: 12.5px; color: var(--ink-3); }
+.dif-a { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+
+@media (max-width: 1100px) {
+  .pg-aside > .lib-aside { max-height: none; overflow: visible; }
+}
+@media (max-width: 760px) {
+  .pg-lib .lib-fams .t { table-layout: auto; }
+  .pg-lib .lib-fams .t th { width: auto !important; }
+  .dif { grid-template-columns: 1fr; }
+  .dif-a { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: flex-start; }
+  .lib-tools input[type=search] { max-width: none; }
+}
+.lib-keep .radio small input[type=date] { display: block; width: auto; min-width: 170px; margin-top: 6px; }

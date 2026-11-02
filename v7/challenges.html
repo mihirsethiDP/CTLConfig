@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CloseTheLoop v7 challenges</title>
+<meta name="description" content="Every place where v7's two prototypes, the recommended approach (v7/1) and Alex's model as drafted (v7/2), disagree or need a call, with what each one builds, a call to mark on each, and the readings v7/2 takes where Alex's drafts are silent.">
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="1/assets/decisions7.css?v=3">
+<style>
+  /* The look and tokens of v7/1's hand-off doc, in light and dark. The cards themselves are drawn by
+     1/assets/decisions7.js (V7DEC.renderDoc) with decisions7.css, which carries its own light and dark tokens. */
+  :root {
+    color-scheme: light;
+    --bg: #f7f8f6; --surface: #ffffff; --surface-2: #f3f5f3; --line: #e6e9e6; --line-2: #d5dbd7;
+    --ink: #25302e; --ink-2: #4e5a57; --ink-3: #5f6b68;
+    --accent: #377068; --accent-strong: #2e5e57; --accent-tint: #eaf3f0;
+    --dk-accent: #377068;   /* links in the shared cards: 5:1 or better on every light surface here */
+    --ok-ink: #2f6a40; --ok-tint: #e8f2ea; --warn: #c99a3e; --warn-ink: #81611d; --warn-tint: #faf3e2;
+    --btn: #33504c; --btn-hover: #283f3c; --btn-ink: #ffffff;
+    --font: "Figtree", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+    --r: 10px; --r-lg: 14px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #121817; --surface: #1a2120; --surface-2: #212a28; --line: #2d3735; --line-2: #3b4745;
+      --ink: #e4eae8; --ink-2: #bcc6c3; --ink-3: #97a39f;
+      --accent: #7fc0b5; --accent-strong: #a2d6cc; --accent-tint: #1d3330;
+      --ok-ink: #95d1a4; --ok-tint: #1c3224; --warn: #c99a3e; --warn-ink: #e3c57f; --warn-tint: #352c17;
+      --btn: #7fc0b5; --btn-hover: #a2d6cc; --btn-ink: #10201d;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #121817; --surface: #1a2120; --surface-2: #212a28; --line: #2d3735; --line-2: #3b4745;
+    --ink: #e4eae8; --ink-2: #bcc6c3; --ink-3: #97a39f;
+    --accent: #7fc0b5; --accent-strong: #a2d6cc; --accent-tint: #1d3330;
+    --ok-ink: #95d1a4; --ok-tint: #1c3224; --warn: #c99a3e; --warn-ink: #e3c57f; --warn-tint: #352c17;
+    --btn: #7fc0b5; --btn-hover: #a2d6cc; --btn-ink: #10201d;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; scroll-padding-top: 20px; }
+  body { margin: 0; font: 400 16px/1.65 var(--font); color: var(--ink); background: var(--bg); -webkit-font-smoothing: antialiased; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; text-underline-offset: 2px; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+  .wrap { max-width: 1160px; margin: 0 auto; padding: 0 28px; }
+  p { margin: 0 0 14px; }
+  .muted { color: var(--ink-3); }
+  .small { font-size: 13.5px; }
+
+  /* top */
+  .top { background: var(--surface); border-bottom: 1px solid var(--line); padding: 46px 0 36px; }
+  .eyebrow { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent-strong); font-weight: 700; }
+  .top h1 { font-size: 38px; line-height: 1.15; margin: 10px 0 12px; letter-spacing: -.02em; font-weight: 700; }
+  .top .sub { font-size: 18px; color: var(--ink-2); max-width: 70ch; margin: 0; }
+  .top .ver { font-size: 15px; color: var(--ink-2); max-width: 70ch; margin: 14px 0 0; padding: 10px 14px; border-left: 3px solid var(--accent); background: var(--accent-tint); border-radius: 0 var(--r) var(--r) 0; }
+  .top .ver a { font-weight: 600; }
+  .wip { display: inline-block; padding: 0 7px; border: 1px dashed var(--line-2); border-radius: 4px; font-size: 13px; color: var(--ink-2); background: var(--surface); }
+  .meta { margin-top: 18px; font-size: 13px; color: var(--ink-3); display: flex; gap: 6px 20px; flex-wrap: wrap; }
+  .cta { margin-top: 22px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .cta a, .cta button { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 9px; font: 600 14.5px/1.2 var(--font); text-decoration: none; cursor: pointer; }
+  .cta .p { background: var(--btn); color: var(--btn-ink); border: 1px solid var(--btn); }
+  .cta .p:hover { background: var(--btn-hover); border-color: var(--btn-hover); }
+  .cta .s { border: 1px solid var(--line-2); color: var(--ink-2); background: var(--surface); }
+  .cta .s:hover { border-color: var(--accent); color: var(--accent-strong); text-decoration: none; }
+  .copy-msg { margin: 10px 0 0; font-size: 14px; color: var(--ok-ink); min-height: 0; }
+  .copy-msg:empty { display: none; }
+  .copy-box { margin-top: 10px; max-width: 70ch; }
+  .copy-box label { display: block; font-size: 13.5px; color: var(--ink-2); margin-bottom: 4px; }
+  .copy-box textarea { display: block; width: 100%; min-height: 180px; padding: 10px 12px; border: 1px solid var(--line-2); border-radius: var(--r); font: 12.5px/1.5 var(--mono); color: var(--ink); background: var(--surface-2); resize: vertical; }
+
+  /* layout */
+  .layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 48px; padding-top: 36px; }
+  .toc { position: sticky; top: 20px; align-self: start; font-size: 13.5px; max-height: calc(100vh - 40px); overflow-y: auto; padding-bottom: 20px; }
+  .toc .eyebrow { font-size: 10.5px; color: var(--ink-3); padding: 0 0 8px 12px; }
+  .toc a { display: block; padding: 4px 0 4px 12px; color: var(--ink-2); border-left: 2px solid var(--line); }
+  .toc a:hover { color: var(--accent-strong); text-decoration: none; border-color: var(--accent); }
+  .toc a.sub { padding-left: 24px; font-size: 12.5px; color: var(--ink-3); }
+  .toc a.sub b { font: 600 11.5px var(--mono); color: var(--ink-2); margin-right: 4px; }
+  .col { min-width: 0; max-width: 900px; padding-bottom: 72px; }
+  h2 { font-size: 26px; line-height: 1.25; margin: 56px 0 14px; letter-spacing: -.02em; font-weight: 700; }
+  .how h2 { margin-top: 0; }
+  .how ol { margin: 0 0 14px; padding-left: 22px; max-width: 74ch; }
+  .how li { margin-bottom: 6px; }
+  .how p { max-width: 74ch; }
+
+  /* the shared document view, at this page's scale */
+  .doc { margin-top: 48px; }
+  .dd .dd-gh { font-size: 24px; line-height: 1.25; letter-spacing: -.02em; margin: 56px 0 6px; }
+  .dd > .dd-glance:first-child .dd-gh { margin-top: 0; }
+  .dd .dd-q { font-size: 18px; letter-spacing: -.01em; }
+  .dd .dd-card { box-shadow: 0 1px 2px rgba(0, 0, 0, .04); }
+  .dd .dd-table th { background: var(--surface-2); }
+
+  /* calls about the study itself */
+  .study .lede { color: var(--ink-2); max-width: 74ch; }
+  .study .dd-card { border-style: dashed; }
+  .study-now { margin: 0; font-size: 14px; color: var(--dk-ink); }
+  .foot { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 13.5px; color: var(--ink-3); }
+  .foot p { margin: 0 0 6px; }
+
+  @media (max-width: 960px) {
+    .layout { grid-template-columns: minmax(0, 1fr); gap: 0; }
+    .toc { display: none; }
+  }
+  @media (max-width: 640px) {
+    .wrap { padding: 0 16px; }
+    .top { padding: 32px 0 28px; }
+    .top h1 { font-size: 29px; }
+    .top .sub { font-size: 16.5px; }
+    body { font-size: 15.5px; }
+    h2 { font-size: 23px; margin-top: 44px; }
+    .dd .dd-gh { font-size: 21px; margin-top: 44px; }
+    .cta a, .cta button { padding: 9px 13px; font-size: 14px; }
+  }
+  @media print {
+    .toc, .cta, .dd-picks, .dd-go { display: none; }
+    .layout { grid-template-columns: minmax(0, 1fr); }
+    .dd-card, .dd-reading { break-inside: avoid-page; }
+  }
+</style>
+</head>
+<body>
+
+<header class="top"><div class="wrap">
+  <div class="eyebrow">CloseTheLoop · Configuration · v7</div>
+  <h1>CloseTheLoop v7 challenges</h1>
+  <p class="sub">Every place where the two approaches disagree, or where a call is needed, with what each prototype does about it. v7/1 is the recommended approach; v7/2 is Alex's model as drafted. The same cards appear inside both prototypes, and the screens where a challenge arises carry a quiet marker, "Decisions on this screen", that links to its section here (which screens exactly is study call 3, at the end).</p>
+  <p class="ver"><a href="index.html">Both approaches</a> · v7/1: <a href="1/prototype.html#/plants">the prototype</a> and <a href="1/index.html">its hand-off</a> · v7/2: <span id="v72-links"><span class="wip">in build</span></span></p>
+  <div class="meta"><span>2 November 2026</span><span>Owner: Mihir Sethi, with Claude</span><span id="counts">The cards load from the decisions file</span></div>
+  <div class="cta">
+    <button type="button" class="p" id="copy-answers">Copy my answers</button>
+    <a class="s" href="#how">How to answer</a>
+    <a class="s" href="#dd-glance-h">At a glance</a>
+    <a class="s" href="#readings">Readings</a>
+  </div>
+  <p class="copy-msg" id="copy-msg" role="status" aria-live="polite"></p>
+  <div class="copy-box" id="copy-box" hidden><label for="copy-text">This browser blocked copying. Select the text below and copy it yourself.</label><textarea id="copy-text" readonly></textarea></div>
+</div></header>
+
+<div class="wrap"><div class="layout">
+<nav class="toc" aria-label="Contents">
+  <div class="eyebrow">Contents</div>
+  <a href="#how">How to answer</a>
+  <a href="#dd-glance-h">At a glance</a>
+  <div id="toc-cards"></div>
+  <a href="#readings">Readings v7/2 takes</a>
+  <a href="#study">Calls about the study</a>
+</nav>
+
+<div class="col">
+<section class="how" id="how" aria-labelledby="how-h">
+  <h2 id="how-h">How to answer</h2>
+  <ol>
+    <li>Read a card: the question, the recommendation, what v7/1 and v7/2 each build, and the options with what each one leads to. What Alex's pack says, what v6 does today, Mihir's earlier direction and what to tell Alex are folded under Background.</li>
+    <li>Pick your call under the options: one of them, or "Something else". Pick it again to take it back.</li>
+    <li>When you are done, use <b>Copy my answers</b> at the top of this page and paste the text into your reply. Cards without a call are listed at the end.</li>
+  </ol>
+  <p>Your calls are kept in this browser only. They are shared with the Decisions pages of both prototypes and with the hand-off docs, so a call made in one place shows in all of them. To add a note to a call, open the card in the prototype with "Add a note on this card".</p>
+  <p class="muted small">Each card says when it arose: in the first review of Alex's packs, while reviewing v7/1, or while designing v7/2. New challenges are added here as they come up, and their markers appear on the screens where they arise.</p>
+</section>
+
+<main class="doc" id="doc">
+  <p class="muted">Loading the cards from the decisions file…</p>
+  <noscript><p>The cards are drawn from <code>1/assets/decisions7.js</code> and need JavaScript.</p></noscript>
+</main>
+
+<section class="study" id="study" aria-labelledby="study-h">
+  <h2 id="study-h">Calls about the study itself</h2>
+  <p class="lede">These came up while putting the markers into the prototypes and reviewing the study's own pages and files. They are about how the study shows and publishes its challenges, not about the product, so they are not decision cards and the prototypes do not show them. Your calls here are kept in this browser and added to <b>Copy my answers</b>.</p>
+  <div id="study-list"></div>
+</section>
+
+<footer class="foot">
+  <p>Prototypes for a decision, not products. Every count comes from sample readings, generated the same way every time.</p>
+  <p>The cards are drawn from the same file the prototypes read, so this page and the Decisions pages never disagree.</p>
+</footer>
+</div>
+</div></div>
+
+<script src="1/assets/decisions7.js?v=3"></script>
+<script>
+/* The challenges doc: the shared decision file (1/assets/decisions7.js) draws every card and every reading through
+   V7DEC.renderDoc; this script adds the contents, "Copy my answers", the v7/2 links once v7/2 is ready, and the two
+   calls about the study itself (kept in this browser under 'ctl7.study'). It never loads either prototype. */
+window.V7_PAGE = 'challenges';
+(function () {
+  'use strict';
+  var D = window.V7DEC, cards = window.V7_DECISIONS;
+  var $ = function (id) { return document.getElementById(id); };
+  var fill = function (id, html) { var el = $(id); if (el) el.innerHTML = html; };
+  if (!D || !Array.isArray(cards) || typeof D.renderDoc !== 'function') {
+    fill('doc', '<p>The decisions file (1/assets/decisions7.js) did not load, so the cards cannot be shown.</p>');
+    return;
+  }
+  var esc = D.esc;
+  var plural = function (n, one, many) { return n + ' ' + (n === 1 ? one : (many || one + 's')); };
+
+  /* calls about the study itself: not decision cards, so they keep their own calls */
+  var STUDY = [
+    { id: 'study-words', n: 1, short: 'Alex\'s words in the markers',
+      title: 'When a marker on a v7/1 screen says what v7/2 builds, should it use Alex\'s words?',
+      why: 'Each marker names its challenge and says what each prototype builds. The v7/2 line quotes v7/2\'s own words (Trigger, Zones, Persistence, unit process), so someone walking v7/1 meets Alex\'s terms on screens that otherwise keep to plain words. v7/1\'s hand-off promises that no screen outside the Decisions page shows those words; today the markers are the exception.',
+      now: 'Option 1, in both prototypes: the markers come from the shared decision file.',
+      recommendation: 'Option 3. A marker\'s job is to say that a call applies here and lead to it; the card and this doc already set the two approaches side by side in full. It keeps v7/1\'s screens in plain words without rewriting how Alex\'s model reads. Nothing changes on v7/2\'s screens, where Alex\'s words are its own and the v7/1 line is plain already.',
+      options: [
+        { label: 'Keep them, as quotes in a labelled study note', consequence: 'No rewrite, and the marker shows how v7/2\'s screens actually read. Plant staff in a v7/1 demo meet Alex\'s terms, and v7/1\'s word check has to treat them as quoted words on every screen with a marker.' },
+        { label: 'Write each v7/2 line in v7/1\'s plain words', consequence: 'Every v7/1 screen stays in plain words. One line per card to rewrite, and the marker no longer shows how v7/2\'s screens read.' },
+        { label: 'On v7/1 screens, say only that v7/2 builds it differently', consequence: 'The cleanest screens: the marker says "v7/2 builds this differently" and links the card, where v7/2\'s words are quoted in full. Comparing takes one more click.', recommended: true },
+      ] },
+    { id: 'study-markers', n: 2, short: 'Markers always on, or hideable',
+      title: 'Should the challenge markers always show, or can a reviewer hide them?',
+      why: 'About three in four of the v7/1 screens the checks visit (832 of 1,108) carry at least one marker. Vedanta\'s home carries 9 and Manesar\'s Differences 6; the strip shows three and folds the rest under "+n more".',
+      now: 'Option 1, in both prototypes.',
+      recommendation: 'Option 2. It keeps Mihir\'s direction, every challenge shown where it arises, as the default, and gives a demo a clean screen on purpose rather than by accident. A line in the top bar saying the study notes are hidden stops anyone forgetting.',
+      options: [
+        { label: 'Always on, as now', consequence: 'Every challenge is visible where it arises. A walkthrough with Alex or plant staff shows study notes on most screens.' },
+        { label: 'On by default, with a "Hide study notes" switch kept in this browser', consequence: 'Clean demos when wanted, and every challenge shows by default. Someone who hid them could miss one, so the top bar says "Study notes hidden" while they are.', recommended: true },
+        { label: 'Only when arriving from this doc, or from a link that asks for them', consequence: 'Clean by default. Someone just exploring a prototype never learns that a challenge applies to the screen in front of them.' },
+      ] },
+    { id: 'study-coverage', n: 3, short: 'Which screens carry a marker', arose: 'reviewing the markers',
+      title: 'Should a marker sit on every screen a challenge reaches, or on one worked example of each kind?',
+      why: 'Some consequences show on every screen of a kind: the sludge-pump issue on every pump\'s Issues tab (31 of them), "one task per type" on every library type\'s Tasks tab, an alert\'s state on every alert page. A card names its screens by their address, so it can say "every alert page" or "every Tasks tab", but not "every pump". Today the cards mix the two: some mark every screen of a kind, others one example (the sludge-pump issue on two pumps, value sources on BL-1). Marking more makes the strips longer: three in four of the screens the checks visit carry one. A strip says a call applies on this screen, not where on it; each item names what to look at when opened.',
+      now: 'A mix, in both prototypes: every screen of a kind where its address can say so, one example where it cannot.',
+      recommendation: 'Option 3. Mihir asked for a marker wherever a challenge arises, and "every pump" is exactly where the sludge-pump issue arises. Naming the kind keeps that true as plants change, where a list of equipment would go stale. Strips longer than three cards already fold the rest under "+n more".',
+      options: [
+        { label: 'Mark every screen a challenge reaches, wherever its address can say so', consequence: 'Nothing is missed where an address can name it, and most screens carry a strip, the busiest more than three cards. A challenge tied to a kind of equipment (every pump) still can\'t be marked everywhere, only on a list of examples.' },
+        { label: 'One worked example of each kind, and the card says where else it shows', consequence: 'Strips stay short and each points at a clear example. The card adds a line such as "Also on every pump\'s Issues tab", so a reader who opens it learns the reach; someone who never opens the card does not.' },
+        { label: 'Let a card name a kind of equipment as well as an address', consequence: 'A card can say "every Pump\'s Issues tab", and the strip shows on all 31 and on any pump added later, with no list of equipment to keep up. Each prototype tells the strip the equipment\'s type; the shared file still reads no plant data. Strips on equipment pages get longer.', recommended: true },
+      ] },
+    { id: 'study-inherited', n: 4, short: 'Internal names in v6\'s files', arose: 'reviewing v7/1\'s files',
+      title: 'Two files v7/1 copies from v6 named internal things. v7/1\'s copies are cleaned; should v6\'s be cleaned too?',
+      why: 'v6\'s root-cause file names, in a comment, the folder it was generated in, and its equipment catalogue lists customer drawing names from the SCADA export in a note. Both have been public since v6 was published. v7/1 ships copies of both, and its copies are now cleaned: a comment and a note, nothing on screen. v6 is kept exactly as published, so its copies still carry the names.',
+      now: 'v7/1\'s copies are cleaned; v6 is unchanged.',
+      recommendation: 'Option 2. The site is public, and a working-folder name and customer drawing names don\'t belong on it; v6 already shows them, so the sooner they go the better. A change to a comment and a note keeps v6 working exactly as before, and one footnote keeps the promise honest. It needs Mihir\'s say-so, because v1 to v6 are otherwise frozen.',
+      options: [
+        { label: 'Clean only v7/1\'s copies (as now)', consequence: 'v1 to v6 stay exactly as published, as every page promises. The names stay public in v6, and v7/1\'s copies differ from v6\'s by a comment and a note.' },
+        { label: 'Also clean v6\'s two files, once, in the comment and the note only', consequence: 'The names leave the public site. Nothing v6 shows or does changes, but "v1 to v6 are unchanged" needs a footnote saying which comment and note were cleaned, and when.', recommended: true },
+        { label: 'Keep v7/1\'s copies as v6 has them', consequence: 'v7/1 and v6 stay identical, and the public checks need an exception for these two files. The names stay public twice over.' },
+      ] },
+    { id: 'study-docwords', n: 5, short: 'Alex\'s words in this doc', arose: 'reviewing this doc',
+      title: 'Should this doc use Alex\'s capitalised words (Trigger, Issue, Task, unit process), or plain words with Alex\'s term quoted once?',
+      why: 'This doc is read by plant staff and Alex alike. The questions and v7/1\'s lines use plain words; v7/2\'s lines and the readings v7/2 takes use Alex\'s, so one page mixes "an open issue" with "a frozen Trigger", and ten reading titles carry Alex\'s capitalised words ("Releasing a frozen Trigger", "Where Tasks sit"). Study call 1 covers only the markers on v7/1\'s screens.',
+      now: 'A mix: the questions and v7/1\'s lines in plain words, v7/2\'s lines and the readings in Alex\'s words.',
+      recommendation: 'Option 3. The questions and titles are what everyone reads first, in the table and the contents, so they belong in one plain vocabulary; the v7/2 lines exist to show how Alex\'s model reads, so they keep its words. Card D23\'s question already follows this. It costs ten reading titles.',
+      options: [
+        { label: 'Keep the mix (as now)', consequence: 'Each line reads the way its own prototype does, so a reader sees how v7/2 will talk. A plant reader meets Trigger, Zones and unit process with no gloss, and one thing has two names on one page.' },
+        { label: 'Plain words throughout, with Alex\'s term quoted once per card or reading', consequence: 'One vocabulary for everyone, with Alex\'s word once, in quotes, where it first matters ("a frozen alert, a \'Trigger\' in Alex\'s words"). Most v7/2 lines and readings are rewritten, and the doc no longer shows how v7/2\'s screens read.' },
+        { label: 'Plain words in every question and title; Alex\'s words only in what v7/2 builds', consequence: 'Every question, short name and reading title reads plainly, so the table and the contents use one vocabulary; the v7/2 lines keep Alex\'s words as quotes of what v7/2 shows. Ten reading titles to rewrite.', recommended: true },
+      ] },
+  ];
+  var SKEY = 'ctl7.study';
+  var SMEM = null;
+  function studyStore() {
+    if (SMEM) return SMEM;
+    var v = null;
+    try { v = JSON.parse(window.localStorage.getItem(SKEY) || 'null'); } catch (e) { v = null; }
+    SMEM = v && v.v === 1 && v.answers && typeof v.answers === 'object' ? v : { v: 1, answers: {} };
+    return SMEM;
+  }
+  function studySave() { try { window.localStorage.setItem(SKEY, JSON.stringify(studyStore())); } catch (e) { /* storage off: kept for this visit */ } }
+  function studyCall(s) { var a = studyStore().answers[s.id]; return typeof a === 'number' && a >= 0 && a < s.options.length ? a : null; }
+  function recOf(s) { for (var i = 0; i < s.options.length; i++) if (s.options[i].recommended) return i; return null; }
+  function studyCallHtml(s) {
+    var a = studyCall(s);
+    if (a == null) return '<span class="dd-none">No call yet</span>';
+    return '<span class="dk-chip ' + (a === recOf(s) ? 'dk-c-ok">Option ' + (a + 1) + ', as recommended' : 'dk-c-call">Option ' + (a + 1)) + '</span>';
+  }
+  function studyPicks(s) {
+    var a = studyCall(s); var rec = recOf(s);
+    return '<span class="dd-k2">Your call</span>' + s.options.map(function (o, i) {
+      return '<button type="button" class="dd-pick' + (a === i ? ' on' : '') + '" data-study="' + esc(s.id) + '" data-opt="' + i + '" aria-pressed="' + (a === i ? 'true' : 'false') + '" title="' + esc(o.label) + '">Option ' + (i + 1) + (i === rec ? ' (recommended)' : '') + '</button>';
+    }).join('') + (a != null ? '<button type="button" class="dd-pick dd-clear" data-study="' + esc(s.id) + '" data-opt="">Clear</button>' : '')
+      + '<span class="dd-saved">Kept in this browser and added to Copy my answers.</span>';
+  }
+  function studyHtml(s) {
+    var rec = recOf(s);
+    var opts = s.options.map(function (o, i) {
+      return '<li class="dd-opt' + (i === rec ? ' is-rec' : '') + '"><div class="dd-opt-h"><span class="dd-on">Option ' + (i + 1) + '</span><b>' + esc(o.label) + '</b>' + (i === rec ? '<span class="dk-chip dk-rec">Recommended</span>' : '') + '</div><p>' + esc(o.consequence) + '</p></li>';
+    }).join('');
+    return '<section class="dd-card" id="' + esc(s.id) + '" aria-labelledby="' + esc(s.id) + '-q">'
+      + '<div class="dd-meta"><span class="dd-id">Study call ' + s.n + '</span><span class="dd-short">' + esc(s.short) + '</span><span class="dd-arose">Arose: ' + esc(s.arose || 'putting the markers in') + '</span><span class="dd-mycall">Your call: <span data-study-call="' + esc(s.id) + '">' + studyCallHtml(s) + '</span></span></div>'
+      + '<h3 class="dd-q" id="' + esc(s.id) + '-q">' + esc(s.title) + '</h3>'
+      + '<span class="dd-k">Why it came up</span><div class="dk-prose"><p>' + esc(s.why) + '</p></div>'
+      + '<div class="dd-rec"><span class="dd-k">Recommendation</span><div class="dk-prose"><p>' + esc(s.recommendation) + '</p></div></div>'
+      + '<span class="dd-k">What the prototypes do now</span><p class="study-now">' + esc(s.now) + '</p>'
+      + '<span class="dd-k">Options</span><ol class="dd-opts">' + opts + '</ol>'
+      + '<div class="dd-picks" data-study-picks="' + esc(s.id) + '" role="group" aria-label="Your call on study call ' + s.n + '">' + studyPicks(s) + '</div>'
+      + '</section>';
+  }
+  function drawStudy() { fill('study-list', '<div class="dd" data-dd-mode="challenges">' + STUDY.map(studyHtml).join('') + '</div>'); }
+  function studyById(id) { for (var i = 0; i < STUDY.length; i++) if (STUDY[i].id === id) return STUDY[i]; return null; }
+  function onStudyClick(ev) {
+    var t = ev && ev.target; var b = t && typeof t.closest === 'function' ? t.closest('[data-study]') : null;
+    if (!b) return;
+    var s = studyById(b.getAttribute('data-study')); if (!s) return;
+    var raw = b.getAttribute('data-opt'); var cur = studyCall(s);
+    if (raw === '' || raw == null || +raw === cur) delete studyStore().answers[s.id];
+    else studyStore().answers[s.id] = +raw;
+    studySave(); drawStudy();
+  }
+  function studyLines() {
+    return STUDY.filter(function (s) { return studyCall(s) != null; }).map(function (s) {
+      return 'Study call ' + s.n + ' — ' + s.title + ': ' + s.options[studyCall(s)].label;
+    });
+  }
+
+  /* contents: the groups (anchored by the shared renderer) and every card */
+  var groups = [];
+  cards.forEach(function (d) {
+    var a = D.aroseOf(d); var g = null;
+    for (var i = 0; i < groups.length; i++) if (groups[i].a === a) g = groups[i];
+    if (!g) { g = { a: a, ds: [] }; groups.push(g); }
+    g.ds.push(d);
+  });
+  var slug = function (a) { return 'group-' + (String(a).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'questions'); };
+  fill('toc-cards', groups.map(function (g) {
+    return '<a href="#' + (groups.length > 1 ? slug(g.a) : 'group-questions') + '">' + esc(g.a) + ' · ' + g.ds.length + '</a>'
+      + g.ds.map(function (d) { return '<a class="sub" href="#' + esc(d.id) + '"><b>' + esc(d.id) + '</b>' + esc(D.shortOf(d)) + '</a>'; }).join('');
+  }).join(''));
+
+  var rs = Array.isArray(window.V7_READINGS) ? window.V7_READINGS : [];
+  fill('counts', plural(cards.length, 'challenge') + ' · ' + plural(rs.length, 'reading') + ' v7/2 takes · ' + plural(STUDY.length, 'call') + ' about the study');
+
+  /* v7/2: plain text until it is built */
+  if (D.V72_READY === true) fill('v72-links', '<a href="2/prototype.html#/plants">the prototype</a> and <a href="2/index.html">its hand-off</a>');
+
+  /* Copy my answers: every card (a call, or "Not answered yet") and the study calls */
+  var copyBtn = $('copy-answers');
+  if (copyBtn) copyBtn.addEventListener('click', function () {
+    var msg = $('copy-msg'); var box = $('copy-box'); var ta = $('copy-text');
+    var main = D.answersText(); var st = studyLines();
+    if (box) box.hidden = true;
+    if (!main && !st.length) { if (msg) msg.textContent = 'No calls yet. Pick an option under a card first.'; return; }
+    var text = (main || 'My calls on the v7 decisions\n\nNo card answered yet: ' + cards.map(function (d) { return d.id; }).join(', '))
+      + (st.length ? '\n\nCalls about the study\n' + st.join('\n') : '');
+    var n = D.counts().answered;
+    var done = function () { if (msg) msg.textContent = 'Copied ' + plural(n, 'call') + ' on the cards' + (st.length ? ' and ' + st.length + ' about the study' : '') + '. Paste it into your reply.'; };
+    var byHand = function () {
+      if (msg) msg.textContent = '';
+      if (ta) ta.value = text;
+      if (box) box.hidden = false;
+      if (ta) { try { ta.focus(); ta.select(); } catch (e) { /* selection is a nicety */ } }
+    };
+    try {
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') navigator.clipboard.writeText(text).then(done, byHand);
+      else byHand();
+    } catch (e) { byHand(); }
+  });
+
+  /* the study calls first, so a deep link to one lands once the cards are drawn too */
+  drawStudy();
+  var list = $('study-list'); if (list) list.addEventListener('click', onStudyClick);
+  D.renderDoc($('doc'), { mode: 'challenges' });
+}());
+</script>
+</body>
+</html>

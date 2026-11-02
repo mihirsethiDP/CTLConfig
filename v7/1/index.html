@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CloseTheLoop Configuration v7/1</title>
+<meta name="description" content="v7/1, the recommended approach: a clickable study of configuring CloseTheLoop from the library to a live plant, what it takes from Alex's model and what it does differently, the decisions for Mihir with what v7/1 and v7/2 each build, and how to check it.">
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/decisions7.css?v=3">
+<style>
+  :root {
+    --bg: #f7f8f6; --surface: #ffffff; --surface-2: #f3f5f3; --surface-3: #eceeec;
+    --line: #e6e9e6; --line-2: #d5dbd7;
+    --ink: #25302e; --ink-2: #4e5a57; --ink-3: #7b8784;
+    --accent: #3f7d74; --accent-strong: #2e5e57; --accent-tint: #eaf3f0;
+    --ok-ink: #2f6a40; --ok-tint: #e8f2ea;
+    --warn: #c99a3e; --warn-ink: #81611d; --warn-tint: #faf3e2;
+    --bad: #b8564f; --bad-ink: #8f3f38; --bad-tint: #f8ebe9;
+    --info: #5b7a90; --info-ink: #3e5566; --info-tint: #eaf0f4;
+    --font: "Figtree", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+    --r: 10px; --r-lg: 14px;
+    --shadow-sm: 0 1px 2px rgba(37, 48, 46, .05);
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; scroll-padding-top: 20px; }
+  body { margin: 0; font: 400 16px/1.65 var(--font); color: var(--ink); background: var(--bg); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; text-underline-offset: 2px; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+  code, .mono { font-family: var(--mono); font-size: .86em; }
+  code { background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
+  .wrap { max-width: 1160px; margin: 0 auto; padding: 0 28px; }
+
+  /* top */
+  .top { background: var(--surface); border-bottom: 1px solid var(--line); padding: 46px 0 40px; }
+  .eyebrow { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent-strong); font-weight: 700; }
+  .top h1 { font-size: 38px; line-height: 1.15; margin: 10px 0 12px; letter-spacing: -.02em; max-width: 22ch; font-weight: 700; }
+  .top .sub { font-size: 18px; color: var(--ink-2); max-width: 68ch; margin: 0; }
+  .top .ver { font-size: 15px; color: var(--ink-2); max-width: 68ch; margin: 14px 0 0; padding: 10px 14px; border-left: 3px solid var(--accent); background: var(--accent-tint); border-radius: 0 var(--r) var(--r) 0; }
+  .top .ver a { font-weight: 600; }
+  .meta { margin-top: 18px; font-size: 13px; color: var(--ink-3); display: flex; gap: 8px 20px; flex-wrap: wrap; }
+  .cta { margin-top: 24px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .cta a { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 9px; font-weight: 600; font-size: 14.5px; text-decoration: none; }
+  .cta a.p { background: #33504c; color: #fff; }
+  .cta a.p:hover { background: #283f3c; }
+  .cta a.s { border: 1px solid var(--line-2); color: var(--ink-2); background: var(--surface); }
+  .cta a.s:hover { border-color: var(--accent); color: var(--accent-strong); }
+
+  /* layout */
+  .layout { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 48px; padding-top: 36px; }
+  .toc { position: sticky; top: 20px; align-self: start; font-size: 13.5px; max-height: calc(100vh - 40px); overflow-y: auto; padding-bottom: 20px; }
+  .toc .eyebrow { font-size: 10.5px; color: var(--ink-3); padding: 0 0 8px 12px; }
+  .toc a { display: block; padding: 5px 0 5px 12px; color: var(--ink-2); border-left: 2px solid var(--line); }
+  .toc a:hover { color: var(--accent-strong); text-decoration: none; border-color: var(--accent); }
+  .toc a.sub { padding-left: 24px; font-size: 12.5px; color: var(--ink-3); }
+  article { min-width: 0; max-width: 860px; padding-bottom: 96px; }
+  article > p, article > ul, article > ol, article > .callout { max-width: 74ch; }
+  h2 { font-size: 27px; line-height: 1.25; margin: 64px 0 14px; letter-spacing: -.02em; font-weight: 700; }
+  h2:first-child { margin-top: 0; }
+  h2 .n { font: 600 14px var(--mono); color: var(--accent); margin-right: 10px; vertical-align: 3px; }
+  h3 { font-size: 18px; line-height: 1.35; margin: 34px 0 10px; letter-spacing: -.01em; font-weight: 650; }
+  p { margin: 0 0 14px; }
+  ul, ol { margin: 0 0 16px; padding-left: 22px; }
+  li { margin-bottom: 6px; }
+  .lead { font-size: 17.5px; color: var(--ink-2); }
+  .muted { color: var(--ink-3); }
+  .small { font-size: 13.5px; }
+
+  /* tables */
+  .tw { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 12px 0 22px; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; line-height: 1.5; }
+  th { text-align: left; background: var(--surface-2); padding: 9px 12px; font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); white-space: nowrap; }
+  td { padding: 10px 12px; border-top: 1px solid var(--line); vertical-align: top; }
+  td:first-child { font-weight: 600; }
+  table.ac td:first-child { font: 600 12.5px var(--mono); color: var(--accent-strong); white-space: nowrap; width: 72px; }
+  table.ac td { font-weight: 400; }
+  table.ac td:first-child { font-weight: 600; }
+  table.wide { min-width: 720px; }
+  a.dref { font: 600 12.5px var(--mono); white-space: nowrap; }
+
+  /* blocks */
+  .callout { border-left: 3px solid var(--accent); background: var(--accent-tint); padding: 12px 18px; border-radius: 0 var(--r) var(--r) 0; margin: 16px 0 22px; font-size: 15px; }
+  .callout.warn { border-color: var(--warn); background: var(--warn-tint); }
+  .nums { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 18px 0 26px; }
+  .nums div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 14px 16px; font-size: 13.5px; color: var(--ink-2); line-height: 1.4; }
+  .nums b { display: block; font-size: 28px; line-height: 1.1; letter-spacing: -.02em; color: var(--accent-strong); margin-bottom: 4px; font-weight: 700; }
+  .go { display: inline-block; max-width: 100%; font-size: 13px; font-weight: 600; line-height: 1.4; padding: 3px 10px; border-radius: 14px; border: 1px solid var(--line-2); background: var(--surface); color: var(--accent-strong); }
+  h3 .go { margin-left: 8px; vertical-align: 2px; }
+  .go:hover { border-color: var(--accent); background: var(--accent-tint); text-decoration: none; }
+
+  /* the 12 chapters */
+  ol.chs { list-style: none; padding: 0; margin: 16px 0 24px; counter-reset: ch; }
+  ol.chs > li { counter-increment: ch; display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 4px 14px; padding: 16px 0; border-top: 1px solid var(--line); margin: 0; }
+  ol.chs > li::before { content: counter(ch); grid-row: 1 / span 3; width: 30px; height: 30px; border-radius: 50%; background: var(--accent-tint); color: var(--accent-strong); font: 600 13px/30px var(--mono); text-align: center; }
+  ol.chs h4 { margin: 2px 0 2px; font-size: 16px; font-weight: 650; }
+  ol.chs p { margin: 0 0 6px; color: var(--ink-2); font-size: 15px; }
+  .ch-a { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; font-size: 13px; }
+  .ch-a .k { color: var(--ink-3); font-size: 12px; }
+
+  /* section 4: the shared document view (decisions7.css) inside this page */
+  .dec-chal { margin: 4px 0 18px; }
+  .dec-chal .small { margin-left: 6px; }
+  #dec-table, #dec-list { margin-top: 26px; }
+  .dd h3, .dd h4 { letter-spacing: -.01em; }
+  .dd .dd-gh { font-size: 20px; margin-top: 40px; }
+  .dd .dd-glance .dd-gh { margin-top: 0; }
+  .dd .dd-table th { background: var(--surface-2); text-transform: none; white-space: normal; }
+  .dd .dd-table td { border-top: 0; }
+  .dd .dd-table td:first-child { font-weight: 400; }
+  .dd li { margin-bottom: 0; }
+  .dd ul, .dd ol { margin-bottom: 0; }
+
+  /* decisions */
+  .dsum td:first-child { white-space: nowrap; }
+  .dsum td { font-weight: 400; }
+  .prose p { margin: 0 0 8px; }
+  .prose p:last-child, .prose ul:last-child { margin-bottom: 0; }
+  .prose ul { margin: 4px 0 8px; padding-left: 20px; }
+  .prose li { margin: 2px 0; }
+
+  @media (max-width: 960px) {
+    .layout { grid-template-columns: 1fr; gap: 0; }
+    .toc { display: none; }
+    .nums { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 640px) {
+    .wrap { padding: 0 16px; }
+    .top { padding: 34px 0 30px; }
+    .top h1 { font-size: 29px; }
+    .top .sub { font-size: 16.5px; }
+    h2 { font-size: 23px; margin-top: 52px; }
+    body { font-size: 15.5px; }
+  }
+  @media print {
+    .toc, .cta { display: none; }
+    .layout { grid-template-columns: 1fr; }
+    .dd-card, .dd-reading { break-inside: avoid-page; }
+    .dd-picks, .dd-go { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="top"><div class="wrap">
+  <div class="eyebrow">CloseTheLoop · Configuration · v7/1</div>
+  <h1>From the library to a live plant, end to end.</h1>
+  <p class="sub">v7/1 is a clickable study of configuring and running CloseTheLoop. It is built on v6's content and takes Alex's configuration model where that makes the job easier and is right. Where Alex's pack, v6 or Mihir's earlier direction is weaker, v7/1 takes the better option and says so on a decision card.</p>
+  <p class="ver">This is v7/1, the recommended approach. <a href="../index.html">Both approaches</a> · <a href="../challenges.html">Challenges doc</a>. v7/2, Alex's model as drafted, answers the same challenges and is in build.</p>
+  <div class="meta"><span>29 October 2026 · updated 2 November 2026</span><span>Owner: Mihir Sethi, with Claude</span><span>v1 to v6 are unchanged</span></div>
+  <div class="cta">
+    <a class="p" href="prototype.html#/plants">Open the v7/1 prototype →</a>
+    <a class="s" href="#walk">Walk the story</a>
+    <a class="s" href="#decisions">The decisions</a>
+    <a class="s" href="../challenges.html">Challenges doc</a>
+    <a class="s" href="#ac">Acceptance criteria</a>
+  </div>
+</div></header>
+
+<div class="wrap"><div class="layout">
+<nav class="toc" aria-label="Contents">
+  <div class="eyebrow">Contents</div>
+  <a href="#what">1 · What v7/1 is</a>
+  <a class="sub" href="#plants">The four plants</a>
+  <a class="sub" href="#walk">Walk it in 12 chapters</a>
+  <a href="#adopts">2 · What v7/1 takes from Alex</a>
+  <a href="#differs">3 · What v7/1 does differently</a>
+  <a class="sub" href="#words">Words on screen</a>
+  <a class="sub" href="#contract-changes">Changes the cards ask for</a>
+  <a href="#decisions">4 · The decisions</a>
+  <a class="sub" href="#dec-table">At a glance</a>
+  <a class="sub" href="#dec-list">Every card</a>
+  <a href="#simulated">5 · What is simulated</a>
+  <a href="#ac">6 · Acceptance criteria</a>
+  <a href="#run">7 · How to run and reset</a>
+  <a href="#open">8 · Open items carried from v6</a>
+</nav>
+
+<article>
+
+<!-- ─────────────────────────────────────────────────────────────── 1 -->
+<h2 id="what"><span class="n">1</span>What v7/1 is</h2>
+<p class="lead">One clickable prototype that carries a plant from the library, through commissioning, to live running and a library change, with every screen in plain words.</p>
+<p>v7/1 keeps v6's content: the database's 56 equipment types under their stored names, the workbook's 31 issues, 183 root causes with a fix for each, 75 general tasks, and the four sample plants. It replaces v6's nine setup steps with a plant that is either <b>Commissioning</b> or <b>Live</b>, a <b>Readiness</b> home fed by one checklist, a quiet <b>trial</b> before go live, a record of every value a plant changes, and a library that shows where a change lands before it is published.</p>
+<p>Mihir's brief for v7: simple by design, frictionless, plain words, one home per fact, show the consequence before it happens, and critique rather than follow, whether the source is Alex's pack, v6 or Mihir's own earlier calls. Each place where those sources disagree is a <a href="#decisions">decision card</a>.</p>
+<div class="nums">
+  <div><b>56</b>equipment types, the database's own</div>
+  <div><b>4</b>plants: one real SCADA layout, three samples</div>
+  <div><b>12</b>chapters in the story</div>
+  <div><b id="dec-n">27</b>decisions for Mihir</div>
+</div>
+
+<h3 id="plants">The four plants</h3>
+<p>Each plant carries the part of the story its data can honestly show (decision <a class="dref" href="#D4">D4</a>). Every count and preview built from readings carries a <b>Sample readings</b> tag.</p>
+<div class="tw"><table class="wide">
+  <tr><th>Plant</th><th>Data</th><th>At the start of the story</th><th>What it shows</th></tr>
+  <tr><td>DigitalPaani (STP)</td><td>Real SCADA layout (drawing v157); readings are samples</td><td>Commissioning since Thu 29 Oct, 08:30. Read from SCADA this morning; nothing reviewed; nobody in the User Center.</td><td>What SCADA found, What the library brings, Readiness, its task programme and the readings SCADA doesn't send.</td></tr>
+  <tr><td>Vedanta ETP</td><td>Sample plant</td><td>Commissioning since Fri 23 Oct, 10:00 (day 6 of the trial). Every library proposal accepted except one.</td><td>Trial firings, a noisy alert, tuning, an Emergency during the trial, and go live.</td></tr>
+  <tr><td>Manesar STP</td><td>Sample plant</td><td>Live since Tue 1 Sep 2026. One open issue: DO low on AT-2.</td><td>Live issues, diagnosis to close, Coverage, a library change and Differences from the library.</td></tr>
+  <tr><td>Bawal WTP</td><td>Sample plant</td><td>Live since Wed 15 Jul 2026; quiet.</td><td>A second Live plant for library changes to reach.</td></tr>
+</table></div>
+
+<h3 id="walk">Walk it in 12 chapters</h3>
+<p>The prototype's <b>Story</b> button opens the same 12 chapters beside every page. The story clock starts at Thu 29 Oct, 09:00 (IST) and is shared by every plant; <b>Move time on</b> moves it.</p>
+<ol class="chs">
+  <li><h4>The library</h4><p>Every equipment type is one of the database's 56, under its own name, carrying its readings, limits, alerts and tasks. A type page is laid out like an equipment page, with Where it lands and Publish beside it.</p>
+    <div class="ch-a"><a class="go" href="prototype.html#/library">Open the library →</a><a class="go" href="prototype.html#/library/BLW">A type page: Blower</a><span class="k">Decisions</span><a class="dref" href="#D10">D10</a><a class="dref" href="#D17">D17</a><a class="dref" href="#D1">D1</a><a class="dref" href="#D14">D14</a></div></li>
+  <li><h4>A new plant from SCADA</h4><p>DigitalPaani was read from its real SCADA layout this morning. "What SCADA found" groups its 66 pieces of equipment by database type to accept, and lists the three drawn as one type but stored as another. SCADA is the only source, so those are fixed there.</p>
+    <div class="ch-a"><a class="go" href="prototype.html#/p/digitalpaani/scada">What SCADA found →</a><span class="k">Decisions</span><a class="dref" href="#D9">D9</a><a class="dref" href="#D4">D4</a><a class="dref" href="#D20">D20</a></div></li>
+  <li><h4>What the library brings</h4><p>For each piece of equipment the library proposes alerts and tasks, with a chip on every limit saying where it comes from. Accepting a whole type at once puts its alerts On trial, so nothing reaches anyone yet.</p>
+    <div class="ch-a"><a class="go" href="prototype.html#/p/digitalpaani/library">What the library brings →</a><span class="k">Decisions</span><a class="dref" href="#D8">D8</a><a class="dref" href="#D18">D18</a></div></li>
+  <li><h4>Readiness</h4><p>One checklist decides what blocks go live and what is only a gap. Blockers come first, each linked to where it is fixed. Go live stays disabled and says why; people are read from the User Center, not edited here.</p>
+    <div class="ch-a"><a class="go" href="prototype.html#/p/digitalpaani">DigitalPaani's Readiness →</a><span class="k">Decisions</span><a class="dref" href="#D2">D2</a><a class="dref" href="#D13">D13</a><a class="dref" href="#D9">D9</a></div></li>
+  <li><h4>Trial and tuning</h4><p>Vedanta ETP is on day 6 of its trial. "Level high — EQ-1" fires often enough to be noisy; "DO low — SBR-1" fires about 6 times a day, mostly briefly and near its limit. Changing limits shows what the last 7 days would have done, then asks for a reason.</p>
+    <div class="ch-a"><a class="go" href="prototype.html#/p/vedanta/alert/a_3d">Level high — EQ-1 →</a><a class="go" href="prototype.html#/p/vedanta/alert/a_3r">DO low — SBR-1</a><span class="k">Decisions</span><a class="dref" href="#D5">D5</a><a class="dref" href="#D21">D21</a><a class="dref" href="#D6">D6</a></div></li>
+  <li><h4>Safety in commissioning</h4><p>Bands below Emergency only record trial firings. A real Emergency is different: on Wed 28 Oct at 15:10 a pH excursion opened an issue tagged Commissioning, and the Leads were told by WhatsApp and in the app, with no call and no hooter.</p>
+    <div class="ch-a"><a class="go" href="prototype.html#/p/vedanta/issues">Vedanta's issues →</a><span class="k">Decision</span><a class="dref" href="#D3">D3</a></div></li>
+  <li><h4>Go live</h4><p>One library proposal at Vedanta is still undecided, so Go live is blocked. Decide it, and the confirmation lists exactly what changes: alerts turn On, calls and the hooter start, tasks begin with their count a day, first due dates spread out.</p>
+    <div class="ch-a"><a class="go" href="prototype.html#/p/vedanta">Vedanta's Readiness →</a><a class="go" href="prototype.html#/p/vedanta/library">The undecided proposal</a><span class="k">Decisions</span><a class="dref" href="#D2">D2</a><a class="dref" href="#D3">D3</a><a class="dref" href="#D7">D7</a><a class="dref" href="#D19">D19</a></div></li>
+  <li><h4>Live operation</h4><p>Manesar STP is Live with "DO low — AT-2" open since 07:40, and the issue states the terms it opened under. Dheeraj Kumar, the Operator who was told, started its diagnosis at 07:50 ("Is the blower running?" Yes), so you carry on at question 2, "Does the gauge on the blower discharge read above 0.45 bar?". Answer No: the root cause is BL-1's intake filter, the issue says "Caused by BL-1", and a fix step links a task. The issue's "Lowest" is the lowest reading while it is open (0.65 mg/L at 08:40), not the reading it opened at. Verify still shows Major; move time on +1 hour and the reading is back inside, so you close on the readings. Move time on further and more issues open from the sample readings.</p>
+    <div class="ch-a"><a class="go" href="prototype.html#/p/manesar/issues">Manesar's issues →</a><span class="k">Decisions</span><a class="dref" href="#D15">D15</a><a class="dref" href="#D16">D16</a></div></li>
+  <li><h4>Coverage</h4><p>On a Live plant, home becomes Coverage: how often each alert fires, how many were false alarms, how long issues take to close, and the blind spots only a person can find.</p>
+    <div class="ch-a"><a class="go" href="prototype.html#/p/manesar">Manesar's Coverage →</a><span class="k">Decisions</span><a class="dref" href="#D2">D2</a><a class="dref" href="#D11">D11</a><a class="dref" href="#D12">D12</a></div></li>
+  <li><h4>A library change</h4><p>Edit a limit on a type and the draft shows where it lands, counted over the four plants: values that change, plants that keep their own, open issues that keep their terms, tasks that would fall due. Try MLSS low on Diffuser Tank (Change limits under "Falls below"), Minor 2000 → 2200 mg/L: Manesar's AT-2 follows, AT-1 keeps its own 2500 mg/L. Publishing writes a dated note to each plant it reaches.</p>
+    <div class="ch-a"><a class="go" href="prototype.html#/library/OS_TANK_DF">Diffuser Tank in the library →</a><span class="k">Decisions</span><a class="dref" href="#D11">D11</a><a class="dref" href="#D17">D17</a><a class="dref" href="#D19">D19</a></div></li>
+  <li><h4>Differences from the library</h4><p>Every value a plant changed is listed with its reason, who changed it, the library value it started from and when to review it. Send it back to the library, keep it, or suggest it for the library.</p>
+    <div class="ch-a"><a class="go" href="prototype.html#/differences">All plants →</a><a class="go" href="prototype.html#/p/manesar/differences">Manesar STP only</a><span class="k">Decisions</span><a class="dref" href="#D6">D6</a><a class="dref" href="#D11">D11</a></div></li>
+  <li><h4>Decisions</h4><p>The questions for Mihir, each with its options, a recommendation and what v7/1 and v7/2 each build. Mark a call on each card, then copy the answers to send.</p>
+    <div class="ch-a"><a class="go" href="prototype.html#/decisions">The Decisions page →</a><span class="k">Decisions</span><a class="dref" href="#D1">D1</a><a class="dref" href="#D2">D2</a><a class="dref" href="#D5">D5</a></div></li>
+</ol>
+
+<!-- ─────────────────────────────────────────────────────────────── 2 -->
+<h2 id="adopts"><span class="n">2</span>What v7/1 takes from Alex</h2>
+<p>Alex's configuration model (the first pack of 27–28 Oct and the follow-up pack of 29 Oct) is right on most of what it settles. v7/1 builds these as Alex wrote them, sometimes narrowed to what this phase has. Each row gives one of Alex's ideas a short name, says it in plain words, and links the card that covers it.</p>
+<div class="tw"><table class="wide">
+  <tr><th>Alex's idea</th><th>In plain words</th><th>How v7/1 does it</th><th>Card</th></tr>
+  <tr><td>Commissioning, then Live</td><td>A plant has one stored state: Commissioning, then Live. Its home is Readiness while it is set up and Coverage once it runs.</td><td>The state is stored and only Go live sets it. Readiness, the go-live confirmation and Coverage read one checklist, so they never disagree.</td><td><a class="dref" href="#D2">D2</a></td></tr>
+  <tr><td>A quiet trial</td><td>Commissioning is a trial: alerts record what they would have done instead of telling anyone.</td><td>Bands below Emergency record trial firings with their rate a day; more than 10 a day is a "noisy" gap. The Emergency band differs (see D3).</td><td><a class="dref" href="#D3">D3</a> <a class="dref" href="#D21">D21</a></td></tr>
+  <tr><td>Library items start as drafts</td><td>What the library brings arrives as a draft, never switched on by itself.</td><td>Library proposals wait for Accept or "Not for this plant". Accepted alerts go On trial; Go live turns them On.</td><td><a class="dref" href="#D8">D8</a></td></tr>
+  <tr><td>Hold and clear times</td><td>"Must hold for" and "must clear for" are minutes on each alert; an Emergency fires on the first reading.</td><td>One firing rule, used for live issues, trial firings and the "last 7 days" preview, honours both. v6 showed a hold time but never applied it.</td><td><a class="dref" href="#D5">D5</a></td></tr>
+  <tr><td>Response times follow severity</td><td>When an issue must be started and fixed follows its severity; no alert carries its own clock.</td><td>No start-by or fix-by fields anywhere. The alert page shows "Start by / fix by follow the severity", read-only.</td><td><a class="dref" href="#D13">D13</a></td></tr>
+  <tr><td>One record of plant changes</td><td>One record for every value a plant changes: the value, the library value at the time, a reason, who, when, and a review date.</td><td>A list of plant changes beside v6's values, with a state worked out on every read (OK, Library changed since, Review due, Ended). The reasons differ (see D6).</td><td><a class="dref" href="#D6">D6</a></td></tr>
+  <tr><td>One editor, sources shown</td><td>One editor for each thing, and every value says where it comes from instead of an "inherit" step.</td><td>Source chips on every value. The library type page is the equipment page plus Where it lands and Publish. The limits sheet is the only editor of limits.</td><td><a class="dref" href="#D10">D10</a></td></tr>
+  <tr><td>Plant chosen on the page</td><td>The plant is chosen on the page, never in a header switcher; "All Plants" names the whole set.</td><td>All Plants is the way in, and the plant sits in every address.</td><td><a class="dref" href="#D10">D10</a></td></tr>
+  <tr><td>Limits from the library</td><td>The library holds the limits; they land on each plant's sensor, and a plant changes them there.</td><td>Limits sit on the type's readings, matched by reading and direction. Precedence: changed here, then the SCADA form, then the library. One rule kind only this phase (see D18).</td><td><a class="dref" href="#D18">D18</a></td></tr>
+  <tr><td>Library versions and reach</td><td>Library changes carry versions, and a library page shows who a change will reach before it is published.</td><td>One version number per equipment type. "Where it lands" is a dry run with true counts over the four plants; an Emergency-band change is a safety change that needs a reason. No pins (see D17).</td><td><a class="dref" href="#D17">D17</a> <a class="dref" href="#D11">D11</a></td></tr>
+  <tr><td>Library moved under a change</td><td>Is a plant told when the library value under its own change moves?</td><td>No push; the value shows "Library changed since" on the field, in Differences and on Coverage. Plants whose values follow a change get a dated note.</td><td><a class="dref" href="#D11">D11</a></td></tr>
+  <tr><td>A plant Readings list</td><td>Should the plant have a Readings list?</td><td>Yes, in both Commissioning and Live, grouped by equipment, with SCADA, manual and lab readings.</td><td><a class="dref" href="#D12">D12</a></td></tr>
+  <tr><td>Cause found by diagnosis</td><td>Which equipment caused an issue is found through diagnosis.</td><td>An issue stays on the equipment whose sensor fired and gains "Caused by &lt;tag&gt;" when its root cause sits on other equipment.</td><td><a class="dref" href="#D16">D16</a></td></tr>
+  <tr><td>No tasks before Live</td><td>No scheduled tasks run before Live.</td><td>Tasks start at Go live, with first due dates spread across each task's interval (see D19).</td><td><a class="dref" href="#D19">D19</a></td></tr>
+  <tr><td>Consequence first</td><td>Show the consequence before it is saved.</td><td>"Last 7 days with these limits" while limits are typed; Where it lands before Publish; the go-live confirmation lists every change.</td><td><a class="dref" href="#D5">D5</a></td></tr>
+</table></div>
+
+<!-- ─────────────────────────────────────────────────────────────── 3 -->
+<h2 id="differs"><span class="n">3</span>What v7/1 does differently, and why</h2>
+<p>Where v7/1 departs from Alex's pack, from v6, or from Mihir's earlier direction, the reason and the options are on a decision card. In short:</p>
+<div class="tw"><table class="wide">
+  <tr><th>Topic</th><th>Alex's pack</th><th>v7/1</th><th>Card</th></tr>
+  <tr><td>Grouping above equipment</td><td>Stages, unit processes and control groups in the spine.</td><td>Not this phase. Each tank holds its own readings, issues and tasks; the costs are named as next-phase work.</td><td><a class="dref" href="#D1">D1</a> <a class="dref" href="#D20">D20</a></td></tr>
+  <tr><td>Readiness</td><td>Tracks Structure · Bindings · People; four blockers.</td><td>Tracks What SCADA found · What the library brings · Who is told; adds "every proposal decided" and "at least one alert On trial or On".</td><td><a class="dref" href="#D2">D2</a></td></tr>
+  <tr><td>An Emergency during Commissioning</td><td>Nothing is sent until Live, even for a real Emergency.</td><td>The Emergency opens a real issue told to the Leads by WhatsApp and in the app; no call, no hooter (Alex's own memo's recommendation).</td><td><a class="dref" href="#D3">D3</a></td></tr>
+  <tr><td>Where readings come from</td><td>Not said.</td><td>Labelled sample readings, one engine for trial firings, the preview and live issues.</td><td><a class="dref" href="#D5">D5</a></td></tr>
+  <tr><td>Reasons for a plant change</td><td>Physical, Regulatory or client, Structural, Tuning, Temporary.</td><td>"Tuned for this plant" and "For now, until …", plus three ways out that are not changes: sensor fault, built differently, library wrong.</td><td><a class="dref" href="#D6">D6</a></td></tr>
+  <tr><td>Work for a set of equipment</td><td>Filed on the unit process.</td><td>Routine work shows as one task per type at the plant, with a line per equipment.</td><td><a class="dref" href="#D7">D7</a></td></tr>
+  <tr><td>Trial on a Live plant</td><td>Only by sending the whole plant back to Commissioning.</td><td>Each alert has its own state: Draft, On trial, On, Off.</td><td><a class="dref" href="#D8">D8</a></td></tr>
+  <tr><td>The source of equipment</td><td>The survey and the plant graph; "SCADA" is a copy defect.</td><td>"SCADA", read-only; every fix is made in SCADA, then read again. Drawn-versus-stored mismatches are gaps.</td><td><a class="dref" href="#D9">D9</a></td></tr>
+  <tr><td>Phone Equipment Card</td><td>Open question.</td><td>Recommended: two linked views that share one editor.</td><td><a class="dref" href="#D10">D10</a></td></tr>
+  <tr><td>Plants that follow a library change</td><td>Updated with no notice.</td><td>Updated at once, with a dated note at each plant and a reason on each task that falls due.</td><td><a class="dref" href="#D11">D11</a></td></tr>
+  <tr><td>Hand-test readings</td><td>Limits only on a sensor page.</td><td>Manual and lab readings use the same limits sheet; a plant Readings list in both states.</td><td><a class="dref" href="#D12">D12</a></td></tr>
+  <tr><td>People</td><td>Roster, phones and grants edited in the console.</td><td>Read-only from the User Center; reachability is a go-live blocker.</td><td><a class="dref" href="#D13">D13</a></td></tr>
+  <tr><td>Words</td><td>Trigger, Zones, Persistence, Override, Deviation and more on screen.</td><td>Plain words on screen; the mapping lives in the <a href="#words">word map</a>.</td><td><a class="dref" href="#D14">D14</a></td></tr>
+  <tr><td>Open issues</td><td>An alert with an open issue is frozen.</td><td>No freeze: the issue finishes on the terms it opened under; changes apply at once.</td><td><a class="dref" href="#D15">D15</a></td></tr>
+  <tr><td>What an issue is about</td><td>Equipment, unit process or plant.</td><td>The equipment whose sensor fired, plus "Caused by".</td><td><a class="dref" href="#D16">D16</a></td></tr>
+  <tr><td>Library versions</td><td>On types and on templates; four kinds picked by the publisher; pins.</td><td>One version per equipment type, the kind worked out from the change, no pins.</td><td><a class="dref" href="#D17">D17</a></td></tr>
+  <tr><td>Limits that scale with size</td><td>Expressions over design values; up to 12 source states.</td><td>One rule (motor current from the SCADA form's motor rating) and six source chips, worked out on every read.</td><td><a class="dref" href="#D18">D18</a></td></tr>
+  <tr><td>First due dates</td><td>The last service date entered at commissioning, else go-live day.</td><td>Spread across each task's interval; an optional "last done" date per task.</td><td><a class="dref" href="#D19">D19</a></td></tr>
+  <tr><td>"Noisy"</td><td>More than 10 trial firings a day.</td><td>The same rule today, with the rate and "mostly short" shown on every alert.</td><td><a class="dref" href="#D21">D21</a></td></tr>
+</table></div>
+
+<h3 id="words">Words on screen</h3>
+<p>Screens use plain words; Alex's terms appear only on the Decisions page, in this document and, for now, in the v7/2 line of the "Decisions on this screen" marker (an open call at the end of the <a href="../challenges.html#study">challenges doc</a>). This is the map between the two (decision <a class="dref" href="#D14">D14</a>).</p>
+<div class="tw"><table class="wide">
+  <tr><th>Alex's word</th><th>On screen in v7/1</th><th>Why</th></tr>
+  <tr><td>Trigger</td><td>alert (what an admin sets); issue (what opens)</td><td>Every v7/1 alert is fired by a reading; scheduled work is a task's cadence. "Alert" passes the "would Devid know what this means?" test.</td></tr>
+  <tr><td>Zones</td><td>limits: Caution · Minor · Major · Emergency</td><td>Alex's own screens say "limits".</td></tr>
+  <tr><td>Persistence / Clearing</td><td>must hold for N min / must clear for N min</td><td>Alex's own labels on the alert page.</td></tr>
+  <tr><td>Binding, bindings pass</td><td>What the library brings; a proposal; Accept / Not for this plant</td><td>Says what the admin is doing.</td></tr>
+  <tr><td>Derived</td><td>From the SCADA form (e.g. "From the SCADA form: 22 kW motor")</td><td>Names the source a person can go and fix.</td></tr>
+  <tr><td>Override</td><td>Changed here</td><td>Plain, and the reason is shown next to it.</td></tr>
+  <tr><td>Base moved</td><td>Library changed since</td><td>Says what happened.</td></tr>
+  <tr><td>Deviation(s)</td><td>Differences from the library</td><td>Plain; no blame in the word.</td></tr>
+  <tr><td>Downstream panel</td><td>Where it lands</td><td>Says what the panel answers.</td></tr>
+  <tr><td>Template, template version</td><td>The type's alerts and tasks; "Library · version N" on the type</td><td>One version per equipment type (D17).</td></tr>
+  <tr><td>Plant graph, survey</td><td>SCADA, What SCADA found</td><td>The tool staff open and the export v7/1 reads (D9).</td></tr>
+  <tr><td>Unit process, control group, stage</td><td>Not shown this phase</td><td>Next phase; Alex's names will be used when they arrive (D1, D20).</td></tr>
+  <tr><td>Machine</td><td>equipment</td><td>Alex is right: a tank is equipment.</td></tr>
+  <tr><td>Estate</td><td>All Plants</td><td>Alex's word.</td></tr>
+  <tr><td>Readiness, Coverage, Commissioning, Live, Trial firing</td><td>the same</td><td>Alex's words; they are plain already.</td></tr>
+  <tr><td>Library (never "database")</td><td>library; the database's type names as stored</td><td>Alex's word for the library; the type names stay verbatim.</td></tr>
+  <tr><td>Full, Technical, People Admin; grants</td><td>not shown</td><td>v7/1 has one user, the Global Admin, and no role picker.</td></tr>
+</table></div>
+
+<h3 id="contract-changes">Changes the cards ask for</h3>
+<p>Several cards end "Contract should change". These are the places where v7/1's own build plan should change, collected from the cards into one list.</p>
+<div id="dec-contract"><p class="muted">Loading from the decisions file…</p></div>
+
+<!-- ─────────────────────────────────────────────────────────────── 4 -->
+<h2 id="decisions"><span class="n">4</span>The decisions</h2>
+<p>Each card is one question for Mihir. It gives the recommendation, what v7/1 builds and what v7/2 builds side by side, the options with their consequences, and, folded, what Alex's pack says, what v6 does today, Mihir's earlier direction and what to tell Alex. The cards come from one file (<code>assets/decisions7.js</code>), which the prototype's <a href="prototype.html#/decisions">Decisions page</a>, the strip under each screen's header and the challenges doc read too. The first 21 came from the first review of Alex's packs; the later ones arose while reviewing v7/1 and designing v7/2.</p>
+<div class="callout"><b>How to answer.</b> Pick a call under any card's options: here, on the <a href="prototype.html#/decisions">Decisions page</a> or in the challenges doc. All three share one set of calls in this browser. <b>Copy my answers</b> is on the Decisions page and in the challenges doc. Three cards are marked <b>Decide before building further</b>: D1, D2 and D5. If Alex's full structure were picked on D1, every reading, issue and task would move to a new home under every page.</div>
+<p class="dec-chal"><a class="go" href="../challenges.html">Read every challenge in the challenges doc →</a> <span class="muted small">It adds the readings v7/2 takes where Alex's drafts are silent, and the open calls about the study itself.</span></p>
+<div id="dec-table"><p class="muted">Loading from the decisions file…</p></div>
+<div id="dec-list"><noscript><p class="callout warn">The decision cards are rendered from <code>assets/decisions7.js</code> and need JavaScript.</p></noscript></div>
+
+<!-- ─────────────────────────────────────────────────────────────── 5 -->
+<h2 id="simulated"><span class="n">5</span>What is simulated</h2>
+<ul>
+  <li><b>Readings.</b> Every reading is a sample series, worked out the same way every time from the sensor and the time, polled every 15 minutes in this build (D5 recommends 1 minute). Each count or preview built from them carries <b>Sample readings</b>. DigitalPaani's structure is real; its readings are samples too.</li>
+  <li><b>The SCADA read.</b> DigitalPaani is the exported SCADA layout (drawing v157, site labelled Ireo Uptown). "Read again" is not wired. The form answers on five of its equipment (EQTT-1, EQTT-2, FFP-1, FFP-2, UFFP-1) are stand-ins.</li>
+  <li><b>One user.</b> Everyone is the Global Admin; there is no role picker, so who may do what (Full or Technical Admin, a Lead with a grant) is not shown.</li>
+  <li><b>The User Center.</b> A read-only stub built from v6's rosters. "Edit in the User Center" only shows a message.</li>
+  <li><b>Messages.</b> Nothing is sent. An issue records who would have been told and how (WhatsApp, in the app, a call, the hooter).</li>
+  <li><b>The operator app.</b> Not part of v7. Issue and task pages stand in for the work, and the equipment page's Phone view stands in for the Equipment Card.</li>
+  <li><b>Time.</b> One story clock for every plant, starting Thu 29 Oct 2026, 09:00 IST. <b>Move time on</b> (+1 hour to +1 week) runs the engine for every plant; Activity is stamped with the same clock.</li>
+  <li><b>The library.</b> v6's content, every type at version 1 except Clarifier Tank, already at version 2 (published Tue 20 Oct: Sludge blanket high must hold for 5 → 15 min), so SC-1 starts as "Library changed since".</li>
+  <li><b>Storage.</b> In the browser only: <code>ctl7.estate.v1</code> and <code>ctl7.overlay.v1</code> (the story), <code>ctl7.story</code> (story panel open or closed), <code>ctl7.decisions</code> (your calls, shared with this document, the challenges doc and v7/2).</li>
+</ul>
+
+<!-- ─────────────────────────────────────────────────────────────── 6 -->
+<h2 id="ac"><span class="n">6</span>Acceptance criteria</h2>
+<p>Each criterion is one check in the prototype, starting from <b>Reset the story</b>. They follow the 12 chapters. Where a decision card recommends something v7/1 does not do yet, the criterion checks what v7/1 does now; the card says what would change.</p>
+
+<h3>1 · The library <a class="go" href="prototype.html#/library">Open</a></h3>
+<div class="tw"><table class="ac">
+  <tr><td>V7-1</td><td>The library lists 56 equipment types under the database's names as stored (for example "Diffuser Tank", "Open Skeleton Tank", "ACF/MGF"), grouped by family, each with how many plants use it and its version.</td></tr>
+  <tr><td>V7-2</td><td>The library shows one plain box: "Grouping equipment into treatment steps, and readings on pipes between equipment — next phase." No page shows a grouping level, chip or breadcrumb above equipment.</td></tr>
+  <tr><td>V7-3</td><td>A type page (Blower) has the same tabs as an equipment page, Readings · Issues · Tasks · Details, and its header reads "Library · version 1".</td></tr>
+  <tr><td>V7-4</td><td>Limits on a type page are per reading and direction, each with a source chip; Diffuser Tank's DO low reads Minor 2.0, Major 1.0, Emergency 0.5 mg/L.</td></tr>
+</table></div>
+
+<h3>2 · A new plant from SCADA <a class="go" href="prototype.html#/p/digitalpaani/scada">Open</a></h3>
+<div class="tw"><table class="ac">
+  <tr><td>V7-5</td><td>All Plants lists four plants, each tagged: DigitalPaani "Real SCADA layout"; Manesar STP, Bawal WTP and Vedanta ETP "Sample plant". The top bar has no plant switcher; the plant is in the address.</td></tr>
+  <tr><td>V7-6</td><td>DigitalPaani is Commissioning since Thu 29 Oct, 08:30, and its home is Readiness: whether it can go live, with 5 blockers and 3 gaps at the start.</td></tr>
+  <tr><td>V7-7</td><td>What SCADA found groups DigitalPaani's 66 pieces of equipment into 13 database types, each with Accept, plus Accept all; nothing is accepted at the start. Accepting a group updates the SCADA track on Readiness.</td></tr>
+  <tr><td>V7-8</td><td>It lists the three pieces of equipment drawn as one type and stored as another: Screen Chamber (drawn Screen Chamber Tank), EQT Tank - 1 and EQT Tank - 2 (drawn Diffuser Tank), all stored as Open Skeleton Tank. The page says the stored type is the one used and that the drawing is fixed in SCADA, then read again.</td></tr>
+  <tr><td>V7-9</td><td>No page edits a SCADA fact: the type, the tag and the form answers are read-only on the equipment page's Details tab.</td></tr>
+</table></div>
+
+<h3>3 · What the library brings <a class="go" href="prototype.html#/p/digitalpaani/library">Open</a></h3>
+<div class="tw"><table class="ac">
+  <tr><td>V7-10</td><td>Proposals are listed per piece of equipment, grouped by type with "Accept all for &lt;n&gt; &lt;type&gt;"; each alert proposal shows its limits with a source chip, each task its cadence.</td></tr>
+  <tr><td>V7-11</td><td>A proposal that needs a reading SCADA doesn't send (for example motor current on DigitalPaani's pumps) is greyed, says why, and cannot be accepted.</td></tr>
+  <tr><td>V7-12</td><td>Accepting an alert puts it On trial, never On. "Not for this plant" asks for a reason. Both show in Activity.</td></tr>
+</table></div>
+
+<h3>4 · Readiness <a class="go" href="prototype.html#/p/digitalpaani">Open</a></h3>
+<div class="tw"><table class="ac">
+  <tr><td>V7-13</td><td>Readiness shows blockers before gaps, each linking to where it is fixed, and three tracks with progress: What SCADA found · What the library brings · Who is told.</td></tr>
+  <tr><td>V7-14</td><td>At the start DigitalPaani's blockers are: What SCADA found not accepted; library proposals not decided; no alert On trial; no reachable Operator; no reachable Lead. Its gaps include the three drawn-versus-stored mismatches.</td></tr>
+  <tr><td>V7-15</td><td>Go live is disabled and reads "Go live is blocked by &lt;n&gt; things. First: &lt;the first blocker&gt;" (DigitalPaani: "Go live is blocked by 5 things. First: accept what SCADA found (13 types)"), or with one blocker "Go live is blocked by 1 thing: &lt;the blocker&gt;" (Vedanta: "Go live is blocked by 1 thing: decide MLSS low on SBR-1").</td></tr>
+  <tr><td>V7-16</td><td>Who is told is read-only; "Edit in the User Center" only shows a message. No page edits people or phones, and no alert has start-by or fix-by fields.</td></tr>
+  <tr><td>V7-17</td><td>The blocker and gap lines on Readiness, in the go-live confirmation and on Coverage are word for word the same (one checklist).</td></tr>
+</table></div>
+
+<h3>5 · Trial and tuning <a class="go" href="prototype.html#/p/vedanta/alert/a_3d">Open</a></h3>
+<div class="tw"><table class="ac">
+  <tr><td>V7-18</td><td>Vedanta ETP is Commissioning since Fri 23 Oct, 10:00 (day 6 of the trial). Its accepted alerts are On trial, and every count and preview carries "Sample readings".</td></tr>
+  <tr><td>V7-19</td><td>"Level high — EQ-1" shows about 13 trial firings a day and is the one noisy gap on Readiness (more than 10 a day, averaged over the trial so far).</td></tr>
+  <tr><td>V7-20</td><td>"DO low — SBR-1" shows about 6 trial firings a day and "mostly short", and is not marked noisy.</td></tr>
+  <tr><td>V7-21</td><td>Change limits on SBR-1's DO: the sheet shows "Last 7 days with these limits: would have fired N times (now M)" and recomputes while typing (Minor 1.8 mg/L gives about 7 instead of 42).</td></tr>
+  <tr><td>V7-22</td><td>Saving a value that differs from the library needs a reason, "Tuned for this plant" (review in 6 months) or "For now, until &lt;date&gt;", and a note. The three ways out (the sensor reads wrong · it is built differently · the library is wrong) are offered and none is saved as a change. The saved value shows "Changed here" and appears in Differences from the library.</td></tr>
+  <tr><td>V7-23</td><td>The limits sheet notes "Emergency fires on the first reading". The alert page shows must hold for / must clear for, and "Start by / fix by follow the severity", read-only.</td></tr>
+</table></div>
+
+<h3>6 · Safety in commissioning <a class="go" href="prototype.html#/p/vedanta/issues">Open</a></h3>
+<div class="tw"><table class="ac">
+  <tr><td>V7-24</td><td>Vedanta's issues list one open Emergency issue on EQ-1's pH, opened Wed 28 Oct, 15:10, tagged Commissioning.</td></tr>
+  <tr><td>V7-25</td><td>Its page says who was told: the Leads by WhatsApp and in the app; no call, no hooter.</td></tr>
+  <tr><td>V7-26</td><td>Moving time on at Vedanta adds trial firings for bands below Emergency and opens no issue for them.</td></tr>
+</table></div>
+
+<h3>7 · Go live <a class="go" href="prototype.html#/p/vedanta">Open</a></h3>
+<div class="tw"><table class="ac">
+  <tr><td>V7-27</td><td>Vedanta's only blocker is the undecided proposal "MLSS low on SBR-1", and it links to What the library brings.</td></tr>
+  <tr><td>V7-28</td><td>Once it is decided, Go live opens a confirmation listing: alerts going from On trial to On (with the count), "Calls and the hooter start now", tasks a day both ways (about 47, or "59 if each piece of equipment gets its own": the same words on every plant and on the Tasks tab), first due dates spread across each task's interval, counts starting today, and structure changes needing a reason. An alert On trial for under a day is named: deciding "MLSS low on SBR-1" at 09:00 gives "MLSS low — SBR-1 has been On trial for 0 min; it turns On without a trial", and the trial card lists it as "Accepted just now: no trial yet", never among the quiet alerts.</td></tr>
+  <tr><td>V7-29</td><td>Confirming makes Vedanta Live: its home becomes Coverage, its On trial alerts are On, and Activity records the go live. Until an alert opens an issue, Coverage says "No alert has opened an issue since go live" and labels the list: "13 alerts are On and quiet: …".</td></tr>
+  <tr><td>V7-30</td><td>On a Live plant, "Return to Commissioning" needs a reason, says Emergencies are still sent to the Leads, and says what would then block go live again (Manesar: "80 library proposals not decided"). On a Live plant, "Accept all" says its alerts run On trial for 7 days and then reach people, and that tasks start now, with the tasks a day before and after (Manesar: 36 a day, up from 2).</td></tr>
+</table></div>
+
+<h3>8 · Live operation <a class="go" href="prototype.html#/p/manesar/issues">Open</a></h3>
+<div class="tw"><table class="ac">
+  <tr><td>V7-31</td><td>The top bar shows the story clock, Thu 29 Oct, 09:00. Move time on (+1 hour, +6 hours, +1 day, +1 week) moves every plant and says what happened; Reset the story returns to the start.</td></tr>
+  <tr><td>V7-32</td><td>Manesar STP is Live since Tue 1 Sep 2026 with one open issue, "DO low — AT-2", opened Thu 29 Oct, 07:40, whose page reads "Opened under: Major below 1.0 mg/L, must hold for 0 min, must clear for 15 min". Its diagnosis was started at 07:50 by Dheeraj Kumar, the Operator who was told ("Is the blower running?" Yes, shown with their name), so the reading coming back cannot close it as unstarted.</td></tr>
+  <tr><td>V7-33</td><td>AT-2's DO is back inside its limits from 09:55 (1.6 mg/L at 09:40, 2.1 at 09:55), so after the fix, +1 hour shows it inside and Verify closes on the readings; until then Verify says it is still in Major and that closing now records the fix as worked, and its gauge names the band the reading is in ("Now 0.89 mg/L · Major"). Moving time on further opens new issues at Manesar from the sample readings (BL-1 motor current from 14:10 today, SC-1 sludge blanket early on Fri 30 Oct), each stating its terms.</td></tr>
+  <tr><td>V7-34</td><td>An issue runs its diagnosis step by step to a root cause, then numbered fix steps; a step that names a general task opens that task and comes back (Manesar's "DO low — AT-2": Yes (Dheeraj Kumar, 07:50), then No at question 2 → Intake filter blocked, caused by BL-1 → step 4 links "Open the task: Blower suction filter cleaning"). A fix step that is a question ("Is the filter element clean?") is answered Yes or No and the answer is logged. Verify "yes" closes the issue, "no" returns to diagnosis; when the reading came back before the fix was done, Verify says so before you close. "Close as a false alarm" sits in Verify and close as a quiet second choice, and asks why.</td></tr>
+  <tr><td>V7-35</td><td>When the root cause sits on another equipment type, the issue shows "Caused by &lt;tag&gt;" and that equipment's Issues tab lists it.</td></tr>
+  <tr><td>V7-36</td><td>Changing AT-2's DO limits while its issue is open applies to the alert at once; the open issue keeps its terms and says "Opened under the old limit …".</td></tr>
+</table></div>
+
+<h3>9 · Coverage <a class="go" href="prototype.html#/p/manesar">Open</a></h3>
+<div class="tw"><table class="ac">
+  <tr><td>V7-37</td><td>Manesar's home is Coverage ("How the alerts are doing"): for each alert, fires a day, the share closed as false alarms, and the time to close; blind spots (issues only a person can find, with or without a task that looks for them); the checklist's gaps; library change notes.</td></tr>
+  <tr><td>V7-38</td><td>The equipment page's Phone view shows the same equipment one decision per screen, limits read-only, and "Change limits" opens the same limits sheet.</td></tr>
+</table></div>
+
+<h3>10 · A library change <a class="go" href="prototype.html#/library/OS_TANK_DF">Open</a></h3>
+<div class="tw"><table class="ac">
+  <tr><td>V7-39</td><td>Editing a limit on a type makes a draft, and Where it lands shows true counts over the four plants. Diffuser Tank, MLSS Minor below 2000 → 2200 mg/L: "Reaches 1 plant · 1 value changes (AT-2) · 1 value kept here (AT-1)"; Manesar AT-2 follows (2000 → 2200 mg/L) and AT-1 keeps its 2500 mg/L.</td></tr>
+  <tr><td>V7-40</td><td>An Emergency-band change is a safety change: it says it reaches every plant, including the ones that changed it, and needs a reason (Diffuser Tank DO Emergency 0.5 → 0.6 mg/L ends Manesar AT-1's change on that band).</td></tr>
+  <tr><td>V7-41</td><td>A cadence change lists the plants that follow, with the whole "how often" on both sides (Blower "Bearing service" every 6 months or 500 run-hours → every 3 months or 500 run-hours: BL-1 and BL-2 at Vedanta and at Manesar), any task that would fall due now, with why, and any task never done since go live that comes due sooner (Manesar BL-2: "counts from today: due Wed 27 Jan (was Sun 28 Feb)"). Where it lands and publish use one rule, so after publishing BL-2's bearing service is due Wed 27 Jan, 09:00, and the plant's change note names it; BL-1's stays due Tue 10 Nov by its hour meter.</td></tr>
+  <tr><td>V7-42</td><td>Publish needs a note, moves the type to version 2, writes a dated change note to each affected plant's Activity and Coverage, and sends nothing. Afterwards AT-1's MLSS shows "Library changed since". When a value a plant kept equals the library's new value (MLSS Minor 2000 → 2500 mg/L, AT-1's own value), Where it lands says "keeps its own 2500 mg/L — now the same as the library" and Differences shows it as "Now the same as the library", with Back to the library value as its action, not as Library changed since. Discard draft leaves the library as it was.</td></tr>
+</table></div>
+
+<h3>11 · Differences from the library <a class="go" href="prototype.html#/differences">Open</a></h3>
+<div class="tw"><table class="ac">
+  <tr><td>V7-43</td><td>Differences (all plants, and per plant) lists every plant change: equipment and reading, what, plant value, library value or SCADA form value, named as such (and the value it started from when different), reason and note, who, when, review by, and state.</td></tr>
+  <tr><td>V7-44</td><td>Manesar's seeded changes read "Reason not recorded (changed before reasons were kept)"; its plant-only items read "Not in the library" and offer "Suggest for the library".</td></tr>
+  <tr><td>V7-45</td><td>Filters: All · Library changed since · Review due · Reason not recorded · Not in the library · Ended. Each row offers Back to the library value (Back to the SCADA form value when the value it differs from comes from the SCADA form, as on Manesar's BL-1 motor current, 22 kW motor), Keep (with a new review date) and Suggest for the library; a band that would leave its reading's bands out of order is checked before the dialog opens, which then offers only "for all 3 bands" and lists what each becomes (Manesar BL-1 motor current, Minor). Going back that removes or restores an Emergency says so, and an open issue on the reading is named whatever the plant's state. Each action says what happened and shows in Activity.</td></tr>
+</table></div>
+
+<h3>12 · Decisions <a class="go" href="prototype.html#/decisions">Open</a></h3>
+<div class="tw"><table class="ac">
+  <tr><td>V7-46</td><td>The Decisions page lists every card in order, D1 to D21 from the first review and then the ones that arose later (D22 to D27), grouped Decide before building further (3) · Shapes v7 (17) · Small (7). Each card opens and closes, marks the recommended option, shows what v7/1 and v7/2 build and links into the prototype; every link opens a page.</td></tr>
+  <tr><td>V7-47</td><td>A call picked on a card is still there after a reload. "Copy my answers" copies lines "D1 — &lt;question&gt;: &lt;chosen option&gt; (note)", and shows the text to copy by hand when the browser blocks copying.</td></tr>
+  <tr><td>V7-48</td><td>Every story chapter's decision chips open the matching card at #/decisions/&lt;id&gt;, and this document shows the same cards from the same file.</td></tr>
+  <tr><td>V7-49</td><td>Outside the Decisions page no screen shows Alex's terms (Trigger, Zones, Binding, Persistence, Derived, unit process, control group, stage), "machine", "Custom", "estate", decision IDs or spec section numbers. The smoke test checks every rendered page; the workbook's own wording ("dead zones", "sludge zone", the lab weights W1/W2) is quoted as written and listed as a warning. The one exception is the quiet "Decisions on this screen" marker under a page header: it names its cards and quotes what v7/2 builds in v7/2's own words, and the smoke test checks it on its own. Whether it should quote those words is an open call at the end of the challenges doc.</td></tr>
+</table></div>
+
+<!-- ─────────────────────────────────────────────────────────────── 7 -->
+<h2 id="run"><span class="n">7</span>How to run and reset</h2>
+<ol>
+  <li>Open <code>site/v7/1/prototype.html</code> in a browser, from any static server or straight from disk. There is no build step and no library: plain JavaScript, with Figtree and IBM Plex Mono from Google Fonts.</li>
+  <li>Start at <b>All Plants</b>. The <b>Story</b> button opens the 12 chapters; each has "Take me there" and links to its decisions.</li>
+  <li><b>Reset the story</b> (top bar) puts every plant back to Thu 29 Oct, 09:00 and clears everything changed in the story. It does not clear your calls on the Decisions page; use "Clear my call" on a card, or remove <code>ctl7.decisions</code> from the browser's storage.</li>
+  <li>Checks, from <code>site/v7/1</code> with Node: <code>node tests/smoke.js</code> renders every page for every plant and fails on errors, banned words and dead links; <code>node tests/core7.test.js</code> checks the story's outcomes; <code>node tests/decisions7.test.js</code> checks the decision cards, their links and this document; <code>node tests/integrate7.test.js</code> walks the twelve chapters in one session and checks that every module's pages agree. From <code>site/v7</code>, <code>node tests/docs.test.js</code> checks this document, the overview and the challenges doc.</li>
+</ol>
+<div class="tw"><table class="wide">
+  <tr><th>File</th><th>What it holds</th></tr>
+  <tr><td><code>prototype.html</code></td><td>The app: loads the files below in order.</td></tr>
+  <tr><td><code>assets/data.js … runtime.js</code></td><td>v6's data and logic, copied; small patches are marked "v7:".</td></tr>
+  <tr><td><code>assets/core7.js</code></td><td>v7's state, scenario, story clock, sample readings, firing engine, plant changes, sources, checklist and library publish.</td></tr>
+  <tr><td><code>assets/ui7.js</code>, <code>v7.css</code></td><td>UI kit, router, top bar, story panel, All Plants, Activity.</td></tr>
+  <tr><td><code>assets/plant7.js</code></td><td>Plant home (Readiness or Coverage, go live), What SCADA found, What the library brings, equipment, readings, tasks.</td></tr>
+  <tr><td><code>assets/object7.js</code></td><td>The one object page (equipment and library type), Phone view, limits sheet, alert page.</td></tr>
+  <tr><td><code>assets/lib7.js</code></td><td>Library list, type page, Where it lands, Publish, Differences.</td></tr>
+  <tr><td><code>assets/work7.js</code></td><td>Issues, the issue page (diagnosis, fix, verify), task page, Report a problem.</td></tr>
+  <tr><td><code>assets/decisions7.js</code>, <code>decisions7.css</code></td><td>The decision cards, the Decisions page, the quiet "Decisions on this screen" strip under each page header, and the document view this page, the overview and the challenges doc draw. One file, shared by both prototypes.</td></tr>
+</table></div>
+
+<!-- ─────────────────────────────────────────────────────────────── 8 -->
+<h2 id="open"><span class="n">8</span>Open items carried from v6</h2>
+<p>v6's hand-off left these for Mihir to confirm. v7 changes some of them; the rest stand as v6 left them.</p>
+<div class="tw"><table class="wide">
+  <tr><th>Item</th><th>Where it stands in v7</th><th>Card</th></tr>
+  <tr><td>Sludge-pump work sits on the Tube settler; the sludge-pump breakdown issue sits on every pump</td><td>Unchanged, marked to confirm. Using SCADA's pipes to place it is proposed as the next phase's first step.</td><td><a class="dref" href="#D20">D20</a></td></tr>
+  <tr><td>DigitalPaani's screen chamber is stored as Open Skeleton Tank</td><td>Now a Readiness gap with "Fix it in SCADA, then read again"; the database team decides.</td><td><a class="dref" href="#D9">D9</a></td></tr>
+  <tr><td>11 screen tasks on both Mechanical Screen and Screen Chamber Tank</td><td>Unchanged; no plant in the study draws both.</td><td><a class="dref" href="#D1">D1</a></td></tr>
+  <tr><td>Where the MBBR's outlet issues and tests sit (TSS and odour on MBBR)</td><td>Unchanged, marked "Where it belongs: to confirm"; "Caused by" added.</td><td><a class="dref" href="#D16">D16</a></td></tr>
+  <tr><td>Duty/standby changeovers on every blower</td><td>Shown as one task per type with a line per blower; one plant round proposed.</td><td><a class="dref" href="#D7">D7</a></td></tr>
+  <tr><td>Conditional cadences kept as notes ("below 1 ppm, test every 2 hours")</td><td>Still notes. A report prompt when a hand test passes its limit is proposed.</td><td><a class="dref" href="#D12">D12</a></td></tr>
+  <tr><td>Fixed first due date (2 Nov) for every inherited task; run-hours work on blowers with no meter</td><td>First due dates are spread at go live; run-hours work falls due by its hour meter, which counts only while the equipment runs, from the last service or go live.</td><td><a class="dref" href="#D19">D19</a></td></tr>
+  <tr><td>DigitalPaani has no Lead, so its maintenance sign-off could not be saved</td><td>No sign-off in v7; no reachable Lead is a go-live blocker read from the User Center.</td><td><a class="dref" href="#D13">D13</a></td></tr>
+  <tr><td>Values marked "to confirm": content guessed for 12 types, guessed current limits, pH and MLSS limits, Ozonator, UV, Gas Tonner</td><td>Unchanged and still marked. D6 asks Alex to leave them out of the pack's target of 80% of proposals accepted without change until they are signed off.</td><td><a class="dref" href="#D6">D6</a></td></tr>
+  <tr><td>Guessed severities: H2S high at the screen; the new MBBR DO, pH and temperature alerts</td><td>Unchanged, to confirm.</td><td></td></tr>
+  <tr><td>Plant maintenance rounds (MCC, structure, calibration) are allowed on the plant</td><td>Unchanged, to confirm.</td><td></td></tr>
+  <tr><td>Lab cadences assume no lab (30 days); no "has a lab" fact on the plant</td><td>Unchanged, to confirm.</td><td></td></tr>
+  <tr><td>v5 tasks the workbook repeats (intake filter, bearing service, dosing pump, media and tube cleaning, probe calibration)</td><td>Both kept, to confirm.</td><td></td></tr>
+  <tr><td>Rake causes listed on the manual Screen Chamber Tank</td><td>Unchanged, to confirm.</td><td></td></tr>
+  <tr><td>The chemical dosing check sits on Dosing Tank only</td><td>Unchanged, to confirm.</td><td></td></tr>
+  <tr><td>Microscopy has no steps of its own</td><td>Unchanged, to confirm.</td><td></td></tr>
+  <tr><td>65 fix-step and task pairs left unlinked, each with a reason</td><td>Unchanged; the list needs a reader.</td><td></td></tr>
+  <tr><td>How the workbook was read: causes on several types, sludge blanket opens overflow, sensor-fault causes, v5's diagnostics kept</td><td>Unchanged, to confirm.</td><td></td></tr>
+  <tr><td>Saved data from an older library is refused</td><td>v7 keeps its own storage keys; Reset the story starts again.</td><td></td></tr>
+</table></div>
+
+</article>
+</div></div>
+
+<script src="assets/decisions7.js?v=3"></script>
+<script>
+/* Fills sections 3 and 4 from assets/decisions7.js, the file the prototype's Decisions page and the challenges doc read
+   too: "Changes the cards ask for" here, then the at-a-glance table and every card through V7DEC.renderDoc (v7/1 marked
+   "You are here"; the your-call chips share the prototypes' calls). It never loads the app. */
+window.V7_PAGE = 'doc'; window.V7_VARIANT = '1';
+(function () {
+  'use strict';
+  var D = window.V7DEC, cards = window.V7_DECISIONS;
+  var $ = function (id) { return document.getElementById(id); };
+  var fill = function (id, html) { var el = $(id); if (el) el.innerHTML = html; };
+  if (!D || !Array.isArray(cards) || typeof D.renderDoc !== 'function') {
+    ['dec-contract', 'dec-table', 'dec-list'].forEach(function (id) { fill(id, '<p class="callout warn">The decisions file (assets/decisions7.js) did not load.</p>'); });
+    return;
+  }
+  var esc = D.esc;
+  fill('dec-n', String(cards.length));                 // the tile follows the file as cards arrive
+
+  /* changes the cards ask of the contract (from what v7/1 builds) */
+  var CC = /(?:The c|C)ontract should change/;
+  var asks = cards.filter(function (d) { return CC.test(d.v7Does); }).map(function (d) {
+    var t = d.v7Does; var i = t.search(CC);
+    return '<tr><td><a class="dref" href="#' + esc(d.id) + '">' + esc(d.id) + '</a></td><td><div class="prose">' + D.prose(t.slice(i)) + '</div></td></tr>';
+  });
+  fill('dec-contract', asks.length ? '<div class="tw"><table class="dsum"><tr><th>Card</th><th>What should change</th></tr>' + asks.join('') + '</table></div>' : '<p class="muted">None.</p>');
+
+  /* at a glance and every card, grouped by when they arose; a deep link (#D7) lands on its card */
+  D.renderDoc({ glance: 'dec-table', cards: 'dec-list', mode: 'doc', level: 3 });
+}());
+</script>
+</body>
+</html>
