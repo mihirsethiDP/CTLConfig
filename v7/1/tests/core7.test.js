@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* v7 · tests/core7.test.js — headless test of core7.js (window.V7), builder B1. Node only, no dependencies.
+/* v7 · tests/core7.test.js — headless test of core7.js (window.V7). Node only, no dependencies.
    Loads v6's layer and core7.js in prototype.html's order with a stub window/localStorage, boots the story, and checks the story's
    outcomes, determinism, the engine, the ledger and source chips, go live, the library (Where it lands → publish), advance(24h),
    a full diagnosis → fix → verify → close, persistence across a reload (a child process), and the words in core7's own text.

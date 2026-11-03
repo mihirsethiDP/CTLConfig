@@ -1,4 +1,4 @@
-/* v7 · ui7.js · window.V7UI — UI kit, router, shell, story panel, All Plants, Activity.  Builder B2.
+/* v7 · ui7.js · window.V7UI — UI kit, router, shell, story panel, All Plants, Activity.
 
    Loads after core7.js (window.V7) and before the page modules. Reads V7 lazily and defensively: every call into
    V7 goes through safe(), so a missing or failing core function degrades the page instead of blanking it (the
@@ -33,8 +33,10 @@
      header, before the tabs; route().fn is that wrapper, route().raw the module's own renderFn.
      go(hash) · render() · current() → {path, params, pattern} · match(path) · routes() · renderPath(path) · afterRender(fn)
    SHELL   start() boots V7, builds the top bar + story panel and renders. chromeHtml() returns that html (for tests).
-     The top bar carries a badge naming this prototype ("v7/1 · Recommended approach") that links to the v7 overview.
-   STORY   chapters() → the 12 chapters with live deep links; chapterOf(path) → 1…12 or 0.
+     The top bar carries a badge naming this prototype ("v7/1 · Recommended approach") that links to the v7 overview, and,
+     once v7/2 is published (V7DEC.V72_READY), "Same place in v7/2 →" for the current page's chapter.
+   STORY   chapters() → the 12 chapters with live deep links, each with cmp72 (the same moment in v7/2) and, once v7/2 is
+          published, compare72 {href, target, label}; chapterOf(path) → 1…12 or 0.
    PAGES   #/plants (default), #/activity/:plant?, #/p/:plant/activity.                                                   */
 (function () {
   'use strict';
@@ -675,9 +677,21 @@
     const v = VERSIONS[String(W.V7_VARIANT) === '2' ? 2 : 1];
     return `<a class="tb-ver" href="../index.html" title="The v7 overview: both approaches side by side"><b>${esc(v[0])}</b><span> · ${esc(v[1])}</span></a>`;
   }
+  /* the same moment in v7/2, Alex's model as drafted: shown only once v7/2 is published, and opened in its own window */
+  function v72Ready() { const D = W.V7DEC; return !!(D && D.V72_READY === true); }
+  function v72Href(route) {
+    const r = route || '#/plants'; const D = W.V7DEC;
+    const h = D && typeof D.hrefFor === 'function' ? safe(() => D.hrefFor('2', r), '') : '';
+    return typeof h === 'string' && h ? h : `../2/prototype.html${r}`;
+  }
+  function samePlace72(path) { const n = chapterOf(path || ''); return v72Href(CMP72[n] || '#/plants'); }
+  function samePlaceHtml(path) {
+    if (!v72Ready()) return '';
+    return `<a class="tb-ver tb-same" id="tbSame" href="${esc(samePlace72(path))}" target="v7-2" title="Opens the same moment in v7/2, Alex's model as drafted"><span>Same place in </span><b>v7/2</b> →</a>`;
+  }
   function topbarHtml(path) {
     const advances = [[60, '+1 hour'], [360, '+6 hours'], [1440, '+1 day'], [10080, '+1 week']];
-    return `<header class="tb"><a class="tb-brand" href="#/plants">CloseTheLoop<span> · Configuration</span></a>${versionBadge()}`
+    return `<header class="tb"><a class="tb-brand" href="#/plants">CloseTheLoop<span> · Configuration</span></a>${versionBadge()}${samePlaceHtml(path)}`
       + `<nav class="tb-nav" id="tbNav" aria-label="Main">${navHtml(path)}</nav>`
       + `<div class="tb-right"><div class="tb-clock"><button type="button" class="clock" data-act="ui:clock" aria-haspopup="true" aria-expanded="false" title="The story clock: one clock for every plant"><span class="clock-k">Story clock</span><b id="clockNow">${esc(fmt(now()))}</b><span class="caret" aria-hidden="true">▾</span></button>`
       + `<div class="menu" role="menu"><p class="menu-h">Move time on</p>${advances.map(([m, l]) => `<button type="button" role="menuitem" data-act="ui:advance" data-min="${m}">${esc(l)}</button>`).join('')}<p class="menu-n">Readings, trial firings, issues and tasks move with the clock.</p><hr><button type="button" role="menuitem" data-act="ui:reset">Reset the story</button></div></div>`
@@ -764,10 +778,14 @@
       text: ['The open questions for Mihir, each with its options, a recommendation and what this prototype does today.', 'Mark your call on each, then copy your answers to send.'],
       go: () => '#/decisions' },
   ];
+  /* each chapter's moment in v7/2 (its own routes), for "Compare with v7/2 →" and "Same place in v7/2 →" */
+  const CMP72 = { 1: '#/library', 2: '#/p/digitalpaani/review/structure', 3: '#/p/digitalpaani/review/bindings', 4: '#/p/digitalpaani', 5: '#/p/vedanta/trigger/a_3d',
+    6: '#/p/vedanta/trigger/a_3f', 7: '#/p/vedanta', 8: '#/p/manesar/trigger/a_do_at2', 9: '#/p/manesar', 10: '#/library/templates/tpl_up_activated-sludge_mlss-low', 11: '#/deviations', 12: '#/decisions' };
   function chapters() {
-    const c = ctx();
+    const c = ctx(); const ready = v72Ready();
     return STORY.map((s) => ({
       n: s.n, title: s.title, text: s.text.slice(), href: s.go(c) || '#/plants', also: s.also ? s.also(c).filter((a) => a && a.href) : [],
+      cmp72: CMP72[s.n], compare72: ready ? { href: v72Href(CMP72[s.n]), target: 'v7-2', label: 'Compare with v7/2', title: "Opens the same moment in v7/2, Alex's model as drafted" } : null,
       decisions: s.dec.map((id) => ({ id, label: decLabel(id), href: `#/decisions/${id}`, title: decTitle(id) })),
     }));
   }
@@ -797,7 +815,8 @@
     const chs = chapters();
     return `<div class="story-h"><div><h2>The story</h2><p>Twelve chapters, start to finish. The clock starts at Thu 29 Oct, 09:00.</p></div><button type="button" class="x" data-act="ui:story" aria-label="Close the story">×</button></div>`
       + `<ol class="chs">${chs.map((c) => `<li class="ch${c.n === cur ? ' on' : ''}" data-ch="${c.n}"><span class="ch-n">${c.n}</span><div class="ch-b"><h3>${esc(c.title)}</h3>${c.text.map((t) => `<p>${esc(t)}</p>`).join('')}`
-        + `<p class="ch-go"><a class="ch-link" href="${esc(c.href)}">Take me there →</a>${c.also.map((a) => `<a class="ch-also" href="${esc(a.href)}">${esc(a.label)}</a>`).join('')}</p>`
+        + `<p class="ch-go"><a class="ch-link" href="${esc(c.href)}">Take me there →</a>${c.also.map((a) => `<a class="ch-also" href="${esc(a.href)}">${esc(a.label)}</a>`).join('')}`
+        + `${c.compare72 ? `<a class="ch-also ch-cmp" href="${esc(c.compare72.href)}" target="${esc(c.compare72.target)}" title="${esc(c.compare72.title)}">${esc(c.compare72.label)} →</a>` : ''}</p>`
         + `<p class="ch-dec"><span class="ch-dec-k">Decisions</span>${c.decisions.map((d) => `<a class="chip chip-dec" href="${esc(d.href)}" title="${esc(d.title)}">${esc(d.label)}</a>`).join('')}</p></div></li>`).join('')}</ol>`
       + `<div class="story-f"><p>Sample plants run on sample readings, generated the same way every time. Reset the story to start again.</p><button type="button" class="tb-btn" data-act="ui:reset">Reset the story</button></div>`;
   }
@@ -993,6 +1012,7 @@
     const f = changed ? null : captureFocus();
     MAIN.innerHTML = renderPath(hashNow());
     const nav = q('#tbNav'); if (nav) nav.innerHTML = navHtml(sp.path);
+    const same = q('#tbSame'); if (same) same.setAttribute('href', samePlace72(sp.path));
     const ck = q('#clockNow'); if (ck) ck.textContent = fmt(now());
     highlightStory(sp.path, false);
     if (changed) { try { W.scrollTo(0, 0); } catch (e) { /* ignore */ } } else restoreFocus(f);

@@ -1,0 +1,79 @@
+{
+  "what": "Presenter actions per story chapter in the end-to-end walk of v7/2: every button pressed (clicks) and every value typed or choice made in a field (fields), through the registered handlers. Following a link is not counted; a field left at its default is not counted; optional beats are counted apart.",
+  "chapters": {
+    "1": {
+      "count": 0,
+      "clicks": 0,
+      "fields": 0,
+      "optional": 0
+    },
+    "2": {
+      "count": 42,
+      "clicks": 15,
+      "fields": 27,
+      "optional": 4
+    },
+    "3": {
+      "count": 4,
+      "clicks": 3,
+      "fields": 1,
+      "optional": 0
+    },
+    "4": {
+      "count": 23,
+      "clicks": 16,
+      "fields": 7,
+      "optional": 0
+    },
+    "5": {
+      "count": 6,
+      "clicks": 2,
+      "fields": 4,
+      "optional": 0
+    },
+    "6": {
+      "count": 0,
+      "clicks": 0,
+      "fields": 0,
+      "optional": 0
+    },
+    "7": {
+      "count": 3,
+      "clicks": 3,
+      "fields": 0,
+      "optional": 0
+    },
+    "8": {
+      "count": 16,
+      "clicks": 8,
+      "fields": 8,
+      "optional": 5
+    },
+    "9": {
+      "count": 5,
+      "clicks": 5,
+      "fields": 0,
+      "optional": 0
+    },
+    "10": {
+      "count": 6,
+      "clicks": 4,
+      "fields": 2,
+      "optional": 10
+    },
+    "11": {
+      "count": 17,
+      "clicks": 10,
+      "fields": 7,
+      "optional": 0
+    },
+    "12": {
+      "count": 1,
+      "clicks": 0,
+      "fields": 1,
+      "optional": 0
+    }
+  },
+  "total": 123,
+  "optional": 19
+}

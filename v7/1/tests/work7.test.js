@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* v7 · tests/work7.test.js — headless test of work7.js (window.V7WORK), builder B6. Node only, no dependencies.
+/* v7 · tests/work7.test.js — headless test of work7.js (window.V7WORK). Node only, no dependencies.
    Loads every asset in prototype.html's order with smoke.js's stub DOM, boots the story, renders the three work routes for every
    plant, issue and task, and walks the story through the page handlers (fake elements stand in for clicks):
      Manesar "DO low — AT-2": terms → a limit change shows "Opened under the old limit" → diagnosis Yes/No → "Caused by BL-1" →

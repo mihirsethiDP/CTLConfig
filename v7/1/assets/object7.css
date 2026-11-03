@@ -1,5 +1,5 @@
 /* v7 · object7.css — the one object page (equipment and library type), the limits sheet, the alert page, the phone view.
-   Builder B4. Small additions on top of v7.css; every colour comes from v7.css tokens. Loaded by object7.js (V7UI.addCss). */
+   Small additions on top of v7.css; every colour comes from v7.css tokens. Loaded by object7.js (V7UI.addCss). */
 
 .o-tag { font-family: var(--mono); font-weight: 600; letter-spacing: 0; color: var(--ink-2); margin-right: 4px; }
 .o-why[hidden], .o-until-w[hidden], .o-safety[hidden], .o-back[hidden] { display: none !important; }

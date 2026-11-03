@@ -1,5 +1,5 @@
 /* v7 · decisions7.css — the Decisions page (#/decisions, #/decisions/:id), the decisions strip under every page header,
-   the two-prototypes block, and the document view the docs draw (V7DEC.renderDoc). Builder B7.
+   the two-prototypes block, and the document view the docs draw (V7DEC.renderDoc).
    Shared byte-identical by both prototypes and the docs. The app's own page rules use v7.css tokens; everything this
    file adds for the strip, the two prototypes and the docs uses its own --dk-* tokens below, so it also works on a doc
    that loads no v7.css. Light by default; dark follows the reader's setting unless the page says data-theme="light"

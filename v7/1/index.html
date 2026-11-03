@@ -149,9 +149,9 @@
   <div class="eyebrow">CloseTheLoop · Configuration · v7/1</div>
   <h1>From the library to a live plant, end to end.</h1>
   <p class="sub">v7/1 is a clickable study of configuring and running CloseTheLoop. It is built on v6's content and takes Alex's configuration model where that makes the job easier and is right. Where Alex's pack, v6 or Mihir's earlier direction is weaker, v7/1 takes the better option and says so on a decision card.</p>
-  <p class="ver">This is v7/1, the recommended approach. <a href="../index.html">Both approaches</a> · <a href="../challenges.html">Challenges doc</a>. v7/2, Alex's model as drafted, answers the same challenges and is in build.</p>
+  <p class="ver">This is v7/1, the recommended approach. <a href="../index.html">Both approaches</a> · <a href="../challenges.html">Challenges doc</a>. <span id="v72-ver">v7/2, Alex's model as drafted, answers the same challenges and is in build.</span></p>
   <div class="meta"><span>29 October 2026 · updated 2 November 2026</span><span>Owner: Mihir Sethi, with Claude</span><span>v1 to v6 are unchanged</span></div>
-  <div class="cta">
+  <div class="cta" id="cta">
     <a class="p" href="prototype.html#/plants">Open the v7/1 prototype →</a>
     <a class="s" href="#walk">Walk the story</a>
     <a class="s" href="#decisions">The decisions</a>
@@ -480,7 +480,7 @@
 </article>
 </div></div>
 
-<script src="assets/decisions7.js?v=3"></script>
+<script src="assets/decisions7.js?v=5"></script>
 <script>
 /* Fills sections 3 and 4 from assets/decisions7.js, the file the prototype's Decisions page and the challenges doc read
    too: "Changes the cards ask for" here, then the at-a-glance table and every card through V7DEC.renderDoc (v7/1 marked
@@ -497,6 +497,12 @@ window.V7_PAGE = 'doc'; window.V7_VARIANT = '1';
   }
   var esc = D.esc;
   fill('dec-n', String(cards.length));                 // the tile follows the file as cards arrive
+
+  /* v7/2 is linked only once it is published; until then it is named as in build */
+  if (D.V72_READY === true) {
+    fill('v72-ver', 'v7/2, Alex\'s model as drafted, answers the same challenges: <a href="' + esc(D.docHref('2')) + '">Read v7/2</a>.');
+    var cta = $('cta'); if (cta) cta.innerHTML += '<a class="s" href="' + esc(D.docHref('2')) + '">Read v7/2</a>';
+  }
 
   /* changes the cards ask of the contract (from what v7/1 builds) */
   var CC = /(?:The c|C)ontract should change/;

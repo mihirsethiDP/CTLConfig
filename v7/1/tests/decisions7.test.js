@@ -1,22 +1,29 @@
 #!/usr/bin/env node
-/* v7 · tests/decisions7.test.js — headless checks for assets/decisions7.js and the hand-off doc index.html (builder B7).
-   Node only, no dependencies. Usage: node tests/decisions7.test.js [-v]
+/* v7 · tests/decisions7.test.js — headless checks for assets/decisions7.js and this folder's hand-off doc index.html.
+   The same file runs in site/v7/1 and site/v7/2 (it reads which one it is in); the other prototype is asked its questions
+   in a child process (site/v7/tests/apps.js). Node only, no dependencies.
+   Usage: node tests/decisions7.test.js [-v]          CTL_V72_ROUTES=1 also renders every v7/2 page the cards link
    1. The cards: D1…Dn in order (the 21 from the first review, then any that arose later), every field present, one
       recommended option each, D1–D21's question, severity and recommended option pinned, they/them in prose, no
       "ids" or "evidence" fields, no internal references in any text (STRIP: Alex's document IDs, wireframe IDs, file
-      names and paths, internal document and code names, the second real plant's name), every link a contract route
-      whose plant, equipment, alert and type exist.
+      names and paths, internal document and code names, the second real plant's name), every v7/1 link a v7/1 route
+      that lands on a real v7/1 page.
    1b. The newer fields, wherever a card carries them (all optional): short, arose, the option each prototype builds,
       both, the one-line summaries, paired links, and `where` (router syntax, real v7/1 screens, every link's route
       covered); window.V7_READINGS when present. Fixtures that break each rule prove the checks fire.
+   1c. The v7/2 side: every v7/2 link and every v7/2 `where` pattern is a route v7/2 registers, naming objects v7/2 has;
+      with V7DEC.V72_READY true (or CTL_V72_ROUTES=1) each link also lands on a real v7/2 page and each pattern is
+      registered there.
    2. Standalone load (a fresh context with no app): window.V7_DECISIONS and window.V7DEC exist, no routes, no throw.
-   3. The app's views (all assets that exist, in prototype.html's order): routes registered, list (every filter) and every
-      card page render as strings, no junk, every in-app link resolves, the page's own words are clean (a banned word
-      may appear only inside the cards' quoted text), and no rendered page or copied text matches STRIP.
+   3. The app's views (this folder's assets, in prototype.html's order, as this prototype): routes registered, list (every
+      filter) and every card page render as strings, no junk, every in-app link is this prototype's route, the page's own
+      words are clean (a banned word may appear only inside the cards' quoted text), no rendered page or copied text
+      matches STRIP.
    4. Your call: pick, note, other, clear, the copied text format, and the browser-storage key.
-   5. index.html: loads only decisions7.js; its renderer fills sections 3 and 4 with every card; neither its output nor
-      the doc's own text matches a STRIP pattern, and there is no ID table; every prototype link is a contract route with
-      real ids; every in-page anchor exists; acceptance criteria V7-1… are sequential in 12 chapters.
+   5. index.html (v7/1's or v7/2's hand-off): loads only decisions7.js; its renderer fills the cards with every card, "You
+      are here" on this prototype; neither its output nor the doc's own text matches a STRIP pattern; every link into
+      either prototype is that prototype's route on real objects; every in-page anchor exists; acceptance criteria are
+      numbered without gaps in their chapter groups; v7/2 is linked from v7/1's doc only once it is published.
    Exit 0 = pass. */
 'use strict';
 const fs = require('fs');
@@ -26,8 +33,11 @@ const vm = require('vm');
 const ROOT = path.resolve(__dirname, '..');
 const ASSETS = path.join(ROOT, 'assets');
 const VERBOSE = process.argv.includes('-v');
+const HERE = path.basename(ROOT) === '2' ? '2' : '1';                 // which prototype this folder holds
+const APPS = require(path.resolve(ROOT, '..', 'tests', 'apps.js'));  // the v7/2 route table and the other prototype, asked in a child process
 const smoke = require('./smoke.js');                 // exports the stub DOM and the word checkers (does not run when required)
 smoke.installDom();
+global.V7_VARIANT = HERE; global.V7_NO_V6_SHELL = true;
 
 const FAIL = []; const NOTES = []; let CHECKS = 0;
 function ok(cond, what, extra) { CHECKS++; if (!cond) FAIL.push(what + (extra ? `  — ${extra}` : '')); return !!cond; }
@@ -103,22 +113,79 @@ if (!Array.isArray(CARDS) || !DEC) return finish();
 
 const PLANTS = new Set((V && V.plants ? V.plants() : []).map((p) => p.key));
 const CODES = new Set((V && V.libTypes ? V.libTypes() : (W.CATALOGUE || [])).map((t) => t.code));
+
+/* the other prototype's answers. In site/v7/2 the app loaded above is v7/2's, which no longer opens some of v7/1's issues
+   (Vedanta's Emergency during the trial), so v7/1's links and screens are asked of v7/1's own app; in site/v7/1, v7/2's
+   links and patterns are asked of v7/2's. Each is asked once, in a child process with its own globals. */
+const READY = DEC.V72_READY === true;
+const STRICT72 = READY || process.env.CTL_V72_ROUTES === '1';
+const OTHER = { ids: new Map(), routes: new Map() };
+function askOther(which, ids, hashes, full) {
+  const todoI = ids.filter((q) => !OTHER.ids.has(which + APPS.idKey(q))); const todoH = hashes.filter((h) => !OTHER.routes.has(which + h));
+  if (!todoI.length && !todoH.length) return;
+  const r = APPS.probe(which, { full: !!full, ids: todoI, hashes: todoH });
+  ok(r.loaded && !(r.errors || []).length, `v7/${which}'s app loads to answer for the ${which === '1' ? 'v7/1' : 'v7/2'} side of the cards`, (r.errors || []).join(' | '));
+  todoI.forEach((q) => OTHER.ids.set(which + APPS.idKey(q), r.ids[APPS.idKey(q)] === true));
+  todoH.forEach((h) => OTHER.routes.set(which + h, r.routes[h] || { pattern: null, problem: 'not answered' }));
+}
+function idQuery(pt) {
+  const segs = pt.split('/').filter((x) => !/^:.*\?$/.test(x));
+  if (segs.some((x) => x[0] === ':')) return null;
+  const m = matchPattern('#/' + segs.join('/')); if (!m) return null;
+  const kind = /eq\/:id/.test(m.pattern) ? 'eq' : /alert\/:id/.test(m.pattern) ? 'alert' : /issue\/:id/.test(m.pattern) ? 'issue' : '';
+  return kind ? { kind, plant: m.params.plant, id: m.params.id } : null;
+}
+if (HERE === '2' && Array.isArray(CARDS)) {
+  const qs = []; const hs = [];
+  CARDS.forEach((d) => {
+    (d.links || []).forEach((l) => { if (l && typeof l.href === 'string') { hs.push(l.href); const m = matchPattern(l.href); if (m) { const q = idQuery(String(l.href).replace(/^#\//, '').split('?')[0]); if (q) qs.push(q); } } });
+    ((d.where && d.where['1']) || []).forEach((pt) => { if (typeof pt === 'string') { const q = idQuery(pt); if (q) qs.push(q); } });
+  });
+  askOther('1', qs, [...new Set(hs)], true);
+}
+function hasOn71(kind, plant, id, local) {
+  if (HERE === '1') return local();
+  const q = { kind, plant, id }; askOther('1', [q], [], true);
+  return OTHER.ids.get('1' + APPS.idKey(q)) === true;
+}
 function idsResolve(hash, where) {
   const m = matchPattern(hash);
-  if (!ok(!!m, `link is a contract route: ${hash}`, where)) return;
+  if (!ok(!!m, `link is a v7/1 route: ${hash}`, where)) return;
   const p = m.params;
   if (p.plant != null && PLANTS.size) ok(PLANTS.has(p.plant), `plant "${p.plant}" exists`, `${where}: ${hash}`);
-  if (/eq\/:id/.test(m.pattern) && V) ok(!!V.eq(p.plant, p.id), `equipment ${p.plant}/${p.id} exists`, `${where}: ${hash}`);
-  if (/alert\/:id/.test(m.pattern) && V) ok((V.alerts(p.plant, {}) || []).some((a) => a.id === p.id), `alert ${p.plant}/${p.id} exists`, `${where}: ${hash}`);
-  if (/issue\/:id/.test(m.pattern) && V) ok(!!V.issue(p.plant, p.id), `issue ${p.plant}/${p.id} exists`, `${where}: ${hash}`);
+  if (/eq\/:id/.test(m.pattern) && V) ok(hasOn71('eq', p.plant, p.id, () => !!V.eq(p.plant, p.id)), `equipment ${p.plant}/${p.id} exists in v7/1`, `${where}: ${hash}`);
+  if (/alert\/:id/.test(m.pattern) && V) ok(hasOn71('alert', p.plant, p.id, () => (V.alerts(p.plant, {}) || []).some((a) => a.id === p.id)), `alert ${p.plant}/${p.id} exists in v7/1`, `${where}: ${hash}`);
+  if (/issue\/:id/.test(m.pattern) && V) ok(hasOn71('issue', p.plant, p.id, () => !!V.issue(p.plant, p.id)), `issue ${p.plant}/${p.id} exists in v7/1`, `${where}: ${hash}`);
   if (p.code != null && CODES.size) ok(CODES.has(p.code), `library type ${p.code} exists`, `${where}: ${hash}`);
   if (p.tab != null) ok(TABS.has(p.tab), `tab "${p.tab}" is Readings · Issues · Tasks · Details`, `${where}: ${hash}`);
   if (m.pattern === 'decisions/:id') ok(!!DEC.byId(p.id), `decision ${p.id} exists`, `${where}: ${hash}`);
-  if (UI && UI.match) {
+  if (HERE === '1' && UI && UI.match) {
     const mm = UI.match(hash);
     if (mm) ok(mm.pattern === m.pattern || (m.pattern === 'p/:plant/eq/:id/phone' && /eq/.test(mm.pattern)), `the app routes ${hash} to ${m.pattern}`, `got ${mm.pattern}`);
     else note(`not routed yet (module missing?): ${hash}`);
+  } else if (HERE === '2') {
+    askOther('1', [], [hash], true); const r = OTHER.routes.get('1' + hash) || {};
+    ok(!r.problem && (r.pattern === m.pattern || (m.pattern === 'p/:plant/eq/:id/phone' && /eq/.test(r.pattern || ''))), `v7/1 routes ${hash} to ${m.pattern} and lands on a real page`, `${r.pattern || 'no route'} ${r.problem || ''} · ${where}`);
   }
+}
+/* the v7/2 side: a link or a pattern is one of v7/2's routes, on objects v7/2 has (asked of v7/2's core when this
+   folder is v7/1's); with v7/2 published (or CTL_V72_ROUTES=1) it must also be registered and land on a real page */
+function problems72(hash) {
+  const m = APPS.matchRoute(APPS.V72_ROUTES, hash); const o = APPS.objectsOf72(m);
+  return { m, qs: o.qs, problem: m ? o.problem : 'is not a v7/2 route' };
+}
+function on72(qs) {
+  if (HERE === '2') return qs.map((q) => [q, APPS.exists(V, '2', q)]);
+  askOther('2', qs, [], false); return qs.map((q) => [q, OTHER.ids.get('2' + APPS.idKey(q)) === true]);
+}
+function route72(hash) {
+  if (HERE === '2' && UI && UI.match) {
+    const mm = UI.match(hash); let problem = '';
+    if (!mm) problem = 'no route';
+    else { try { if (APPS.NOTFOUND.test(smoke.visibleText(UI.renderPath(hash)).slice(0, 300))) problem = 'lands on a "not found" page'; } catch (e) { problem = 'throws ' + e.message; } }
+    return { pattern: mm ? mm.pattern : null, problem };
+  }
+  askOther('2', [], [hash], true); return OTHER.routes.get('2' + hash) || { pattern: null, problem: 'not answered' };
 }
 
 /* ── 1. the cards ─────────────────────────────────────────────────────────────────────────────────────── */
@@ -186,7 +253,7 @@ if (CARDS.some((d) => 'both' in d)) { const b = CARDS.filter((d) => idN(d.id) <=
 /* ── 1b. the newer fields ──────────────────────────────────────────────────────────────────────────────────────
    All optional: a card without them renders as before. Each rule is checked wherever a card carries the field, so the
    card content can be merged in one go; bad fixtures (copies, never the live cards) prove each rule fires. */
-const ARISE = ['First review', 'Reviewing v7/1', 'Designing v7/2'];
+const ARISE = ['First review', 'Reviewing v7/1', 'Designing v7/2', 'Building v7/2'];
 const NEWTEXT = ['short', 'v71Short', 'v72Short', 'v72Does'];
 const words = (t) => String(t).trim().split(/\s+/).filter(Boolean).length;
 const pathOf = (h) => String(h == null ? '' : h).replace(/^#\/?/, '').split('?')[0].replace(/\/+$/, '');
@@ -213,9 +280,9 @@ function screenProblem(pt) {
   if (lit(p.code) && CODES.size && !CODES.has(p.code)) return `names library type "${p.code}", which does not exist`;
   if (lit(p.tab) && !TABS.has(p.tab)) return `names tab "${p.tab}"`;
   if (!holes && V) {
-    if (/eq\/:id/.test(m.pattern) && !V.eq(p.plant, p.id)) return `names equipment ${p.plant}/${p.id}, which does not exist`;
-    if (/alert\/:id/.test(m.pattern) && !(V.alerts(p.plant, {}) || []).some((a) => a.id === p.id)) return `names alert ${p.plant}/${p.id}, which does not exist`;
-    if (/issue\/:id/.test(m.pattern) && !V.issue(p.plant, p.id)) return `names issue ${p.plant}/${p.id}, which does not exist`;
+    if (/eq\/:id/.test(m.pattern) && !hasOn71('eq', p.plant, p.id, () => !!V.eq(p.plant, p.id))) return `names equipment ${p.plant}/${p.id}, which does not exist`;
+    if (/alert\/:id/.test(m.pattern) && !hasOn71('alert', p.plant, p.id, () => (V.alerts(p.plant, {}) || []).some((a) => a.id === p.id))) return `names alert ${p.plant}/${p.id}, which does not exist`;
+    if (/issue\/:id/.test(m.pattern) && !hasOn71('issue', p.plant, p.id, () => !!V.issue(p.plant, p.id))) return `names issue ${p.plant}/${p.id}, which does not exist`;
   }
   if (m.pattern === 'decisions' || m.pattern === 'decisions/:id') return 'is a Decisions page (the strip never shows there)';
   return '';
@@ -293,6 +360,38 @@ CARDS.forEach((d) => {
   if (Array.isArray(d.links)) noStrip(d.links.map((l) => (l && l.label72) || '').join('\n'), `${d.id}.links (v7/2 labels)`);
 });
 { const pr = readingProblems(W.V7_READINGS); ok(!pr.length, 'window.V7_READINGS, when present, is well formed', pr.join(' | ')); }
+
+/* ── 1c. the v7/2 side of every card ─────────────────────────────────────────────────────────────────────────────
+   Every href72 is a v7/2 route on objects v7/2 has; every where['2'] pattern's sample path is a v7/2 route, and its
+   literal ids exist. With v7/2 published (or CTL_V72_ROUTES=1): each href72 lands on a real page in v7/2, each pattern's
+   sample path is registered there, and each card's href72 screen carries that card's marker in v7/2. */
+{
+  const links72 = []; const pats72 = [];
+  CARDS.forEach((d) => {
+    (d.links || []).forEach((l, i) => { if (l && typeof l.href72 === 'string') links72.push([d, `links[${i}]`, l.href72]); });
+    ((d.where && d.where['2']) || []).forEach((pt) => { if (typeof pt === 'string' && !patternProblem(pt)) pats72.push([d, pt]); });
+  });
+  const sampleOf = (pt) => '#/' + pt.split('/').filter((x) => !/^:.*\?$/.test(x)).map((x) => (x[0] === ':' ? '__any__' : x)).join('/');
+  const items = links72.map(([d, k, h]) => [d, k, h, problems72(h)]).concat(pats72.map(([d, pt]) => [d, `where.2 "${pt}"`, sampleOf(pt), problems72(sampleOf(pt))]));
+  const bad = items.filter((x) => x[3].problem).map(([d, k, h, p]) => `${d.id}.${k} ${h}: ${p.problem}`);
+  ok(links72.length >= 50 && !bad.length, `every v7/2 link and pattern (${links72.length} links, ${pats72.length} patterns) is a route v7/2 registers`, bad.slice(0, 6).join(' | '));
+  const qs = []; items.forEach(([, , , p]) => p.qs.forEach((q) => { if (q.id !== '__any__' && q.plant !== '__any__') qs.push(q); }));
+  const missing = on72(qs).filter(([, has]) => !has).map(([q]) => `${q.kind} ${q.plant ? q.plant + '/' : ''}${q.id}`);
+  ok(!missing.length, 'every object a v7/2 link or pattern names exists in v7/2', [...new Set(missing)].slice(0, 6).join(' | '));
+  const owners = [...new Set(items.map(([, , , p]) => p.m && p.m.owner).filter(Boolean))];
+  ok(owners.every((f) => /^(ui7|plant7|lists7|structure7|object7|lib7|ledger7|work7|decisions7)\.js$/.test(f)), 'every v7/2 route the cards use belongs to one of v7/2\'s screen files', owners.join(', '));
+  if (STRICT72) {
+    const lost = links72.map(([d, k, h]) => [d, k, h, route72(h)]).filter(([, , h, r]) => r.problem || r.pattern !== problems72(h).m.pattern).map(([d, k, h, r]) => `${d.id}.${k} ${h}: ${r.problem || `routed to ${r.pattern}`}`);
+    ok(!lost.length, 'every v7/2 link lands on its page in v7/2', lost.slice(0, 6).join(' | '));
+    const unreg = pats72.map(([d, pt]) => [d, pt, route72(sampleOf(pt))]).filter(([d, pt, r]) => r.pattern !== problems72(sampleOf(pt)).m.pattern).map(([d, pt, r]) => `${d.id} "${pt}": ${r.pattern || 'no route'}`);
+    ok(!unreg.length, 'every v7/2 pattern is registered in v7/2', unreg.slice(0, 6).join(' | '));
+    const pathOf72 = (h) => String(h).replace(/^#\/?/, '').split('?')[0].replace(/\/+$/, '');
+    const unmarked = links72.filter(([d, , h]) => !DEC.markersFor('2', pathOf72(h)).some((x) => x.id === d.id)).map(([d, k, h]) => `${d.id}.${k} ${h}`);
+    ok(!unmarked.length, 'every card\'s v7/2 link opens a screen whose strip names the card', unmarked.slice(0, 6).join(' | '));
+  } else {
+    note(`v7/2's side checked by route and object (${links72.length} links, ${pats72.length} patterns); set CTL_V72_ROUTES=1 to land on each page in v7/2`);
+  }
+}
 /* a marker means "this screen shows the consequence": note any common v7/1 screen that would carry more than 3 */
 {
   const screens = ['plants', 'library', 'differences', 'activity'];
@@ -380,17 +479,26 @@ function isCardText(text, i, len) {
   }
   return false;
 }
+/* the cards' own text, quoted on the Decisions pages and in the strip: a banned word there is data, not the page's words.
+   The corpus is read when the page is checked, so fixture text counts too; given as separate strings (where this folder's
+   smoke.js supports it), one whole card string that covers the word on the page is enough. */
+function decData(src) {
+  const D0 = src || W; const names = ['V7_DECISIONS', 'V7_READINGS']; const pick = { V7_DECISIONS: D0.V7_DECISIONS, V7_READINGS: D0.V7_READINGS };
+  const list = smoke.corpusOf(pick, names, true);
+  const test = smoke.isDataIn(smoke.corpusOf(pick, names), Array.isArray(list) ? list : null);
+  return (text, i, len) => isCardText(text, i, len) || test(text, i, len);
+}
 function checkPage(html, where) {
   if (!ok(typeof html === 'string' && html.length > 0, `${where} renders an html string`)) return;
   noStrip(smoke.decode(html), `${where} (text and attributes)`);
   ok(!/class="dec-ids"|class="dec-ev"|>Evidence</.test(html), `${where} shows no ID chips and no Evidence fold`);
-  for (const f of smoke.scan(html, { ids: false, isData: isCardText })) {
+  for (const f of smoke.scan(html, { ids: false, isData: decData() })) {
     if (f.kind === 'data-word') continue;                 // a banned word inside a card's quoted text: allowed on this page
     ok(false, `${where}: "${f.word}" in the page's own words`, f.ctx);
   }
   for (const href of smoke.links(html)) {
     if (!href.startsWith('#/')) { ok(href === '#' ? false : true, `${where}: link ${href}`); continue; }
-    ok(!!matchPattern(href), `${where}: link ${href} is a contract route`);
+    ok(HERE === '1' ? !!matchPattern(href) : !problems72(href).problem, `${where}: link ${href} is a v7/${HERE} route`);
   }
 }
 if (UI) {
@@ -441,7 +549,7 @@ if (UI) {
   ok(!DEC.answerOf('D21') && !DEC.noteOf('D2'), 'Clear my call removes the call and the note');
 })();
 
-/* ── 5. index.html ─────────────────────────────────────────────────────────────────────────────────────── */
+/* ── 5. index.html: this folder's hand-off doc ─────────────────────────────────────────────────────────────────── */
 (() => {
   const file = path.join(ROOT, 'index.html');
   if (!ok(fs.existsSync(file), 'index.html exists')) return;
@@ -449,42 +557,70 @@ if (UI) {
   const srcs = [...html.matchAll(/<script[^>]*\bsrc\s*=\s*["']([^"']+)["']/gi)].map((m) => m[1]);
   ok(srcs.length === 1 && /^assets\/decisions7\.js(\?v=\d+)?$/.test(srcs[0]), 'index.html loads only assets/decisions7.js', srcs.join(', '));
   ok(/fonts\.googleapis\.com\/css2\?family=Figtree[^"]*IBM\+Plex\+Mono/.test(html), 'Figtree and IBM Plex Mono from Google Fonts');
-  ['what', 'walk', 'adopts', 'differs', 'words', 'decisions', 'simulated', 'ac', 'run', 'open'].forEach((id) => ok(html.includes(`id="${id}"`), `section #${id}`));
+  const SECTIONS = HERE === '1' ? ['what', 'walk', 'adopts', 'differs', 'words', 'decisions', 'simulated', 'ac', 'run', 'open'] : ['what', 'model', 'walk', 'decisions', 'silent', 'comparison', 'words', 'simulated', 'ac', 'run'];
+  SECTIONS.forEach((id) => ok(html.includes(`id="${id}"`), `section #${id}`));
+  if (HERE === '2') {
+    const h2 = [...html.matchAll(/<h2 id="([a-z-]+)"><span class="n">(\d+)<\/span>/g)].map((m) => m[1]);
+    ok(h2.join() === SECTIONS.join(), 'v7/2\'s hand-off has its ten sections in order', h2.join(', '));
+  }
   const inline = [...html.matchAll(/<script>([\s\S]*?)<\/script>/gi)].map((m) => m[1]);
   ok(inline.length === 1, 'one inline renderer');
   // run the renderer against the standalone file in a fresh context with a tiny DOM
   const els = {}; const get = (id) => (els[id] = els[id] || { id, innerHTML: '', scrollIntoView() {} });
-  const ctx = { console, location: { hash: '' }, localStorage: { getItem: () => null, setItem() {} }, document: { getElementById: (id) => (/^dec-|^D\d+$/.test(id) ? get(id) : null) } };
+  const ctx = { console, location: { hash: '' }, localStorage: { getItem: () => null, setItem() {} }, document: { getElementById: (id) => (/^dec-|^D\d+$|^read-/.test(id) ? get(id) : null) } };
   ctx.window = ctx;
   try {
     vm.runInNewContext(fs.readFileSync(path.join(ASSETS, 'decisions7.js'), 'utf8'), ctx);
     vm.runInNewContext(inline[0], ctx, { filename: 'index.html inline renderer' });
   } catch (e) { ok(false, 'the inline renderer runs', e.message); return; }
-  const out = ['dec-contract', 'dec-table', 'dec-list', 'dec-ids'].map((id) => (els[id] || {}).innerHTML || '');
-  ok(out.slice(0, 3).every((x) => x.length > 100), 'the renderer fills the contract-changes, summary and card slots');
+  const SLOTS = HERE === '1' ? ['dec-contract', 'dec-table', 'dec-list', 'dec-ids'] : ['dec-readings', 'dec-table', 'dec-list'];
+  const out = SLOTS.map((id) => (els[id] || {}).innerHTML || '');
+  ok(out.slice(0, 3).every((x) => x.length > 100), `the renderer fills its slots (${SLOTS.slice(0, 3).join(', ')})`);
   ok((out[2].match(/<section class="dd-card" id="D\d+"/g) || []).length === N, `the doc shows all ${N} cards, each anchored #Dn (V7DEC.renderDoc)`);
   ok((out[1].match(/<tr><td data-label="Card">/g) || []).length === N, `the doc's at-a-glance table has ${N} rows`);
-  ok(/You are here/.test(out[2]) && /class="dd-picks"/.test(out[2]), 'the doc\'s cards mark v7/1 "You are here" and carry the your-call chips');
-  ok(/window\.V7_PAGE = 'doc'; window\.V7_VARIANT = '1';/.test(inline[0]), 'the doc says it is v7/1\'s hand-off doc (V7_PAGE, V7_VARIANT)');
-  ok(/This is v7\/1, the recommended approach\./.test(html) && /<a href="\.\.\/index\.html">Both approaches<\/a>/.test(html) && /<a href="\.\.\/challenges\.html">Challenges doc<\/a>/.test(html), 'the top block names v7/1 and links both approaches and the challenges doc');
+  const cols = out[2].split(`class="dk-col dk-col-${HERE}"`).slice(1);
+  ok(cols.length === N && cols.every((c) => c.split(/class="dk-col dk-col-\d"/)[0].includes('>You are here<')) && /class="dd-picks"/.test(out[2]), `the doc's cards mark v7/${HERE} "You are here" and carry the your-call chips`);
+  ok(new RegExp(`window\\.V7_PAGE = 'doc'; window\\.V7_VARIANT = '${HERE}';`).test(inline[0]), `the doc says it is v7/${HERE}'s hand-off doc (V7_PAGE, V7_VARIANT)`);
+  if (HERE === '1') {
+    ok(/This is v7\/1, the recommended approach\./.test(html) && /<a href="\.\.\/index\.html">Both approaches<\/a>/.test(html) && /<a href="\.\.\/challenges\.html">Challenges doc<\/a>/.test(html), 'the top block names v7/1 and links both approaches and the challenges doc');
+    if (!READY) ok(!/href="(\.\.\/)?2\//.test(html + out.join('')), 'no link into v7/2 while it is in build');
+    else ok(/href="\.\.\/2\/prototype\.html#\//.test(out.join('')), 'v7/2 is published: the cards link into it');
+    ok((out[0].match(/<tr><td><a class="dref"/g) || []).length >= 10, 'the doc lists the contract changes the cards ask for', `${(out[0].match(/<tr><td>/g) || []).length} rows`);
+    ok(out[3] === '' && !/id="(dec-ids|ids)"/.test(html), 'the doc has no table of Alex\'s IDs');
+  } else {
+    ok(/This is v7\/2, Alex's model as drafted\./.test(html) && /<a href="\.\.\/index\.html">Both approaches<\/a>/.test(html) && /<a href="\.\.\/challenges\.html">Challenges doc<\/a>/.test(html) && /<a href="\.\.\/1\/index\.html">Read v7\/1<\/a>/.test(html), 'the top block names v7/2 and links both approaches, the challenges doc and v7/1');
+    ok(/id="readings"/.test(out[0]) && (W.V7_READINGS || []).every((r) => out[0].includes(`id="reading-${r.n}"`)), 'section 5 lists every reading the file holds, each anchored');
+    ok(/href="\.\.\/1\/prototype\.html#\/[^"]*" target="v7-1"/.test(out[2]), 'the cards link v7/1 in its own window');
+  }
   ok(/href="\.\.\/challenges\.html">Read every challenge in the challenges doc/.test(html), 'the decisions section links the challenges doc');
-  ok(!/href="(\.\.\/)?2\//.test(html + out.join('')), 'no link into v7/2 while it is in build');
-  ok((out[0].match(/<tr><td><a class="dref"/g) || []).length >= 10, 'the doc lists the contract changes the cards ask for', `${(out[0].match(/<tr><td>/g) || []).length} rows`);
-  ok(out[3] === '' && !/id="(dec-ids|ids)"/.test(html), 'the doc has no table of Alex\'s IDs');
-  out.forEach((x, i) => noStrip(smoke.decode(x), `index.html renderer slot ${['dec-contract', 'dec-table', 'dec-list', 'dec-ids'][i]}`));
+  out.forEach((x, i) => noStrip(smoke.decode(x), `index.html renderer slot ${SLOTS[i]}`));
   // the doc's own prose too (the workbook's lab weights "W1/W2" are quoted data, not a wireframe ID)
   noStrip(smoke.decode(html.replace(/<(script|style)\b[\s\S]*?<\/\1>/gi, ' ')).replace(/the lab weights W1\/W2/g, 'the lab weights'), 'index.html\'s own text');
   const all = html.replace(/<script[\s\S]*?<\/script>/gi, '') + out.join('');
-  const proto = [...all.matchAll(/href="prototype\.html(#[^"]*)"/g)].map((m) => smoke.decode(m[1]));
-  ok(proto.length > 60, 'the doc links into the prototype', `${proto.length} links`);
-  [...new Set(proto)].forEach((h) => idsResolve(h, 'index.html'));
+  const own = [...new Set([...all.matchAll(/href="prototype\.html(#[^"]*)"/g)].map((m) => smoke.decode(m[1])))];
+  ok(own.length > 30, 'the doc links into its own prototype', `${own.length} distinct links`);
+  if (HERE === '1') own.forEach((h) => idsResolve(h, 'index.html'));
+  else {
+    const st = own.map((h) => [h, problems72(h)]);
+    const bad = st.filter(([, p]) => p.problem).map(([h, p]) => `${h}: ${p.problem}`);
+    ok(!bad.length, 'every link into v7/2 is one of v7/2\'s routes', bad.slice(0, 6).join(' | '));
+    const qs = []; st.forEach(([, p]) => p.qs.forEach((q) => qs.push(q)));
+    const missing = on72(qs).filter(([, has]) => !has).map(([q]) => `${q.kind} ${q.id}`);
+    ok(!missing.length, 'every object the doc links in v7/2 exists', [...new Set(missing)].slice(0, 6).join(' | '));
+    if (STRICT72) { const lost = own.map((h) => [h, route72(h)]).filter(([, r]) => r.problem).map(([h, r]) => `${h}: ${r.problem}`); ok(!lost.length, 'every link into v7/2 lands on a real v7/2 page', lost.slice(0, 6).join(' | ')); }
+    const to1 = [...new Set([...all.matchAll(/href="\.\.\/1\/prototype\.html(#[^"]*)"/g)].map((m) => smoke.decode(m[1])))];
+    ok(to1.length >= 20, 'the doc links into v7/1', `${to1.length} distinct links`);
+    to1.forEach((h) => idsResolve(h, 'index.html (into v7/1)'));
+  }
   const anchors = new Set([...all.matchAll(/\sid="([^"]+)"/g)].map((m) => m[1]));
   [...new Set([...all.matchAll(/href="#([^"/][^"]*)"/g)].map((m) => m[1]))].forEach((a) => ok(anchors.has(a), `in-page anchor #${a} exists`));
-  const ac = [...html.matchAll(/<td>V7-(\d+)<\/td>/g)].map((m) => +m[1]);
-  ok(ac.length >= 40 && ac.every((n, i) => n === i + 1), 'acceptance criteria V7-1… are sequential', `${ac.length}: ${ac.join(',')}`);
+  const P = HERE === '1' ? 'V7' : 'V72';
+  const ac = [...html.matchAll(new RegExp(`<td>${P}-(\\d+)</td>`, 'g'))].map((m) => +m[1]);
+  ok(ac.length >= 40 && ac.every((n, i) => n === i + 1), `acceptance criteria ${P}-1… are sequential`, `${ac.length}: ${ac.slice(-3).join(',')}`);
   const acSec = html.slice(html.indexOf('id="ac"'), html.indexOf('id="run"'));
   const chs = [...acSec.matchAll(/<h3>(\d+) · /g)].map((m) => +m[1]);
   ok(chs.join() === '1,2,3,4,5,6,7,8,9,10,11,12', 'acceptance criteria are grouped by the 12 chapters', chs.join());
+  if (HERE === '2') ok(ac.length === 148 && /<h3>Across the app<\/h3>/.test(acSec) && acSec.indexOf('<h3>Across the app</h3>') > acSec.indexOf('<h3>12 · '), 'then "Across the app", up to V72-148');
   const vis = smoke.visibleText(html.replace(/<script[\s\S]*?<\/script>/gi, ''));
   const pm = vis.match(PRON); ok(!pm, 'the doc uses they/them', pm && vis.slice(Math.max(0, pm.index - 60), pm.index + 20));
   for (const j of [/\bundefined\b/, /\bNaN\b/, /\[object Object\]/]) ok(!j.test(out.join('')), `the rendered doc has no "${j.source}"`);
@@ -513,7 +649,8 @@ if (UI) {
     /* the API */
     ['variant', 'page', 'hrefFor', 'targetFor', 'challengesHref', 'docHref', 'linksFor', 'markersFor', 'markerHtml', 'renderDoc', 'docHtml', 'twoHtml', 'matchRoute', 'v71Index', 'v72Index', 'hasPair', 'shortOf', 'aroseOf', 'builds', 'onExternalChange']
       .forEach((f) => ok(typeof DEC[f] === 'function', `V7DEC.${f} is a function`));
-    ok(DEC.V72_READY === false, 'V72_READY is false while v7/2 is unbuilt');
+    { const d2 = path.resolve(ROOT, '..', '2'); const pub = fs.existsSync(path.join(d2, 'prototype.html')) && fs.existsSync(path.join(d2, 'index.html')) && /window\.V7_VARIANT = '2';/.test(fs.readFileSync(path.join(d2, 'index.html'), 'utf8'));
+      ok(typeof DEC.V72_READY === 'boolean' && (DEC.V72_READY === false || pub), 'V72_READY is false until v7/2 is published, and true only once its prototype and hand-off exist', `V72_READY ${DEC.V72_READY}`); }
     ok(DEC.PUBLIC === true, 'PUBLIC: no card carries ids');
     ok(CARDS.every((d) => !DEC.hasPair(d) || (DEC.v71Index(d) === null || Number.isInteger(DEC.v71Index(d)))), 'v71Index is an index or null on every card');
 
@@ -592,7 +729,7 @@ if (UI) {
     ok(!/class="chip|tone-|chip-|sev-|class="banner|class="note/.test(s), 'the strip uses none of the app\'s chip, severity, banner or note styles');
     { const css = fs.readFileSync(path.join(ASSETS, 'decisions7.css'), 'utf8'); const rule = (css.match(/\.dec-mark\s*\{[^}]*\}/) || [''])[0];
       ok(rule && !/dashed/.test(rule) && /border-left:\s*3px solid/.test(rule), 'the strip has a look of its own: a solid left rule, never the dashed border the app uses for "not built yet"', rule); }
-    const sw = smoke.scan(s, { ids: false, marks: true }).filter((f) => f.kind !== 'data-word'); ok(!sw.length, 'the strip\'s own words are clean', JSON.stringify(sw));
+    const sw = smoke.scan(s, { ids: false, marks: true, isData: decData() }).filter((f) => f.kind !== 'data-word'); ok(!sw.length, 'the strip\'s own words are clean', JSON.stringify(sw));
     ok(smoke.scan('<p>x</p>' + s).every((f) => f.kind !== 'id'), 'smoke.scan leaves the strip out of the page\'s own words');
     DEC.setAnswer('D15', { opt: 1 });
     ok(T(DEC.markerHtml('1', 'p/manesar/alert/a_do_at2')).includes('D15 · Freeze while an issue is open · Your call: Option 2'), 'summary carries the reader\'s call once made');
@@ -662,6 +799,7 @@ if (UI) {
   };
   try {
     const { c, store } = fresh({ globals: { V7_PAGE: 'challenges' } }); pairUp(c);
+    c.V7DEC.V72_READY = false;                              // the mechanism with v7/2 unpublished, whatever the file says today
     const el = bare(); const html = c.V7DEC.renderDoc(el, { mode: 'challenges' });
     ok(typeof html === 'string' && el.innerHTML === html && html.length > 5000, 'renderDoc fills a bare element with no document and no app');
     ok((html.match(/<section class="dd-card" id="D\d+"/g) || []).length === N + 1, 'one <section id="Dn"> per card', (html.match(/<section class="dd-card" id="D\d+"/g) || []).length);
@@ -675,7 +813,7 @@ if (UI) {
     ok(!/You are here/.test(html), 'no "You are here" on a page that belongs to neither prototype');
     for (const j of [/\bundefined\b/, /\bNaN\b/, /\[object Object\]/]) ok(!j.test(T(html)), `the document view has no "${j.source}"`);
     noStrip(smoke.decode(html), 'the document view');
-    const own = smoke.scan(html, { ids: false, isData: smoke.isDataIn(smoke.corpusOf({ V7_DECISIONS: c.V7_DECISIONS, R: c.V7_READINGS }, ['V7_DECISIONS', 'R'])) }).filter((f) => f.kind !== 'data-word');
+    const own = smoke.scan(html, { ids: false, isData: decData(c) }).filter((f) => f.kind !== 'data-word');
     ok(!own.length, 'the document view\'s own words are clean', JSON.stringify(own));
     ok(typeof el.on.click === 'function', 'renderDoc binds its your-call chips');
     click(el, 'D15', 1);
@@ -717,6 +855,83 @@ if (UI) {
     storageFn({ key: 'ctl7.other' }); storageFn({ key: 'ctl7.decisions' });
     ok(hits === 1 && c7.V7DEC.answerOf('D9') && c7.V7DEC.answerOf('D9').opt === 0, 'onExternalChange: another tab\'s call shows, other keys are ignored');
   } catch (e) { ok(false, 'the standalone document view runs', e.stack); }
+})();
+
+/* ── 7. v7/2's numbers in the cards and readings (site/v7/2 only): each one equals v7/2's engine at the start of the
+   story — the facts the cards quote, plus the few the later cards and the readings quote. Last, because it resets. ── */
+if (HERE === '2' && V && typeof V.reset === 'function') (() => {
+  let F = null; try { F = APPS.values72(V); } catch (e) { ok(false, 'v7/2\'s numbers are worked out', e.message); return; }
+  const WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
+  const word = (n) => WORDS[+n] || String(n);
+  const S = (f, fb) => { try { return f(); } catch (e) { return fb; } };
+  const card = (id) => DEC.byId(id) || {}; const reading = (n) => (W.V7_READINGS || []).find((r) => r && r.n === n) || {};
+  const zoneText = (k, s, dir, b) => S(() => V.zoneInfo(k, s, dir).perBand[b].valueText, null);
+  const ov = S(() => V.overrides({ plant: 'manesar' }), []) || [];
+  const ovOf = (re) => ov.find((o) => re.test(`${o.what}`)) || {};
+  const [clears, clearsAt] = String(F.noisyClears || '').split(', ');
+  const tiers = (k, ids) => ids.map((id) => S(() => V.tierInfo(k, id), null));
+  const dpRaised = S(() => V.equipment('digitalpaani').map((e) => [e, V.tierInfo('digitalpaani', e.id)]).filter(([, t]) => t && t.src === 'derived' && t.value !== t.libValue), []);
+  const raisedBy = (re, from, to) => dpRaised.filter(([e, t]) => re.test(e.tag) && t.libValue === from && t.value === to).length;
+  const bw = tiers('bawal', ['sc_v1', 'sc_dt1', 'sc_cav']);
+  const migr = ovOf(/AMP-BL1 · Caution/);
+  const EXPECT = [
+    ['D1', 'v72Does', `proposes ${F.dpUnitProcesses} unit processes and ${F.dpControlGroups} control groups and leaves ${F.dpUnclassified} pieces of equipment unclassified`],
+    ['D1', 'v72Does', `beside the ${F.eqTypes} equipment types`],
+    ['D3', 'v72Does', `on ${F.emergencyAt} is one more trial firing on pH low · EQ-1, with a peak of ${F.emergencyPeak}`],
+    ['D4', 'v72Does', `day ${F.trialDay} of its trial`],
+    ['D5', 'v72Does', `"Fired ${F.lvlCount} times in ${F.lvlDays} days · median ${F.lvlMedian} min · peak ${F.lvlPeak}"`],
+    ['D6', 'v72Does', `"Override · Tuning · you · ${F.today} · review by ${F.tunedReview}"`],
+    ['D7', 'v72Does', `about ${F.vedTasksPerDay} Tasks a day at Vedanta`],
+    ['D7', 'v72Does', `DigitalPaani would run about ${F.dpTasksPerDay} Tasks a day once Live`],
+    ['D18', 'v72Does', `"${zoneText('manesar', 'eq1_lvl', 'above', 'caution')}"`],
+    ['D18', 'v72Does', `as for ${word(F.dpHeightGaps)} tanks at DigitalPaani`],
+    ['D19', 'v72Does', `("Entered for ${F.vedLastService} of ${F.vedEq} pieces of equipment" at Vedanta)`],
+    ['D19', 'v72Does', `so ${F.vedDueOnGoLive} scheduled Tasks would fall due on Vedanta's go-live day`],
+    ['D21', 'v72Does', `Level high · EQ-1 (${F.lvlPerDay} a day) is noisy`],
+    ['D21', 'v72Does', `DO low · SBR-1 (${F.doPerDay} a day,`],
+    ['D24', 'v72Does', `'Fired ${F.lvlCount} times in ${F.lvlDays} days'`],
+    ['D24', 'v72Does', `'Trial so far: would have fired ${F.lvlTuned} times instead of ${F.lvlCount}'`],
+    ['D24', 'v72Does', `about ${clearsAt} on ${clears}`],
+    ['D24', 'v72Does', `Wed 28 Oct's Emergency on pH low · EQ-1`],
+    ['D25', 'v72Does', `set ${S(() => migr.atText, '?')}, review by ${S(() => migr.reviewByText, '?')}, author not recorded`],
+    ['D25', 'v72Does', `AMP-BL1's Caution ${ovOf(/AMP-BL1 · Caution/).valueText} (base ${ovOf(/AMP-BL1 · Caution/).baseText}), Minor ${ovOf(/AMP-BL1 · Minor/).valueText} (base ${ovOf(/AMP-BL1 · Minor/).baseText}) and Major ${ovOf(/AMP-BL1 · Major/).valueText === 'no value' ? 'none' : ovOf(/AMP-BL1 · Major/).valueText} (base ${ovOf(/AMP-BL1 · Major/).baseText})`],
+    ['D25', 'v72Does', `do-when ${ovOf(/do when/).valueText} (base ${ovOf(/do when/).baseText}) and done-when ${ovOf(/done when/).valueText} (base ${ovOf(/done when/).baseText})`],
+    ['D25', 'options', `Five of Manesar's ${F.migrated} migrated values`],
+    ['D26', 'v72Does', `raises V-1 from ${S(() => bw[0].libValue, '?')} to ${S(() => bw[0].value, '?')} (it serves MGF-1) and DT-1 and CV-1 from ${S(() => bw[1].libValue, '?')} to ${S(() => bw[1].value, '?')} (UF-1)`],
+    ['D26', 'v72Does', `raises the ${word(raisedBy(/^UFBP-/, 'B', 'A'))} UF backwash pumps from B to A and ${word(raisedBy(/^UF(F|P|BO)V-/, 'C', 'A'))} UF valves from C to A`],
+    ['D26', 'options', `(${dpRaised.length} at DigitalPaani, ${bw.filter((t) => t && t.src === 'derived' && t.value !== t.libValue).length} at Bawal)`],
+    ['R8', 'reading', `${F.dpUnclassified} of DigitalPaani's ${F.dpEquipment} pieces of equipment and ${F.bawalByRules} of Bawal's ${F.bawalEq}`],
+    ['R14', 'reading', `'${zoneText('manesar', 'eq1_lvl', 'above', 'caution')}'`],
+    ['R18', 'reading', `so it falls on ${F.migratedReview.replace(/^\w+ /, '')}`],
+    ['R24', 'reading', `${F.vedDueOnGoLive} of Vedanta's ${F.vedScheduled} scheduled Tasks`],
+    ['R35', 'reading', `keeps ${String(ovOf(/do when/).valueText).replace(/ A$/, '')} / ${ovOf(/done when/).valueText} as two Migrated overrides against a worked-out ${String(ovOf(/do when/).baseText).replace(/ A$/, '')} / ${ovOf(/done when/).baseText}`],
+  ];
+  const textOf = (who, field) => {
+    if (/^R\d+$/.test(who)) { const r = reading(+who.slice(1)); return [r.title, r.drafts, r.reading, r.why].join('\n'); }
+    const d = card(who); return field === 'options' ? (d.options || []).map((o) => o.label + ' ' + o.consequence).join('\n') : String(d[field] || '');
+  };
+  const miss = EXPECT.filter(([who, field, want]) => !textOf(who, field).replace(/\s+/g, ' ').includes(want)).map(([who, field, want]) => `${who}.${field} should say "${want}"`);
+  ok(!miss.length, `v7/2's numbers in the cards and readings equal v7/2's engine (${EXPECT.length} places)`, miss.slice(0, 4).join(' | '));
+  /* "almost two days" (D24) and "under two days later" (D21): how long the tuned Trigger stays noisy, from the engine */
+  S(() => {
+    const ts = V.trialStats('vedanta', 'a_3d'); const days = (ts.since + (ts.count / 10) * 864e5 - V.now()) / 864e5;
+    const d24 = [card('D24').tellAlex].concat((card('D24').options || []).map((o) => o.consequence)).join(' ');
+    ok(days >= 1.5 && days < 2 && /almost two more days/.test(d24) && /almost two days/.test(d24) && /under two days later/.test(card('D21').v72Does), 'the noisy mark outlasts a fix by almost two days, as D21 and D24 say', `${days.toFixed(2)} days`);
+  }, null);
+  /* every fact the cards quote appears in some card's v7/2 text */
+  const facts = require('./facts72.js').KEYS; const all72 = CARDS.map((d) => [d.v72Short, d.v72Does].join('\n')).join('\n');
+  const unquoted = facts.filter((k) => F[k] == null || !all72.includes(String(F[k])));
+  ok(!unquoted.length, 'every fact the cards quote is in a card\'s v7/2 text', unquoted.map((k) => `${k} (${F[k]})`).join(', '));
+  /* the Forced try card D23 quotes: Downstream lists the frozen Trigger, which keeps its Emergency limit */
+  S(() => {
+    const id = 'tpl_up_activated-sludge_do-low';
+    V.editTemplate(id, { band: 'emergency', rule: { kind: 'const', value: 0.8 } });
+    const ds = V.downstream(id); const fz = (ds.fields || []).flatMap((f) => f.groups || []).find((g) => g.key === 'frozen') || {};
+    const held = V.heldOf('manesar', 'a_do_at2'); const em = held && held.terms && held.terms.bands ? held.terms.bands.emergency : null;
+    V.discardTemplateDraft(id);
+    ok(textOf('D23', 'v72Does').includes(`'${fz.head}' with '${(fz.items || []).map((x) => x.text || x).join('')}', which keeps ${em}`), 'D23\'s Forced try reads as v7/2\'s Downstream does', `${fz.head} · ${(fz.items || []).map((x) => x.text || x).join(' ; ')} · keeps ${em}`);
+  }, null);
+  V.reset();
 })();
 
 finish();

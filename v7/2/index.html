@@ -1,0 +1,758 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CloseTheLoop Configuration v7/2</title>
+<meta name="description" content="v7/2: Alex's model built as drafted, end to end, on the same plants and story as v7/1, to compare the two.">
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/decisions7.css?v=3">
+<style>
+  :root {
+    --bg: #f7f8f6; --surface: #ffffff; --surface-2: #f3f5f3; --surface-3: #eceeec;
+    --line: #e6e9e6; --line-2: #d5dbd7;
+    --ink: #25302e; --ink-2: #4e5a57; --ink-3: #7b8784;
+    --accent: #3f7d74; --accent-strong: #2e5e57; --accent-tint: #eaf3f0;
+    --ok-ink: #2f6a40; --ok-tint: #e8f2ea;
+    --warn: #c99a3e; --warn-ink: #81611d; --warn-tint: #faf3e2;
+    --bad: #b8564f; --bad-ink: #8f3f38; --bad-tint: #f8ebe9;
+    --info: #5b7a90; --info-ink: #3e5566; --info-tint: #eaf0f4;
+    --font: "Figtree", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+    --r: 10px; --r-lg: 14px;
+    --shadow-sm: 0 1px 2px rgba(37, 48, 46, .05);
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; scroll-padding-top: 20px; }
+  body { margin: 0; font: 400 16px/1.65 var(--font); color: var(--ink); background: var(--bg); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; text-underline-offset: 2px; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+  code, .mono { font-family: var(--mono); font-size: .86em; }
+  code { background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
+  .wrap { max-width: 1160px; margin: 0 auto; padding: 0 28px; }
+
+  /* top */
+  .top { background: var(--surface); border-bottom: 1px solid var(--line); padding: 46px 0 40px; }
+  .eyebrow { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent-strong); font-weight: 700; }
+  .top h1 { font-size: 38px; line-height: 1.15; margin: 10px 0 12px; letter-spacing: -.02em; max-width: 22ch; font-weight: 700; }
+  .top .sub { font-size: 18px; color: var(--ink-2); max-width: 68ch; margin: 0; }
+  .top .ver { font-size: 15px; color: var(--ink-2); max-width: 68ch; margin: 14px 0 0; padding: 10px 14px; border-left: 3px solid var(--accent); background: var(--accent-tint); border-radius: 0 var(--r) var(--r) 0; }
+  .top .ver a { font-weight: 600; }
+  .meta { margin-top: 18px; font-size: 13px; color: var(--ink-3); display: flex; gap: 8px 20px; flex-wrap: wrap; }
+  .cta { margin-top: 24px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .cta a { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 9px; font-weight: 600; font-size: 14.5px; text-decoration: none; }
+  .cta a.p { background: #33504c; color: #fff; }
+  .cta a.p:hover { background: #283f3c; }
+  .cta a.s { border: 1px solid var(--line-2); color: var(--ink-2); background: var(--surface); }
+  .cta a.s:hover { border-color: var(--accent); color: var(--accent-strong); }
+
+  /* layout */
+  .layout { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 48px; padding-top: 36px; }
+  .toc { position: sticky; top: 20px; align-self: start; font-size: 13.5px; max-height: calc(100vh - 40px); overflow-y: auto; padding-bottom: 20px; }
+  .toc .eyebrow { font-size: 10.5px; color: var(--ink-3); padding: 0 0 8px 12px; }
+  .toc a { display: block; padding: 5px 0 5px 12px; color: var(--ink-2); border-left: 2px solid var(--line); }
+  .toc a:hover { color: var(--accent-strong); text-decoration: none; border-color: var(--accent); }
+  .toc a.sub { padding-left: 24px; font-size: 12.5px; color: var(--ink-3); }
+  article { min-width: 0; max-width: 860px; padding-bottom: 96px; }
+  article > p, article > ul, article > ol, article > .callout { max-width: 74ch; }
+  h2 { font-size: 27px; line-height: 1.25; margin: 64px 0 14px; letter-spacing: -.02em; font-weight: 700; }
+  h2:first-child { margin-top: 0; }
+  h2 .n { font: 600 14px var(--mono); color: var(--accent); margin-right: 10px; vertical-align: 3px; }
+  h3 { font-size: 18px; line-height: 1.35; margin: 34px 0 10px; letter-spacing: -.01em; font-weight: 650; }
+  p { margin: 0 0 14px; }
+  ul, ol { margin: 0 0 16px; padding-left: 22px; }
+  li { margin-bottom: 6px; }
+  .lead { font-size: 17.5px; color: var(--ink-2); }
+  .muted { color: var(--ink-3); }
+  .small { font-size: 13.5px; }
+
+  /* tables */
+  .tw { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 12px 0 22px; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; line-height: 1.5; }
+  th { text-align: left; background: var(--surface-2); padding: 9px 12px; font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); white-space: nowrap; }
+  td { padding: 10px 12px; border-top: 1px solid var(--line); vertical-align: top; }
+  td:first-child { font-weight: 600; }
+  table.ac td:first-child { font: 600 12.5px var(--mono); color: var(--accent-strong); white-space: nowrap; width: 72px; }
+  table.ac td { font-weight: 400; }
+  table.ac td:first-child { font-weight: 600; }
+  table.wide { min-width: 720px; }
+  a.dref { font: 600 12.5px var(--mono); white-space: nowrap; }
+
+  /* blocks */
+  .callout { border-left: 3px solid var(--accent); background: var(--accent-tint); padding: 12px 18px; border-radius: 0 var(--r) var(--r) 0; margin: 16px 0 22px; font-size: 15px; }
+  .callout.warn { border-color: var(--warn); background: var(--warn-tint); }
+  .nums { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 18px 0 26px; }
+  .nums div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 14px 16px; font-size: 13.5px; color: var(--ink-2); line-height: 1.4; }
+  .nums b { display: block; font-size: 28px; line-height: 1.1; letter-spacing: -.02em; color: var(--accent-strong); margin-bottom: 4px; font-weight: 700; }
+  .go { display: inline-block; max-width: 100%; font-size: 13px; font-weight: 600; line-height: 1.4; padding: 3px 10px; border-radius: 14px; border: 1px solid var(--line-2); background: var(--surface); color: var(--accent-strong); }
+  h3 .go { margin-left: 8px; vertical-align: 2px; }
+  .go:hover { border-color: var(--accent); background: var(--accent-tint); text-decoration: none; }
+
+  /* the 12 chapters */
+  ol.chs { list-style: none; padding: 0; margin: 16px 0 24px; counter-reset: ch; }
+  ol.chs > li { counter-increment: ch; display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 4px 14px; padding: 16px 0; border-top: 1px solid var(--line); margin: 0; }
+  ol.chs > li::before { content: counter(ch); grid-row: 1 / span 3; width: 30px; height: 30px; border-radius: 50%; background: var(--accent-tint); color: var(--accent-strong); font: 600 13px/30px var(--mono); text-align: center; }
+  ol.chs h4 { margin: 2px 0 2px; font-size: 16px; font-weight: 650; }
+  ol.chs p { margin: 0 0 6px; color: var(--ink-2); font-size: 15px; }
+  .ch-a { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; font-size: 13px; }
+  .ch-a .k { color: var(--ink-3); font-size: 12px; }
+
+  /* section 4: the shared document view (decisions7.css) inside this page */
+  .dec-chal { margin: 4px 0 18px; }
+  .dec-chal .small { margin-left: 6px; }
+  #dec-table, #dec-list { margin-top: 26px; }
+  .dd h3, .dd h4 { letter-spacing: -.01em; }
+  .dd .dd-gh { font-size: 20px; margin-top: 40px; }
+  .dd .dd-glance .dd-gh { margin-top: 0; }
+  .dd .dd-table th { background: var(--surface-2); text-transform: none; white-space: normal; }
+  .dd .dd-table td { border-top: 0; }
+  .dd .dd-table td:first-child { font-weight: 400; }
+  .dd li { margin-bottom: 0; }
+  .dd ul, .dd ol { margin-bottom: 0; }
+
+  /* decisions */
+  .dsum td:first-child { white-space: nowrap; }
+  .dsum td { font-weight: 400; }
+  .prose p { margin: 0 0 8px; }
+  .prose p:last-child, .prose ul:last-child { margin-bottom: 0; }
+  .prose ul { margin: 4px 0 8px; padding-left: 20px; }
+  .prose li { margin: 2px 0; }
+
+  @media (max-width: 960px) {
+    .layout { grid-template-columns: 1fr; gap: 0; }
+    .toc { display: none; }
+    .nums { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 640px) {
+    .wrap { padding: 0 16px; }
+    .top { padding: 34px 0 30px; }
+    .top h1 { font-size: 29px; }
+    .top .sub { font-size: 16.5px; }
+    h2 { font-size: 23px; margin-top: 52px; }
+    body { font-size: 15.5px; }
+  }
+  @media print {
+    .toc, .cta { display: none; }
+    .layout { grid-template-columns: 1fr; }
+    .dd-card, .dd-reading { break-inside: avoid-page; }
+    .dd-picks, .dd-go { display: none; }
+  }
+
+  /* v7/2 additions: the spine, side-by-side lists, the walk's do / see lines and action counts */
+  .spine { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 4px; margin: 10px 0 18px; font-size: 14px; }
+  .spine span { padding: 4px 10px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--surface); font-weight: 600; color: var(--ink-2); }
+  .spine span.up { border-color: var(--accent); color: var(--accent-strong); background: var(--accent-tint); }
+  .spine i { color: var(--ink-3); font-style: normal; }
+  .cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; margin: 12px 0 22px; }
+  .cols > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 14px 18px; min-width: 0; }
+  .cols h4 { margin: 0 0 8px; font-size: 15px; }
+  .cols ul { margin: 0; font-size: 14.5px; }
+  ol.chs p.do, ol.chs p.see { font-size: 14.5px; }
+  ol.chs p.do b, ol.chs p.see b { color: var(--ink); }
+  .acts { font-size: 12.5px; color: var(--ink-2); white-space: nowrap; }
+  .acts b { font: 600 12.5px var(--mono); color: var(--accent-strong); }
+  .note { font-size: 13.5px; color: var(--ink-3); }
+  ul.quiet li { margin-bottom: 8px; }
+  @media (max-width: 720px) {
+    .cols { grid-template-columns: minmax(0, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<header class="top"><div class="wrap">
+  <div class="eyebrow">CloseTheLoop configuration · v7/2 · 30 Oct 2026</div>
+  <h1>Alex's model, built as drafted, end to end.</h1>
+  <p class="sub">v7/2 is the second of two clickable studies. It builds Alex's configuration model as Alex drafted it, on the same four plants, story clock and sample readings as v7/1, so the two can be compared screen by screen. Where the drafts were silent or disagreed, v7/2 takes the reading Alex's own principles favour and says so.</p>
+  <p class="ver">This is v7/2, Alex's model as drafted. <a href="../index.html">Both approaches</a> · <a href="../challenges.html">Challenges doc</a> · <a href="../1/index.html">Read v7/1</a>, the recommended approach.</p>
+  <div class="meta"><span>30 October 2026 · updated 2 November 2026</span><span>Owner: Mihir Sethi, with Claude</span><span>v1 to v6 are unchanged</span></div>
+  <div class="cta">
+    <a class="p" href="prototype.html#/plants">Open the v7/2 prototype →</a>
+    <a class="s" href="../1/index.html">Read v7/1</a>
+    <a class="s" href="../index.html">Both approaches</a>
+    <a class="s" href="#walk">Walk the story</a>
+    <a class="s" href="#decisions">Card by card</a>
+  </div>
+</div></header>
+
+<div class="wrap"><div class="layout">
+<nav class="toc" aria-label="Contents">
+  <div class="eyebrow">Contents</div>
+  <a href="#what">1 · What v7/2 is</a>
+  <a class="sub" href="#plants">The four plants</a>
+  <a href="#model">2 · The model on one page</a>
+  <a href="#walk">3 · Walk it in 12 chapters</a>
+  <a href="#decisions">4 · How v7/2 differs, card by card</a>
+  <a class="sub" href="#dec-table">At a glance</a>
+  <a class="sub" href="#dec-list">Every card</a>
+  <a href="#silent">5 · Where the drafts were silent</a>
+  <a href="#comparison">6 · What the comparison shows</a>
+  <a class="sub" href="#costs">What it costs to build</a>
+  <a href="#words">7 · Words on screen</a>
+  <a href="#simulated">8 · What is simulated</a>
+  <a href="#ac">9 · Acceptance criteria</a>
+  <a href="#run">10 · How to run and reset</a>
+</nav>
+
+<article>
+
+<!-- ─────────────────────────────────────────────────────────────── 1 -->
+<h2 id="what"><span class="n">1</span>What v7/2 is</h2>
+<p class="lead">One clickable prototype that carries the same plants through the same twelve moments as v7/1, in Alex's configuration model as Alex drafted it.</p>
+<p>Only what Alex's model changes is changed: the plants, the clock, the sample readings, the engine that fires on them and the workbook's content are v7/1's. Where the drafts are silent or say two things, v7/2 takes the reading Alex's own ranked principles favour, and <a href="#silent">section 5</a> lists each one. The design stance is to render the model faithfully, costs included, and never to improve it quietly with v7/1's recommendations: where v7/1 does better, the decision card says so instead.</p>
+<div class="nums">
+  <div><b data-v="eqTypes">56</b>equipment types, the database's own</div>
+  <div><b data-v="upTypes">27</b>unit-process types, new in v7/2</div>
+  <div><b>12</b>chapters in the story, as in v7/1</div>
+  <div><b id="dec-n">27</b>decisions for Mihir, shared with v7/1</div>
+</div>
+
+<h3 id="same">Same in both, and only in v7/2</h3>
+<div class="cols">
+  <div><h4>Same in both</h4><ul>
+    <li>The four plants, each carrying the same part of the story.</li>
+    <li>One story clock for every plant, from Thu 29 Oct 2026, 09:00 (IST).</li>
+    <li>Sample readings, generated the same way every time, and one engine that records trial firings, works out previews and opens Issues.</li>
+    <li>The database's equipment types under their stored names, and the workbook's issues, root causes with their fixes, and general tasks.</li>
+    <li>The decision cards, from one shared file, and your calls on them.</li>
+  </ul></div>
+  <div><h4>Only in v7/2</h4><ul>
+    <li>Unit processes, stages and control groups, proposed from the plant graph and confirmed in a structure pass.</li>
+    <li>A review queue in two passes: the structure, then the bindings.</li>
+    <li>A People tab on each plant, where the roster, phones and routing are edited.</li>
+    <li>A page for every sensor, whose Zones are the only place its limits are edited.</li>
+    <li>Templates with their own versions, four publish kinds and pins.</li>
+    <li>Limit rules over design parameters.</li>
+    <li>Five override reasons, each with its own path, and Deviations.</li>
+    <li>The freeze while an Issue is open, and resync.</li>
+    <li>Membership edited on the drawing.</li>
+    <li>Alex's words on every screen.</li>
+  </ul></div>
+</div>
+
+<h3 id="plants">The four plants</h3>
+<p>Each plant carries the part of the story its data can honestly show, exactly as in v7/1 (card <a class="dref" href="#D4">D4</a>). Every count and preview built from readings carries a <b>Sample readings</b> tag.</p>
+<div class="tw"><table class="wide">
+  <tr><th>Plant</th><th>Kind</th><th>At the start of the story</th><th>What it carries in v7/2</th></tr>
+  <tr><td>DigitalPaani (STP)</td><td>Real plant graph; readings are samples</td><td>Commissioning since <span data-v="dpSince">Thu 29 Oct, 08:30</span>. The plant graph was just read; nothing reviewed; nobody on the roster.</td><td>Identification, the structure pass and the drawing, the bindings pass, Readiness and People.</td></tr>
+  <tr><td>Vedanta ETP</td><td>Sample plant</td><td>Commissioning since <span data-v="vedSince">Fri 23 Oct, 10:00</span>, day <span data-v="trialDay">6</span> of its trial. Structure confirmed; every binding accepted except one draft.</td><td>Trial firings, a noisy Trigger, tuning on a sensor's Zones, an Emergency that is only a trial firing, last service dates and go-live.</td></tr>
+  <tr><td>Manesar STP</td><td>Sample plant</td><td>Live since <span data-v="manSince">Tue 1 Sep 2026</span>. One open Issue: DO low · AT-2, its Trigger frozen. Older plant values migrated as overrides.</td><td>A live Issue on a unit process, the freeze and resync, Coverage, a library change and Deviations.</td></tr>
+  <tr><td>Bawal WTP</td><td>Sample plant</td><td>Live since <span data-v="bawalSince">Wed 15 Jul 2026</span>; quiet.</td><td>A second Live plant: structure changes and criticality tiers worked out from its structure.</td></tr>
+</table></div>
+
+<!-- ─────────────────────────────────────────────────────────────── 2 -->
+<h2 id="model"><span class="n">2</span>The model on one page, in plain words</h2>
+<h3 id="spine">The spine</h3>
+<div class="spine" aria-label="Plant type, Plant, Stage, Unit process, Equipment, Sensor, Reading"><span>Plant type</span><i>›</i><span>Plant</span><i>›</i><span>Stage</span><i>›</i><span class="up">Unit process</span><i>›</i><span>Equipment</span><i>›</i><span>Sensor</span><i>›</i><span>Reading</span></div>
+<p>A stage is only a label taken from the unit-process type (Preliminary, Primary, Secondary, Tertiary, Sludge handling): nothing is filed on it. A unit process is a basin or reactor in the plant graph, one object with one page. Each piece of equipment takes part in one or more unit processes, or in none. Control groups sit across the spine: blowers or pumps that feed exactly the same downstream set, holding only their members and a setpoint. Every Trigger, Issue and Task is about one unit process, one piece of equipment or the plant.</p>
+
+<h3 id="rules">Five interaction rules</h3>
+<ol>
+  <li><b>One editor for each value.</b> A sensor's limits are edited on its page, a Task's cadence on its Trigger page, a design parameter on Details. Every other place shows the value read-only and links there.</li>
+  <li><b>Every value shows its source.</b> Library, Derived, Override, Base moved, Gap and the rest, as a chip that never needs a hover.</li>
+  <li><b>Any difference from the library is an override</b>, with a reason, an author and a review date, and Deviations lists it.</li>
+  <li><b>A new plant is a review.</b> The structure pass, then the bindings pass: automation proposes, a person confirms.</li>
+  <li><b>Commissioning, then Live.</b> Nothing is sent while a plant is in Commissioning; Go live starts Issues, notifications and scheduled Tasks.</li>
+</ol>
+
+<h3 id="principles">Alex's six principles, in Alex's order</h3>
+<ol>
+  <li>Nothing changes silently.</li>
+  <li>Safety.</li>
+  <li>Show the consequence before saving.</li>
+  <li>Automation proposes; a person confirms.</li>
+  <li>One place to edit each thing.</li>
+  <li>Configuration shows its results.</li>
+</ol>
+<p>Where the drafts are silent, v7/2 takes the reading these favour, highest first. Section 5 names the principle behind each reading.</p>
+
+<h3 id="states">Commissioning and Live</h3>
+<div class="tw"><table class="wide">
+  <tr><th></th><th>Commissioning</th><th>Live</th></tr>
+  <tr><td>Triggers</td><td>Active Triggers record trial firings at every severity, Emergencies included. Nothing is sent: no Issue, no message, no call, no hooter.</td><td>Active Triggers open Issues and notify the plant's people, including Emergency calls and the hooter.</td></tr>
+  <tr><td>New Triggers</td><td>Accepted as drafts, then activated; their trial firings start at once.</td><td>A draft is activated straight into Issues. There is no trial unless the whole plant returns to Commissioning.</td></tr>
+  <tr><td>Scheduled Tasks</td><td>None: they wait for go-live.</td><td>First due from the last service date entered, otherwise on go-live day.</td></tr>
+  <tr><td>Metrics</td><td>Not counted.</td><td>Counted from the latest go-live, on Coverage.</td></tr>
+  <tr><td>Structure changes</td><td>Free.</td><td>Each needs a typed reason, and the Triggers it touches are flagged until someone checks them.</td></tr>
+  <tr><td>Blockers</td><td>No Operator with a verified phone, no Lead with a verified phone, equipment with no type, equipment left unclassified, drafts nobody has decided.</td><td>None: go-live has passed.</td></tr>
+  <tr><td>Gaps</td><td>Readings whose limits can't resolve, noisy Triggers, equipment with no maintenance programme, Issue Triggers with no diagnostic flow.</td><td>The same four, on Coverage.</td></tr>
+</table></div>
+
+<h3 id="where">Where each value is edited</h3>
+<div class="tw"><table class="wide">
+  <tr><th>Value</th><th>Edited on</th></tr>
+  <tr><td>A sensor's limits (its Zones)</td><td>The sensor page, under Zones, with the reason asked first.</td></tr>
+  <tr><td>One Trigger's limit</td><td>Its Trigger page, as "Override for this Trigger only", with a reason and a note.</td></tr>
+  <tr><td>Persistence, clearing and Enabled</td><td>The Trigger page.</td></tr>
+  <tr><td>A scheduled Task's cadence; a condition Task's thresholds</td><td>The Task's Trigger page, or from the Equipment Card in a sheet that opens the same form.</td></tr>
+  <tr><td>Criticality tier</td><td>Details of the equipment or unit process.</td></tr>
+  <tr><td>Design parameters</td><td>Details of the equipment, unit process or plant.</td></tr>
+  <tr><td>Membership and control groups</td><td>The Structure page, on the drawing or in the list.</td></tr>
+  <tr><td>Roster, phones and the hooter</td><td>The plant's People tab.</td></tr>
+  <tr><td>Library limit rules, persistence, clearing and cadence</td><td>The template page, then Downstream and Publish.</td></tr>
+</table></div>
+
+<!-- ─────────────────────────────────────────────────────────────── 3 -->
+<h2 id="walk"><span class="n">3</span>Walk it in 12 chapters</h2>
+<p>The prototype's <b>Story</b> button opens the same twelve chapters beside every page, each with "Compare with v7/1 →". The story clock starts at Thu 29 Oct, 09:00 (IST); walk the chapters in order from <b>Reset the story</b>. The numbers below are worked out from v7/2's engine at the start of the story. <b>Actions</b> counts the clicks a presenter makes in each chapter, in v7/1 and in v7/2, as the end-to-end walks record them.</p>
+<ol class="chs">
+  <li><h4>The library</h4>
+    <p class="do"><b>Do:</b> open the library, then Equipment types › Blower, then Unit-process types › Activated sludge › DO low.</p>
+    <p class="see"><b>See:</b> <span data-v="upTypes">27</span> unit-process types beside <span data-v="eqTypes">56</span> equipment types, and <span data-v="templates">254</span> templates, each with its own version. Blower's "Motor current high v1" holds a limit rule per band ("Caution above 100% · Minor above 105% · Major above 115% of full-load current") and says where it resolves, such as Manesar's BL-1 at <span data-v="blAmps">40.0 / 42.0 / 46.0 A</span>. An MBBR is a unit process, so its type page points to Moving bed bioreactor. DO low's Downstream names the frozen Trigger at Manesar.</p>
+    <div class="ch-a"><a class="go" href="prototype.html#/library">Open in v7/2 →</a><a class="go" href="prototype.html#/library/eq-types/BLW">Blower</a><a class="go" href="prototype.html#/library/templates/tpl_up_activated-sludge_do-low">DO low</a><a class="go" href="../1/prototype.html#/library" target="v7-1">Same moment in v7/1</a><span class="acts">Actions: v7/1 <b data-act71="1">0</b> · v7/2 <b data-act72="1">0</b></span><span class="k">Decisions</span><a class="dref" href="#D1">D1</a><a class="dref" href="#D10">D10</a><a class="dref" href="#D17">D17</a><a class="dref" href="#D14">D14</a></div></li>
+  <li><h4>A new plant from the survey</h4>
+    <p class="do"><b>Do:</b> open DigitalPaani's structure pass; change SC's type to Screening; accept everything proposed; place or set aside what is left; open the drawing.</p>
+    <p class="see"><b>See:</b> from <span data-v="dpNodes">66</span> pieces of equipment and <span data-v="dpSensors">38</span> sensors, identification proposes <span data-v="dpUnitProcesses">21</span> unit processes and <span data-v="dpControlGroups">11</span> control groups, each with a plain reason: <span data-v="dpRows">76</span> rows to review, <span data-v="dpProposed">56</span> proposed and <span data-v="dpUnclassified">20</span> unclassified, which a person must place or mark not part of any unit process. Changing SC to Screening brings <span data-v="screeningTasks">14</span> Task templates. When the last row is decided, the structure is confirmed and the bindings pass opens.</p>
+    <div class="ch-a"><a class="go" href="prototype.html#/p/digitalpaani/review/structure">Open in v7/2 →</a><a class="go" href="prototype.html#/p/digitalpaani/structure/drawing">The drawing</a><a class="go" href="../1/prototype.html#/p/digitalpaani/scada" target="v7-1">Same moment in v7/1</a><span class="acts">Actions: v7/1 <b data-act71="2">1</b> · v7/2 <b data-act72="2">42</b></span><span class="k">Decisions</span><a class="dref" href="#D1">D1</a><a class="dref" href="#D9">D9</a><a class="dref" href="#D20">D20</a><a class="dref" href="#D4">D4</a><a class="dref" href="#D26">D26</a></div></li>
+  <li><h4>The bindings pass</h4>
+    <p class="do"><b>Do:</b> open the bindings pass; filter what can't resolve; add a tank height on CCT; accept the rest and start the trial.</p>
+    <p class="see"><b>See:</b> every value with its source chip, such as "Derived · 85% of tank height (4.0 m)". <span data-v="dpHeightGaps">3</span> level readings can't resolve because the survey holds no tank height for their tanks; adding one re-resolves the reading at once. Accepted Triggers read "Active · trial". With every binding accepted, DigitalPaani would run about <span data-v="dpTasksPerDay">233</span> Tasks a day once Live.</p>
+    <div class="ch-a"><a class="go" href="prototype.html#/p/digitalpaani/review/bindings">Open in v7/2 →</a><a class="go" href="../1/prototype.html#/p/digitalpaani/library" target="v7-1">Same moment in v7/1</a><span class="acts">Actions: v7/1 <b data-act71="3">1</b> · v7/2 <b data-act72="3">4</b></span><span class="k">Decisions</span><a class="dref" href="#D8">D8</a><a class="dref" href="#D18">D18</a><a class="dref" href="#D16">D16</a><a class="dref" href="#D22">D22</a></div></li>
+  <li><h4>Readiness</h4>
+    <p class="do"><b>Do:</b> open DigitalPaani's home; on People add an Operator and a Lead and send each a code; leave the two drafts that can't resolve inactive, with a reason.</p>
+    <p class="see"><b>See:</b> three tracks, Structure · Bindings · People; at the start <span data-v="dpBlockers">3</span> blockers (no Operator, no Lead, unclassified equipment) and the gap "<span data-v="dpNopm">66</span> pieces of equipment without a maintenance programme". Once people are verified and the drafts decided, Go live is enabled. Alex's list has no rule that a Trigger must exist, so a plant with nothing bound would be cleared the same way.</p>
+    <div class="ch-a"><a class="go" href="prototype.html#/p/digitalpaani">Open in v7/2 →</a><a class="go" href="prototype.html#/p/digitalpaani/people">People at DigitalPaani</a><a class="go" href="../1/prototype.html#/p/digitalpaani" target="v7-1">Same moment in v7/1</a><span class="acts">Actions: v7/1 <b data-act71="4">0</b> · v7/2 <b data-act72="4">23</b></span><span class="k">Decisions</span><a class="dref" href="#D2">D2</a><a class="dref" href="#D13">D13</a><a class="dref" href="#D19">D19</a></div></li>
+  <li><h4>Trial and tuning</h4>
+    <p class="do"><b>Do:</b> open Vedanta's Level high · EQ-1; follow its source to the sensor's Zones; override Caution with the reason Tuning at 87%.</p>
+    <p class="see"><b>See:</b> day <span data-v="trialDay">6</span> of the trial, <span data-v="vedActive">12</span> Triggers active, <span data-v="vedFirings">112</span> trial firings so far. "Fired <span data-v="lvlCount">76</span> times in <span data-v="lvlDays">5.9</span> days · median <span data-v="lvlMedian">45</span> min · peak <span data-v="lvlPeak">88%</span>", <span data-v="lvlPerDay">12.8</span> a day, so it is noisy; DO low · SBR-1 fires <span data-v="doPerDay">5.9</span> a day and carries no mark. The reason comes first, five to choose from; the preview reads "Trial so far: would have fired <span data-v="lvlTuned">0</span> times instead of <span data-v="lvlCount">76</span>." The noisy gap stays, because trial firings are records: with nothing new, it clears at <span data-v="noisyClears">Sat 31 Oct, 01:19</span>.</p>
+    <div class="ch-a"><a class="go" href="prototype.html#/p/vedanta/trigger/a_3d">Open in v7/2 →</a><a class="go" href="prototype.html#/p/vedanta/trigger/a_3r">DO low · SBR-1</a><a class="go" href="prototype.html#/p/vedanta/sensor/v_eq1_LVL?f=zone.above.caution">LVL-EQ-1's Zones</a><a class="go" href="../1/prototype.html#/p/vedanta/alert/a_3d" target="v7-1">Same moment in v7/1</a><span class="acts">Actions: v7/1 <b data-act71="5">5</b> · v7/2 <b data-act72="5">6</b></span><span class="k">Decisions</span><a class="dref" href="#D5">D5</a><a class="dref" href="#D21">D21</a><a class="dref" href="#D6">D6</a><a class="dref" href="#D10">D10</a><a class="dref" href="#D24">D24</a></div></li>
+  <li><h4>Safety in commissioning</h4>
+    <p class="do"><b>Do:</b> open pH low · EQ-1 at Vedanta, then Vedanta's Issues and People › Routing.</p>
+    <p class="see"><b>See:</b> one trial firing on <span data-v="emergencyAt">Wed 28 Oct, 15:10</span> at the Emergency band, peak <span data-v="emergencyPeak">pH 3.7</span>, marked "Emergency · nobody was told". Vedanta has no Issue at all: in Commissioning nothing is sent, Emergencies included. Routing says who will be told from go-live.</p>
+    <div class="ch-a"><a class="go" href="prototype.html#/p/vedanta/trigger/a_3f">Open in v7/2 →</a><a class="go" href="prototype.html#/p/vedanta/issues">Vedanta's Issues</a><a class="go" href="../1/prototype.html#/p/vedanta/issue/is_5m" target="v7-1">Same moment in v7/1</a><span class="acts">Actions: v7/1 <b data-act71="6">0</b> · v7/2 <b data-act72="6">0</b></span><span class="k">Decisions</span><a class="dref" href="#D3">D3</a><a class="dref" href="#D8">D8</a></div></li>
+  <li><h4>Go live</h4>
+    <p class="do"><b>Do:</b> open Vedanta's home; decide the undecided draft, MLSS low · SBR-1; open Go live and read it.</p>
+    <p class="see"><b>See:</b> last service dates entered for <span data-v="vedLastService">4</span> of <span data-v="vedEq">11</span> pieces of equipment, so <span data-v="vedDueOnGoLive">51</span> of <span data-v="vedScheduled">73</span> scheduled Tasks would fall due on go-live day, then about <span data-v="vedTasksPerDay">59</span> Tasks a day (v7/1's grouping shows about <span data-v="v71VedPerDay">47</span>). The confirmation lists what changes, loudest first, and "Trial: <span data-v="vedFired">3</span> Triggers fired". After go-live the home is Coverage.</p>
+    <div class="ch-a"><a class="go" href="prototype.html#/p/vedanta">Open in v7/2 →</a><a class="go" href="prototype.html#/p/vedanta/review/bindings">The undecided draft</a><a class="go" href="prototype.html#/p/vedanta/people/service-dates">Last service dates</a><a class="go" href="../1/prototype.html#/p/vedanta" target="v7-1">Same moment in v7/1</a><span class="acts">Actions: v7/1 <b data-act71="7">3</b> · v7/2 <b data-act72="7">3</b></span><span class="k">Decisions</span><a class="dref" href="#D2">D2</a><a class="dref" href="#D3">D3</a><a class="dref" href="#D7">D7</a><a class="dref" href="#D19">D19</a></div></li>
+  <li><h4>Live operation</h4>
+    <p class="do"><b>Do:</b> open Manesar's open Issue, DO low · AT-2; answer question 2 No; open its Trigger; override DO-AT2's Minor to 1.5 with Tuning; move time on an hour and Verify.</p>
+    <p class="see"><b>See:</b> the Issue sits on the unit process AT-2, and the diagnosis says "Caused by BL-1 (Blower; takes part in AT-2)". The Trigger is frozen while the Issue is open: the zone change saves, with the preview "Last 7 days: would have fired <span data-v="ch8Would">2</span> times (now <span data-v="ch8Now">3</span>)", but the Trigger keeps 2.0. After the close it shows "Base moved · waits for a resync" until someone resyncs it.</p>
+    <div class="ch-a"><a class="go" href="prototype.html#/p/manesar/issue/is_2z">Open in v7/2 →</a><a class="go" href="prototype.html#/p/manesar/trigger/a_do_at2">The Trigger</a><a class="go" href="prototype.html#/p/manesar/up/at2">The unit process AT-2</a><a class="go" href="../1/prototype.html#/p/manesar/issue/is_2z" target="v7-1">Same moment in v7/1</a><span class="acts">Actions: v7/1 <b data-act71="8">11</b> · v7/2 <b data-act72="8">16</b></span><span class="k">Decisions</span><a class="dref" href="#D15">D15</a><a class="dref" href="#D16">D16</a><a class="dref" href="#D13">D13</a><a class="dref" href="#D20">D20</a></div></li>
+  <li><h4>Coverage</h4>
+    <p class="do"><b>Do:</b> open Manesar's home; open Return to Commissioning and read it; open Readings; then Bawal.</p>
+    <p class="see"><b>See:</b> <span data-v="manActive">6</span> active Triggers, <span data-v="manIssues">3</span> Issues in the last 7 days, <span data-v="manFalse">1</span> of <span data-v="manClosed">2</span> closed as a false alarm, and <span data-v="manDrafts">80</span> drafts waiting in the review queue. Returning would mute <span data-v="retActive">6</span> Triggers, stop <span data-v="retUpcoming">9</span> upcoming Tasks and leave <span data-v="retDrafts">80</span> drafts to decide before going live again. Blind spots wait for the diagnostics work. Readings exist on Live plants only.</p>
+    <div class="ch-a"><a class="go" href="prototype.html#/p/manesar">Open in v7/2 →</a><a class="go" href="prototype.html#/p/manesar/readings">Readings at Manesar</a><a class="go" href="prototype.html#/p/bawal">Bawal WTP</a><a class="go" href="../1/prototype.html#/p/manesar" target="v7-1">Same moment in v7/1</a><span class="acts">Actions: v7/1 <b data-act71="9">0</b> · v7/2 <b data-act72="9">5</b></span><span class="k">Decisions</span><a class="dref" href="#D2">D2</a><a class="dref" href="#D11">D11</a><a class="dref" href="#D12">D12</a><a class="dref" href="#D8">D8</a><a class="dref" href="#D27">D27</a></div></li>
+  <li><h4>A library change</h4>
+    <p class="do"><b>Do:</b> open the MLSS low template; change Minor from 2,000 to 2,200 mg/L; read Downstream; publish with a note. Then resync DO low · AT-2.</p>
+    <p class="see"><b>See:</b> Downstream before publishing: Manesar's MLSS-AT2 follows (<span data-v="mlssLib">2,000 mg/L</span> today) and MLSS-AT1 keeps its own <span data-v="mlssAt1">2,500 mg/L</span> and will show Base moved. "Version: Minor (suggested)", which the publisher confirms. The plants that follow change at once and are not told; only All Plants Activity records the publish. A Forced try on DO low's Emergency band skips the frozen Trigger while its Issue is open.</p>
+    <div class="ch-a"><a class="go" href="prototype.html#/library/templates/tpl_up_activated-sludge_mlss-low">Open in v7/2 →</a><a class="go" href="prototype.html#/library/templates/tpl_up_activated-sludge_do-low">DO low: a Forced try</a><a class="go" href="prototype.html#/library/eq-types/BLW/tasks">Blower: a cadence change</a><a class="go" href="../1/prototype.html#/library/OS_TANK_DF" target="v7-1">Same moment in v7/1</a><span class="acts">Actions: v7/1 <b data-act71="10">5</b> · v7/2 <b data-act72="10">6</b></span><span class="k">Decisions</span><a class="dref" href="#D11">D11</a><a class="dref" href="#D17">D17</a><a class="dref" href="#D18">D18</a><a class="dref" href="#D19">D19</a><a class="dref" href="#D23">D23</a></div></li>
+  <li><h4>Deviations</h4>
+    <p class="do"><b>Do:</b> open Deviations; adopt the library value on Sludge blanket high · SC-1; extend the one past review; try the five reasons on DO-AT2's Major, ending with a Temporary override; move time on a week.</p>
+    <p class="see"><b>See:</b> <span data-v="devOverrides">17</span> overrides · <span data-v="devBaseMoved">1</span> base moved · <span data-v="devPastReview">1</span> past review · <span data-v="devSingleUse">2</span> single-use templates · <span data-v="devStructure">11</span> structure changes at the start, grouped by library field. <span data-v="migrated">15</span> of Manesar's older values carry the reason Migrated, review by <span data-v="migratedReview">Mon 30 Nov 2026</span>. The Temporary override expires by itself, and Activity says the plant admins were told.</p>
+    <div class="ch-a"><a class="go" href="prototype.html#/deviations">Open in v7/2 →</a><a class="go" href="prototype.html#/p/manesar/deviations">Manesar STP only</a><a class="go" href="../1/prototype.html#/differences" target="v7-1">Same moment in v7/1</a><span class="acts">Actions: v7/1 <b data-act71="11">2</b> · v7/2 <b data-act72="11">17</b></span><span class="k">Decisions</span><a class="dref" href="#D6">D6</a><a class="dref" href="#D11">D11</a><a class="dref" href="#D14">D14</a><a class="dref" href="#D25">D25</a></div></li>
+  <li><h4>Decisions</h4>
+    <p class="do"><b>Do:</b> open the Decisions page; open D3; pick a call; open the same card in v7/1.</p>
+    <p class="see"><b>See:</b> the same <b id="dec-n2">27</b> cards as v7/1, each with "What v7/1 does (recommended approach)" and "What v7/2 does (Alex's model)", "You are here" on v7/2's column, and links to the same place in both. A call made here shows in v7/1 too.</p>
+    <div class="ch-a"><a class="go" href="prototype.html#/decisions">Open in v7/2 →</a><a class="go" href="prototype.html#/decisions/D3">Card D3</a><a class="go" href="../1/prototype.html#/decisions" target="v7-1">Same moment in v7/1</a><span class="acts">Actions: v7/1 <b data-act71="12">1</b> · v7/2 <b data-act72="12">1</b></span><span class="k">Decisions</span><a class="dref" href="#D1">D1</a><a class="dref" href="#D2">D2</a><a class="dref" href="#D5">D5</a></div></li>
+</ol>
+<p class="note" id="acts-note">The action counts come from the end-to-end walks of both prototypes: every button pressed and every value typed or choice made, in the order each story tells it. Following a link is not counted, a field left as it was is not counted, and optional beats are left out. Each walk does its own story's beats, so where a v7/2 chapter tries more than v7/1's does (an override in chapter 8, an activation and a return opened in chapter 9, five reasons tried in chapter 11), its count includes that; chapters 2 and 4 are the same moments, done Alex's way. A dash means a walk has not been counted yet.</p>
+
+<!-- ─────────────────────────────────────────────────────────────── 4 -->
+<h2 id="decisions"><span class="n">4</span>How v7/2 differs, card by card</h2>
+<p>Each card is one question for Mihir. It gives the recommendation, what v7/1 builds and what v7/2 builds side by side (v7/2 marked "You are here"), the options with their consequences and which prototype builds which, and, folded, what Alex's pack says, what v6 does today and Mihir's earlier direction. The cards come from the one file both prototypes, both hand-off docs and the challenges doc read, so they never disagree.</p>
+<div class="callout"><b>How to answer.</b> Pick a call under any card's options: here, on either prototype's Decisions page or in the challenges doc. Your calls are kept in this browser and shared by both prototypes and both documents. <b>Copy my answers</b> is on the Decisions page and in the challenges doc.</div>
+<p class="dec-chal"><a class="go" href="../challenges.html">Read every challenge in the challenges doc →</a> <span class="muted small">It adds the calls about the study itself.</span></p>
+<div id="dec-table"><p class="muted">Loading from the decisions file…</p></div>
+<div id="dec-list"><noscript><p class="callout warn">The decision cards are drawn from the shared decisions file and need JavaScript.</p></noscript></div>
+
+<!-- ─────────────────────────────────────────────────────────────── 5 -->
+<h2 id="silent"><span class="n">5</span>Where Alex's drafts were silent or disagreed</h2>
+<p>v7/2 builds Alex's model as drafted, so wherever the drafts say nothing, or say two different things, it has to pick one reading. Each reading below says what the drafts say, in plain words, the reading v7/2 takes, and the principle that decided it. <span id="read-sum">Those marked "Mihir to confirm" need a call.</span></p>
+<div id="dec-readings"><p class="muted">Loading from the decisions file…</p></div>
+<h3 id="smaller">Smaller readings, taken without a call</h3>
+<p>These come up on fewer screens or change little. Each is built as described, and the principle in brackets decided it.</p>
+<ul class="quiet">
+  <li><b>Two blockers for people.</b> "No reachable Operator and Lead" could block only when both are missing; v7/2 shows one blocker per missing role, as Alex's own Readiness drawing does (safety).</li>
+  <li><b>Undecided drafts.</b> Accepting a binding as a draft does not clear the blocker; activating it, leaving it inactive with a reason or rejecting it does (nothing changes silently).</li>
+  <li><b>One list of gaps.</b> Alex's three screens list different gaps; v7/2 uses the reference list of four on all of them, and Coverage keeps them (nothing changes silently between screens).</li>
+  <li><b>The noisy rule against the drawing.</b> One drawing marks DO low noisy at 6 a day; the rule (more than 10 a day) wins, so only Level high · EQ-1 is noisy at Vedanta (one place to edit each thing).</li>
+  <li><b>The trial's window.</b> Counted from when the Trigger became active in Commissioning, or the latest return, and never under one day, so a few firings in the first hours don't mark a Trigger noisy.</li>
+  <li><b>No callout for an Emergency trial firing.</b> Alex has none, and adding one would quietly change the model; the row's "Emergency · nobody was told" states the consequence instead (show the consequence).</li>
+  <li><b>Task bindings.</b> An accepted Task binding is active but generates nothing until go-live; an undecided one is a draft for the blocker.</li>
+  <li><b>Maintenance programme.</b> Any maintenance Task except calibration counts; the last-service count uses planned maintenance only, because that is what a service date sets.</li>
+  <li><b>A service date already past its interval.</b> The Task is due on go-live day, never before; compliance counts from go-live.</li>
+  <li><b>Going live a second time.</b> A Task's last real completion counts as its last service, then the entered date, then go-live day.</li>
+  <li><b>How drafts on a Live plant are reached.</b> A count on Coverage's Triggers card links to the bindings pass; it is navigation only.</li>
+  <li><b>Who may go live.</b> "Go live needs Full Admin" is kept as Alex wrote it; the prototype's one user, the Global Admin, can too.</li>
+  <li><b>Machines and basins.</b> A node is one object, the unit process, with its own page, so "tanks count" holds for the Equipment Card while lists split unit processes from equipment.</li>
+  <li><b>Participants' Tasks.</b> A unit-process page lists its participants' Issues as shared and counts their Tasks with a link (configuration shows its results).</li>
+  <li><b>What "Triggers re-checked" means.</b> Triggers on the unit process or on the moved equipment; on a Live plant they are flagged until a person marks them checked (nothing changes silently).</li>
+  <li><b>When the bindings pass opens.</b> Once every structure row is decided and nothing is left unclassified.</li>
+  <li><b>Readings as structure rows.</b> One readings row per unit process, Accept only; sensors move only through the survey.</li>
+  <li><b>Shared participants on the drawing.</b> An outline plus a "shared" tag, with the side panel naming the other unit processes, instead of a dashed copy per group.</li>
+  <li><b>Stages at a water plant.</b> The stage list is written for wastewater, so Bawal's filters read "Tertiary".</li>
+  <li><b>Who owns a limit rule.</b> The template; its chip names the template and its version (one place to edit each thing).</li>
+  <li><b>Where library values are edited.</b> On the template page; a type page opens the same editor in a sheet (one place to edit each thing).</li>
+  <li><b>When zones are worked out.</b> Whenever a template applies, bound or proposed; a rejected proposal leaves the zone "Gap · no rule".</li>
+  <li><b>Base moved on a frozen Trigger.</b> Shown, amber, as the pattern for frozen Triggers says.</li>
+  <li><b>Physical on a constant.</b> The form says no design parameter changes a constant rule and offers only "Override anyway" (show the consequence).</li>
+  <li><b>Structural "for now".</b> The reason stays Structural, with the one-year review; the drafts give no expiry.</li>
+  <li><b>Keep and the review date.</b> Keeping an override whose base moved records the new base and a note but leaves the review date alone; Extend is what moves it (nothing changes silently).</li>
+  <li><b>Similar overrides.</b> Plants that override a field to the same value are grouped with "Consider a library variant?", whatever their reasons, as drawn.</li>
+  <li><b>Filters on Deviations.</b> The drawing's cluster filter becomes a plant filter, since the study has no clusters.</li>
+  <li><b>Units on every value.</b> Deviations rows carry units, because cadence rows mix weeks and months.</li>
+  <li><b>"Notify", not Alex's banned word.</b> Alex's own blocker and go-live copy use a word the word list bans; the word list wins and v7/2 says "notify".</li>
+  <li><b>What is not built.</b> Bulk overrides and keyboard shortcuts appear on no screen of Alex's, so neither prototype has them.</li>
+  <li><b>Plant admins on expiry.</b> The prototype has one user, so the Activity line says the plant admins were told.</li>
+  <li><b>The same moment where Alex's model has no such object.</b> v7/1's chapter 6 is an Issue; in v7/2 it is the Trigger page where the Emergency trial firing is recorded (show the consequence).</li>
+  <li><b>Version numbers in the story.</b> Chapter text says "the version" and lets each chip say whether it is the type's or the template's.</li>
+  <li><b>Two vocabularies on a card.</b> Each column of a card speaks its own prototype's words; the page around it uses only words both prototypes allow.</li>
+  <li><b>Public cards.</b> Alex asked for each disagreement with its document id; the public site shows none, so the cards say what each draft says in plain words.</li>
+</ul>
+
+<!-- ─────────────────────────────────────────────────────────────── 6 -->
+<h2 id="comparison"><span class="n">6</span>What the comparison shows</h2>
+<h3 id="cmp-effort">Commissioning effort</h3>
+<ul>
+  <li><b>v7/2 asks more of the person commissioning a plant.</b> The same twelve moments take more steps: a structure pass before any Trigger is proposed, a sensor page before tuning, people typed in before go-live, a resync after an Issue closes. The action counts in section 3 put a number on it.</li>
+  <li><b>The structure pass is long and literal.</b> DigitalPaani's has <span data-v="dpRows">76</span> rows. One click accepts the <span data-v="dpProposed">56</span> proposed, but the <span data-v="dpUnclassified">20</span> left unclassified must each be placed or set aside by hand, because the membership rules place only blowers, recirculation and backwash pumps, dosing sets and valves. At Bawal the rules alone would leave <span data-v="bawalByRules">7</span> of its <span data-v="bawalEq">8</span> pieces of equipment unclassified. v7/1 asks for one decision per equipment type.</li>
+  <li><b>Bulk accept can confirm wrong proposals as easily as right ones:</b> the screen chamber as a Collection sump, one control group over both UF trains' backwash pumps, one over both hypo dosing lines.</li>
+  <li><b>Limits that need a parameter.</b> A level limit can't resolve until a tank height exists, so <span data-v="dpHeightGaps">3</span> of DigitalPaani's level readings raise nothing until someone types one; the height then changes nothing, because the sensor already reads % of the tank. Motor-current limits resolve to exactly v7/1's numbers; only the chip changes.</li>
+  <li><b>Better attribution, and a fix for the screen chamber.</b> Membership points a diagnosis at the right equipment, and a person can change the screen chamber's type to Screening in the console, gaining <span data-v="screeningTasks">14</span> Task templates without waiting for the database team. v7/1 can only flag it.</li>
+</ul>
+<h3 id="cmp-safety">Safety</h3>
+<ul>
+  <li><b>Nothing is sent during Commissioning, Emergencies included.</b> Vedanta's pH Emergency on <span data-v="emergencyAt">Wed 28 Oct, 15:10</span> (peak <span data-v="emergencyPeak">pH 3.7</span>) reached nobody: it is one trial firing. In v7/1 it opened an Issue and told the Leads, with no call and no hooter. One rule, no exceptions, and riskier.</li>
+  <li><b>New Triggers on a Live plant</b> go straight to real Issues and calls. The only way to get trial evidence first is to return the whole plant: at Manesar that mutes <span data-v="retActive">6</span> Triggers, stops <span data-v="retUpcoming">9</span> upcoming Tasks and stops the counts, and going live again waits behind <span data-v="retDrafts">80</span> drafts. v7/1 runs only the new Trigger on a trial.</li>
+  <li><b>The freeze.</b> A Trigger with an open Issue is skipped by every change, a Forced Emergency change included, so the tank with the open low-DO Issue is the one that misses a stricter Emergency limit until the Issue closes, and its Trigger waits for a person to resync it. In v7/1 only the open Issue keeps its old terms.</li>
+  <li><b>Two of Alex's own screens carry a risk.</b> A probe fault saved as Tuning stays a limit change for 90 days, with no path to a calibration; and the frozen-Trigger preview offers "Close it as a false alarm" to unblock a change, which feeds the false-alarm rate on Coverage.</li>
+</ul>
+<h3 id="cmp-library">Library changes and plant notices</h3>
+<ul>
+  <li><b>Quieter for the plants, louder for the publisher.</b> A published change reaches the plants that follow at once, with no note: their Activity stays silent and only the version on the chip changes. In return the publisher gets four kinds, pins and a Downstream count before publishing. v7/1 writes a dated note to each plant a change reaches.</li>
+  <li><b>Stricter on overrides.</b> A Forced change suspends overrides instead of ending them, so they return when it is lifted, and an override that comes to equal the library clears itself. Base moved, the only amber state, is the one signal a plant gets.</li>
+  <li><b>More to explain, little extra reach at four plants.</b> Two version numbers, four publish kinds, pins and a Downstream panel that counts plants in overlapping classes; with four plants, nearly every count is 0 or 1.</li>
+</ul>
+<h3 id="cmp-dayone">Day-one work</h3>
+<ul>
+  <li><b>Work piles up on go-live day.</b> No scheduled Task runs before go-live, and every Task without a service date is due that day: at Vedanta <span data-v="vedDueOnGoLive">51</span> of <span data-v="vedScheduled">73</span> fall due on go-live day even with <span data-v="vedLastService">4</span> service dates entered. v7/1 spreads first due dates across each interval.</li>
+  <li><b>One Tasks-a-day number with every copy in it.</b> About <span data-v="vedTasksPerDay">59</span> a day at Vedanta against v7/1's grouped <span data-v="v71VedPerDay">47</span>; about <span data-v="dpTasksPerDay">233</span> at DigitalPaani with every binding accepted. Filing Tasks on unit processes doesn't shorten the list: each MBBR keeps its own tests and the blower changeover lands on every blower.</li>
+  <li><b>A fixed Trigger stays noisy.</b> Trial firings are records, so tuning Level high · EQ-1 on Thu 29 Oct leaves its noisy gap until <span data-v="noisyClears">Sat 31 Oct, 01:19</span>, although the preview already says it would have fired <span data-v="lvlTuned">0</span> times; and DO low · SBR-1 loses v7/1's "mostly short" explanation.</li>
+</ul>
+<h3 id="cmp-words">Words</h3>
+<ul>
+  <li><b>One vocabulary with Alex.</b> Screens say Trigger, Zones, Persistence, Override, Base moved, Deviation, survey and plant graph, and Criticality tier A, B or C, and Alex's word list finds no defect.</li>
+  <li><b>At a cost for operators.</b> "Persistence" and "Clearing" read less plainly than "must hold for" and "must clear for", and "Criticality tier B" less plainly than v6's names; v7/1's name for the plant's own control system, the one staff import from, disappears from the screens.</li>
+  <li><b>An audit trail from day one.</b> Deviations groups every override by library field with a reason and a review date, and every older value carries the reason Migrated, where v7/1 shows "Reason not recorded".</li>
+</ul>
+
+<h3 id="costs">What it costs to build</h3>
+<p>Estimates for the product, not the prototype. S is days, M a week or two, L several weeks.</p>
+<div class="tw"><table class="wide">
+  <tr><th>Capability v7/2 adds</th><th>What it takes</th><th>Size</th><th>Depends on</th></tr>
+  <tr><td>Unit processes, stages, control groups</td><td>New objects and pages, identification from the plant graph's pipes, a new home for every reading, Issue and Task</td><td>L</td><td>Pipes drawn the right way round (DigitalPaani has some drawn against the flow)</td></tr>
+  <tr><td>Review queue: structure pass and bindings pass</td><td>Two queues with bulk accept, Undo, decisions kept across re-runs, changes only after a re-run</td><td>M</td><td>The identification output</td></tr>
+  <tr><td>Membership on the drawing</td><td>An editor over the plant graph's drawing, with a list view for keyboard work</td><td>L</td><td>Alex lists it among the riskiest parts</td></tr>
+  <tr><td>Sensor pages and Zones</td><td>A page per sensor, the only limit editor, the one-Trigger exception</td><td>M</td><td>—</td></tr>
+  <tr><td>Template versions, publish kinds, pins</td><td>Two version axes, a suggested kind the publisher confirms, a library copy per pinned plant, a history</td><td>L</td><td>—</td></tr>
+  <tr><td>Limit rules over design parameters</td><td>An expression per band, a parameter editor, the constant flag, re-resolving on change, the source order</td><td>L</td><td>Design parameters the survey does not hold</td></tr>
+  <tr><td>Five override reasons with their paths</td><td>The design-parameter path, library-variant requests, Temporary overrides that revert by themselves and tell the plant admins</td><td>M</td><td>The plant admins' contacts (People)</td></tr>
+  <tr><td>Freeze and resync</td><td>A hold while an Issue is open, Base moved after it closes, a resync action</td><td>S</td><td>—</td></tr>
+  <tr><td>People in the console</td><td>Roster, roles, phone check, routing, kept in step with the User Center</td><td>M</td><td>A phone-verification service</td></tr>
+  <tr><td>Alex's words</td><td>Copy across every page</td><td>S</td><td>—</td></tr>
+  <tr><td>Last service dates and the count-from choice</td><td>An optional Readiness step and a choice at publish</td><td>S</td><td>—</td></tr>
+</table></div>
+<h3 id="not-in-v72">What v7/2 does not have that v7/1 has</h3>
+<ul>
+  <li>Dated change notes to the plants a library change reaches.</li>
+  <li>The ways out of a limit change: a sensor fault, a correction at the source, a suggestion for the library.</li>
+  <li>A trial for a single new Trigger on a Live plant.</li>
+  <li>A Readings tab during Commissioning, and limits on hand tests.</li>
+  <li>Tasks grouped by type on screen, and first due dates spread across each interval.</li>
+  <li>The "mostly short" label on a trial Trigger.</li>
+  <li>The Emergency exception: a real Emergency during Commissioning reaching the Leads.</li>
+</ul>
+
+<!-- ─────────────────────────────────────────────────────────────── 7 -->
+<h2 id="words"><span class="n">7</span>Words on screen</h2>
+<p>v7/2 uses Alex's word list wholesale (card <a class="dref" href="#D14">D14</a>). Each row gives v7/2's word, what it means, and the word v7/1 uses for the same thing.</p>
+<div class="tw"><table class="wide">
+  <tr><th>v7/2 word</th><th>Meaning</th><th>v7/1 word</th></tr>
+  <tr><td>Trigger</td><td>The rule an admin configures on a reading: when it fires and what it opens.</td><td>alert</td></tr>
+  <tr><td>Issue · Task</td><td>What opens when something is wrong · planned work. Capitalised as objects.</td><td>issue · task</td></tr>
+  <tr><td>Unit process · Stage · Control group</td><td>A basin or reactor and the work it does · a label for where it sits in treatment · blowers or pumps that feed the same set.</td><td>none: each tank holds its own readings, issues and tasks</td></tr>
+  <tr><td>Survey · plant graph</td><td>Where equipment and sensors come from: the survey writes the plant graph, and the console reads it.</td><td>the plant's control system, by its own name (card D9 quotes it)</td></tr>
+  <tr><td>Zones · limit · limit rule</td><td>A sensor's set of limits · one band's number · the library's rule for a band, a constant or an expression.</td><td>limits · the library's limits</td></tr>
+  <tr><td>Persistence · Clearing</td><td>"Persistence · must hold for n min" and "Clearing · must clear for n min".</td><td>must hold for · must clear for</td></tr>
+  <tr><td>Draft · never fires · Active · trial · Active · Inactive</td><td>A Trigger's status.</td><td>Draft · On trial · On · Off</td></tr>
+  <tr><td>Structure pass · Bindings pass</td><td>The two passes of the review queue.</td><td>a review named after the control system · What the library brings</td></tr>
+  <tr><td>Structure · Bindings · People</td><td>Readiness's three tracks.</td><td>the same two, then Who is told</td></tr>
+  <tr><td>Template · Equipment type · Unit-process type, each "v n"</td><td>Library objects, each with its own version.</td><td>library type · version</td></tr>
+  <tr><td>Downstream · Publish · Patch, Minor, Major, Forced</td><td>Where a library change lands, and its kind.</td><td>Where it lands · Publish · Safety change</td></tr>
+  <tr><td>Library · Derived · Override · Base moved · Gap</td><td>Where a value comes from.</td><td>From the library · From the form · Changed here · Library changed since · No limits yet</td></tr>
+  <tr><td>Physical · Regulatory or client · Structural · Tuning · Temporary · Migrated</td><td>Why a plant differs from the library; Migrated is never offered.</td><td>Tuned for this plant · For now, until … · Not recorded</td></tr>
+  <tr><td>Revert · Extend · Keep · Adopt the library value · Promote</td><td>What can be done with an override.</td><td>Back to the library value · Keep · Suggest for the library</td></tr>
+  <tr><td>Deviations · Past review</td><td>Every override at a plant · an override whose review date has passed.</td><td>Differences from the library · Review due</td></tr>
+  <tr><td>Diagnostic flow · Fix · Action flow · Verify</td><td>The steps from an Issue to its close.</td><td>Diagnosis · fix steps · Verify</td></tr>
+  <tr><td>Cadence · Last service</td><td>How often a Task falls due · when it was last done.</td><td>how often · last done</td></tr>
+  <tr><td>Criticality tier A · B · C</td><td>How critical a piece of equipment is.</td><td>Critical · Essential · Standard</td></tr>
+  <tr><td>People · Roster · Reachability · Routing</td><td>Who works at the plant and who is told.</td><td>Who is told (read from the User Center)</td></tr>
+  <tr><td>Equipment Card</td><td>The Lead's phone screen for one piece of equipment.</td><td>Phone view</td></tr>
+  <tr><td>Commissioning · nothing is sent</td><td>The chip on every page of a plant in Commissioning.</td><td>Commissioning</td></tr>
+</table></div>
+<p>Never shown in v7/2: the words on Alex's don't-use list, among them machine, asset, estate, custom, schedule, procedure, priority and the name of the control system; v7/1's own words above; "alarm" except in "false alarm"; and any internal id. The smoke test checks every page for them.</p>
+
+<!-- ─────────────────────────────────────────────────────────────── 8 -->
+<h2 id="simulated"><span class="n">8</span>What is simulated</h2>
+<ul>
+  <li><b>Readings.</b> Every reading is a sample series, worked out the same way every time from the sensor and the time, as in v7/1. Each count or preview built from them carries <b>Sample readings</b>. DigitalPaani's plant graph is real; its readings are samples too.</li>
+  <li><b>The survey and identification.</b> DigitalPaani's plant graph is its real layout export, read as the survey's output; identification of unit processes and control groups is worked out from its drawing with the rules as drafted. For the sample plants, the structure is a written seed. "Re-run identification" runs again on the same graph.</li>
+  <li><b>One user.</b> Everyone is the Global Admin, so role rules ("Go live needs Full Admin") show as text and never block.</li>
+  <li><b>Phones.</b> "Send code" sends nothing; a labelled sample button stands in for the person entering the code.</li>
+  <li><b>Messages.</b> Nothing is sent anywhere. An Issue records who would have been told and how.</li>
+  <li><b>The operator app.</b> Not part of v7/2. Issue and Task pages stand in for the work, and the Equipment Card stands in for the phone screen.</li>
+  <li><b>Time.</b> One story clock for every plant, from Thu 29 Oct 2026, 09:00 (IST). <b>Move time on</b> runs the engine for every plant.</li>
+  <li><b>The library.</b> Every type and template at v1, except Sludge blanket high, already at v2 (persistence 5 → 15 min, published Tue 20 Oct).</li>
+</ul>
+
+<!-- ─────────────────────────────────────────────────────────────── 9 -->
+<h2 id="ac"><span class="n">9</span>Acceptance criteria</h2>
+<p>Each criterion is one check, starting from <b>Reset the story</b>. They follow the 12 chapters, then the app as a whole, and each is checked by a test that runs in node.</p>
+
+<h3>1 · The library <a class="go" href="prototype.html#/library">Open</a></h3>
+<div class="tw"><table class="ac">
+  <tr><td>V72-1</td><td>The library has 27 unit-process types; the 29 equipment types that are basins or reactors and the 27 others make up the 56 database types exactly.</td></tr>
+  <tr><td>V72-2</td><td>Every Trigger at every plant names a template the library holds; equipment-type templates exist only for the types that are not basins or reactors; each unit-process type's templates carry the same readings, directions, limits and cadences as the database type its content comes from.</td></tr>
+  <tr><td>V72-3</td><td>"This scales with the plant" is shown on a band exactly when its limit rule is a constant on a reading that scales with the plant, such as an agitator's motor current or a dosing tank's chemical level, and never on a rule over a design parameter.</td></tr>
+  <tr><td>V72-4</td><td>Manesar's AMP-BL1 resolves to 40.0 / 42.0 / 46.0 A (Derived) and runs on 44 / 48 A / none by Override; its three overrides keep a derived base.</td></tr>
+  <tr><td>V72-5</td><td>Vedanta's BL-1 motor current resolves to 20.0 / 21.0 / 23.0 A and P-1's to 6.7 / 7.0 / 7.7 A, and Bawal's RW-1 to 10.0 / 10.5 / 11.5 A, all Derived.</td></tr>
+  <tr><td>V72-6</td><td>Manesar's LVL-EQ1 resolves to Caution 85% (3.4 m) and Major 95% (3.8 m), Derived; Vedanta's LVL-EQ-1 to 85% and 95% with 3.8 m and 4.3 m from the 4.5 m a person entered.</td></tr>
+  <tr><td>V72-7</td><td>The library home's seven counts equal what the library holds; every equipment type that is a basin or reactor shows the banner linking its unit-process types; Moving bed bioreactor lists the same Task templates and Issue types v7/1 shows on MBBR.</td></tr>
+  <tr><td>V72-8</td><td>At the start Sludge blanket high is at v2 (persistence 15 min) with v1 (5 min) in its history; every type is at v1; All Plants Activity has exactly one publish line and Manesar's Activity none.</td></tr>
+</table></div>
+
+<h3>2 · A new plant from the survey <a class="go" href="prototype.html#/p/digitalpaani/review/structure">Open</a></h3>
+<div class="tw"><table class="ac">
+  <tr><td>V72-9</td><td>Identification at DigitalPaani finds 21 unit processes, 45 pieces of equipment, 47 memberships, 11 control groups and 20 unclassified, over 38 sensors.</td></tr>
+  <tr><td>V72-10</td><td>DigitalPaani's proposed types: SC and SP Collection sump; OGT Oil and grease removal; EQTT-1 and EQTT-2 Equalisation; the five MBBRs Moving bed bioreactor; TS-1 and TS-2 Tube settling; CCT Chlorine contact; MGF and ACF Media filtration; UVS UV disinfection; UF-1 and UF-2 Ultrafiltration; TWT and UFWT Treated water storage; SLP Sludge holding.</td></tr>
+  <tr><td>V72-11</td><td>SRCP-1 and SRCP-2 take part in MBBR-1, MBBR-2 and MBBR-3; SRCP-3 and SRCP-4 in MBBR-4 and MBBR-5; MBBRAB-1 in all five MBBRs; UFPV-1 in UF-1 and UFWT; CDT and CDP in CCT; no sludge recirculation pump takes part in TS-1 or TS-2 at the start.</td></tr>
+  <tr><td>V72-12</td><td>DigitalPaani's structure pass counts 76 rows, 56 proposed, 20 unclassified, 15 shared rows and 11 control groups, and is not confirmed.</td></tr>
+  <tr><td>V72-13</td><td>Vedanta, Manesar and Bawal start with their structure confirmed and 4, 7 and 3 unit processes; 4, 2 and 5 structure changes; and FP-1, BS-1, and BS-1 with SABRE-1 marked not part of any unit process.</td></tr>
+  <tr><td>V72-14</td><td>No page names the plant's control system (the workbook's own text excepted); DigitalPaani is tagged "Real plant graph"; fixes read "Fix the survey, then re-run" or "Correct the survey, then re-run identification".</td></tr>
+  <tr><td>V72-15</td><td>Changing SC to Screening previews 14 Task templates and 6 Issue types against Collection sump's 1 Task template, and about 28.8 more Tasks a day; saving records one type change, and the pass then shows 55 proposed.</td></tr>
+  <tr><td>V72-16</td><td>"Accept all that are proposed" at DigitalPaani accepts every proposed row and leaves 20 unclassified; Undo brings them back.</td></tr>
+  <tr><td>V72-17</td><td>Placing UFFP-1 in UF-1 records an added member, drops the unclassified count by one and raises UFFP-1 to Criticality tier A, Derived; the preview had said "Criticality tier for UFFP-1: B → A".</td></tr>
+  <tr><td>V72-18</td><td>Re-running identification at every plant reports nothing changed, added or gone, and keeps every decision and change.</td></tr>
+  <tr><td>V72-19</td><td>DigitalPaani's drawing has 66 nodes, 21 of them unit processes, and 96 links; the sample plants have no drawing; the drawing scrolls inside its own frame.</td></tr>
+  <tr><td>V72-20</td><td>Identification gives the same result on every boot and after a reset.</td></tr>
+  <tr><td>V72-21</td><td>The difference between a node's drawn and stored type shows on its Details, never as a Readiness gap.</td></tr>
+  <tr><td>V72-22</td><td>The Structure list at DigitalPaani shows the unclassified equipment first, with Place in…, Not part of any unit process and the bulk bar; selecting a unit process on the drawing outlines its participants, dashed when proposed and solid when confirmed.</td></tr>
+  <tr><td>V72-23</td><td>A structure change can be undone for 10 s from its toast, and later from Activity while nothing later touched the same rows; after that Undo is gone.</td></tr>
+  <tr><td>V72-24</td><td>At the start Bawal's V-1 is Criticality tier B and DT-1 and CV-1 tier A, all Derived; a Derived tier is never lower than its type's.</td></tr>
+</table></div>
+
+<h3>3 · The bindings pass <a class="go" href="prototype.html#/p/digitalpaani/review/bindings">Open</a></h3>
+<div class="tw"><table class="ac">
+  <tr><td>V72-25</td><td>The bindings pass reads "Bindings pass · waiting" until the structure is confirmed; once open, it groups its rows by unit process in flow order, with "Outside any unit process" last.</td></tr>
+  <tr><td>V72-26</td><td>DigitalPaani has no gap for missing limits until its structure is confirmed; then LVL-CCT, LVL-TWT and LVL-UFWT each need a tank height, and no other plant has such a gap at the start.</td></tr>
+  <tr><td>V72-27</td><td>A tank height of 3.5 m on CCT clears its gap and resolves LVL-CCT to 85% (3.0 m) and 95% (3.3 m); Undo brings the gap back.</td></tr>
+  <tr><td>V72-28</td><td>Replacing a survey value without a note fails with "Say why this differs from the survey."</td></tr>
+  <tr><td>V72-29</td><td>Accepting as drafts leaves every accepted row a draft and the drafts blocker as it was; accepting and starting the trial makes them active, and only active Triggers record trial firings; rows that can't resolve are skipped, counted, and stay in the drafts blocker until each is decided; rows that need equipment or sensors never count.</td></tr>
+  <tr><td>V72-30</td><td>Leaving a Trigger inactive without a reason fails with "Say why it stays inactive."; with one, it is inactive and leaves the drafts blocker.</td></tr>
+  <tr><td>V72-31</td><td>Vedanta's bindings pass at the start: 1 undecided, 11 that need equipment or sensors, 86 active, and the counts add up to All.</td></tr>
+</table></div>
+
+<h3>4 · Readiness <a class="go" href="prototype.html#/p/digitalpaani">Open</a></h3>
+<div class="tw"><table class="ac">
+  <tr><td>V72-32</td><td>A Commissioning home shows exactly three tracks, Structure, Bindings and People, each step marked done, current, waiting or needs attention; waiting steps say what they wait for.</td></tr>
+  <tr><td>V72-33</td><td>At every plant, at the start and after every story step, the only blockers are no Operator, no Lead, untyped equipment, unclassified equipment and undecided drafts, and the only gaps are readings with no limits, noisy Triggers, no maintenance programme and no diagnostic flow.</td></tr>
+  <tr><td>V72-34</td><td>DigitalPaani at the start: blockers no Operator, no Lead and 20 unclassified; the gap of 66 pieces of equipment with no maintenance programme; Go live disabled as "Go live · 3 blockers left".</td></tr>
+  <tr><td>V72-35</td><td>With an Operator and a Lead added and verified and the unclassified equipment decided, DigitalPaani can go live with no Trigger and its bindings pass not yet open.</td></tr>
+  <tr><td>V72-36</td><td>At every plant, the gaps on Readiness, in the go-live confirmation and on Coverage are the same at the same moment.</td></tr>
+  <tr><td>V72-37</td><td>Adding a person without a name fails with "Give the person's name."; a new Operator starts unverified and unreachable; Send code records when the code went; verifying clears the Operator blocker.</td></tr>
+  <tr><td>V72-38</td><td>Removing Arjun Mehta at Vedanta warns that no Lead would be left, since Priya Nair is unverified; afterwards the Lead blocker is back.</td></tr>
+  <tr><td>V72-39</td><td>A new phone number resets verification; when that person was the only reachable Lead, the Lead blocker returns.</td></tr>
+  <tr><td>V72-40</td><td>Manesar's People tab reads "Start by / fix by follow the severity: Emergency 1 h / 4 h · Major 8 h / 24 h · Minor 24 h / 72 h", and no page has an input for start-by or fix-by.</td></tr>
+  <tr><td>V72-41</td><td>Switching Manesar's hooter off writes "Hooter switched off at Manesar STP", the Emergency routing line ends "(the hooter is off)", and a later Emergency Issue there sounds no hooter.</td></tr>
+  <tr><td>V72-42</td><td>Vedanta's Structure track reads "Confirmed Fri 23 Oct, 10:25 · 4 placed by hand · 1 not part of any unit process"; DigitalPaani's reads "66 pieces of equipment · 38 sensors" and "76 to review · 20 unclassified" at the start.</td></tr>
+</table></div>
+
+<h3>5 · Trial and tuning <a class="go" href="prototype.html#/p/vedanta/trigger/a_3d">Open</a></h3>
+<div class="tw"><table class="ac">
+  <tr><td>V72-43</td><td>Level high · EQ-1 has 76 trial firings, 12.8 a day, noisy, median 45 min; DO low · SBR-1 has 35, 5.9 a day, not noisy, median 30 min, peak 1.58 mg/L; neither is marked "mostly short", and both rates equal v7/1's.</td></tr>
+  <tr><td>V72-44</td><td>After overriding LVL-EQ-1's Caution to 87% with a reason, Level high · EQ-1 still shows 76 trial firings and stays noisy; at Sat 31 Oct, 01:30 with no new firings the gap is gone.</td></tr>
+  <tr><td>V72-45</td><td>On a Live plant the preview reads "Last 7 days: would have fired n times (now m)." for the values typed; on a Commissioning plant it reads "Trial so far: would have fired n times instead of m.", counted over the trial against its recorded firings (76 for Vedanta's LVL-EQ-1 Caution at 87%).</td></tr>
+  <tr><td>V72-46</td><td>The override form offers exactly five reasons, in the order Physical, Regulatory or client, Structural, Tuning, Temporary; Migrated is never offered.</td></tr>
+  <tr><td>V72-47</td><td>Saving without a reason fails with "Choose why this plant differs."; Tuning and Regulatory or client need a note; Temporary needs an expiry within 30 days.</td></tr>
+  <tr><td>V72-48</td><td>Review by defaults to 90 days for Tuning, a year for Physical, Regulatory or client and Structural, and the expiry for Temporary.</td></tr>
+  <tr><td>V72-49</td><td>Physical on a constant band says no design parameter changes it and offers only "Override anyway"; on a derived band it opens the design parameter.</td></tr>
+  <tr><td>V72-50</td><td>Structural's "Request a variant" records a variant request on the library page and in Activity, and saves no override.</td></tr>
+  <tr><td>V72-51</td><td>An override for one Trigger only accepts Structural, Tuning or Temporary, always needs a note, changes only that Trigger's band (the others still read "Follows sensor") and counts under "Trigger limit overrides".</td></tr>
+  <tr><td>V72-52</td><td>"Set" on a gap offers only Physical and Tuning.</td></tr>
+  <tr><td>V72-53</td><td>Limits have one editor: no limit input appears on a Readings tab, on the Trigger page (outside "Override for this Trigger only") or on the Equipment Card, and each shows "Edit on sensor".</td></tr>
+</table></div>
+
+<h3>6 · Safety in commissioning <a class="go" href="prototype.html#/p/vedanta/trigger/a_3f">Open</a></h3>
+<div class="tw"><table class="ac">
+  <tr><td>V72-54</td><td>At the start Vedanta has no Issue.</td></tr>
+  <tr><td>V72-55</td><td>pH low · EQ-1 has exactly one trial firing: Wed 28 Oct, 15:10 to 16:10, Emergency, peak pH 3.7, limit pH 4.0.</td></tr>
+  <tr><td>V72-56</td><td>Moving time on a day from the start opens no Issue at Vedanta and tells nobody there, and its trial firings grow.</td></tr>
+  <tr><td>V72-57</td><td>Every page of Vedanta and DigitalPaani shows "Commissioning · nothing is sent"; no Manesar page does at the start.</td></tr>
+  <tr><td>V72-58</td><td>Vedanta's Issues tab reads "No Issues. While Vedanta ETP is in Commissioning, Triggers record trial firings only, at every severity: nothing is sent."</td></tr>
+  <tr><td>V72-59</td><td>Overriding pH low · EQ-1's Emergency limit to pH 3.5 leaves its recorded trial firing as it was.</td></tr>
+  <tr><td>V72-60</td><td>Vedanta's pH Emergency override is Physical, its base "no rule", review by 23 Oct 2027, and the trial row reads "Emergency · nobody was told".</td></tr>
+</table></div>
+
+<h3>7 · Go live <a class="go" href="prototype.html#/p/vedanta">Open</a></h3>
+<div class="tw"><table class="ac">
+  <tr><td>V72-61</td><td>Last service dates at Vedanta cover 4 of 11 pieces of equipment: BL-1 and BL-2 on Mon 19 Oct, P-1 and P-2 on Tue 20 Oct.</td></tr>
+  <tr><td>V72-62</td><td>After the MLSS low decision the go-live confirmation counts 73 scheduled Tasks, 51 due on go-live day, 22 counted from service dates on 4 of 11 pieces of equipment, and about 59 Tasks a day.</td></tr>
+  <tr><td>V72-63</td><td>After go-live exactly 51 Tasks are due; BL-1's belt tension and alignment check is due Wed 18 Nov, its oiling at go-live (its interval had passed) and its bearing service on Fri 13 Nov by its meter.</td></tr>
+  <tr><td>V72-64</td><td>With every service date cleared, all 73 scheduled Tasks would fall due on go-live day.</td></tr>
+  <tr><td>V72-65</td><td>A last service date is refused in the future ("A last service date can't be in the future."), on equipment with no PM Task ("DT-1 has no PM Task.") and on a Live plant ("Manesar STP is Live: PM Tasks count from their last completion.").</td></tr>
+  <tr><td>V72-66</td><td>The go-live confirmation shows its four lines in order, the first loud, then the Tasks line, "Trial: 3 Triggers fired · 1 fired more than 10 times a day" and the number of gaps that remain.</td></tr>
+  <tr><td>V72-67</td><td>Go live changes no Trigger's status and ends the running Level high trial firing at go-live; a later firing opens an Issue, and an Emergency Issue calls people and sounds the hooter.</td></tr>
+  <tr><td>V72-68</td><td>After go-live Vedanta's home is Coverage with "Live since …", no Issues since go-live and 13 active Triggers, and Activity starts "Went live: 13 Triggers now create Issues".</td></tr>
+  <tr><td>V72-69</td><td>On a Live plant, noisy counts Issues: Vedanta right after go-live has no noisy gap, and a day later Level high · EQ-1 has one, at its Issues since go-live a day.</td></tr>
+  <tr><td>V72-70</td><td>No Task is grouped by type; Vedanta's Tasks a day is one figure and equals v7/1's figure when each piece of equipment gets its own (59); no Task is marked "to confirm" or shared.</td></tr>
+  <tr><td>V72-71</td><td>No Task, Issue or Trigger is about a control group; a control group's page shows its members' work and no Tasks of its own.</td></tr>
+</table></div>
+
+<h3>8 · Live operation <a class="go" href="prototype.html#/p/manesar/issue/is_2z">Open</a></h3>
+<div class="tw"><table class="ac">
+  <tr><td>V72-72</td><td>Vedanta's DO low · SBR-1 is about the unit process SBR-1, pH low · EQ-1 about EQ-1 and Motor current high · BL-1 about the blower; Manesar's open DO low · AT-2 Issue is about the unit process AT-2.</td></tr>
+  <tr><td>V72-73</td><td>Diagnosing DO low · AT-2 to BL-1's intake filter names BL-1 and logs "Caused by BL-1 (Blower; takes part in AT-2)"; at DigitalPaani "All blowers OFF" on an MBBR-1 Issue lands on a blower that takes part in MBBR-1, never on ESAB-1 or ESAB-2.</td></tr>
+  <tr><td>V72-74</td><td>AT-2's Issues include BL-1's, marked "Shared · on BL-1".</td></tr>
+  <tr><td>V72-75</td><td>On Manesar, placing BS-1 in EQ-1 without a reason fails with "Give a reason: this plant is Live."; with one it succeeds and flags Sump flooding · EQ-1 "Structure changed …".</td></tr>
+  <tr><td>V72-76</td><td>The Issue page shows "Subject: AT-2 · Activated sludge", "Opened under: Major &lt; 1.0 mg/L · persistence 0 min · clearing 15 min" and the frozen line; "Close it as a false alarm" opens the false-alarm close, which asks why.</td></tr>
+  <tr><td>V72-77</td><td>Report a problem offers unit processes by stage, equipment and the whole plant; the plant says "No problems are written for the whole plant yet. Report it on the unit process or equipment where you saw it."</td></tr>
+  <tr><td>V72-78</td><td>At the start DO low · AT-2 is frozen on Minor 2.0, Major 1.0 and Emergency 0.5 mg/L, persistence 0 min and clearing 15 min.</td></tr>
+  <tr><td>V72-79</td><td>Overriding DO-AT2's Minor to 1.5 while frozen moves the zone to 1.5 and leaves the Trigger on 2.0; the preview names the frozen Trigger and reads "would have fired 2 times (now 3)".</td></tr>
+  <tr><td>V72-80</td><td>Persistence, clearing and a limit for this Trigger only are refused while it is frozen ("This Trigger is frozen while its Issue is open.") and show disabled as "Override · frozen"; resync is refused while an Issue is open ("Resync after the Issue closes.").</td></tr>
+  <tr><td>V72-81</td><td>Closing the Issue after its terms moved keeps the Trigger waiting for a resync; closing without a change releases it.</td></tr>
+  <tr><td>V72-82</td><td>Resync after the close makes the Trigger follow its sensor and its template's current version, and writes Activity.</td></tr>
+</table></div>
+
+<h3>9 · Coverage <a class="go" href="prototype.html#/p/manesar">Open</a></h3>
+<div class="tw"><table class="ac">
+  <tr><td>V72-83</td><td>Accepting a Manesar proposal without activating it makes a draft; activating it makes it active with no trial.</td></tr>
+  <tr><td>V72-84</td><td>The Activate dialog for a Manesar draft says it "creates Issues and notifies the plant's people", "It gets no trial first" and "Return the plant to Commissioning…", and never "would have fired".</td></tr>
+  <tr><td>V72-85</td><td>Returning Manesar would leave 6 active Triggers recording trial firings, keep the open DO low · AT-2 Issue, stop 9 upcoming Tasks (3 due in the next 7 days; 1 already due stays open) and leave 80 drafts to decide.</td></tr>
+  <tr><td>V72-86</td><td>Return to Commissioning is refused without a reason; with one, Manesar is in Commissioning, its six Triggers record trial firings, the open Issue stays open, the drafts blocker counts 80, and a day later no new Issue has opened.</td></tr>
+  <tr><td>V72-87</td><td>After a return, a firing on a Trigger whose Issue is still open is logged on that Issue and records no trial firing while it is open.</td></tr>
+  <tr><td>V72-88</td><td>Manesar's Coverage at the start: 6 active, 80 drafts, 3 Issues in the last 7 days, 2 closed, 1 false alarm (50%), noisiest DO low · AT-2; Blind spots shows its placeholder sentence; the only gap is 4 pieces of equipment with no maintenance programme.</td></tr>
+  <tr><td>V72-89</td><td>Bawal's Coverage at the start has one gap: Chemical tank low · DT-1 has no diagnostic flow.</td></tr>
+  <tr><td>V72-90</td><td>Setting limits on a hand test fails with "Hand-test results stay in the task record: they have no sensor, so no Zones."</td></tr>
+  <tr><td>V72-91</td><td>The Readings tab is available at Manesar and not at Vedanta at the start; no row is a hand test; Vedanta's tab shows its empty state.</td></tr>
+  <tr><td>V72-92</td><td>Coverage's "Deviations here" numbers equal the plant's Deviations counts.</td></tr>
+</table></div>
+
+<h3>10 · A library change <a class="go" href="prototype.html#/library/templates/tpl_up_activated-sludge_mlss-low">Open</a></h3>
+<div class="tw"><table class="ac">
+  <tr><td>V72-93</td><td>Downstream for MLSS low's Minor 2,000 → 2,200 mg/L: 1 plant updates, 1 base moved, nothing cleared, pinned or frozen; Minor suggested and Major allowed.</td></tr>
+  <tr><td>V72-94</td><td>Publishing makes v2: MLSS-AT2's Minor is 2,200 mg/L with "Library · MLSS low v2"; the MLSS-AT1 override shows Base moved; All Plants Activity gains one line and Manesar's none.</td></tr>
+  <tr><td>V72-95</td><td>A Minor draft whose new value equals an override ends that override as Cleared, and Downstream says it will clear.</td></tr>
+  <tr><td>V72-96</td><td>An Emergency change can only be Forced and needs a reason; publishing suspends DO-AT1's Emergency override (kept, not ended); with the Issue open DO low · AT-2 is listed frozen and keeps 0.5; after the Issue closes and while the Trigger waits for a resync, a Forced publish reaches its Emergency band only; lifting the change restores the override and the held band.</td></tr>
+  <tr><td>V72-97</td><td>Adding a band suggests Major; publishing puts a draft in each following plant's review queue, and the Trigger stays on its old version until the draft is accepted.</td></tr>
+  <tr><td>V72-98</td><td>A pin without a reason fails; a pinned plant keeps the old value through a Minor publish and is reached by a Forced one.</td></tr>
+  <tr><td>V72-99</td><td>The kinds offered never go below the suggested one.</td></tr>
+  <tr><td>V72-100</td><td>Manesar's Chemical refill and Sludge wasting Tasks follow single-use templates and have no override record.</td></tr>
+  <tr><td>V72-101</td><td>The resolution order holds: Forced beats Override beats Derived beats Library or a pinned version beats Gap.</td></tr>
+  <tr><td>V72-102</td><td>Moving a Membrane bioreactor CIP template to every 2 months: "Count from the last service" makes Manesar MBR-1's CIP due now (last done Thu 20 Aug); "Count from the publish date" makes it due 2 months after the publish, later than before, with nothing due now.</td></tr>
+  <tr><td>V72-103</td><td>The BL-1 motor-rating preview (22 → 18.5 kW) lists AMP-BL1 keeping 44 A while its base moves 40.0 → 33.6 A (and 42.0 → 35.3, 46.0 → 38.6 A), and Clean intake filter keeping 42 / 38 A while its base moves 38.0 → 31.9 and 34.0 → 28.6 A; Cancel changes nothing.</td></tr>
+  <tr><td>V72-104</td><td>Resync after chapter 8's override shows "Minor below 2.0 → 1.5 mg/L (Override · Tuning)" and the "Last 7 days with these terms" line; afterwards the Trigger follows DO-AT2.</td></tr>
+</table></div>
+
+<h3>11 · Deviations <a class="go" href="prototype.html#/deviations">Open</a></h3>
+<div class="tw"><table class="ac">
+  <tr><td>V72-105</td><td>At the start Deviations shows 17 overrides · 1 base moved · 1 past review · 0 Trigger limit overrides · 0 pinned · 2 single-use templates · 11 structure changes, and by reason Migrated 15 · Tuning 1 · Physical 1.</td></tr>
+  <tr><td>V72-106</td><td>Every Manesar Migrated override was set 1 Sep 2026, review by 30 Nov 2026, author not recorded, 58 days old at the start; every value a Live plant runs on equals its base or has an override, so nothing differs silently (Clean intake filter's 42 / 38 A are Migrated against a derived 38.0 / 34.0 A).</td></tr>
+  <tr><td>V72-107</td><td>Chemical refill (CDU-1) and Sludge wasting (SP-1) are single-use templates, not overrides; their cadence chip names the template at v1 with "Single-use · Manesar STP only".</td></tr>
+  <tr><td>V72-108</td><td>Every Deviations row links to its field, and the page it opens highlights that field.</td></tr>
+  <tr><td>V72-109</td><td>A row whose base moved offers Keep (with a new note), Adopt the library value and Promote.</td></tr>
+  <tr><td>V72-110</td><td>Revert asks "Go back to the library value …? Your override and its note stay in history."; the record then sits under History with its note.</td></tr>
+  <tr><td>V72-111</td><td>Extend needs a note, and refuses a Temporary expiry more than 30 days out.</td></tr>
+  <tr><td>V72-112</td><td>A Temporary override expires when the clock passes its date: the value returns to its base, Activity says "… Plant admins told." and the time move lists it.</td></tr>
+  <tr><td>V72-113</td><td>Promote is not offered on Temporary or suspended rows; "Make it the library default" opens the template page with the value filled in; once published, the override reads Promoted.</td></tr>
+  <tr><td>V72-114</td><td>A base-moved chip reads "Base moved" with "Library changed … since you overrode it", and nothing is written to the plant.</td></tr>
+  <tr><td>V72-115</td><td>When two or more plants override one field the same way, the group reads "… plants override this value the same way. Consider a library variant?".</td></tr>
+  <tr><td>V72-116</td><td>v7/1's addresses for its Differences pages open v7/2's Deviations pages.</td></tr>
+  <tr><td>V72-117</td><td>Chapter 11's numbers come from a story walked in order, and every preview equals the engine's replay.</td></tr>
+  <tr><td>V72-118</td><td>Structure changes have their own section, with the unit process, what changed, the note, who and when, outside the overrides count.</td></tr>
+  <tr><td>V72-119</td><td>The structure-changes count grows by one with each structure change saved.</td></tr>
+</table></div>
+
+<h3>12 · Decisions, docs, overview <a class="go" href="prototype.html#/decisions">Open</a></h3>
+<div class="tw"><table class="ac">
+  <tr><td>V72-120</td><td>The decision file is the same, byte for byte, in both prototypes, and both prototypes, both docs and the overview load it.</td></tr>
+  <tr><td>V72-121</td><td>Every card says which option each prototype builds, what v7/2 does, a one-line summary of at most 140 characters, and whether both build the same thing (among the first review's cards, only D4 and D5).</td></tr>
+  <tr><td>V72-122</td><td>Every card link is a pair: a place in v7/1 and the same place in v7/2.</td></tr>
+  <tr><td>V72-123</td><td>On v7/2's D3 card both "What v7/1 does (recommended approach)" and "What v7/2 does (Alex's model)" show, "You are here" sits on v7/2's column, and "See it in v7/1" opens v7/1 in its own window; the same holds the other way round in v7/1.</td></tr>
+  <tr><td>V72-124</td><td>Option rows show "Built in v7/1" and "Built in v7/2" beside "Recommended".</td></tr>
+  <tr><td>V72-125</td><td>A call made on v7/1's D3 shows on v7/2's D3 after a reload; with both open, a call made in one shows in the other on its next render.</td></tr>
+  <tr><td>V72-126</td><td>The decision file, both docs and the overview carry none of Alex's document ids, drawing ids, file names or internal document names, nor the reference plant's name.</td></tr>
+  <tr><td>V72-127</td><td>The numbers written into the cards equal those worked out from v7/2's engine.</td></tr>
+  <tr><td>V72-128</td><td>This document has its ten sections in order; section 4 shows every card with both columns; every link into either prototype opens a real page.</td></tr>
+  <tr><td>V72-129</td><td>These acceptance criteria run from V72-1 to V72-148 without gaps.</td></tr>
+  <tr><td>V72-130</td><td>The overview shows both approaches, a row per card with working links into both prototypes and both docs, and the twelve chapter pairs, which match both stories.</td></tr>
+  <tr><td>V72-131</td><td>The chapter list in this document shows each chapter's action count in v7/1 and in v7/2.</td></tr>
+</table></div>
+
+<h3>Across the app</h3>
+<div class="tw"><table class="ac">
+  <tr><td>V72-132</td><td>Every page renders for every plant and sampled object without an error, before and after moving time on a day.</td></tr>
+  <tr><td>V72-133</td><td>No page outside Decisions shows a word on Alex's don't-use list, a v7/1 word v7/2 replaces, or an internal id.</td></tr>
+  <tr><td>V72-134</td><td>No story number is typed into the page code: every number comes from the engine.</td></tr>
+  <tr><td>V72-135</td><td>Every value carries its source chip without a hover, and "Base moved" is the only amber-filled chip.</td></tr>
+  <tr><td>V72-136</td><td>Two boots give identical templates, identification, Deviations, frozen Triggers and Downstream after the same edits; Reset the story restores the start exactly, including Vedanta's tank height entered by a person and the frozen DO Trigger.</td></tr>
+  <tr><td>V72-137</td><td>v7/2 keeps its story in browser storage under its own names and shares only the decision calls with v7/1; v7/1 keeps its own.</td></tr>
+  <tr><td>V72-138</td><td>Resetting one prototype's story leaves the other's untouched.</td></tr>
+  <tr><td>V72-139</td><td>A saved v7/2 story from another story version, or with a mismatched stamp, starts again from the seed.</td></tr>
+  <tr><td>V72-140</td><td>With both prototypes open in one browser, each keeps its own plants, clock and changes.</td></tr>
+  <tr><td>V72-141</td><td>The ids v7/1 uses for Triggers, Issues, equipment, sensors and schedules name the same objects in v7/2.</td></tr>
+  <tr><td>V72-142</td><td>The story panel lists twelve chapters: The library · A new plant from the survey · The bindings pass · Readiness · Trial and tuning · Safety in commissioning · Go live · Live operation · Coverage · A library change · Deviations · Decisions.</td></tr>
+  <tr><td>V72-143</td><td>Each chapter has two sentences, "Take me there →" and its extra links, each opening a real page; "Take me there" lights its own chapter.</td></tr>
+  <tr><td>V72-144</td><td>Each chapter's "Compare with v7/1 →" opens the same moment in v7/1 in its own window and lights the same chapter there; v7/1's "Compare with v7/2 →" does the reverse.</td></tr>
+  <tr><td>V72-145</td><td>The story's decision chips cover every card and open it.</td></tr>
+  <tr><td>V72-146</td><td>Chapter numbers come from the engine; with a value missing, the sentence falls back and never shows a blank or broken number.</td></tr>
+  <tr><td>V72-147</td><td>The top bar shows "v7/2 · Alex's model" (to the overview) and "Same place in v7/1 →" for the current page's chapter; the story panel, top bar and chips use only allowed words.</td></tr>
+  <tr><td>V72-148</td><td>v7/1 changes only by its reverse links and the shared decision file, and its own tests still pass.</td></tr>
+</table></div>
+
+<!-- ─────────────────────────────────────────────────────────────── 10 -->
+<h2 id="run"><span class="n">10</span>How to run and reset</h2>
+<ol>
+  <li>Open <code>site/v7/2/prototype.html</code> in a browser, from any static server or straight from disk. There is no build step and no library: plain JavaScript, with Figtree and IBM Plex Mono from Google Fonts.</li>
+  <li>Start at <b>All Plants</b>. The <b>Story</b> button opens the 12 chapters; each has "Take me there", "Compare with v7/1" and links to its decisions.</li>
+  <li><b>Reset the story</b> (top bar) puts every plant back to Thu 29 Oct, 09:00 and clears everything changed in v7/2's story. It never touches v7/1's story, and it does not clear your calls on the decisions.</li>
+  <li>v7/1 and v7/2 keep separate stories in one browser; your calls on the decisions are shared by both prototypes and both documents.</li>
+  <li>Checks, from <code>site/v7/2</code> with Node: <code>node tests/smoke.js</code> renders every page for every plant and fails on errors, banned words and dead links; <code>node tests/core7.test.js</code> and the other core tests check the engine and the story's outcomes; <code>node tests/integrate72.test.js</code> walks the twelve chapters through the screens; <code>node tests/facts72.js</code> prints the numbers the cards quote; <code>node tests/decisions7.test.js</code> checks the cards and this document. From <code>site/v7</code>: <code>node tests/docs.test.js</code> checks both documents, the overview and the challenges doc, and <code>node tests/compare.test.js</code> checks the two prototypes side by side.</li>
+</ol>
+<div class="tw"><table class="wide">
+  <tr><th>Browser storage</th><th>What it holds</th></tr>
+  <tr><td><code>ctl72.estate.v1</code>, <code>ctl72.overlay.v1</code></td><td>v7/2's story; Reset the story clears and reseeds both.</td></tr>
+  <tr><td><code>ctl72.story</code></td><td>Whether the story panel is open.</td></tr>
+  <tr><td><code>ctl7.decisions</code></td><td>Your calls on the decisions, shared on purpose with v7/1, both documents and the challenges doc.</td></tr>
+</table></div>
+
+</article>
+</div></div>
+
+<script src="assets/decisions7.js?v=5"></script>
+<script>
+/* v7/2's hand-off doc: section 4 (every card, v7/2 marked "You are here") and section 5 (the readings) are drawn from the
+   shared decisions file the prototypes read too; it never loads the app. The numbers in sections 1 to 3 and 6 are worked
+   out from v7/2's engine and re-checked by the docs test. */
+window.V7_PAGE = 'doc'; window.V7_VARIANT = '2';
+(function () {
+  'use strict';
+  var D = window.V7DEC, cards = window.V7_DECISIONS;
+  var $ = function (id) { return document.getElementById(id); };
+  var fill = function (id, html) { var el = $(id); if (el) el.innerHTML = html; };
+  if (!D || !Array.isArray(cards) || typeof D.renderDoc !== 'function') {
+    ['dec-table', 'dec-list', 'dec-readings'].forEach(function (id) { fill(id, '<p class="callout warn">The decisions file (assets/decisions7.js) did not load.</p>'); });
+    return;
+  }
+  fill('dec-n', String(cards.length)); fill('dec-n2', String(cards.length));
+  var rs = Array.isArray(window.V7_READINGS) ? window.V7_READINGS.filter(function (r) { return r && typeof r === 'object'; }) : [];
+  var conf = rs.filter(function (r) { return r.confirm === true; }).length;
+  fill('read-sum', conf ? (conf === 1 ? 'One of them is marked "Mihir to confirm" and needs a call.' : conf + ' of them are marked "Mihir to confirm" and need a call.') : 'None of them needs a call.');
+  D.renderDoc({ glance: 'dec-table', cards: 'dec-list', readings: 'dec-readings', mode: 'doc', level: 3 });
+}());
+</script>
+</body>
+</html>

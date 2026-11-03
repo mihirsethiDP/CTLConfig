@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* v7 · lib7.test.js — headless test for lib7.js (builder B5). Node only, no dependencies.
+/* v7 · lib7.test.js — headless test for lib7.js. Node only, no dependencies.
    Loads every asset in prototype.html's order with smoke.js's stub DOM (object7.js is replaced by a stub V7OBJ when it
    is missing, so the type page wrapper is still exercised), boots V7, then walks chapter 10 and 11 of the story:
    library list → type page → draft → Where it lands → publish (normal and safety) → Differences (all plants and one plant)

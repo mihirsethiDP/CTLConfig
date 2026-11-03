@@ -1,0 +1,72 @@
+/* v7/2 · lists7.css — page styles for the plant's lists (lists7.js): Triggers, Readings, Tasks, plant details.
+   Uses the v7.css colour tokens only, so it follows whatever theme the shell sets. */
+
+.l7 { display: grid; gap: 16px; min-width: 0; }
+.l7 > .card + .card { margin-top: 0; }
+.l7-lead { color: var(--ink-2); max-width: 880px; }
+.l7-lead b { color: var(--ink); font-weight: 600; }
+.l7-tools { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.l7-sub { font-size: 12.5px; color: var(--ink-3); margin-top: 2px; line-height: 1.45; }
+.l7-sub .chip { margin-top: 2px; }
+.l7-chips { display: inline-flex; flex-wrap: wrap; gap: 4px; vertical-align: middle; }
+.l7-num { white-space: nowrap; }
+.l7-num .chip { margin-left: 4px; }
+.l7-trig td:first-child { min-width: 160px; }
+.l7-trig td:nth-child(5) { min-width: 170px; }
+.l7-quiet td { color: var(--ink-3); }
+.l7-quiet td a { color: var(--ink-2); }
+.l7-foot { font-size: 13px; color: var(--ink-3); }
+.l7-foot a { font-weight: 500; }
+
+/* a subject chip that is also a link */
+a.chip.l7-subj { text-decoration: none; white-space: nowrap; }
+a.chip.l7-subj:hover { border-color: var(--accent); color: var(--accent-strong); }
+
+/* groups inside a card: one heading per unit process or piece of equipment, its table under it */
+.l7-group + .l7-group { margin-top: 18px; }
+.l7-gh { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin: 2px 0 8px; }
+.l7-gh h3 { font-size: 14px; font-weight: 600; }
+.l7-gh h3 a { color: var(--ink); }
+.l7-gh h3 a:hover { color: var(--accent-strong); }
+.l7-gh h3 .mono { color: var(--ink-2); }
+.l7-gh .muted { font-size: 12.5px; }
+
+/* the Triggers that create Tasks: one collapsible table under the Issue Triggers */
+details.l7-more { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 0 18px; box-shadow: var(--shadow-sm); }
+details.l7-more > summary { list-style: none; cursor: pointer; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; padding: 14px 0; }
+details.l7-more > summary::-webkit-details-marker { display: none; }
+details.l7-more > summary::before { content: "›"; display: inline-block; width: 10px; font-size: 18px; line-height: 1; color: var(--ink-3); transition: transform .15s ease; }
+details.l7-more[open] > summary::before { transform: rotate(90deg); }
+.l7-sum-t { font-weight: 600; color: var(--ink); }
+.l7-sum-n { font: 600 12px var(--mono); color: var(--ink-2); background: var(--surface-3); border-radius: 999px; padding: 1px 8px; }
+.l7-sum-s { flex-basis: 100%; padding-left: 20px; font-size: 13px; color: var(--ink-3); }
+details.l7-more[open] { padding-bottom: 16px; }
+
+/* a highlighted field (?f=) */
+.l7 tr.is-target td { background: var(--accent-tint); }
+.l7 tr.is-target td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+
+/* phone width: the tables stack (v7.css), the summaries wrap, nothing scrolls sideways */
+@media (max-width: 600px) {
+  details.l7-more { padding: 0 12px; }
+  .l7-sum-s { padding-left: 0; }
+  .l7-num { white-space: normal; }
+  .l7-trig td:first-child, .l7-trig td:nth-child(5) { min-width: 0; }
+  .l7-gh { flex-direction: column; gap: 2px; }
+}
+
+/* one column grid across the groups of a page, so the Task and reading tables line up under each other */
+@media (min-width: 601px) {
+  table.l7-taskt, table.l7-readt { table-layout: fixed; width: 100%; }
+  table.l7-taskt th:nth-child(1) { width: 33%; }
+  table.l7-taskt th:nth-child(2) { width: 34%; }
+  table.l7-taskt th:nth-child(3) { width: 16%; }
+  table.l7-taskt th:nth-child(4) { width: 17%; }
+  table.l7-readt th:nth-child(1) { width: 22%; }
+  table.l7-readt th:nth-child(2) { width: 12%; }
+  table.l7-readt th:nth-child(3) { width: 28%; }
+  table.l7-readt th:nth-child(4) { width: 24%; }
+  table.l7-readt th:nth-child(5) { width: 14%; }
+  table.l7-taskt td, table.l7-readt td { overflow-wrap: anywhere; }
+  table.l7-taskt .chip, table.l7-readt .chip { white-space: normal; max-width: 100%; text-align: left; }
+}

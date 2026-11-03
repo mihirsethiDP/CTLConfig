@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-/* v7 · object7.test.js — headless checks for B4's object page, limits sheet, value sheets and alert page (node, no deps).
+/* v7 · object7.test.js — headless checks for object7's object page, limits sheet, value sheets and alert page (node, no deps).
    Loads every asset in prototype.html order with smoke.js's stub DOM, boots the story, then checks the story moments on the
-   pages B4 owns and drives the sheets through their state functions (the stub DOM has no querySelector, so the sheet's live
+   pages object7 owns and drives the sheets through their state functions (the stub DOM has no querySelector, so the sheet's live
    DOM updates are exercised through lsState / vsState instead). Prints a compact report; exit 1 on any failure.
    Usage: node tests/object7.test.js [-v] */
 'use strict';
@@ -198,7 +198,7 @@ const alertNamed = (key, re) => V.alerts(key, {}).find((a) => re.test(a.name));
   ok('On is refused while Commissioning (core) and the page shows Turn on disabled', !r.ok && /disabled/.test(render('p/vedanta/alert/' + lvl.id).match(/Turn on[^<]*<|<button[^>]*disabled[^>]*>Turn on/)[0] || ''));
 }
 
-/* 12 · Report a problem hands over to B6 when it is there */
+/* 12 · Report a problem hands over to work7 when it is there */
 {
   ok('Report a problem uses V7WORK.openReport when present', O.report('vedanta', 'v_sbr') === true && !!(W.V7WORK && W.V7WORK.openReport));
   ok('Unknown equipment and alert render a calm not-found page', /Not found/.test(text(render('p/vedanta/eq/nope'))) && /Not found/.test(text(render('p/vedanta/alert/nope'))));

@@ -1,0 +1,215 @@
+/* v7/2 · structure7.css — the Structure page (list and drawing), the structure pass, the control-group page and the structure
+   modals (structure7.js). Built on v7.css's tokens; the drawing adds a few of its own, light by default with a dark set that
+   applies only when a page asks for it. */
+
+:root {
+  --st-up-fill: #edf4f1;
+  --st-up-line: #8fb0a8;
+  --st-eq-fill: #ffffff;
+  --st-eq-line: #b9c2be;
+  --st-pipe: #c3cbc7;
+  --st-text: #25302e;
+  --st-text-2: #5f6b68;
+  --st-sel: #2e5e57;
+  --st-prop: #3f7d74;
+  --st-add: #2f6a40;
+  --st-unc: #b8564f;
+  --st-frame: #fbfcfb;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --st-up-fill: #1f2f2b; --st-up-line: #5f8a81; --st-eq-fill: #1a2120; --st-eq-line: #4a5653; --st-pipe: #4a5653;
+    --st-text: #e3ebe8; --st-text-2: #a7b4b0; --st-sel: #9fd3c7; --st-prop: #7fc0b3; --st-add: #8fd0a0; --st-unc: #e08a82; --st-frame: #141a19;
+  }
+}
+:root[data-theme="dark"] {
+  --st-up-fill: #1f2f2b; --st-up-line: #5f8a81; --st-eq-fill: #1a2120; --st-eq-line: #4a5653; --st-pipe: #4a5653;
+  --st-text: #e3ebe8; --st-text-2: #a7b4b0; --st-sel: #9fd3c7; --st-prop: #7fc0b3; --st-add: #8fd0a0; --st-unc: #e08a82; --st-frame: #141a19;
+}
+
+/* ── membership state chips: dashed = Proposed, solid = Confirmed, Added = placed by hand ───────────────── */
+.chip.st-ms-proposed, .chip.chip-prop { background: transparent; border: 1px dashed var(--accent); color: var(--accent-strong); }
+.chip.st-ms-confirmed, .chip.st-ms-accepted, .chip.st-ms-placed { background: var(--ok-tint); color: var(--ok-ink); }
+.chip.st-ms-added, .chip.st-ms-made { background: var(--ok-tint); color: var(--ok-ink); border-color: var(--ok); }
+.chip.st-ms-changed { background: var(--info-tint); color: var(--info-ink); }
+.chip.st-ms-rejected, .chip.st-ms-notpart { background: transparent; border-color: var(--line-2); color: var(--ink-3); }
+.chip.st-ms-unclassified { background: var(--bad-tint); color: var(--bad-ink); }
+/* amber stays an outline here: an amber fill belongs to "Base moved" alone */
+.chip.st-ms-removing { background: transparent; border: 1px dashed var(--warn); color: var(--warn-ink); }
+.chip.st-ms-underneath { background: transparent; border: 1px solid var(--warn); color: var(--warn-ink); }
+.chip.st-ms-adding { background: transparent; border: 1px dashed var(--info); color: var(--info-ink); }
+.chip.st-tier { background: var(--surface-2); color: var(--ink-2); }
+.chip.st-src { font-size: 11.5px; }
+.chip.st-pchip a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+.chip.st-subj { font-weight: 600; }
+
+/* ── shared bits ──────────────────────────────────────────────────────────────────────────────────────── */
+.st-quiet { color: var(--ink-3); font-size: 13px; }
+.st-foot { color: var(--ink-3); font-size: 13px; margin-top: 18px; }
+.st-intro { color: var(--ink-2); max-width: 78ch; }
+.st-warn { color: var(--warn-ink); font-size: 13px; }
+.st-also { font-size: 12.5px; color: var(--ink-3); }
+.st-also a { color: var(--ink-2); }
+.st-lines { list-style: disc; padding-left: 20px; display: grid; gap: 3px; font-size: 13.5px; color: var(--ink); }
+.st-hint { font-size: 12.5px; color: var(--ink-3); margin-top: 10px; }
+.st-sub { font-size: 12px; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; color: var(--ink-3); margin: 10px 0 4px; }
+.st-h { font-size: 13.5px; margin: 14px 0 6px; }
+.st-h:first-child { margin-top: 0; }
+.st-link { border: 0; background: none; color: var(--accent); padding: 0 2px; font-size: 12.5px; font-weight: 600; }
+.st-link:hover { text-decoration: underline; }
+.is-target { box-shadow: 0 0 0 2px var(--accent); border-radius: 8px; }
+
+/* ── the pass tabs and the bar above the groups ───────────────────────────────────────────────────────── */
+.st-passtabs { margin-bottom: 16px; }
+.st-tab-off { color: var(--ink-3); cursor: not-allowed; }
+.st-passbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+.st-passbar .filters { flex: 1 1 auto; }
+.st-passbar-a { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.st-done .banner-t { font-weight: 500; }
+.st-pgroup .card-t { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.st-gt a { color: var(--ink); }
+.st-prows, .st-urows, .st-ups, .st-checks { list-style: none; }
+.st-prow { display: flex; align-items: flex-start; gap: 14px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.st-prow:last-child { border-bottom: 0; }
+.st-prow-m { flex: 1; min-width: 0; }
+.st-prow-t { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.st-prow-tt { font-weight: 500; font-family: var(--mono); font-size: 13px; }
+.st-prow-s { color: var(--ink-3); font-size: 13px; margin-top: 2px; }
+.st-prow-a, .st-urow-a { flex: 0 0 auto; display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+.st-prow.is-decided .st-prow-tt { color: var(--ink-2); }
+
+/* ── unclassified rows and the bulk bar ───────────────────────────────────────────────────────────────── */
+.st-urow { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.st-urow:last-child { border-bottom: 0; }
+.st-urow.is-on { background: var(--surface-2); }
+.st-tick { padding-top: 2px; }
+.st-tick input { width: 16px; height: 16px; accent-color: var(--accent); }
+.st-urow-m { flex: 1; min-width: 0; }
+.st-urow-t a { font-family: var(--mono); font-weight: 600; font-size: 13px; color: var(--ink); }
+.st-urow-s { color: var(--ink-3); font-size: 13px; margin-top: 2px; }
+.st-bulk { position: sticky; top: calc(var(--tb-h) + 8px); z-index: 5; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 10px 14px; margin-bottom: 8px;
+  border-radius: var(--r); background: var(--accent-tint); color: var(--accent-strong); }
+.st-bulk-a { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* ── the Structure page: toolbar, list ────────────────────────────────────────────────────────────────── */
+.st-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.st-seg { display: inline-flex; border: 1px solid var(--line-2); border-radius: 9px; overflow: hidden; }
+.st-seg-b { padding: 6px 14px; font-size: 13px; font-weight: 600; color: var(--ink-2); background: var(--surface); }
+.st-seg-b + .st-seg-b { border-left: 1px solid var(--line-2); }
+.st-seg-b:hover { text-decoration: none; background: var(--surface-2); }
+.st-seg-b.on { background: var(--accent-tint); color: var(--accent-strong); }
+.st-seg-b.is-off { color: var(--ink-3); cursor: not-allowed; background: var(--surface-2); }
+.st-stage { width: auto; min-width: 160px; padding: 6px 10px; font-size: 13px; }
+.st-toolbar + .filters { margin-top: 10px; }
+.st-back { margin-bottom: 12px; }
+.st-ups > li + li { margin-top: 10px; }
+.st-up, .st-cg { padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); }
+.st-up.is-sel, .st-cg.is-sel { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.st-up-h { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.st-up-t { color: var(--ink); }
+.st-up-t b { font-family: var(--mono); font-weight: 600; }
+.st-up-r { color: var(--ink-3); font-size: 13px; margin-top: 4px; }
+.st-up-p { margin-top: 8px; display: grid; gap: 6px; }
+.st-up-c { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px; }
+.st-up-a { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
+.st-role { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; font-size: 13.5px; }
+.st-role-l { color: var(--ink-3); font-size: 12.5px; min-width: 7.5em; }
+.st-plist { list-style: none; display: flex; flex-wrap: wrap; gap: 6px 14px; }
+.st-plist-v { display: grid; gap: 6px; width: 100%; }
+.st-p { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
+.st-p > a { font-family: var(--mono); font-size: 13px; font-weight: 600; }
+.st-p-removing > a, .st-p-removed s { color: var(--ink-3); text-decoration: line-through; }
+.st-x { border: 1px solid transparent; background: none; color: var(--ink-3); border-radius: 6px; padding: 0 5px; line-height: 20px; font-size: 13px; }
+.st-x:hover { background: var(--surface-2); color: var(--bad-ink); border-color: var(--line-2); }
+.st-removed { opacity: .9; }
+
+/* ── the pending bar (sticky at the bottom while there are edits) ─────────────────────────────────────── */
+.st-pending { position: sticky; bottom: 12px; z-index: 6; margin-top: 18px; padding: 14px 16px; border-radius: var(--r-lg); background: var(--surface);
+  border: 1px solid var(--accent); box-shadow: var(--shadow); display: grid; gap: 8px; }
+.st-pending-t { font-size: 14px; }
+.st-pending-a { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.st-reason textarea { min-height: 56px; }
+
+/* ── the drawing ──────────────────────────────────────────────────────────────────────────────────────── */
+.st-draw { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.st-zoom { display: inline-flex; gap: 2px; }
+.st-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; font-size: 12.5px; color: var(--ink-3); }
+.st-lg { display: inline-block; width: 16px; height: 10px; border-radius: 3px; vertical-align: middle; }
+.st-lg-prop { border: 2px dashed var(--st-prop); }
+.st-lg-conf { border: 2px solid var(--st-sel); }
+.st-lg-add { border: 2px solid var(--st-add); background: var(--ok-tint); }
+.st-lg-unc { border: 2px solid var(--st-unc); }
+.st-frame { width: 100%; max-width: 100%; overflow: auto; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--st-frame); margin-top: 10px; max-height: 72vh; overscroll-behavior: contain; }
+.st-frame:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.st-svg { display: block; -webkit-user-select: none; user-select: none; }   /* Shift-click adds to the edit, never selects page text */
+.st-svg.is-fit { width: 100%; height: auto; }
+.st-svg text { font-family: var(--font); fill: var(--st-text); text-anchor: middle; pointer-events: none; }
+.st-svg .st-t1 { font-weight: 700; font-family: var(--mono); }
+.st-svg .st-t2 { fill: var(--st-text-2); }
+.st-svg .st-t3 { font-family: var(--mono); font-weight: 600; }
+.st-svg .st-tag { fill: var(--st-sel); font-weight: 700; }
+.st-svg .st-zone { fill: var(--st-text-2); font-style: italic; }
+.st-pipe { stroke: var(--st-pipe); stroke-width: 6; fill: none; }
+.st-arrowhead { fill: var(--st-pipe); }
+.st-n { cursor: pointer; }
+.st-n rect { stroke-width: 4; }
+.st-n-up rect { fill: var(--st-up-fill); stroke: var(--st-up-line); }
+.st-n-eq rect { fill: var(--st-eq-fill); stroke: var(--st-eq-line); }
+.st-n:hover rect, .st-n:focus rect { stroke: var(--st-sel); }
+.st-n:focus { outline: none; }
+.st-n:focus-visible rect { stroke-width: 10; }
+.st-n.is-unclassified rect { stroke: var(--st-unc); stroke-width: 8; }
+.st-n.is-notpart rect { stroke-dasharray: 8 8; }
+.st-n.is-sel rect { stroke: var(--st-sel); stroke-width: 16; }
+.st-n.is-p rect { stroke: var(--st-sel); stroke-width: 10; }
+.st-n.is-p-proposed rect { stroke: var(--st-prop); stroke-dasharray: 26 14; }
+.st-n.is-p-added rect { stroke: var(--st-add); }
+.st-n.is-adding rect { stroke: var(--st-prop); stroke-dasharray: 8 10; stroke-width: 12; }
+.st-n.is-removing rect { stroke: var(--st-unc); stroke-dasharray: 8 10; opacity: .7; }
+.st-n.is-mate rect, .st-n.is-feed rect { stroke: var(--st-up-line); stroke-width: 8; stroke-dasharray: 4 8; }
+.st-n.is-multi rect { stroke: var(--st-sel); stroke-width: 12; stroke-dasharray: 2 8; }
+.st-n.is-dim, .st-pipe.is-dim { opacity: .35; }
+
+/* ── the side panel ───────────────────────────────────────────────────────────────────────────────────── */
+.st-panel .card-b { display: grid; gap: 10px; }
+.st-panel-a { display: flex; flex-wrap: wrap; gap: 6px; }
+.st-panel-p { display: grid; gap: 6px; }
+.st-panel-pend, .st-panel-cg { display: grid; gap: 8px; padding: 10px 12px; border-radius: var(--r); background: var(--accent-tint); }
+.st-partcard .st-role { flex-direction: column; align-items: flex-start; gap: 4px; }
+.st-partcard .st-role + .st-role { margin-top: 10px; }
+.st-sens { font-size: 13px; margin-top: 10px; }
+.st-sens a { font-family: var(--mono); }
+
+/* ── the control-group page ───────────────────────────────────────────────────────────────────────────── */
+.st-work { list-style: disc; padding-left: 20px; display: grid; gap: 4px; }
+.st-feeds { margin-top: 12px; }
+.st-cg-a { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* ── modals ───────────────────────────────────────────────────────────────────────────────────────────── */
+.st-md { display: grid; gap: 4px; }
+/* the consequence stays in view at the foot of the scrolling body while a person picks */
+.st-md-live { position: sticky; bottom: -18px; z-index: 1; margin: 12px -4px 0; padding: 10px 14px; border-radius: var(--r); background: var(--surface-2);
+  box-shadow: 0 -6px 14px rgba(37, 48, 46, .06); }
+.st-md-live:empty { display: none; }
+.st-md .radios { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+.st-md .st-reason { margin-top: 12px; }
+.st-fact { padding: 8px 12px; border-radius: var(--r); background: var(--info-tint); color: var(--info-ink); font-size: 13.5px; }
+.st-checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 6px; }
+.st-check { display: flex; gap: 8px; align-items: flex-start; padding: 7px 10px; border: 1px solid var(--line-2); border-radius: var(--r); cursor: pointer; background: var(--surface); }
+.st-check:has(input:checked) { border-color: var(--accent); background: var(--accent-tint); }
+.st-check input { margin-top: 3px; accent-color: var(--accent); }
+.st-check b { font-weight: 600; font-size: 13.5px; }
+.st-check small { display: block; color: var(--ink-3); font-size: 12px; }
+.st-err { margin-top: 8px; }
+
+/* ── narrow screens: no sideways page scroll; the drawing scrolls inside its frame ────────────────────── */
+@media (max-width: 760px) {
+  .st-prow, .st-urow { flex-wrap: wrap; }
+  .st-prow-a, .st-urow-a { flex: 1 0 100%; justify-content: flex-start; }
+  .st-urow-a { padding-left: 28px; }
+  .st-role-l { min-width: 0; flex: 1 0 100%; }
+  .st-passbar-a { width: 100%; }
+  .st-checks { grid-template-columns: 1fr; }
+  .st-pending { bottom: 8px; }
+  .st-stage { min-width: 0; flex: 1 1 auto; }
+}

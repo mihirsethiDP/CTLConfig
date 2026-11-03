@@ -1,0 +1,145 @@
+/* v7/2 · ledger7.css — the override form, the Deviations pages and the override modals.
+   Linked by prototype.html (and added by ledger7.js through V7UI.addCss when missing). Uses v7.css tokens; the few colours of
+   its own are --lg-* tokens below. Light by default; dark follows the reader's setting unless the page says
+   data-theme="light" (the prototype is light only). Chip tones keep the source-chip vocabulary: Base moved is the only
+   amber-fill chip, Past review an amber outline. */
+
+:root {
+  --lg-moved-bg: #f4e5bf; --lg-moved-ink: #6f5214;
+  --lg-review-line: #d9b45e; --lg-review-ink: #81611d;
+  --lg-ovr-bg: #eef2f6; --lg-ovr-line: #33485a; --lg-ovr-ink: #263848;
+  --lg-der-line: #3f7d74; --lg-der-ink: #2e5e57;
+  --lg-gap-line: #e2c98c; --lg-gap-ink: #81611d;
+  --lg-susp-ink: #6b7572; --lg-frozen-bg: #e7edf2; --lg-frozen-ink: #3e5566;
+  --lg-forced-line: #b8564f; --lg-forced-ink: #8f3f38;
+  --lg-box-bg: #fafbf9; --lg-path-bg: #f3f6f4;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --lg-moved-bg: #4a3c17; --lg-moved-ink: #f0d58f;
+    --lg-review-line: #b3913f; --lg-review-ink: #e3c57f;
+    --lg-ovr-bg: #22303b; --lg-ovr-line: #9fb6c9; --lg-ovr-ink: #d3e1ec;
+    --lg-der-line: #7fc0b5; --lg-der-ink: #a2d6cc;
+    --lg-gap-line: #8a7234; --lg-gap-ink: #e3c57f;
+    --lg-susp-ink: #97a39f; --lg-frozen-bg: #1d2a33; --lg-frozen-ink: #b5cddd;
+    --lg-forced-line: #e0897f; --lg-forced-ink: #f0b0a8;
+    --lg-box-bg: #1a2120; --lg-path-bg: #212a28;
+  }
+}
+:root[data-theme="dark"] {
+  --lg-moved-bg: #4a3c17; --lg-moved-ink: #f0d58f;
+  --lg-review-line: #b3913f; --lg-review-ink: #e3c57f;
+  --lg-ovr-bg: #22303b; --lg-ovr-line: #9fb6c9; --lg-ovr-ink: #d3e1ec;
+  --lg-der-line: #7fc0b5; --lg-der-ink: #a2d6cc;
+  --lg-gap-line: #8a7234; --lg-gap-ink: #e3c57f;
+  --lg-susp-ink: #97a39f; --lg-frozen-bg: #1d2a33; --lg-frozen-ink: #b5cddd;
+  --lg-forced-line: #e0897f; --lg-forced-ink: #f0b0a8;
+  --lg-box-bg: #1a2120; --lg-path-bg: #212a28;
+}
+
+/* ── chips inside the ledger's pages: long chips wrap, every tone is visible without hover ─────────────── */
+:where(.dv, .ovf, .lg-chip, .dvm) .chip { height: auto; min-height: 22px; padding-top: 3px; padding-bottom: 3px; white-space: normal; line-height: 1.25; text-align: left; }
+:where(.dv, .ovf, .lg-chip, .dvm) .chip-moved { background: var(--lg-moved-bg); color: var(--lg-moved-ink); border-color: transparent; }
+:where(.dv, .ovf, .lg-chip, .dvm) .chip-review { background: transparent; border-color: var(--lg-review-line); color: var(--lg-review-ink); }
+:where(.dv, .ovf, .lg-chip, .dvm) .chip-ovr { background: var(--lg-ovr-bg); border-color: var(--lg-ovr-line); color: var(--lg-ovr-ink); }
+:where(.dv, .ovf, .lg-chip, .dvm) .chip-der { background: var(--surface); border: 1px dotted var(--lg-der-line); color: var(--lg-der-ink); }
+:where(.dv, .ovf, .lg-chip, .dvm) .chip-gap { background: var(--surface); border-color: var(--lg-gap-line); color: var(--lg-gap-ink); }
+:where(.dv, .ovf, .lg-chip, .dvm) .chip-susp { background: transparent; border-color: var(--line-2); color: var(--lg-susp-ink); }
+:where(.dv, .ovf, .lg-chip, .dvm) .chip-forced { background: var(--surface); border-color: var(--lg-forced-line); color: var(--lg-forced-ink); }
+:where(.dv, .ovf, .lg-chip, .dvm) .chip-pin { background: var(--surface); border: 1px dashed var(--ink-3); color: var(--ink); }
+:where(.dv, .ovf, .lg-chip, .dvm) .chip-prop { background: transparent; border: 1px dashed var(--line-2); color: var(--ink-2); }
+:where(.dv, .ovf, .lg-chip, .dvm) .chip-single { background: transparent; border: 1px dashed var(--lg-der-line); color: var(--lg-der-ink); }
+:where(.dv, .ovf, .lg-chip, .dvm) .chip-frozen { background: var(--lg-frozen-bg); color: var(--lg-frozen-ink); border-color: transparent; }
+.lg-chip { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 2px; max-width: 100%; }
+.lg-chip > .chip + .chip { margin-top: 2px; }
+.lg-sub { display: block; font-size: 12px; color: var(--ink-3); line-height: 1.4; margin-top: 2px; }
+.lg-small { display: block; font-size: 11.5px; color: var(--ink-3); }
+.lg-acts { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.lg-acts > a:not(.btn) { font-size: 12.5px; }
+
+/* ── the override form (inline under a field row, in a sheet, or in a modal) ───────────────────────────── */
+.ovf { margin: 10px 0 4px; padding: 14px 16px; border: 1px solid var(--line-2); border-radius: var(--r); background: var(--lg-box-bg); }
+.ovf > * + * { margin-top: 14px; }
+.ovf.ovf-boxed { margin: 0; padding: 0; border: 0; background: transparent; }
+.ovf-h { font-size: 13px; font-weight: 600; color: var(--ink); margin: 0 0 8px; display: flex; align-items: center; gap: 8px; }
+.ovf-in { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.ovf-in input[type=number] { width: 120px; }
+.ovf-in select { width: auto; min-width: 120px; }
+.ovf-k, .ovf-u { font-size: 13px; color: var(--ink-2); }
+.ovf-base { font-size: 13px; color: var(--ink-3); }
+.ovf-why .radios { gap: 6px; }
+.ovf-why .radio { padding: 8px 12px; }
+.ovf-path { padding: 12px 14px; border-radius: var(--r-sm); background: var(--lg-path-bg); border: 1px solid var(--line); font-size: 13.5px; }
+.ovf-path > * + * { margin-top: 10px; }
+.ovf-path-q { background: transparent; border-style: dashed; }
+.ovf-pa { display: flex; flex-wrap: wrap; gap: 8px; }
+.ovf textarea { width: 100%; min-height: 64px; }
+.ovf input[type=date] { width: auto; min-width: 170px; }
+.ovf input[type=text] { width: 100%; max-width: 420px; }
+.ovf-prev { padding: 10px 12px; border-left: 3px solid var(--accent); background: var(--surface); border-radius: 0 var(--r-sm) var(--r-sm) 0; font-size: 13.5px; color: var(--ink-2); }
+.ovf-prev p + p { margin-top: 4px; }
+.ovf-fz { color: var(--lg-frozen-ink); }
+.ovf-fz a { white-space: nowrap; }
+.ovf-err:empty { display: none; }
+.ovf-a { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+
+/* ── Deviations ─────────────────────────────────────────────────────────────────────────────────────────── */
+.dv > * + * { margin-top: 16px; }
+.dv-cs { display: flex; flex-wrap: wrap; gap: 6px; }
+.dv-c { display: inline-flex; align-items: center; min-height: 30px; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--line-2); background: var(--surface); color: var(--ink-2); font-size: 13px; font-weight: 500; }
+.dv-c:hover { text-decoration: none; background: var(--surface-2); }
+.dv-c.on { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); color: var(--accent-strong); font-weight: 600; }
+.dv-c-moved { background: var(--lg-moved-bg); border-color: transparent; color: var(--lg-moved-ink); }
+.dv-c-review { border-color: var(--lg-review-line); color: var(--lg-review-ink); }
+.dv-c-susp { color: var(--lg-susp-ink); }
+.dv-c-quiet { border-color: transparent; background: transparent; color: var(--accent); margin-left: auto; }
+.dv-f { display: flex; flex-wrap: wrap; gap: 8px; }
+.dv-sel { width: auto; min-width: 150px; max-width: 100%; }
+.dv-only { font-size: 13px; color: var(--ink-2); }
+.dv-g, .dv-sec { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 14px 18px; box-shadow: var(--shadow-sm); }
+.dv-g-moved { border-left: 3px solid var(--lg-review-line); }
+.dv-gh { font-size: 14px; font-weight: 600; margin-bottom: 8px; overflow-wrap: anywhere; }
+.dv-sh h3 { font-size: 15px; }
+.dv-sh p { font-size: 13px; color: var(--ink-3); margin-top: 2px; }
+.dv-sh + * { margin-top: 10px; }
+.dv-t { table-layout: fixed; }
+.dv-t th:nth-child(1) { width: 23%; }
+.dv-t th:nth-child(2) { width: 19%; }
+.dv-t th:nth-child(4) { width: 58px; }
+.dv-t th:nth-child(5) { width: 176px; }
+.dv-t td { vertical-align: top; overflow-wrap: break-word; }
+.dv-t td:first-child a { font-weight: 500; }
+.dv-v { font-family: var(--mono); font-size: 12.5px; color: var(--ink); }
+.dv-age { white-space: nowrap; color: var(--ink-2); }
+.dv-act { text-align: right; }
+.dv-t tr.dv-moved td:first-child { box-shadow: inset 3px 0 0 var(--lg-moved-bg); }
+.dv-t tr.dv-ended td { color: var(--ink-3); }
+.dv-var { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 14px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--line-2); font-size: 13px; color: var(--ink-2); }
+.dv-l { list-style: none; }
+.dv-l li { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 8px 16px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.dv-l li:last-child { border-bottom: 0; }
+.dv-li { min-width: 0; flex: 1 1 320px; }
+.dv-li > span:first-child { overflow-wrap: anywhere; }
+.dv-chips { display: block; margin-top: 4px; }
+.dv-st a { font-weight: 500; }
+
+/* ── modals ─────────────────────────────────────────────────────────────────────────────────────────────── */
+.dvm-warn { color: var(--warn-ink); font-size: 13px; }
+.dvm-quiet { color: var(--ink-3); font-size: 13px; }
+.dvm .field-e:empty { display: none; }
+.dvm > * + * { margin-top: 12px; }
+
+@media (max-width: 1100px) {
+  .dv-t th:nth-child(5) { width: 128px; }
+}
+@media (max-width: 760px) {
+  .dv-t { table-layout: auto; }
+  .dv-t th { width: auto !important; }
+  .dv-act { text-align: left; }
+  .dv-t td.dv-v::before { font-family: var(--font); }
+  .dv-c-quiet { margin-left: 0; }
+  .dv-g, .dv-sec { padding: 12px 14px; }
+  .ovf { padding: 12px; }
+  .ovf-a { justify-content: flex-start; }
+  .dv-sel { flex: 1 1 100%; }
+}

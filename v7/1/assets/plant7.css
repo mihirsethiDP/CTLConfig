@@ -1,4 +1,4 @@
-/* v7 · plant7.css — page styles for the plant pages (plant7.js, builder B3). Uses v7.css tokens only. */
+/* v7 · plant7.css — page styles for the plant pages (plant7.js). Uses v7.css tokens only. */
 
 /* Readiness: verdict line, three track cards, the checklist card */
 .p7-verdict { padding: 12px 16px; border-radius: var(--r); background: var(--surface); border: 1px solid var(--line); color: var(--ink-2); }

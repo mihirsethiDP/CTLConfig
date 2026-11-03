@@ -1,4 +1,4 @@
-/* v7 · plant7.js · window.V7PLANT — the plant pages.  Builder B3.
+/* v7 · plant7.js · window.V7PLANT — the plant pages.
 
    Loads after core7.js (window.V7) and ui7.js (window.V7UI). Pure string renderers registered with V7UI.route; every
    action is a data-act handler registered with V7UI.on (the shell persists and re-renders after it).
@@ -17,7 +17,7 @@
        state · Sample plant / Real SCADA layout, state line, tabs Home · Equipment · Readings · Issues · Tasks · Differences ·
        Activity). active = tab id ('home'|'equipment'|'readings'|'issues'|'tasks'|'differences'|'activity').
        opts: {crumbs:[{label,href}], title, sub, chips:[html], actions:[html], aside, banner, cls}. Unknown plant → a "No such
-       plant" page. Used by B2 (Activity), B5 (Differences) and B6 (Issues).
+       plant" page. Used by ui7 (Activity), lib7 (Differences) and work7 (Issues).
      pages.{home, scada, library, equipment, readings, tasks}(params) → html (the route functions)
      tabs(key) → [{id,label,href,count}] · typePlural(typeName, n) → "5 Blowers", "2 ACF/MGF" · openGoLive(key) · openReturn(key)
 
@@ -76,7 +76,7 @@
   const H = (html) => ({ html: String(html) });                 /* already-escaped html for V7UI builders (txt() escapes plain strings) */
   const say = (html, o) => U.toast(`<span>${html}</span>`, o);  /* toasts: escaped html, always wrapped so it is never escaped twice */
 
-  /* ── the plant frame (shared by every plant route, also B2/B5/B6) ─────────────────────────────────────── */
+  /* ── the plant frame (shared by every plant route, also ui7/lib7/work7) ─────────────────────────────────────── */
   const TABS = [['home', 'Home', ''], ['equipment', 'Equipment', '/equipment'], ['readings', 'Readings', '/readings'], ['issues', 'Issues', '/issues'], ['tasks', 'Tasks', '/tasks'], ['differences', 'Differences', '/differences'], ['activity', 'Activity', '/activity']];
   function plantOf(key) { const v = V(); return key && v ? call(() => v.plant(key), null) : null; }
   function tabs(key) {
@@ -651,7 +651,7 @@
     }).join('');
     return { html: any ? bars : '', chips: chips.join(' '), none: !any };
   }
-  /* the one limits editor lives on the object page (B4): open its sheet in place, else go to the equipment page */
+  /* the one limits editor lives on the object page (object7): open its sheet in place, else go to the equipment page */
   function limitsBtn(key, r, lim) {
     if (r.nextPhase || !r.takesLimits || !arr(r.dirs).length || (r.kind === 'status' && lim.none)) return '';
     return `<div class="p7-lbtn">${btn(lim.none ? 'Set limits' : 'Change limits', { act: 'p7:limits', data: { plant: key, sensor: r.id, dir: r.primaryDir || arr(r.dirs)[0], eq: r.eqId || '' }, small: true, kind: 'ghost' })}</div>`;

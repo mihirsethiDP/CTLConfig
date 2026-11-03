@@ -1,5 +1,5 @@
 /* v7 · decisions7.js — window.V7_DECISIONS (the decision cards) + window.V7DEC (the #/decisions views, the decisions strip
-   on every screen, and the document view the challenges doc and the overview draw).  Builder B7.
+   on every screen, and the document view the challenges doc and the overview draw).
 
    One file, shared byte-identical by both prototypes (v7/1 the recommended approach, v7/2 Alex's model as drafted) and by
    the docs. It loads standalone (a doc loads only this file) and inside either app (after work7.js); it registers its
@@ -8,7 +8,7 @@
    GLOBALS READ (never written): window.V7_VARIANT '1' (default) | '2' — which prototype this page belongs to;
           window.V7_PAGE 'app' (default) | 'doc' (a hand-off doc in v7/N/) | 'overview' | 'challenges' (pages in site/v7/).
    DATA   window.V7_DECISIONS: ordered array of cards {id:'D1'…, title (a plain question), short (2–6 words), severity:
-          'Decide before building further'|'Shapes v7'|'Small', arose ('First review'|'Reviewing v7/1'|'Designing v7/2'),
+          'Decide before building further'|'Shapes v7'|'Small', arose ('First review'|'Reviewing v7/1'|'Designing v7/2'|'Building v7/2'),
           alexSays, v6Today, mihirsDirection, options:[{label, consequence, recommended}], recommendation, v7Does,
           tellAlex, v71Option, v71Short, v72Option, v72Short, v72Does, both, links:[{label, href, label72, href72}],
           where:{'1':[route patterns], '2':[route patterns]}}. Every field after `tellAlex` is optional: a card without
@@ -526,7 +526,7 @@
       "v71Short": "Routine checks, routine work and manual tests grouped per type on screen, marked 'to confirm'; PM and calibration stay per equipment.",
       "v72Option": 0,
       "v72Short": "A Task per equipment or unit process; no grouping by type; one Tasks-a-day number.",
-      "v72Does": "v7/2 files every Task on one piece of equipment or one unit process, as Alex's model does. No option on this card matches Alex exactly: option 1 is the closest, and Alex also files Tasks on unit processes. Control groups carry no Tasks, so a blower changeover is a Task on each blower, and nothing on screen groups the Tasks of one type. No scheduled Task runs before go-live. The go-live confirmation gives one number, about 59 Tasks a day at Vedanta, where v7/1's grouping shows about 47 on screen. Readiness counts equipment with no maintenance programme as a gap. Filing Tasks on unit processes does not shorten the list: each MBBR still gets its own tests, and the blower changeover lands on every blower.",
+      "v72Does": "v7/2 files every Task on one piece of equipment or one unit process, as Alex's model does. No option on this card matches Alex exactly: option 1 is the closest, and Alex also files Tasks on unit processes. Control groups carry no Tasks, so a blower changeover is a Task on each blower, and nothing on screen groups the Tasks of one type. No scheduled Task runs before go-live. The go-live confirmation gives one number, about 59 Tasks a day at Vedanta, where v7/1's grouping shows about 47 on screen; with every binding accepted, DigitalPaani would run about 233 Tasks a day once Live. Readiness counts equipment with no maintenance programme as a gap. Filing Tasks on unit processes does not shorten the list: each MBBR still gets its own tests, and the blower changeover lands on every blower.",
       "both": false,
       "links": [
         {
@@ -904,7 +904,7 @@
       "v71Short": "Manual and lab readings get limits and a Readings tab in both states; a number typed in a test gets no limit and no report offer.",
       "v72Option": 0,
       "v72Short": "Readings tab on Live plants only; hand-test results stay in the Task, with no limits.",
-      "v72Does": "v7/2 keeps Alex's draft. The plant Readings tab appears on Live plants only and lists the plant graph's sensors with their zones. Manual and lab results are not readings with limits: they stay in the Task record where they were typed, with no limits and no prompt to report. Vedanta, in Commissioning, has no Readings tab. At DigitalPaani a DO test below 1 mg/L would be logged in its Task, and nothing else would happen unless the operator reports it. Alex's own unit-process drawing points the other way, with a manual MLSS reading that has limits and a Trigger; v7/2 follows this card's option and asks Mihir to confirm.",
+      "v72Does": "v7/2 keeps Alex's draft. The plant Readings tab appears on Live plants only and lists the plant graph's sensors with their zones. Manual and lab results are not readings with limits: they stay in the Task record where they were typed, with no limits and no prompt to report. Vedanta, in Commissioning, has no Readings tab. Once DigitalPaani is Live, a DO test below 1 mg/L there would be logged in its Task, and nothing else would happen unless the operator reports it. Alex's own unit-process drawing points the other way, with a manual MLSS reading that has limits and a Trigger; v7/2 follows this card's option and asks Mihir to confirm.",
       "both": false,
       "links": [
         {
@@ -1651,7 +1651,7 @@
       "v71Short": "Lists each shared task once per piece of equipment (329 to decide at DigitalPaani); the Tasks tab groups them into 217.",
       "v72Option": 2,
       "v72Short": "One row per Task and subject on the bindings pass and on the Tasks tab: nothing is grouped, so the counts agree.",
-      "v72Does": "v7/2's bindings pass lists one row per template and subject ('Bearing service · Task → BL-1'), grouped by unit process, with 'Accept n' per group and 'Accept n and start trial' for everything left; it opens once the structure pass is confirmed. Every Task sits on one subject and nothing is grouped on the Tasks tab either, so each accepted Task is one row on the pass and one row on the Tasks tab. The cost is card D7's: one Tasks-a-day number with every copy in it.",
+      "v72Does": "v7/2's bindings pass lists one row per template and subject ('Clean intake filter · Task → BL-1'), grouped by unit process, with 'Accept n' per group and 'Accept n and start trial' for everything left; it opens once the structure pass is confirmed. Every Task sits on one subject and nothing is grouped on the Tasks tab either, so each accepted Task is one row on the pass and one row on the Tasks tab. The cost is card D7's: one Tasks-a-day number with every copy in it.",
       "both": false,
       "links": [
         {
@@ -1756,7 +1756,7 @@
         },
         {
           "label": "Keep each firing as a record and average over the whole trial (v7/2, as Alex wrote it)",
-          "consequence": "History never changes, and Wed 28 Oct's Emergency stays on the trial card whatever the limit becomes. But a fixed Trigger stays marked noisy until its average falls below 10 a day: Level high on EQ-1, tuned at 09:00 on Thu 29 Oct, keeps its Readiness gap until about 01:19 on Sat 31 Oct, although the preview already says it would have fired 0 times instead of 76. The mark doesn't block Go live, so staff learn to ignore it, or hold go-live for two days over a Trigger that is already fixed.",
+          "consequence": "History never changes, and Wed 28 Oct's Emergency stays on the trial card whatever the limit becomes. But a fixed Trigger stays marked noisy until its average falls below 10 a day: Level high on EQ-1, tuned at 09:00 on Thu 29 Oct, keeps its Readiness gap until about 01:19 on Sat 31 Oct, although the preview already says it would have fired 0 times instead of 76. The mark doesn't block Go live, so staff learn to ignore it, or hold go-live for almost two days over a Trigger that is already fixed.",
           "recommended": false
         },
         {
@@ -1772,7 +1772,7 @@
       ],
       "recommendation": "Option 3. Records are the right home for what happened: Alex's memo asks for them, and when nothing is sent during Commissioning they are the only trace of an Emergency. But the noisy mark is a prompt to tune, so it should judge the Trigger as it is now, and the 'would have fired' preview already replays the trial with the typed limits. Showing both lines keeps the history honest and lets a fixed Trigger clear at once. If a plant keeps no reading history, option 4 is the fallback; recounting the history itself (v7/1 today) is the weaker option.",
       "v7Does": "v7/1 never stores a trial firing. The trial card and the noisy mark replay the sample readings over the trial so far with the alert's current limits and timing, so a reasoned change shows at once: moving Level high — EQ-1's Caution from 85 to 87% takes it from 76 firings (12.8 a day) to 0, and the noisy gap leaves Readiness straight away. The same replay rewrites the past: lowering pH low — EQ-1's Emergency limit from 4.0 to 3.5 turns its Emergency on Wed 28 Oct into a Major firing on the trial card. The real Commissioning issue that Emergency opened stays.",
-      "tellAlex": "On trial firings as records: agreed, keep them as history. With nothing sent during Commissioning they're the only trace of an Emergency. One change to the noisy mark: judge it by replaying the trial with the Trigger's current limits (the same replay your 'would have fired' preview uses), shown as a second line on the trial card. Otherwise a Trigger fixed on day 6 stays marked noisy for two more days. Does that fit what you meant?",
+      "tellAlex": "On trial firings as records: agreed, keep them as history. With nothing sent during Commissioning they're the only trace of an Emergency. One change to the noisy mark: judge it by replaying the trial with the Trigger's current limits (the same replay your 'would have fired' preview uses), shown as a second line on the trial card. Otherwise a Trigger fixed on day 6 stays marked noisy for almost two more days. Does that fit what you meant?",
       "v71Option": 0,
       "v71Short": "Recounts the trial with today's limits: a fix clears the noisy mark at once, but past firings change with it.",
       "v72Option": 1,
@@ -2364,6 +2364,69 @@
       "why": "Nothing changes silently.",
       "card": "D17",
       "confirm": false
+    },
+    {
+      "n": 42,
+      "title": "Actions on a value whose base moved",
+      "drafts": "Alex's pattern for an inherited value gives a value whose base moved two actions, Keep (with a new note) and Adopt the library value, while Alex's drawing of the Deviations page shows Revert, Extend and Promote on the same row.",
+      "reading": "A row whose base moved offers Keep and Adopt the library value, as the pattern says, plus Promote, which the drawing shows. Revert and Extend stay on the other rows.",
+      "why": "Show the consequence before saving: Keep and Adopt name the value that moved, and Revert and Extend do not.",
+      "card": "D11",
+      "confirm": true
+    },
+    {
+      "n": 43,
+      "title": "'Adopt' on the don't-use list",
+      "drafts": "Alex's word list bans 'adopt' for taking on a binding, yet Alex's own copy for a value whose base moved says 'Keep yours, or adopt the library value'.",
+      "reading": "v7/2 keeps 'Adopt the library value' on a value whose base moved, as Alex wrote it, and never says 'adopt' for a binding, so the word check does not ban the word outright.",
+      "why": "It is Alex's own copy for that one state; the ban is read as being about bindings.",
+      "card": "D14",
+      "confirm": true
+    },
+    {
+      "n": 44,
+      "title": "An override that ends by itself",
+      "drafts": "A minor library change clears an override that now equals the library value. The drafts don't say what happens when a design parameter changes and a derived value comes to equal an override, and their list of override states has no 'Cleared' and no 'Suspended'.",
+      "reading": "A derived value that comes to equal an override clears it too, and the override moves to history as 'Cleared'. A Forced change suspends the overrides on its band: kept, not applied, and back when the change is lifted. Both states are shown.",
+      "why": "The same equality makes the override pointless either way, and showing both states means nothing changes silently.",
+      "card": "D17",
+      "confirm": true
+    },
+    {
+      "n": 45,
+      "title": "How many plants a publish reaches",
+      "drafts": "Alex's publish button counts the plants that will update ('Publish v2 to 1 plant'), though a plant that overrides the value receives the new version too and shows Base moved.",
+      "reading": "The button counts the plants that follow, as drawn. Downstream lists, above it, every plant that will show Base moved and every Trigger that is frozen or pinned.",
+      "why": "Show the consequence before saving: Downstream names every plant a publish reaches, so the button can keep the count Alex drew.",
+      "card": "D17",
+      "confirm": true
+    },
+    {
+      "n": 46,
+      "title": "Constants on readings that scale with the plant",
+      "drafts": "Limits on readings that scale with the plant (level, flow, pressure, motor current) should be rules over design parameters, but a rule can only resolve where the plant has that parameter.",
+      "reading": "A band becomes a rule only where the type's survey asks for the parameter, such as a tank's height or a motor's rating. Elsewhere it stays a constant with the flag 'This scales with the plant. Use a design parameter?', as an agitator's motor current does.",
+      "why": "Safety: a rule that could never resolve would leave the reading with no limits at all.",
+      "card": "D18",
+      "confirm": true
+    },
+    {
+      "n": 47,
+      "title": "Machines that are a process of their own",
+      "drafts": "A unit process is a basin or reactor in the plant graph, and Alex's membership rules place blowers, pumps, dosing sets and valves in one. The drafts don't say whether a bar screen, a screw press, a filter press or an agitator is a unit process or a piece of equipment.",
+      "reading": "They are equipment. No membership rule places them, so they come up unclassified until a person places them or marks them not part of any unit process.",
+      "why": "Automation proposes and a person confirms: the structure pass shows each of them for a person to decide, and v7/2 applies the rules as drafted.",
+      "card": "D1",
+      "confirm": true
+    },
+    {
+      "n": 48,
+      "title": "Notes on an override",
+      "drafts": "Alex's drafts ask for a note with a Tuning or a Regulatory or client override, and with every override for one Trigger only. They don't ask for one with Physical, Structural or Temporary.",
+      "reading": "v7/2 follows that exactly: a Physical, Structural or Temporary override can be saved with no note, where v7/1 always asks why.",
+      "why": "v7/2 renders the model as drafted. The reason is always recorded; the cost is an override nobody explained in words.",
+      "card": "D6",
+      "confirm": true
     }
   ];
 
@@ -2407,7 +2470,7 @@
     return o ? o.label : '';
   }
   function optName(d, opt) { return opt === 'other' ? 'Something else' : `Option ${+opt + 1}`; }
-  const ARISINGS = ['First review', 'Reviewing v7/1', 'Designing v7/2'];
+  const ARISINGS = ['First review', 'Reviewing v7/1', 'Designing v7/2', 'Building v7/2'];
   function idNum(id) { const m = /\d+/.exec(String(id == null ? '' : id)); return m ? +m[0] : 0; }
   function isIndex(d, i) { return typeof i === 'number' && Number.isInteger(i) && i >= 0 && i < ((d && d.options) || []).length; }
   /* the option each prototype builds: v7/1 defaults to the recommended one when the card does not say; null = none of them */
@@ -2714,8 +2777,9 @@
       + `<p class="dd-count" data-dd-count>${countHtml()}</p>`
       + `<div class="dd-tw"><table class="dd-table"><thead><tr>${head.map((t) => `<th scope="col">${esc(t)}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div></section>`;
   }
-  const GROUP_TITLE = { 'First review': 'From the first review of Alex\'s packs', 'Reviewing v7/1': 'From reviewing v7/1', 'Designing v7/2': 'From designing v7/2' };
-  /* each group carries an anchor the docs' contents link to: #group-first-review, #group-reviewing-v7-1, #group-designing-v7-2 */
+  const GROUP_TITLE = { 'First review': 'From the first review of Alex\'s packs', 'Reviewing v7/1': 'From reviewing v7/1', 'Designing v7/2': 'From designing v7/2', 'Building v7/2': 'From building v7/2' };
+  /* each group carries an anchor the docs' contents link to: #group-first-review, #group-reviewing-v7-1, #group-designing-v7-2,
+     #group-building-v7-2 */
   function groupId(a) { return 'group-' + (String(a || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'questions'); }
   function docCard(d, x) {
     const H = `h${x.level + 1}`; const id = esc(d.id); const rec = recommendedIndex(d); const v = variant();
@@ -2842,7 +2906,7 @@
   const DEC = W.V7DEC = {
     list, byId, SEVERITIES, sevOf, esc, prose, recommendedIndex, optionText,
     answers, answerOf, noteOf, setAnswer, clearAnswer, differs, counts, answersText, alexText, KEY, onExternalChange,
-    VARIANTS, ARISINGS, variant, page: pageKind, V72_READY: false, PUBLIC: !list().some((d) => d && Array.isArray(d.ids) && d.ids.length),
+    VARIANTS, ARISINGS, variant, page: pageKind, V72_READY: true, PUBLIC: !list().some((d) => d && Array.isArray(d.ids) && d.ids.length),
     v71Index, v72Index, hasPair, shortOf, aroseOf, builds, hrefFor, targetFor, challengesHref, docHref, linksFor,
     matchRoute, canonicalPath, markersFor, markerHtml, twoHtml, docHtml, renderDoc, cssBase: () => BASE,
     render: { list: () => '', detail: () => '' },

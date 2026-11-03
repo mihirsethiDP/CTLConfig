@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* v7 smoke harness (builder B2). Node only, no dependencies.
+/* v7 smoke harness. Node only, no dependencies.
 
    Loads every asset in prototype.html's order into one context with a stub DOM, boots V7, then calls every
    registered route's renderFn with sampled params: every plant, equipment (at most 3 per type per plant), alert,

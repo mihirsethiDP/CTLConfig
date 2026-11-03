@@ -1,0 +1,137 @@
+/* v7/2 · plant7.css — page styles for the plant pages (plant7.js): the plant frame, Readiness, Coverage, the bindings pass,
+   People, Last service dates and their dialogs. Uses the colour tokens of v7.css only. */
+
+/* ── frame ─────────────────────────────────────────────────────────────── */
+.p7-state { font-weight: 600; }
+.p7-state.st-comm { box-shadow: inset 0 0 0 1.5px var(--warn); }
+.p7-details { font-size: 13px; font-weight: 500; white-space: nowrap; align-self: center; }
+.p7-tab-bad { display: inline-block; min-width: 18px; margin-left: 6px; padding: 0 6px; border-radius: 9px; background: var(--bad-tint); color: var(--bad-ink); font: 600 11.5px/18px var(--mono); text-align: center; }
+
+/* ── shared bits ───────────────────────────────────────────────────────── */
+.p7-act { font-size: 13px; font-weight: 600; white-space: nowrap; }
+.p7-para { margin: 0 0 10px; color: var(--ink-2); }
+.p7-head { margin: 4px 0 6px; font-weight: 600; color: var(--ink); }
+.p7-muted, .p7-clocks-n { color: var(--ink-3); font-size: 13px; }
+.p7-sub { font-size: 12.5px; color: var(--ink-3); margin-top: 3px; font-weight: 400; }
+.p7-none { color: var(--ok-ink); font-weight: 500; }
+.p7-mark { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 20px; width: 20px; height: 20px; border-radius: 50%; font: 700 12px/1 var(--font); }
+.p7-fresh, .p7-comm { padding: 10px 14px; border-radius: var(--r); background: var(--ok-tint); color: var(--ok-ink); font-weight: 500; }
+.p7-comm { background: var(--warn-tint); color: var(--warn-ink); margin-bottom: 12px; }
+.p7-chip-sub { display: block; font-size: 12px; color: var(--ink-3); margin-top: 2px; }
+
+/* ── Readiness: the trial banner, three tracks, Before go-live ─────────── */
+.p7-trial { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 12px 16px; border: 1.5px dashed var(--line-2); border-radius: var(--r); background: var(--surface); }
+.p7-trial-t { font-weight: 600; color: var(--ink); flex: 1 1 260px; }
+.p7-tracks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; align-items: stretch; }
+.p7-tracks > .card + .card { margin-top: 0; }
+.p7-track { display: flex; flex-direction: column; }
+.p7-track .card-b { flex: 1; padding-top: 6px; }
+.p7-steps { list-style: none; display: grid; gap: 2px; }
+.p7-step { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); }
+.p7-step:first-child { border-top: 0; }
+.p7-step .p7-mark { margin-top: 1px; }
+.p7-step.is-done .p7-mark { background: var(--ok-tint); color: var(--ok-ink); }
+.p7-step.is-current .p7-mark { background: var(--accent-tint); color: var(--accent-strong); }
+.p7-step.is-waiting .p7-mark { background: transparent; color: var(--ink-3); box-shadow: inset 0 0 0 1px var(--line-2); }
+.p7-step.is-attention .p7-mark { background: var(--bad-tint); color: var(--bad-ink); }
+.p7-step-m { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.p7-step-l { font-weight: 600; font-size: 13.5px; color: var(--ink); }
+.p7-step-t { font-size: 13px; color: var(--ink-2); overflow-wrap: anywhere; }
+.p7-step.is-waiting .p7-step-l, .p7-step.is-waiting .p7-step-t { color: var(--ink-3); }
+.p7-step-r { flex: 0 0 auto; align-self: center; }
+.p7-items { list-style: none; display: grid; }
+.p7-item { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+.p7-item:first-child { border-top: 0; }
+.p7-item-t { flex: 1 1 280px; min-width: 0; overflow-wrap: anywhere; }
+.p7-item-r { flex: 0 0 auto; }
+.p7-tag { flex: 0 0 auto; padding: 1px 8px; border-radius: 5px; font: 600 11px/18px var(--font); letter-spacing: .02em; text-transform: uppercase; }
+.p7-tag-bad { background: var(--bad-tint); color: var(--bad-ink); }
+.p7-tag-gap { background: var(--surface); color: var(--warn-ink); box-shadow: inset 0 0 0 1px var(--warn); }
+.p7-before .card-f { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.p7-ready { color: var(--ok-ink); font-weight: 600; }
+.p7-role { color: var(--ink-3); font-size: 13px; flex: 1 1 auto; }
+
+/* ── Coverage ──────────────────────────────────────────────────────────── */
+.p7-small { display: block; font-size: 12px; color: var(--ink-3); font-weight: 400; margin-top: 2px; }
+.p7-drafts { margin-top: 14px; color: var(--ink-2); display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; }
+.p7-cov-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.p7-cov-row > .card + .card { margin-top: 0; }
+.p7-placeholder { color: var(--ink-2); font-style: italic; }
+.p7-return .card-h { align-items: center; }
+.p7-return .card-h:last-child { padding-bottom: 16px; }
+
+/* ── the bindings pass ─────────────────────────────────────────────────── */
+.p7-passes { display: flex; flex-wrap: wrap; gap: 8px; }
+.p7-pass { padding: 6px 12px; border: 1px solid var(--line-2); border-radius: var(--r-sm); background: var(--surface); color: var(--ink-2); font-weight: 500; font-size: 13.5px; }
+.p7-pass.on { border-color: var(--accent); color: var(--accent-strong); background: var(--accent-tint); }
+.p7-pass.is-off { color: var(--ink-3); border-style: dashed; cursor: not-allowed; }
+.p7-pass:hover { text-decoration: none; }
+.p7-filters .p7-f-gap { box-shadow: inset 0 0 0 1px var(--warn); }
+.p7-bulk { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.p7-bulk-n { color: var(--ink-3); font-size: 13px; }
+.p7-bgroups > .card + .card { margin-top: 14px; }
+.p7-line { display: block; font-weight: 500; }
+.p7-reads { display: block; font-size: 12.5px; color: var(--ink-3); font-family: var(--mono); }
+.p7-vals { list-style: none; display: grid; gap: 4px; }
+.p7-vals li { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.p7-val { font-size: 13px; color: var(--ink); }
+.p7-cant { color: var(--warn-ink); font-weight: 500; font-size: 13px; margin-right: 6px; }
+.p7-st { white-space: nowrap; }
+.p7-st.p7-st-und { background: transparent; border: 1px dashed var(--line-2); color: var(--ink-2); }
+.p7-st.p7-st-cant { background: var(--surface); border: 1px solid var(--warn); color: var(--warn-ink); }
+.p7-row-a { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: flex-end; }
+.t td.p7-acts { width: 1%; white-space: nowrap; }
+.t tr.is-target td { background: var(--accent-tint); }
+.p7-needs { list-style: disc; padding-left: 18px; display: grid; gap: 4px; color: var(--ink-2); font-size: 13.5px; }
+
+/* ── People ────────────────────────────────────────────────────────────── */
+.p7-reach { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: var(--r); font-weight: 500; }
+.p7-reach.tone-ok { background: var(--ok-tint); color: var(--ok-ink); }
+.p7-reach.tone-bad { background: var(--bad-tint); color: var(--bad-ink); }
+.p7-reach .p7-mark { background: var(--surface); }
+.p7-sent { color: var(--ink-2); font-size: 13px; margin-right: 6px; }
+.p7-ver-a { display: inline-flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.p7-sample { border-style: dashed; }
+.p7-ladder { list-style: none; display: grid; gap: 0; margin-bottom: 14px; }
+.p7-rung { display: flex; align-items: baseline; gap: 12px; padding: 8px 0 8px 12px; border-top: 1px solid var(--line); box-shadow: inset 3px 0 0 var(--line-2); }
+.p7-rung:first-child { border-top: 0; }
+.p7-rung-emergency { box-shadow: inset 3px 0 0 var(--sev-emergency); }
+.p7-rung-major { box-shadow: inset 3px 0 0 var(--sev-major); }
+.p7-rung-minor { box-shadow: inset 3px 0 0 var(--sev-minor); }
+.p7-rung-caution { box-shadow: inset 3px 0 0 var(--sev-caution); }
+.p7-rung-t { flex: 1; min-width: 0; }
+.p7-rung-n { flex: 0 0 auto; color: var(--ink-3); font-size: 13px; font-family: var(--mono); }
+.p7-hooter { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 10px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); margin-bottom: 12px; }
+.p7-hooter-l { font-weight: 600; }
+.p7-seg { display: inline-flex; gap: 4px; }
+.p7-clocks { color: var(--ink-2); }
+.p7-more { margin-top: 10px; font-size: 13px; }
+.p7-choice { display: flex; flex-wrap: wrap; gap: 6px; }
+.p7-opt { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border: 1px solid var(--line-2); border-radius: var(--r-sm); cursor: pointer; font-size: 13.5px; }
+.p7-opt.on, .p7-opt:has(input:checked) { border-color: var(--accent); background: var(--accent-tint); }
+
+/* ── Last service dates ────────────────────────────────────────────────── */
+.p7-counter { padding: 10px 14px; border-radius: var(--r); background: var(--surface); border: 1px solid var(--line); color: var(--ink-2); font-weight: 500; }
+.p7-date { height: 32px; max-width: 160px; }
+
+/* ── dialogs ───────────────────────────────────────────────────────────── */
+.p7-changes { margin: 0 0 12px; padding-left: 20px; display: grid; gap: 8px; }
+ul.p7-changes { list-style: disc; }
+.p7-changes .p7-loud { font-weight: 650; color: var(--ink); }
+.p7-pv { margin: 8px 0; padding: 8px 12px; border-left: 3px solid var(--accent); background: var(--surface-2); border-radius: 0 var(--r-sm) var(--r-sm) 0; color: var(--ink-2); }
+.p7-gaps { margin-top: 8px; color: var(--warn-ink); }
+.p7-gaps > summary { cursor: pointer; }
+.p7-gaps .p7-list { text-decoration: underline; text-underline-offset: 2px; }
+.p7-gaps .p7-items { margin-top: 6px; color: var(--ink-2); }
+.p7-bands { list-style: disc; padding-left: 20px; display: grid; gap: 4px; color: var(--ink-2); }
+
+@media (max-width: 1100px) {
+  .p7-tracks { grid-template-columns: 1fr; }
+}
+@media (max-width: 760px) {
+  .p7-cov-row { grid-template-columns: 1fr; }
+  .p7-row-a { justify-content: flex-start; }
+  .t td.p7-acts { width: auto; white-space: normal; }
+  .p7-rung { flex-direction: column; gap: 2px; }
+  .p7-date { max-width: none; width: 100%; }
+}

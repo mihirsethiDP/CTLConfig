@@ -87,6 +87,7 @@
   .vc-go { margin-top: auto; padding-top: 18px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   .wip { display: inline-block; padding: 1px 8px; border: 1px dashed var(--v2-line); border-radius: 5px; font-size: 13px; font-weight: 600; color: var(--v2); background: var(--v2-tint); }
   .wip-note { font-size: 14px; color: var(--ink-2); }
+  [hidden] { display: none !important; }
 
   /* every challenge */
   .lead-link { display: inline-block; margin: 2px 0 14px; font-weight: 600; }
@@ -96,6 +97,8 @@
   .sd-same { color: var(--ok-ink); background: var(--ok-tint); }
   .sd-diff { color: var(--v2); background: var(--v2-tint); }
   .ov-more { margin-top: 12px; font-size: 14.5px; color: var(--ink-2); }
+  .ov-open { font-size: 13px; line-height: 1.6; }
+  .ov .dd-table td:last-child { min-width: 9em; }
 
   /* the story */
   .tw { overflow-x: auto; margin: 12px 0 8px; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); }
@@ -186,7 +189,7 @@
 
 <section id="challenges" class="ov" aria-labelledby="challenges-h">
   <h2 id="challenges-h">Every challenge</h2>
-  <p>Each row is one challenge: what each prototype builds, whether they build the same thing, and your call if you made one. The full card, with the options and a call to mark, is in the challenges doc.</p>
+  <p>Each row is one challenge: what each prototype builds, whether they build the same thing, and your call if you made one. Open goes to the card in the challenges doc, with the options and a call to mark, then to the same place in each prototype and to the card in each hand-off doc.</p>
   <a class="lead-link" href="challenges.html">Open the challenges doc →</a>
   <div id="ov-table"><p class="muted">Loading from the decisions file…</p><noscript><p>The table is drawn from <code>1/assets/decisions7.js</code> and needs JavaScript. The <a href="challenges.html">challenges doc</a> has every card.</p></noscript></div>
   <p class="ov-more" id="ov-more"></p>
@@ -221,7 +224,7 @@
   <p>Earlier versions stay as they were: <a href="../index.html">the first proposal</a>, <a href="../v2/index.html">v2</a>, <a href="../v3/index.html">v3</a>, <a href="../v4/index.html">v4</a>, <a href="../v5/index.html">v5</a> and <a href="../v6/index.html">v6</a>.</p>
 </footer></div>
 
-<script src="1/assets/decisions7.js?v=3"></script>
+<script src="1/assets/decisions7.js?v=5"></script>
 <script>
 /* The v7 overview: reads the shared decision file (1/assets/decisions7.js) and draws the table of every challenge.
    Links into v7/2 appear only once V7DEC.V72_READY is true; until then v7/2 is named as in build, never linked. */
@@ -242,7 +245,7 @@ window.V7_PAGE = 'overview';
 
   /* v7/2's links, once it is built (story routes as v7/2 will name them) */
   var V72_STORY = { 1: '#/library', 2: '#/p/digitalpaani/review/structure', 3: '#/p/digitalpaani/review/bindings', 4: '#/p/digitalpaani',
-    5: '#/p/vedanta/trigger/a_3d', 6: '#/p/vedanta/trigger/a_3f', 7: '#/p/vedanta', 8: '#/p/manesar/trigger/a_do_at2', 9: '#/p/manesar',
+    5: '#/p/vedanta/trigger/a_3d', 6: '#/p/vedanta/trigger/a_3f', 7: '#/p/vedanta', 8: '#/p/manesar/issue/is_2z', 9: '#/p/manesar',
     10: '#/library/templates/tpl_up_activated-sludge_mlss-low', 11: '#/deviations', 12: '#/decisions' };
   if (ready) {
     var st = $('v72-state'); if (st) st.hidden = true;
@@ -253,7 +256,18 @@ window.V7_PAGE = 'overview';
     fill('story-note', 'Each chapter opens the same moment in each prototype.');
   }
 
-  /* every challenge */
+  /* every challenge: its card in the challenges doc, then the same place in each prototype and the card in each hand-off
+     doc (v7/2's two only once it is published) */
+  function openCell(d) {
+    var l = (d.links || [])[0] || {};
+    var a = function (href, label, target) { return '<a href="' + esc(href) + '"' + (target ? ' target="' + esc(target) + '"' : '') + '>' + esc(label) + '</a>'; };
+    var out = [a(chal(d.id), 'Card')];
+    if (l.href) out.push(a(D.hrefFor('1', l.href), 'v7/1', D.targetFor('1')));
+    out.push(a(D.docHref('1', d.id), 'v7/1 doc'));
+    if (ready) { if (l.href72) out.push(a(D.hrefFor('2', l.href72), 'v7/2', D.targetFor('2'))); out.push(a(D.docHref('2', d.id), 'v7/2 doc')); }
+    else out.push('<span class="dd-none">v7/2 in build</span>');
+    return '<span class="ov-open">' + out.join(' · ') + '</span>';
+  }
   function callCell(d) {
     var a = D.answerOf(d.id);
     if (!a) return D.noteOf(d.id) ? '<span class="dk-chip dk-c-muted">Note only</span>' : '<span class="dd-none">—</span>';
@@ -272,10 +286,10 @@ window.V7_PAGE = 'overview';
         + '<td data-label="v7/2 builds">' + (b2 ? esc(b2) : '<span class="dd-none">Not written yet</span>') + '</td>'
         + '<td data-label="Same or differs">' + (d.both === true ? '<span class="sd sd-same">Same</span>' : '<span class="sd sd-diff">Differs</span>') + '</td>'
         + '<td data-label="Your call">' + callCell(d) + '</td>'
-        + '<td data-label="Read"><a href="' + esc(chal(d.id)) + '">Read the card →</a></td></tr>';
+        + '<td data-label="Open">' + openCell(d) + '</td></tr>';
     }).join('');
     fill('ov-table', '<div class="dd" data-dd-mode="overview"><p class="dd-count">' + plural(c.all, 'challenge') + ' · ' + c.same + ' built the same in both · <b>' + c.answered + '</b> answered' + (c.differs ? ' · ' + c.differs + ' differ from the recommendation' : '') + '</p>'
-      + '<div class="dd-tw"><table class="dd-table"><thead><tr>' + ['Card', 'Question', 'Severity', 'v7/1 builds', 'v7/2 builds', 'Same or differs', 'Your call', 'Read'].map(function (t) { return '<th scope="col">' + esc(t) + '</th>'; }).join('') + '</tr></thead><tbody>' + rows + '</tbody></table></div></div>');
+      + '<div class="dd-tw"><table class="dd-table"><thead><tr>' + ['Card', 'Question', 'Severity', 'v7/1 builds', 'v7/2 builds', 'Same or differs', 'Your call', 'Open'].map(function (t) { return '<th scope="col">' + esc(t) + '</th>'; }).join('') + '</tr></thead><tbody>' + rows + '</tbody></table></div></div>');
   }
   draw();
   D.onExternalChange(draw);

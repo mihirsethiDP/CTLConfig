@@ -1,0 +1,113 @@
+/* v7/2 · lib7.css — the library: home tiles, lists, type pages, the template editor, Downstream + Publish, flows.
+   Loaded by lib7.js through V7UI.addCss (and linked by prototype.html). Uses v7.css tokens only, so it follows the app's theme. */
+
+/* ── home: the seven collections ───────────────────────────────────────── */
+.lb-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+.lb-tile { display: flex; flex-direction: column; gap: 6px; padding: 16px 18px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--shadow-sm); color: var(--ink); min-width: 0; }
+.lb-tile:hover { border-color: var(--accent); text-decoration: none; box-shadow: var(--shadow); }
+.lb-tile-h { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
+.lb-tile-t { font-weight: 600; }
+.lb-tile-n { font: 600 20px var(--mono); color: var(--accent-strong); }
+.lb-tile-p { font-size: 12.5px; color: var(--ink-3); }
+.lb-tile-d { font-size: 13px; color: var(--ink-2); }
+.pg-lib .pg-main > * + * { margin-top: 18px; }
+.lb-drafts .rows .row-s { color: var(--warn-ink); }
+
+/* ── tools: search and filters ─────────────────────────────────────────── */
+.lb-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.lb-tools input[type=search] { flex: 1 1 220px; max-width: 360px; min-width: 0; }
+.lb-sel { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-2); min-width: 0; }
+.lb-sel select { max-width: 260px; min-width: 0; }
+.lb-sub { font-size: 12.5px; color: var(--ink-3); margin-top: 2px; }
+.lb-fams > .sec + .sec { margin-top: 24px; }
+.lb-k { font-size: 12.5px; color: var(--ink-3); margin-top: 8px; }
+
+/* ── type pages: reading cards ─────────────────────────────────────────── */
+.lb-rd + .lb-rd { margin-top: 12px; }
+.lb-rules { font-weight: 500; }
+.lb-chips { margin-top: 6px; }
+.lb-chip { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 2px; max-width: 100%; }
+.lb-csub { font-size: 12px; color: var(--ink-3); }
+.lb-csmall { font-size: 11.5px; color: var(--ink-3); }
+.lb-flag { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 8px; }
+.lb-ra { margin-top: 10px; }
+.lb-ra ul, .tp-use ul { list-style: none; }
+.lb-ra li, .tp-use li { padding: 2px 0; font-size: 13.5px; }
+.lb-rd-none .card-b { padding-top: 4px; }
+
+/* ── the aside: Downstream, Publish, the type's summary ────────────────── */
+.lb-aside > * + * { margin-top: 14px; }
+.pg-aside > .lb-aside { max-height: calc(100vh - var(--tb-h) - 40px); overflow-y: auto; overscroll-behavior: contain; padding: 1px 2px 2px 1px; scrollbar-width: thin; }
+.lb-side .card-h { padding: 14px 16px 0; }
+.lb-side .card-b { padding: 10px 16px 14px; }
+.lb-side .card-f { padding: 10px 16px; display: flex; flex-wrap: wrap; gap: 8px; }
+.lb-dsx-h { font-weight: 600; font-size: 13.5px; }
+.lb-dsx > .card { margin-top: 10px; }
+.lb-used { list-style: none; }
+.lb-used li { display: flex; justify-content: space-between; gap: 10px; padding: 2px 0; font-size: 13.5px; }
+.lb-ovl { margin-top: 10px; font-size: 13.5px; }
+.lb-vr, .lb-hist { list-style: none; }
+.lb-vr li + li, .lb-hist li + li { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+.lb-hist p + p { margin-top: 2px; }
+.lb-pin { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+
+.ds .card-b > * + * { margin-top: 12px; }
+.ds-f { border-top: 1px solid var(--line); padding-top: 10px; }
+.ds-f:first-child { border-top: 0; padding-top: 0; }
+.ds-fh { font-size: 14px; }
+.ds-g { margin-top: 8px; }
+.ds-k { font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.ds-l, .ds-diffs, .ds-x ul, .ds-fz { list-style: none; }
+.ds-l li, .ds-diffs li, .ds-x li, .ds-fz li { padding: 2px 0; font-size: 13px; overflow-wrap: anywhere; }
+.ds-why { color: var(--ink-3); font-size: 12px; }
+.ds-g-frozen .ds-k, .ds-g-held .ds-k { color: var(--info-ink); }
+.ds-g-suspended .ds-k { color: var(--bad-ink); }
+.ds-g-baseMoved .ds-k { color: var(--warn-ink); }
+.ds-r, .ds-n { font-size: 13px; color: var(--ink-2); }
+.ds-x summary { cursor: pointer; color: var(--accent); font-weight: 600; }
+.ds-fzn { font-weight: 600; }
+.ds-fz { margin-top: 2px; }
+.ds-due .radios { margin-top: 6px; }
+.ds-ver { font-weight: 600; }
+.ds-kinds { margin: 8px 0 12px; }
+.ds-kinds .radio.is-off { opacity: .55; cursor: not-allowed; }
+.ds-pub textarea { min-height: 60px; width: 100%; }
+.ds-before .r { text-align: right; }
+
+/* ── the template editor ───────────────────────────────────────────────── */
+.tp-ed > * + * { margin-top: 14px; }
+.tp-rows { display: flex; flex-direction: column; }
+.tp-row { display: grid; grid-template-columns: minmax(130px, 180px) minmax(0, 1fr) minmax(0, 1.2fr); align-items: center; gap: 8px 14px; padding: 10px 0; border-top: 1px solid var(--line); }
+.tp-row:first-child { border-top: 0; }
+.tp-row.is-target { box-shadow: inset 3px 0 0 var(--accent); padding-left: 10px; background: var(--accent-tint); }
+.tp-bn, .tp-tl { font-weight: 600; font-size: 13.5px; }
+.tp-in { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
+.tp-in input[type=number] { width: 96px; min-width: 0; }
+.tp-in select { max-width: 100%; min-width: 0; }
+.tp-u { font-size: 13px; color: var(--ink-3); }
+.tp-rt { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 13px; color: var(--ink-2); min-width: 0; }
+.tp-rtx { font-weight: 500; color: var(--ink); }
+.tp-was { font-size: 12.5px; color: var(--warn-ink); }
+.tp-save { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.tp-flow { font-size: 13.5px; }
+.tp-use + .tp-use { margin-top: 10px; }
+
+/* ── flows ─────────────────────────────────────────────────────────────── */
+.lb-steps { padding-left: 22px; }
+.lb-step { padding: 6px 0; }
+.lb-step + .lb-step { border-top: 1px solid var(--line); }
+.lb-step-t { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.lb-step-x { font-size: 12.5px; color: var(--ink-3); margin-top: 2px; }
+.lb-ans { list-style: none; margin-top: 4px; font-size: 13px; color: var(--ink-2); }
+.lb-ans li { padding: 1px 0; }
+
+@media (max-width: 1100px) {
+  .pg-aside > .lb-aside { max-height: none; overflow: visible; }
+}
+@media (max-width: 760px) {
+  .tp-row { grid-template-columns: 1fr; gap: 6px; }
+  .lb-tools input[type=search] { max-width: none; }
+  .lb-sel { flex: 1 1 100%; }
+  .lb-sel select { flex: 1 1 auto; max-width: none; }
+  .lb-tiles { grid-template-columns: 1fr; }
+}

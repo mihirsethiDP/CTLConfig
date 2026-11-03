@@ -1,4 +1,4 @@
-/* v7 · work7.js · window.V7WORK — issues and tasks being worked. Builder B6.
+/* v7 · work7.js · window.V7WORK — issues and tasks being worked.
 
    Loads after core7.js (window.V7) and ui7.js (window.V7UI); before decisions7.js. Reads V7 defensively (call()), never edits it.
 
@@ -80,7 +80,7 @@
   const foundText = (kinds) => { const k = arr(kinds).map((x) => FOUND[x]).filter(Boolean); return k.length ? `Found by ${joinWords([...new Set(k)]).replace(/ and /, ' or ')}` : ''; };
   const homeChip = () => U.chip('Where it belongs: to confirm', { tone: 'warn', title: 'Which equipment this problem belongs to is still to be confirmed. It stays where the workbook put it for now.' });
 
-  /* the plant page frame (B3), or a plain one with the same tabs */
+  /* the plant page frame (plant7), or a plain one with the same tabs */
   const TABS = [['home', 'Home', ''], ['equipment', 'Equipment', '/equipment'], ['readings', 'Readings', '/readings'], ['issues', 'Issues', '/issues'], ['tasks', 'Tasks', '/tasks'], ['differences', 'Differences', '/differences'], ['activity', 'Activity', '/activity']];
   function plantChips(p) { return [U.chip(p.type || '', { mono: true }), U.stateChip(p.state), p.sample === false ? U.chip('Real SCADA layout', { tone: 'info' }) : U.chip('Sample plant', { tone: 'muted' })]; }
   function frame(key, active, body) {

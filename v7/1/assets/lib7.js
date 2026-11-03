@@ -1,5 +1,5 @@
 /* v7 · lib7.js · window.V7LIB — the library list, the type page wrapper, Where it lands + Publish, and the Differences pages.
-   Builder B5. Loads after ui7.js (window.V7UI) and object7.js (window.V7OBJ); reads window.V7
+   Loads after ui7.js (window.V7UI) and object7.js (window.V7OBJ); reads window.V7
    lazily and defensively (every V7 call goes through safe(), failures land in V7UI._soft).
 
    ROUTES

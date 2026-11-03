@@ -139,6 +139,23 @@ ok(typeof U.on === 'function' && typeof U._handlers['ui:advance'] === 'function'
 ok(/<a class="tb-ver" href="\.\.\/index\.html"[^>]*><b>v7\/1<\/b><span> · Recommended approach<\/span><\/a>/.test(U.chromeHtml('plants')) && vis(U.chromeHtml('plants')).includes('v7/1 · Recommended approach'), 'top bar: badge "v7/1 · Recommended approach" links to the v7 overview');
 global.V7_VARIANT = '2'; ok(vis(U.chromeHtml('plants')).includes('v7/2 · Alex\'s model'), 'top bar: the badge follows V7_VARIANT'); delete global.V7_VARIANT;
 
+/* the reverse links into v7/2: each chapter names its moment there; links show only once v7/2 is published */
+const CMP72 = ['#/library', '#/p/digitalpaani/review/structure', '#/p/digitalpaani/review/bindings', '#/p/digitalpaani', '#/p/vedanta/trigger/a_3d', '#/p/vedanta/trigger/a_3f',
+  '#/p/vedanta', '#/p/manesar/trigger/a_do_at2', '#/p/manesar', '#/library/templates/tpl_up_activated-sludge_mlss-low', '#/deviations', '#/decisions'];
+eq(U.chapters().map((c) => c.cmp72).join(), CMP72.join(), 'every chapter names the same moment in v7/2');
+ok(U.chapters().every((c) => c.compare72 === null) && !/tbSame|Compare with v7\/2|\.\.\/2\//.test(U.chromeHtml('p/vedanta')), 'v7/2 unpublished (no decision file): no link into v7/2 in the top bar or the story');
+global.V7DEC = { V72_READY: false, hrefFor: (w, r) => `../${w}/prototype.html${r}` };
+ok(!/tbSame|Compare with v7\/2|\.\.\/2\//.test(U.chromeHtml('p/vedanta')), 'V72_READY false: still no link into v7/2');
+global.V7DEC.V72_READY = true;
+const on72 = U.chromeHtml('p/vedanta/alert/x');
+ok(/<a class="tb-ver tb-same" id="tbSame" href="\.\.\/2\/prototype\.html#\/p\/vedanta\/trigger\/a_3d" target="v7-2"[^>]*><span>Same place in <\/span><b>v7\/2<\/b> →<\/a>/.test(on72) && vis(on72).includes('Same place in v7/2 →'), 'V72_READY: "Same place in v7/2 →" opens the current chapter\'s moment in v7/2, in window v7-2');
+ok(/id="tbSame" href="\.\.\/2\/prototype\.html#\/plants"/.test(U.chromeHtml('p/manesar/activity')), 'a page in no chapter: "Same place in v7/2 →" opens All Plants there');
+const cmpLinks = [...on72.matchAll(/<a class="ch-also ch-cmp" href="([^"]+)" target="v7-2" title="Opens the same moment in v7\/2, Alex&#39;s model as drafted">Compare with v7\/2 →<\/a>/g)].map((m) => m[1]);
+eq(cmpLinks.join(), CMP72.map((r) => '../2/prototype.html' + r).join(), 'V72_READY: every story chapter has "Compare with v7/2 →" to its moment, in window v7-2');
+ok(U.chapters().every((c, i) => c.compare72 && c.compare72.href === '../2/prototype.html' + CMP72[i] && c.compare72.target === 'v7-2'), 'chapters() carries compare72 once v7/2 is published');
+ok(!scan(on72).length, 'the reverse links pass the word check', JSON.stringify(scan(on72)));
+delete global.V7DEC;
+
 /* the decisions strip: ui7 puts V7DEC.markerHtml(V7_VARIANT, path) under the page header of every routed page */
 ok(!global.V7DEC && !/dec-mark/.test(U.renderPath('#/p/manesar/activity')), 'no V7DEC: no strip, the page renders as before');
 const seenMarks = [];

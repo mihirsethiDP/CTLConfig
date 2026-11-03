@@ -1,11 +1,11 @@
 /* v7 · object7.js · window.V7OBJ — the one object page: an equipment at a plant and a library type, laid out the same way;
    its phone view; the limits sheet (the only editor of limits, with a live "Last 7 days" replay); the alert page.
-   Builder B4. Loads after core7.js (window.V7) and ui7.js (window.V7UI).
+   Loads after core7.js (window.V7) and ui7.js (window.V7UI).
 
    ONE PAGE, TWO SUBJECTS
      render({mode:'instance', plant, eqId, tab, aside}) → html   equipment at a plant; edits become this plant's changes (overrides)
      render({mode:'type', code, tab, aside})            → html   a library type; edits go to the draft (V7.editLib); `aside` is
-                                                                  where B5 puts Where it lands + Publish
+                                                                  where lib7 puts Where it lands + Publish
      Tabs: Readings · Issues · Tasks · Details  (ids readings | issues | tasks | details; anything else → readings)
    ROUTES
      p/:plant/eq/:id/:tab?    the equipment page
@@ -17,7 +17,7 @@
      openTiming({plant, alertId} | {mode:'type', code, alert})                must hold for / must clear for
      openCadence({plant, taskId} | {mode:'type', code, schedule})             how often a task comes round
      openTier(plant, eqId)                                                    criticality
-     report(plant, eqId)   "Report a problem": hands over to B6 (V7WORK.openReport(plant, eqId), or V7WORK.report / reportProblem)
+     report(plant, eqId)   "Report a problem": hands over to work7 (V7WORK.openReport(plant, eqId), or V7WORK.report / reportProblem)
                            when present; otherwise a small picker here that calls V7.report and opens the new issue.
    ACTIONS (V7UI.on): obj:limits obj:ldir obj:lback obj:lsave obj:redirect obj:timing obj:tsave obj:cadence obj:csave obj:tier
      obj:tiersave obj:vback obj:astate obj:aoff obj:report obj:rsave obj:scada obj:suggest obj:sgsave
