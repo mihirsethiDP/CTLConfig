@@ -11,7 +11,7 @@ g.localStorage = { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem
 const el = () => ({ classList: { toggle() {}, add() {}, remove() {} }, setAttribute() {}, removeAttribute() {}, addEventListener() {}, appendChild() {}, remove() {}, querySelector: () => null, querySelectorAll: () => [], style: {}, dataset: {}, innerHTML: '' });
 g.document = { querySelector: () => null, querySelectorAll: () => [], createElement: el, body: el(), onkeydown: null };
 g.location = { hash: '#/plants', href: 'http://localhost/prototype.html#/plants' }; g.scrollTo = () => {}; g.Blob = g.Blob || function Blob() {}; if (!g.URL) g.URL = {};
-for (const f of ['data.js', 'layout-digitalpaani.js', 'catalogue.js', 'flows.js', 'rca.js', 'app.js', 'runtime.js', 'structure73.js', 'ingest73.js', 'core7.js', 'calls73.js', 'decisions7.js']) vm.runInThisContext(fs.readFileSync(path.join(A, f), 'utf8'), { filename: f });
+for (const f of ['data.js', 'layout-digitalpaani.js', 'catalogue.js', 'flows.js', 'rca.js', 'app.js', 'runtime.js', 'structure73.js', 'purposetags73.js', 'ingest73.js', 'core7.js', 'calls73.js', 'decisions7.js']) vm.runInThisContext(fs.readFileSync(path.join(A, f), 'utf8'), { filename: f });
 const V = g.V7; const IN = g.V7INGEST; V.boot();
 const results = [];
 function check(area, name, ok, detail) { results.push(!!ok); if (VERBOSE || !ok) console.log(`${ok ? '  ok  ' : '  FAIL'} [${area}] ${name}${detail ? ' — ' + detail : ''}`); }
@@ -61,6 +61,36 @@ check('changed', 'a Number widget labelled Motor current is read as Motor curren
 check('changed', 'a widget that does not say what it measures still lands on its pump, marked', sn2.rows.some((s) => s.eqId === pump.equipmentId && !s.reads) && sn2.unknown.length === 1);
 check('changed', 'a widget linked to nothing, and one linked to a boundary, are left out and named', sn2.unlinked.length === 1 && sn2.stray.length === 1 && sn2.rows.length === before.sn + 2, `${sn2.unlinked.length}/${sn2.stray.length}/${sn2.rows.length}`);
 check('changed', 'the tank used here is real', !!tank);
+
+/* reader 2 on the equipment collection: sensors under itemDetails.sensors, recognised by abbreviation */
+const O = (id) => ({ $oid: id }); const NM = (n) => [{ question: 'Name', answer: n }, { question: 'Color', answer: { name: 'Blue' } }];
+const S = (abr, tag, name, cat, extra) => ({ sensorName: name, sensorTag: tag, sensorTypeAbr: abr, category: cat, isEnabled: true, dataInputType: 'auto', _id: O('s' + tag), ...(extra || {}) });
+const tankRow = eq.rows.find((r) => r.label === 'Chlorine Contact Tank'); const blwRow = eq.rows.find((r) => r.label === 'MBBR Air Blower - 1'); const scRow = eq.rows.find((r) => r.label === 'Screen Chamber'); const twRow = eq.rows.find((r) => r.label === 'Treated Water Tank');
+const recs = [
+  { _id: O(tankRow.id), nodeType: 'OS_TANK', equipmentType: 'TANK', isArchived: false, itemDetails: { answer: NM('Chlorine Contact Tank'), sensors: [S('LV_', 'LV_OS_TANK_CCT_1:UPT', 'Chlorine Contact Tank LV', 'Level Transmitters')] } },
+  { _id: O(twRow.id), nodeType: 'OS_TANK', isArchived: false, itemDetails: { answer: NM('Treated Water Tank'), sensors: [{ sensorTag: 'LT_OS_TANK_TWT_1:UPT', sensorName: 'Treated Water Tank LT', isEnabled: true }, S('TUR_', 'TUR_OS_TANK_TWT_1:UPT', 'Treated Water Tank TUR', 'Turbidity'), S('PH_', 'PH_OS_TANK_TWT_1:UPT', 'Treated Water Tank PH', 'PH', { isEnabled: false })] } },
+  { _id: O(blwRow.id), nodeType: 'BLW', equipmentType: 'PUMP', isArchived: false, itemDetails: { answer: NM('MBBR Air Blower - 1'), sensors: [S('MAN_', 'MAN_BLW_MAB1_1:UPT', 'MBBR Air Blower - 1 MAN', 'Equipment Auto/Manual Status'), S('ONOFF_', 'ONOFF_BLW_MAB1_1:UPT', 'MBBR Air Blower - 1 ONOFF', 'Equipment ON/OFF'), S('TRP_', 'TRP_BLW_MAB1_1:UPT', 'MBBR Air Blower - 1 TRP', 'Equipment Trip Status'), S('DI_MAIN_UND_', 'DI_MAIN_UND_BLW_MAB1_1:UPT', 'Under Maintenance MBBR Air Blower - 1', 'Manual Input', { dataType: 'boolean', dataInputType: 'manual' })] } },
+  { _id: O(scRow.id), nodeType: 'OS_TANK_SC', isArchived: false, itemDetails: { answer: NM('Screen Chamber'), sensors: [S('BS25_', 'BS25_OS_TANK_SC_SC_1:UPT', 'Screen Chamber BS25', 'Bar Screen Level'), S('BS100_', 'BS100_OS_TANK_SC_SC_1:UPT', 'Screen Chamber BS100', 'Bar Screen Level')] } },
+  { _id: O('pipe-1'), nodeType: 'Pipe', isArchived: false, itemDetails: { answer: NM('J3 to J8'), source: tankRow.id, target: twRow.id, sensors: [S('FR_', 'FR_Pipe_JTJ_1:UPT', 'J3 J8 FR', 'Flow Meters'), S('PR_', 'PR_Pipe_JTJ_1:UPT', 'J6 J8 PR', 'Pressure Transmitters')] } },
+  { _id: O('plant-1'), nodeType: 'PLANT_EQUIPMENT', isArchived: false, itemDetails: { answer: NM('Ireo Uptown'), sensors: [S('HTR_', 'HTR_PLANT_EQUIPMENT_IU_1:UPT', 'Ireo Uptown HTR', 'Hooter')] } },
+  { _id: O('sw-1'), nodeType: 'SWITCH_SENSOR', isArchived: false, itemDetails: { answer: NM('ON/OFF'), sensors: [{ _id: 'sONOFF_BLW_MAB1_1:UPT', sensorTag: 'ONOFF_BLW_MAB1_1:UPT' }] } },
+  { _id: O('gone-1'), nodeType: 'SUB_PMP', isArchived: false, itemDetails: { answer: NM('Sump Pump - 1'), sensors: [S('ONOFF_', 'ONOFF_SUB_PMP_SP1_1:UPT', 'Sump Pump - 1 ONOFF', 'Equipment ON/OFF')] } },
+  { _id: O('old-1'), nodeType: 'PMP', isArchived: true, itemDetails: { answer: NM('Old Pump - 9'), sensors: [S('ONOFF_', 'ONOFF_PMP_OLD_1:UPT', 'Old Pump ONOFF', 'Equipment ON/OFF')] } },
+];
+const snR = IN.sensors(recs, eq); const on = (row) => (snR.per[row.id] || []);
+check('records', 'the equipment collection is read: 9 sensors on four pieces of equipment, matched by id', snR.ok && snR.fromRecords && snR.rows.length === 9 && snR.withS === 4, snR.error || String(snR.rows && snR.rows.length));
+check('records', 'LV is Level and LT is Level too; both map to the library Level reading', on(tankRow)[0].reads === 'Level' && on(tankRow)[0].tag === 'LVL' && on(tankRow)[0].how === 'abbr' && on(twRow).some((s) => s.abbr === 'LT' && s.reads === 'Level' && s.tag === 'LVL' && s.how === 'tag'));
+check('records', 'ONOFF, TRP and MAN are ON/OFF, Trip and Auto Manual, read as Run status, Trip contact and Auto / manual', on(blwRow).filter((s) => s.library).map((s) => s.reads + '>' + s.tag).sort().join() === 'Auto Manual>AM,ON/OFF>RUN,Trip>TRP'.replace('TRP', 'TRIP'), on(blwRow).map((s) => s.reads + '>' + s.tag).join());
+check('records', 'an abbreviation the purpose tags lack keeps its own name and is said so', on(blwRow).some((s) => s.abbr === 'DI_MAIN_UND' && !s.known && s.reads === 'Under Maintenance' && s.manual) && snR.notes.some((n) => /DI_MAIN_UND \(1\)/.test(n)));
+check('records', 'recognised with no library reading: Bar Screen 25% and 100%, Turbidity is a library reading', on(scRow).map((s) => s.reads).join() === 'Bar Screen 25%,Bar Screen 100%' && on(scRow).every((s) => s.known && !s.library) && on(twRow).some((s) => s.reads === 'Turbidity' && s.tag === 'TURB'));
+check('records', 'sensors on pipes wait for the next phase; plant, missing-equipment and switched-off sensors are left out; widgets and archived records are skipped', snR.pipes.length === 2 && snR.stray.length === 2 && snR.notes.some((n) => /1 sensor switched off/.test(n)) && !snR.rows.some((s) => /OLD/.test(s.sensorTag)), snR.pipes.length + '/' + snR.stray.length);
+const eqR = IN.equipment(recs); const snRR = IN.sensors(eqR.records, eqR);
+check('records', 'the collection alone also gives the equipment: five pieces with their types, and the pipe between two tanks', eqR.ok && eqR.rows.length === 5 && eqR.rows.some((r) => r.label === 'Sump Pump - 1' && r.typeName === 'Submersible Pump') && eqR.other.pipes === 1 && eqR.model.links.length === 1 && snRR.rows.length === 10, eqR.error || (eqR.rows.length + '/' + eqR.model.links.length + '/' + snRR.rows.length));
+const usedR = IN.use(text, JSON.stringify(recs), {}); V.reset();
+const names = (id) => V.sensors(DP).filter((s) => String(s.id).startsWith(id + '_')).map((s) => s.name).sort().join();
+check('records', 'loaded: the blower has Auto / manual, Run status, Trip contact and Under Maintenance; the screen chamber its bar-screen levels', usedR.ok && names(blwRow.id) === 'Auto / manual,Run status,Trip contact,Under Maintenance' && names(scRow.id) === 'Bar Screen 100%,Bar Screen 25%' && V.sensors(DP).length === 9, names(blwRow.id) + ' | ' + names(scRow.id) + ' | ' + V.sensors(DP).length);
+check('records', 'what is kept is the slim collection, and it reads back the same', IN.applyKept() === true && !/Color|dataInputType/.test(IN.kept().sn) && g.SCADA_SAMPLES[DP].equipment.reduce((n, e) => n + e.sensors.length, 0) === 9);
+IN.clear(); V.reset();
 
 /* reader 2 from a separate list */
 const first = eq.rows[0]; const second = eq.rows.find((r) => r.id !== first.id);

@@ -30,12 +30,20 @@
   const unwrap = (doc) => { let d = doc; for (let i = 0; i < 4 && d && typeof d === 'object' && !Array.isArray(d) && !d.layout && !d.cells; i++) { const k = ['results', 'result', 'data', 'payload', 'doc'].find((x) => d[x] && typeof d[x] === 'object'); if (!k) break; d = Array.isArray(d[k]) && d[k].length === 1 ? d[k][0] : d[k]; } return d; };
   /* what the console needs from a cell, without how it is drawn (SVG markup, ports, anchors): keeps a kept plant graph small */
   const slimCell = (c) => { const o = { type: c.type, id: c.id }; ['equipmentId', 'equipmentType', 'level', 'value', 'code', 'sensorCode', 'sensorTag', 'measures'].forEach((k) => { if (c[k] != null) o[k] = c[k]; }); const t = c.attrs && c.attrs.label && c.attrs.label.text; if (t != null) o.attrs = { label: { text: t } }; if (c.source && c.source.id) o.source = { id: c.source.id }; if (c.target && c.target.id) o.target = { id: c.target.id }; return o; };
-  const slim = (doc0) => { const doc = unwrap(doc0); const cells = cellsOf(doc); if (!cells) return doc0; const d = Array.isArray(doc) ? {} : doc; return { ...(d.version != null ? { version: d.version } : {}), ...(d.updatedAt ? { updatedAt: d.updatedAt } : {}), layout: { cells: cells.map(slimCell) } }; };
-  const cellsOf = (doc0) => { const doc = unwrap(doc0); const d = doc && (doc.layout || doc); const c = Array.isArray(doc) ? doc : d && d.cells; return Array.isArray(c) && c.length && c.every((x) => x && typeof x === 'object') && c.some((x) => x.type && x.id) ? c : null; };
+  const slim = (doc0) => { const doc = unwrap(doc0); if (isRecords(doc)) return slimRecords(doc); const cells = cellsOf(doc); if (!cells) return doc0; const d = Array.isArray(doc) ? {} : doc; return { ...(d.version != null ? { version: d.version } : {}), ...(d.updatedAt ? { updatedAt: d.updatedAt } : {}), layout: { cells: cells.map(slimCell) } }; };
+  /* the equipment collection: one record per node, [{ _id, nodeType, itemDetails: { answer: [...], sensors: [...], source, target } }] */
+  const oid = (x) => (x && typeof x === 'object' ? String(x.$oid || x._id || x.id || '') : String(x == null ? '' : x));
+  const isRecords = (doc) => Array.isArray(doc) && doc.length > 0 && doc.every((r) => r && typeof r === 'object') && doc.some((r) => r.nodeType && r.itemDetails);
+  const recName = (r) => { const a = arr(r.itemDetails && r.itemDetails.answer).find((x) => x && x.question === 'Name'); return String((a && typeof a.answer === 'string' && a.answer) || '').replace(/\s+/g, ' ').trim(); };
+  const live = (list) => list.filter((r) => r && r.nodeType && !r.isArchived);
+  /* the same records as a drawing: a node per record, a pipe per Pipe record (its two ends are equipment ids) */
+  const fromRecords = (list) => ({ fromRecords: true, layout: { cells: live(list).map((r) => { const id = oid(r._id); const d = r.itemDetails || {}; return r.nodeType === 'Pipe' ? { type: 'Pipe', id, source: { id: oid(d.source) }, target: { id: oid(d.target) }, attrs: { label: { text: recName(r) } } } : { type: r.nodeType, id, equipmentId: id, attrs: { label: { text: recName(r) } } }; }) } });
+  const slimRecords = (list) => live(list).map((r) => { const d = r.itemDetails || {}; return { _id: oid(r._id), nodeType: r.nodeType, itemDetails: { answer: [{ question: 'Name', answer: recName(r) }], ...(d.source ? { source: oid(d.source) } : {}), ...(d.target ? { target: oid(d.target) } : {}), ...(arr(d.sensors).length ? { sensors: arr(d.sensors).map((s) => { const o = { _id: oid(s._id) }; ['sensorTag', 'sensorTypeAbr', 'sensorName', 'category', 'dataType', 'isEnabled'].forEach((k) => { if (s[k] != null) o[k] = s[k]; }); return o; }) } : {}) } }; });
+  const cellsOf = (doc0) => { let doc = unwrap(doc0); if (isRecords(doc)) doc = fromRecords(doc); const d = doc && (doc.layout || doc); const c = Array.isArray(doc) ? doc : d && d.cells; return Array.isArray(c) && c.length && c.every((x) => x && typeof x === 'object') && c.some((x) => x.type && x.id) ? c : null; };
 
   /* READER 1 */
   function equipment(doc0) {
-    const doc = unwrap(doc0); const cells0 = cellsOf(doc);
+    const raw = unwrap(doc0); const records = isRecords(raw) ? raw : null; const doc = records ? fromRecords(records) : raw; const cells0 = cellsOf(doc);
     if (!cells0) return { ok: false, error: 'No plant graph found in this JSON. It should carry the cells of the drawing: { "layout": { "cells": [ … ] } }.' };
     const notes = []; const seenId = new Set(); let noId = 0, dup = 0;
     /* a node with no equipment id is read under its cell id; a repeated equipment id gets a suffix, so nothing is merged */
@@ -63,7 +71,59 @@
     const other = { widgets: 0, drawing: 0, ignored: 0, pipes: cells.filter((c) => c.type === 'Pipe').length, links: cells.filter((c) => c.type === 'standard.Link').length };
     cells.forEach((c) => { if (isLine(c)) return; const row = db(c.equipmentType || c.type); const k = row ? row.kind : 'equipment'; if (k === 'widget') other.widgets++; else if (k === 'drawing') other.drawing++; else if (k === 'ignore') other.ignored++; });
     const nameless = rows.filter((r) => r.noName).length; if (nameless) notes.push(`${plural(nameless, 'piece')} of equipment ${nameless === 1 ? 'has' : 'have'} no name on the drawing.`);
-    return { ok: true, rows, types, unknown: types.filter((t) => !t.known), other, notes, cells: cells.length, site: model.site, drawn: model.drawn, version: model.fromLayout && model.fromLayout.version, model, src };
+    return { ok: true, rows, types, unknown: types.filter((t) => !t.known), other, notes, cells: cells.length, site: model.site, drawn: model.drawn, version: model.fromLayout && model.fromLayout.version, model, src, records };
+  }
+
+  /* ── what a sensor measures, from its abbreviation (the purpose tags) ─────────────────────────
+     A sensor's tag starts with its abbreviation: LV_OS_TANK_CCT_1:UPT is LV, a Level. The record also carries it as
+     sensorTypeAbr ("LV_"). The longest abbreviation that fits wins (ONOFF before ON, VFDONOFF before VFD…). */
+  const ALIAS = { LT: 'LV', LVL: 'LV', LEVEL: 'LV' };
+  /* the purposes the library already has a reading for (window.READINGS tags): these get the type's limits and alerts */
+  const TO_READING = { onOff: 'RUN', vfdOnOrOff: 'RUN', trip: 'TRIP', autoManual: 'AM', level: 'LVL', current: 'AMP', averageCurrent: 'AMP', vfdAmpere: 'AMP', vibration: 'VIB', pumpRunningTime: 'HRS', ph: 'PH', orp: 'ORP', do: 'DO', mlss: 'MLSS', temperature: 'TEMP', turbidity: 'TURB', chlorine: 'FRC', conductivity: 'COND', pressure: 'PRESS', flowRate: 'FLOW', flooding: 'FLOOD', LoadCellWeight: 'WT' };
+  const ON_OFF = /on\/off|trip|auto\/manual|switch|valve status|bar screen|manual input|flooding|hooter|fault|decanter|cycles|alarm|bypass|auto check|control|bidirectional/i;
+  const START = { LVL: 55, AM: 1, TRIP: 0, PH: 7.2, DO: 2.1, MLSS: 3200, TEMP: 29, ORP: 150, FRC: 0.5, TURB: 2, COND: 800, PRESS: 0.5 };
+  let TAGS = null;
+  const tagsBy = () => { if (!TAGS) { TAGS = {}; arr(W.V7_PURPOSE_TAGS).forEach((t) => { TAGS[String(t.abbr).toUpperCase()] = t; }); } return TAGS; };
+  function purposeOf(s) {
+    const by = tagsBy(); const norm = (a) => String(a || '').replace(/_+$/, '').trim().toUpperCase();
+    const a1 = norm(s.sensorTypeAbr); if (a1 && by[ALIAS[a1] || a1]) return { tag: by[ALIAS[a1] || a1], abbr: a1, how: 'abbr' };
+    const st = String(s.sensorTag || '').toUpperCase(); let best = null;
+    Object.keys(by).concat(Object.keys(ALIAS)).forEach((k) => { if (st.startsWith(k + '_') && (!best || k.length > best.length)) best = k; });
+    if (best) return { tag: by[ALIAS[best] || best], abbr: best, how: 'tag' };
+    const cat = String(s.category || '').trim().toLowerCase(); const same = cat ? Object.values(by).filter((t) => String(t.category).toLowerCase() === cat) : [];
+    if (same.length === 1) return { tag: same[0], abbr: same[0].abbr, how: 'category' };
+    return { tag: null, abbr: a1 || st.split(/[_:]/)[0] || '', how: null };
+  }
+  /* reader 2 on the equipment collection: every enabled sensor in itemDetails.sensors, on the record's own equipment */
+  function sensorsFromRecords(list, eq) {
+    const rows = []; const stray = []; const pipes = []; const notes = []; let off = 0; const seen = new Set();
+    const eqById = {}; eq.rows.forEach((r) => { eqById[r.id] = r; });
+    live(list).forEach((rec) => {
+      const ss = arr(rec.itemDetails && rec.itemDetails.sensors); if (!ss.length) return;
+      const id = oid(rec._id); const e = eqById[id]; const row = db(rec.nodeType); const kind = rec.nodeType === 'Pipe' ? 'pipe' : row ? row.kind : 'equipment';
+      if (!e && (kind === 'widget' || kind === 'ignore')) return;   /* a widget only shows a sensor that already sits on its equipment */
+      ss.forEach((s) => {
+        if (!s || typeof s !== 'object' || (!s.sensorTag && !s.sensorTypeAbr)) return;
+        if (s.isEnabled === false) { off++; return; }
+        const p = purposeOf(s); const label = recName(rec);
+        const own = String(s.sensorName || s.sensorNickName || '').replace(label, '').replace(/\s+/g, ' ').trim();
+        const name = p.tag ? p.tag.name : (own && own.toUpperCase() !== p.abbr ? own : String(s.category || p.abbr || 'Sensor'));
+        if (kind === 'pipe') { pipes.push({ name, abbr: p.abbr, on: label }); return; }
+        if (!e) { stray.push({ widget: name, label: '', to: kind === 'drawing' ? `${label || rec.nodeType} (not equipment)` : `${label || id} (not in step 1)` }); return; }
+        const key = `${e.id}|${s.sensorTag || p.abbr}`; if (seen.has(key)) return; seen.add(key);
+        const lib = p.tag ? TO_READING[p.tag.key] || null : null; const tag = lib || p.abbr || 'SENSOR';
+        const onOff = s.dataType === 'boolean' || ON_OFF.test(String((p.tag && p.tag.category) || s.category || ''));
+        const num = (e.label.match(/(\d+)$/) || [])[1];
+        const reading = tag === 'RUN' ? (num && +num % 2 === 0 ? 0 : 1) : START[tag] != null ? START[tag] : 0;
+        rows.push({ eqId: e.id, eqTag: e.tag, eqLabel: e.label, eqType: e.typeName || 'not in the database', widget: onOff ? 'SWITCH_SENSOR' : 'NUMBER_SENSOR', widgetName: p.abbr, tag, reads: name, how: p.how, reading, abbr: p.abbr, sensorTag: s.sensorTag || '', known: !!p.tag, library: !!lib, manual: s.dataInputType === 'manual' });
+      });
+    });
+    const unk = {}; rows.filter((r) => !r.known).forEach((r) => { unk[r.abbr] = (unk[r.abbr] || 0) + 1; });
+    if (Object.keys(unk).length) notes.push(`${plural(Object.keys(unk).length, 'abbreviation')} the purpose tags do not have: ${Object.keys(unk).map((k) => `${k} (${unk[k]})`).join(', ')}. ${Object.keys(unk).length === 1 ? 'Its sensors come' : 'Their sensors come'} in under their own name.`);
+    const plain = {}; rows.filter((r) => r.known && !r.library).forEach((r) => { plain[r.reads] = (plain[r.reads] || 0) + 1; });
+    if (Object.keys(plain).length) notes.push(`Recognised, but the library has no reading for ${Object.keys(plain).length === 1 ? 'it' : 'them'} yet: ${Object.keys(plain).map((k) => `${k} (${plain[k]})`).join(', ')}. ${Object.keys(plain).length === 1 ? 'It comes' : 'They come'} in as a plain reading, with no alerts until the library has one.`);
+    if (off) notes.push(`${plural(off, 'sensor')} switched off in the collection ${off === 1 ? 'is' : 'are'} left out.`);
+    return { rows, stray, pipes, notes };
   }
 
   /* what a widget reads: what kind of widget it is, else the code it carries, else its label */
@@ -82,9 +142,11 @@
   function sensors(doc0, eq) {
     const doc = unwrap(doc0);
     if (!eq || !eq.ok) return { ok: false, error: 'Read the equipment first: sensors are found on the equipment it lists.' };
-    const rows = []; const unlinked = []; const stray = []; const notes = [];
-    const cells = cellsOf(doc);
-    if (cells) {
+    let rows = []; const unlinked = []; let stray = []; let notes = []; let pipes = [];
+    const cells = isRecords(doc) ? null : cellsOf(doc);
+    if (isRecords(doc)) {
+      const r = sensorsFromRecords(doc, eq); rows = r.rows; stray = r.stray; pipes = r.pipes; notes = r.notes;
+    } else if (cells) {
       const byCell = {}; cells.forEach((c) => { if (!isLine(c)) byCell[c.id] = c; });
       const kind = (c) => { const r = db(c.equipmentType || c.type); return r ? r.kind : 'equipment'; };
       const eqByCell = {}; const eqById = {}; eq.rows.forEach((r) => { eqByCell[r.cell] = r; eqById[r.id] = r; });
@@ -114,9 +176,10 @@
     }
     const per = {}; rows.forEach((r) => { (per[r.eqId] = per[r.eqId] || []).push(r); });
     const withS = Object.keys(per).length; const bare = eq.rows.filter((r) => !per[r.id]);
-    const unknown = rows.filter((r) => !r.reads);
-    if (unknown.length) notes.push(`${plural(unknown.length, 'sensor')} ${unknown.length === 1 ? 'does' : 'do'} not say what ${unknown.length === 1 ? 'it measures' : 'they measure'}; ${unknown.length === 1 ? 'it comes' : 'they come'} in as a plain reading with no alerts.`);
-    return { ok: true, rows, per, withS, bare, unlinked, stray, unknown, notes, fromList: !cells };
+    const fromRecs = isRecords(doc);
+    const unknown = rows.filter((r) => (fromRecs ? !r.known : !r.reads));
+    if (unknown.length && !fromRecs) notes.push(`${plural(unknown.length, 'sensor')} ${unknown.length === 1 ? 'does' : 'do'} not say what ${unknown.length === 1 ? 'it measures' : 'they measure'}; ${unknown.length === 1 ? 'it comes' : 'they come'} in as a plain reading with no alerts.`);
+    return { ok: true, rows, per, withS, bare, unlinked, stray, pipes, unknown, notes, fromList: !cells && !fromRecs, fromRecords: fromRecs };
   }
 
   /* the two readers' results as the model the console reads */
@@ -124,6 +187,8 @@
     const m = clone(eq.model); const mt = meta || {};
     m.name = String(mt.name || '').trim() || (BUILT_IN ? BUILT_IN.name : 'Plant'); m.type = mt.type || (BUILT_IN ? BUILT_IN.type : 'STP');
     m.equipment.forEach((e) => { e.sensors = arr(sn && sn.ok ? sn.per[e.id] : []).map((s) => ({ tag: s.tag, widget: s.widget, reading: s.reading })); });
+    /* a sensor the library has no reading for keeps its own name (Bar Screen 25%, Under Maintenance) instead of its abbreviation */
+    if (sn && sn.ok && W.SCADA_SENSOR_MAP) sn.rows.forEach((s) => { if (s.reads && !W.SCADA_SENSOR_MAP[s.tag]) W.SCADA_SENSOR_MAP[s.tag] = s.reads; });
     m.ingested = true; return m;
   }
   /* the structure was read from the built-in drawing: keep what still exists, and list the rest as not placed */
@@ -139,7 +204,7 @@
   function read(eqText, snText, meta) {
     const p = parse(eqText); if (!p.ok) return { ok: false, step: 1, error: p.error };
     const eq = equipment(p.doc); if (!eq.ok) return { ok: false, step: 1, error: eq.error };
-    let sdoc = eq.src; if (String(snText || '').trim()) { const q = parse(snText); if (!q.ok) return { ok: false, step: 2, eq, error: q.error }; sdoc = q.doc; }
+    let sdoc = eq.records || eq.src; if (String(snText || '').trim()) { const q = parse(snText); if (!q.ok) return { ok: false, step: 2, eq, error: q.error }; sdoc = q.doc; }
     const sn = sensors(sdoc, eq); if (!sn.ok) return { ok: false, step: 2, eq, error: sn.error };
     return { ok: true, eq, sn, model: build(eq, sn, meta) };
   }

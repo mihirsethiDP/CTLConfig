@@ -25,7 +25,7 @@
   }
   function readSn() {
     ING.sn = null; ING.err2 = ''; if (!ING.eq) { ING.err2 = 'Read the equipment first.'; return; }
-    let doc = ING.eq.src;
+    let doc = ING.eq.records || ING.eq.src;
     if (ING.own) { const p = IN.parse(ING.snText); if (!p.ok) { ING.err2 = p.error; return; } doc = p.doc; }
     const r = IN.sensors(doc, ING.eq); if (!r.ok) { ING.err2 = r.error; return; } ING.sn = r;
   }
@@ -53,16 +53,20 @@
   function snResult(r, eq) {
     const lost = r.unlinked.length + r.stray.length;
     const stats = `<div class="in-stats">${stat(r.rows.length, r.rows.length === 1 ? 'sensor' : 'sensors')}${stat(r.withS, r.withS === 1 ? 'piece of equipment has one' : 'pieces of equipment have one')}${stat(r.bare.length, 'with no sensor', r.bare.length ? 'quiet' : 'ok')}${stat(lost, 'could not be placed', lost ? 'warn' : 'ok')}</div>`;
-    const HOW = { widget: 'the kind of widget', code: 'the code it carries', label: 'its label' };
+    const HOW = { widget: 'the kind of widget', code: 'the code it carries', label: 'its label', abbr: 'its abbreviation', tag: 'the abbreviation its tag starts with', category: 'its category' };
+    const dash = (s) => (r.fromRecords ? !s.known : !s.reads);
+    const tip = (s) => (r.fromRecords ? `${s.sensorTag}${s.how ? ` · known from ${HOW[s.how]}` : ' · abbreviation not in the purpose tags'}${s.library ? '' : ' · no library reading yet'}${s.manual ? ' · entered by hand' : ''}` : s.reads ? `Known from ${HOW[s.how] || 'the widget'}` : 'What it measures is not stated');
     const table = UI.table({
       cols: [{ label: 'Equipment', key: 'e' }, { label: 'Type', key: 't' }, { label: 'Sensors found on it', key: 's' }],
-      rows: eq.rows.filter((x) => r.per[x.id]).map((x) => ({ e: `<span class="mono">${esc(x.tag)}</span> ${esc(x.label)}`, t: x.known ? esc(x.typeName) : chip('Not in the database', { tone: 'warn' }), s: r.per[x.id].map((s) => `<span class="in-sn${s.reads ? '' : ' in-sn-q'}" title="${esc(s.reads ? `Known from ${HOW[s.how] || 'the widget'}` : 'What it measures is not stated')}"><b>${esc(s.reads || 'Not stated')}</b> <span class="muted">${esc(s.widgetName)}</span></span>`).join(' ') })),
+      rows: eq.rows.filter((x) => r.per[x.id]).map((x) => ({ e: `<span class="mono">${esc(x.tag)}</span> ${esc(x.label)}`, t: x.known ? esc(x.typeName) : chip('Not in the database', { tone: 'warn' }), s: r.per[x.id].map((s) => `<span class="in-sn${dash(s) ? ' in-sn-q' : ''}${r.fromRecords && s.known && !s.library ? ' in-sn-p' : ''}" title="${esc(tip(s))}"><b>${esc(s.reads || 'Not stated')}</b> <span class="muted">${esc(s.widgetName)}</span></span>`).join(' ') })),
       empty: 'No sensor is linked to any equipment.',
     });
     const probs = [];
     if (r.unlinked.length) probs.push(`<b>${plural(r.unlinked.length, 'sensor widget')} not linked to anything:</b> ${esc(r.unlinked.slice(0, 8).map((u) => (u.label ? `${u.widget} "${u.label}"` : u.widget)).join(', '))}${r.unlinked.length > 8 ? ` and ${r.unlinked.length - 8} more` : ''}. Left out.`);
-    if (r.stray.length) probs.push(`<b>${plural(r.stray.length, 'sensor')} pointing at something that is not equipment found in step 1:</b> ${esc(r.stray.slice(0, 8).map((u) => `${u.widget}${u.label ? ` "${u.label}"` : ''} → ${u.to}`).join(', '))}${r.stray.length > 8 ? ` and ${r.stray.length - 8} more` : ''}. Left out.`);
-    const notes = r.notes.length ? note(r.notes.map(esc).join('<br>'), 'info') : '';
+    if (r.stray.length) probs.push(`<b>${plural(r.stray.length, 'sensor')} on something that step 1 did not list as equipment:</b> ${esc(r.stray.slice(0, 8).map((u) => `${u.widget}${u.label ? ` "${u.label}"` : ''} → ${u.to}`).join(', '))}${r.stray.length > 8 ? ` and ${r.stray.length - 8} more` : ''}. Left out.`);
+    const byName = (xs) => { const m = {}; xs.forEach((x) => { m[x.name] = (m[x.name] || 0) + 1; }); return Object.keys(m).map((k) => `${k} (${m[k]})`).join(', '); };
+    const pipeNote = arr(r.pipes).length ? note(`<b>${plural(r.pipes.length, 'sensor')} on pipes, kept for the next phase:</b> ${esc(byName(r.pipes))}. This phase reads sensors on the equipment only; readings on connections come next.`, 'info') : '';
+    const notes = (r.notes.length ? note(r.notes.map(esc).join('<br>'), 'info') : '') + pipeNote;
     return `${stats}${probs.length ? note(probs.join('<br>'), 'warn') : ''}${notes}${table}${r.bare.length ? `<details class="in-more"><summary>${plural(r.bare.length, 'piece')} of equipment with no sensor</summary><p>${tags(r.bare.map((x) => x.tag), 200)}</p><p class="muted small">Equipment with no sensor still gets its tasks from the library. Alerts need a reading, so it gets none.</p></details>` : ''}`;
   }
 
@@ -76,7 +80,7 @@
 
     const s1 = card({
       title: 'Step 1 · Read the equipment',
-      sub: 'Paste a plant-graph export, or choose the file. Each node is matched to the database equipment type stored on it.',
+      sub: 'Paste a plant-graph export or the equipment collection, or choose the file. Each node is matched to the database equipment type stored on it.',
       actions: [btn('Use the DigitalPaani export', { act: 'in:sample', small: true, kind: 'ghost', title: 'Fills the box with the real export, so you can change it and read it again' }), pick('inEqFile', 'eq')],
       body: `<textarea class="in-ta" id="inEq" data-act="in:keep" spellcheck="false" aria-label="Plant graph JSON" placeholder='{ "layout": { "cells": [ { "id": "…", "type": "PMP", "equipmentId": "…", "attrs": { "label": { "text": "Feed Pump - 1" } } }, … ] } }'>${big() ? '' : esc(ING.eqText)}</textarea>`
         + (big() ? `<p class="muted small">Holding the ${(ING.eqText.length / 1e6).toFixed(1)} MB you gave. It is not shown in the box, to keep the page quick. Paste again to replace it.</p>` : '')
@@ -84,16 +88,16 @@
         + (ING.err1 ? errNote(ING.err1) : '') + (ING.eq ? eqResult(ING.eq) : ''),
     });
     const src = `<div class="in-src" role="radiogroup" aria-label="Where the sensors are">`
-      + `<label class="radio${ING.own ? '' : ' on'}"><input type="radio" name="inSrc" value="same" data-act="in:same"${ING.own ? '' : ' checked'}><span>In the same file <span class="muted">(widgets linked to equipment)</span></span></label>`
-      + `<label class="radio${ING.own ? ' on' : ''}"><input type="radio" name="inSrc" value="own" data-act="in:same"${ING.own ? ' checked' : ''}><span>In a separate file</span></label></div>`;
+      + `<label class="radio${ING.own ? '' : ' on'}"><input type="radio" name="inSrc" value="same" data-act="in:same"${ING.own ? '' : ' checked'}><span>In the same file</span></label>`
+      + `<label class="radio${ING.own ? ' on' : ''}"><input type="radio" name="inSrc" value="own" data-act="in:same"${ING.own ? ' checked' : ''}><span>In a separate file <span class="muted">(the equipment collection)</span></span></label></div>`;
     const own = ING.own
-      ? `<textarea class="in-ta in-ta-s" id="inSn" data-act="in:keep" spellcheck="false" aria-label="Sensors JSON" placeholder='[ { "equipmentTag": "RFP-1", "widget": "NUMBER_SENSOR", "code": "AMP", "reading": 6.2 }, { "equipmentId": "…", "widget": "LEVEL_SENSOR" } ]'>${esc(ING.snText)}</textarea>`
-        + `<p class="muted small">A second plant graph, or a list. In a list each row names its equipment by <span class="mono">equipmentId</span>, <span class="mono">equipmentTag</span> or <span class="mono">equipmentLabel</span>, and says what it measures with <span class="mono">code</span> (AMP, LVL, PH, DO, FLOW …) or a reading name.</p>`
+      ? `<textarea class="in-ta in-ta-s" id="inSn" data-act="in:keep" spellcheck="false" aria-label="Sensors JSON" placeholder='[ { "_id": { "$oid": "…" }, "nodeType": "OS_TANK", "itemDetails": { "answer": [ … ], "sensors": [ { "sensorTag": "LV_OS_TANK_CCT_1:UPT", "sensorTypeAbr": "LV_", "category": "Level Transmitters" } ] } }, … ]'>${esc(ING.snText)}</textarea>`
+        + `<p class="muted small">Paste the equipment collection: one record per node, with its sensors under <span class="mono">itemDetails.sensors</span>. Each record is matched to the equipment in step 1 by its id. A second plant graph, or a plain list of sensors, is read too.</p>`
         + `<div class="in-bar">${btn('Read the sensors', { act: 'in:read-sn', kind: 'primary', disabled: !ING.eq })}${pick('inSnFile', 'sn')}${ING.file2 ? `<span class="muted small">From ${esc(ING.file2)}</span>` : ''}</div>`
       : '';
     const s2 = card({
       title: 'Step 2 · Read the sensors on that equipment',
-      sub: 'A separate reader. It only looks for sensors, and only keeps the ones it can put on equipment found in step 1.',
+      sub: 'A separate reader. It finds the sensors on each piece of equipment and says what each one measures from its abbreviation (LV is Level, ONOFF is ON/OFF, TRP is Trip), using the purpose tags.',
       body: (ING.eq ? src + own : '<p class="muted">Read the equipment first.</p>') + (ING.err2 ? errNote(ING.err2) : '') + (ING.sn && ING.eq ? snResult(ING.sn, ING.eq) : ''),
       cls: ING.eq ? '' : 'in-off',
     });
