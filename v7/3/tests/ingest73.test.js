@@ -27,6 +27,17 @@ check('equipment', 'types are counted, and every row sits in one', eq.types.redu
 check('equipment', 'pipes, widgets and drawing items are counted apart from equipment', eq.other.widgets === 38 && eq.other.pipes > 0 && eq.other.links > 0 && eq.other.drawing > 0, JSON.stringify(eq.other));
 check('equipment', 'not JSON, and JSON with no drawing, are refused in plain words', !IN.parse('{oops').ok && !IN.equipment({ hello: 1 }).ok && !IN.equipment({ layout: { cells: [] } }).ok && !IN.sensors(doc, null).ok);
 
+/* the export as the API returns it: wrapped in { results }, with drawing markup, and a valve whose name is only a number */
+const wrapped = { results: JSON.parse(text), nestedResult: ['x'] };
+wrapped.results.layout.cells.forEach((c) => { if (c.type === 'PMP') { c.markup = [{ tagName: 'svg', children: new Array(200).fill({ tagName: 'path', attributes: { d: 'M0 0' } }) }]; c.ports = { groups: {}, items: [] }; } });
+wrapped.results.layout.cells.push({ type: 'VALVE_2', id: 'cell-3456', equipmentId: 'eq-3456', attrs: { label: { text: '3456' } }, ports: { items: [] } });
+const eqW = IN.equipment(wrapped); const snW = eqW.ok ? IN.sensors(eqW.src, eqW) : { rows: [] };
+check('wrapped', 'an export wrapped in { results: { layout } } is read: one more piece of equipment, the same sensors', eqW.ok && eqW.rows.length === before.eq + 1 && snW.rows.length === before.sn, eqW.error || `${eqW.rows.length}/${snW.rows.length}`);
+check('wrapped', 'the valve named "3456" is a Two way Valve tagged 3456', eqW.ok && eqW.rows.some((r) => r.id === 'eq-3456' && r.tag === '3456' && r.typeName === 'Two way Valve'), eqW.ok ? JSON.stringify(eqW.rows.find((r) => r.id === 'eq-3456')) : '');
+const usedW = IN.use(JSON.stringify(wrapped), '', {}); V.reset();
+check('wrapped', 'it loads, and what is kept has no drawing markup', usedW.ok && V.equipment(DP).length === before.eq + 1 && !!V.eq(DP, 'eq-3456') && !/markup|ports/.test(IN.kept().eq) && IN.kept().eq.length < JSON.stringify(wrapped).length / 2, usedW.error);
+IN.clear(); V.reset();
+
 /* reader 2 on the real export */
 const sn = IN.sensors(doc, eq);
 check('sensors', 'the real export: the same sensors the console reads, each on equipment from reader 1', sn.ok && sn.rows.length === before.sn && sn.rows.every((s) => eq.rows.some((r) => r.id === s.eqId)), `${sn.rows && sn.rows.length} vs ${before.sn}`);

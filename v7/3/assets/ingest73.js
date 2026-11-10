@@ -26,11 +26,16 @@
     const s = String(str || '').trim(); if (!s) return { ok: false, error: 'Nothing to read yet. Paste the JSON or choose a file.' };
     try { return { ok: true, doc: JSON.parse(s) }; } catch (e) { return { ok: false, error: `This is not valid JSON: ${String(e.message || e).slice(0, 140)}` }; }
   }
-  const cellsOf = (doc) => { const d = doc && (doc.layout || doc); const c = Array.isArray(doc) ? doc : d && d.cells; return Array.isArray(c) && c.length && c.every((x) => x && typeof x === 'object') && c.some((x) => x.type && x.id) ? c : null; };
+  /* the export as the API returns it wraps the drawing: { results: { layout: { cells } } } (also data / result / an array of one) */
+  const unwrap = (doc) => { let d = doc; for (let i = 0; i < 4 && d && typeof d === 'object' && !Array.isArray(d) && !d.layout && !d.cells; i++) { const k = ['results', 'result', 'data', 'payload', 'doc'].find((x) => d[x] && typeof d[x] === 'object'); if (!k) break; d = Array.isArray(d[k]) && d[k].length === 1 ? d[k][0] : d[k]; } return d; };
+  /* what the console needs from a cell, without how it is drawn (SVG markup, ports, anchors): keeps a kept plant graph small */
+  const slimCell = (c) => { const o = { type: c.type, id: c.id }; ['equipmentId', 'equipmentType', 'level', 'value', 'code', 'sensorCode', 'sensorTag', 'measures'].forEach((k) => { if (c[k] != null) o[k] = c[k]; }); const t = c.attrs && c.attrs.label && c.attrs.label.text; if (t != null) o.attrs = { label: { text: t } }; if (c.source && c.source.id) o.source = { id: c.source.id }; if (c.target && c.target.id) o.target = { id: c.target.id }; return o; };
+  const slim = (doc0) => { const doc = unwrap(doc0); const cells = cellsOf(doc); if (!cells) return doc0; const d = Array.isArray(doc) ? {} : doc; return { ...(d.version != null ? { version: d.version } : {}), ...(d.updatedAt ? { updatedAt: d.updatedAt } : {}), layout: { cells: cells.map(slimCell) } }; };
+  const cellsOf = (doc0) => { const doc = unwrap(doc0); const d = doc && (doc.layout || doc); const c = Array.isArray(doc) ? doc : d && d.cells; return Array.isArray(c) && c.length && c.every((x) => x && typeof x === 'object') && c.some((x) => x.type && x.id) ? c : null; };
 
   /* READER 1 */
-  function equipment(doc) {
-    const cells0 = cellsOf(doc);
+  function equipment(doc0) {
+    const doc = unwrap(doc0); const cells0 = cellsOf(doc);
     if (!cells0) return { ok: false, error: 'No plant graph found in this JSON. It should carry the cells of the drawing: { "layout": { "cells": [ … ] } }.' };
     const notes = []; const seenId = new Set(); let noId = 0, dup = 0;
     /* a node with no equipment id is read under its cell id; a repeated equipment id gets a suffix, so nothing is merged */
@@ -44,6 +49,9 @@
     if (dup) notes.push(`${plural(dup, 'node')} repeated an equipment id already used; each is kept as its own piece of equipment.`);
     const src = Array.isArray(doc) ? { layout: { cells } } : { ...doc, ...(doc.layout ? { layout: { ...doc.layout, cells } } : { cells }) };
     let model; try { model = W.scadaFromLayout(src, { name: 'Plant', type: 'STP' }); } catch (e) { return { ok: false, error: `The plant graph could not be read: ${String(e.message || e).slice(0, 140)}` }; }
+    /* a name that is only a number (a valve labelled "3456") has no letters to make a tag from: its tag is its name */
+    const tagsUsed = new Set(model.equipment.map((e) => e.tag));
+    model.equipment.forEach((e) => { if (/^[A-Za-z]/.test(e.tag || '')) return; let t = (e.label || '').trim() || String(e.id).slice(-6); const b = t; for (let k = 2; tagsUsed.has(t); k++) t = `${b}.${k}`; tagsUsed.add(t); e.tag = t; });
     const rows = model.equipment.map((e) => {
       const det = W.detectDbType(e); const known = !det.notInDb;
       return { id: e.id, cell: e.cell, label: e.label || '(no name)', tag: e.tag, code: e.code, dbType: det.dbType, typeName: known ? det.type : null, known, drawnAs: det.drawnAs || null, noName: !e.label };
@@ -71,7 +79,8 @@
   const sensorRow = (e, widget, code, reading) => ({ eqId: e.id, eqTag: e.tag, eqLabel: e.label, eqType: e.typeName || 'not in the database', widget, widgetName: widgetName(widget), tag: code.tag, reads: readingByTag(code.tag), how: code.how, reading });
 
   /* READER 2 */
-  function sensors(doc, eq) {
+  function sensors(doc0, eq) {
+    const doc = unwrap(doc0);
     if (!eq || !eq.ok) return { ok: false, error: 'Read the equipment first: sensors are found on the equipment it lists.' };
     const rows = []; const unlinked = []; const stray = []; const notes = [];
     const cells = cellsOf(doc);
@@ -137,7 +146,7 @@
   const kept = () => { try { const o = JSON.parse(W.localStorage.getItem(KEY) || 'null'); return o && o.eq ? o : null; } catch (e) { return null; } };
   function use(eqText, snText, meta) {
     const r = read(eqText, snText, meta); if (!r.ok) return r;
-    const save = { eq: JSON.stringify(parse(eqText).doc), sn: String(snText || '').trim() ? JSON.stringify(parse(snText).doc) : '', meta: { name: r.model.name, type: r.model.type }, at: Date.now() };
+    const save = { eq: JSON.stringify(slim(parse(eqText).doc)), sn: String(snText || '').trim() ? JSON.stringify(slim(parse(snText).doc)) : '', meta: { name: r.model.name, type: r.model.type }, at: Date.now() };
     try { W.localStorage.setItem(KEY, JSON.stringify(save)); } catch (e) { return { ok: false, step: 3, error: 'This file is too large to keep in the browser. It was not loaded.' }; }
     put(r.model); return r;
   }

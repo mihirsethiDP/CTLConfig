@@ -12,7 +12,10 @@
   const arr = (x) => (Array.isArray(x) ? x : []);
   const ING = { eqText: '', snText: '', name: '', own: false, eq: null, sn: null, err1: '', err2: '', file1: '', file2: '' };
   const val = (id) => { const el = W.document && W.document.getElementById ? W.document.getElementById(id) : null; return el ? el.value : null; };
-  function pull() { const a = val('inEq'); if (a != null) ING.eqText = a; const b = val('inSn'); if (b != null) ING.snText = b; const n = val('inName'); if (n != null) ING.name = n; }
+  const BIG = 300000; const big = () => ING.eqText.length > BIG;
+  const errNote = (t) => note('<span>' + esc(t) + '</span>', 'warn');
+  /* a very large paste is kept in memory and not written back into the box (it would freeze the page): an empty box then means "keep what was read" */
+  function pull() { const a = val('inEq'); if (a != null && !(a === '' && big())) ING.eqText = a; const b = val('inSn'); if (b != null) ING.snText = b; const n = val('inName'); if (n != null) ING.name = n; }
 
   function readEq() {
     ING.eq = null; ING.sn = null; ING.err1 = ''; ING.err2 = '';
@@ -75,9 +78,10 @@
       title: 'Step 1 · Read the equipment',
       sub: 'Paste a plant-graph export, or choose the file. Each node is matched to the database equipment type stored on it.',
       actions: [btn('Use the DigitalPaani export', { act: 'in:sample', small: true, kind: 'ghost', title: 'Fills the box with the real export, so you can change it and read it again' }), pick('inEqFile', 'eq')],
-      body: `<textarea class="in-ta" id="inEq" data-act="in:keep" spellcheck="false" aria-label="Plant graph JSON" placeholder='{ "layout": { "cells": [ { "id": "…", "type": "PMP", "equipmentId": "…", "attrs": { "label": { "text": "Feed Pump - 1" } } }, … ] } }'>${esc(ING.eqText)}</textarea>`
+      body: `<textarea class="in-ta" id="inEq" data-act="in:keep" spellcheck="false" aria-label="Plant graph JSON" placeholder='{ "layout": { "cells": [ { "id": "…", "type": "PMP", "equipmentId": "…", "attrs": { "label": { "text": "Feed Pump - 1" } } }, … ] } }'>${big() ? '' : esc(ING.eqText)}</textarea>`
+        + (big() ? `<p class="muted small">Holding the ${(ING.eqText.length / 1e6).toFixed(1)} MB you gave. It is not shown in the box, to keep the page quick. Paste again to replace it.</p>` : '')
         + `<div class="in-bar">${btn('Read the equipment', { act: 'in:read-eq', kind: 'primary' })}${ING.file1 ? `<span class="muted small">From ${esc(ING.file1)}</span>` : ''}</div>`
-        + (ING.err1 ? note(esc(ING.err1), 'warn') : '') + (ING.eq ? eqResult(ING.eq) : ''),
+        + (ING.err1 ? errNote(ING.err1) : '') + (ING.eq ? eqResult(ING.eq) : ''),
     });
     const src = `<div class="in-src" role="radiogroup" aria-label="Where the sensors are">`
       + `<label class="radio${ING.own ? '' : ' on'}"><input type="radio" name="inSrc" value="same" data-act="in:same"${ING.own ? '' : ' checked'}><span>In the same file <span class="muted">(widgets linked to equipment)</span></span></label>`
@@ -90,7 +94,7 @@
     const s2 = card({
       title: 'Step 2 · Read the sensors on that equipment',
       sub: 'A separate reader. It only looks for sensors, and only keeps the ones it can put on equipment found in step 1.',
-      body: (ING.eq ? src + own : '<p class="muted">Read the equipment first.</p>') + (ING.err2 ? note(esc(ING.err2), 'warn') : '') + (ING.sn && ING.eq ? snResult(ING.sn, ING.eq) : ''),
+      body: (ING.eq ? src + own : '<p class="muted">Read the equipment first.</p>') + (ING.err2 ? errNote(ING.err2) : '') + (ING.sn && ING.eq ? snResult(ING.sn, ING.eq) : ''),
       cls: ING.eq ? '' : 'in-off',
     });
     const ready = !!(ING.eq && ING.sn);
