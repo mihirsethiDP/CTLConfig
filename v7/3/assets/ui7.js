@@ -486,7 +486,7 @@
     const acts = arr(o.actions).filter(Boolean).join('');
     const head = `<header class="ph"><div class="ph-main"><div class="ph-title"><h1>${txt(o.title || '')}</h1>${chips ? `<div class="ph-chips">${chips}</div>` : ''}</div>${o.sub ? `<p class="ph-sub">${txt(o.sub)}</p>` : ''}</div>${acts ? `<div class="ph-actions">${acts}</div>` : ''}</header>`;
     const tabs = arr(o.tabs).filter(Boolean);
-    const tb = tabs.length ? `<nav class="tabs" role="tablist">${tabs.map((t) => `<a class="tab${t.id === o.active ? ' on' : ''}" href="${esc(t.href || '#')}" role="tab"${t.id === o.active ? ' aria-selected="true"' : ''}>${txt(t.label)}${t.count != null && t.count !== '' ? `<span class="tab-n">${esc(t.count)}</span>` : ''}</a>`).join('')}</nav>` : '';
+    const tb = tabs.length ? `<nav class="tabs" role="tablist">${tabs.map((t) => `<a class="tab${t.id === o.active ? ' on' : ''}" href="${esc(t.href || '#')}" role="tab"${t.id === o.active ? ' aria-selected="true"' : ''}>${txt(t.label)}${t.count != null && t.count !== '' ? `<span class="tab-n">${esc(t.count)}</span>` : ''}${t.flag ? `<span class="tab-flag" title="${esc('Incomplete: ' + t.flag)}" aria-label="${esc('Incomplete: ' + t.flag)}">!</span>` : ''}</a>`).join('')}</nav>` : '';
     const body = o.aside ? `<div class="pg-body has-aside"><div class="pg-main">${o.body || ''}</div><aside class="pg-aside">${o.aside}</aside></div>` : `<div class="pg-body"><div class="pg-main">${o.body || ''}</div></div>`;
     return `<div class="pg${o.cls ? ' ' + o.cls : ''}">${cr}${head}${o.banner || ''}${tb}${body}</div>`;
   }
@@ -785,7 +785,8 @@
     return NAV.map(([label, href, re]) => {
       let onNow = re.test(first);
       if (label === 'All Plants' && (diffs || acts)) onNow = true;
-      return `<a href="${href}"${onNow ? ' class="on" aria-current="page"' : ''}>${esc(label)}</a>`;
+      const fl = label === 'Flows' && W.V7FLAG73 ? W.V7FLAG73.flowsCount() : 0;
+      return `<a href="${href}"${onNow ? ' class="on" aria-current="page"' : ''}>${esc(label)}${fl ? `<span class="tab-flag" title="${fl} flows are incomplete" aria-label="${fl} flows are incomplete">!</span>` : ''}</a>`;
     }).join('');
   }
   /* v7: which of the two prototypes this is, linking to the v7 overview that sets them side by side */

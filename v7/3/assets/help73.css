@@ -15,3 +15,12 @@
 .hp-card .hp-p { padding: 14px 16px; }
 .p7-prop .hp { margin-top: 6px; }
 @media (max-width: 900px) { .hp-b { grid-template-columns: minmax(0, 1fr); } .hp-p { border-right: 0; border-bottom: 1px solid var(--line); } .hp-p:last-child { border-bottom: 0; } }
+
+/* v7/3: the flag on anything incomplete */
+.inc { display: inline-flex; align-items: center; gap: 5px; padding: 1px 8px 1px 3px; border-radius: 999px; background: var(--warn-tint, #faf3e2); color: var(--warn-ink, #81611d); border: 1px solid #e8d6a6; font-size: 12px; font-weight: 600; white-space: nowrap; vertical-align: middle; max-width: 100%; }
+.inc-i, .tab-flag { display: inline-grid; place-items: center; width: 15px; height: 15px; border-radius: 50%; background: var(--warn, #c99a3e); color: #fff; font: 700 11px var(--font); flex: 0 0 auto; }
+.inc-w { font-weight: 500; overflow: hidden; text-overflow: ellipsis; }
+.inc-sm { margin-left: 4px; }
+.tab-flag { margin-left: 6px; vertical-align: 1px; }
+.p7-sec-h { margin: 0 0 14px; } .p7-sec-h h2 { margin: 0 0 4px; font-size: 18px; } .p7-sec-h p { margin: 0; color: var(--ink-2); max-width: 70ch; }
+.fl-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }

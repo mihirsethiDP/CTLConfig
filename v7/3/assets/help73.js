@@ -15,6 +15,7 @@
 
   /* the plant's people of a role, by name, and how one is reached */
   function who(key, role, how) {
+    if (key == null) return `<b>${esc(ROLE[role])}</b> ${how === 'channel' ? 'by WhatsApp or SMS, or in the app if they have no verified phone' : esc(how)}`;   /* a library type: the roles, at whichever plant has it */
     const ps = arr(safe(() => V().people(key), [])).filter((p) => p.role === role);
     if (!ps.length) return `<span class="hp-none">no ${esc(ROLE[role].replace(/s$/, ''))} at this plant yet (add one in the User Center)</span>`;
     const names = ps.length <= 3 ? ps.map((p) => p.name).join(', ') : `${ps.slice(0, 2).map((p) => p.name).join(', ')} and ${ps.length - 2} more`;
@@ -108,5 +109,39 @@
     return wrap('What this would do, who would be told, and what they would do', part('What these settings do', what) + part('Who is told', told) + part('What they must do', must));
   }
 
-  W.V7HELP73 = { alert, task, proposal };
+  /* ── a library type's alert and task (no plant: roles, not names) ──────────────────────────────────── */
+  function typeAlert(lt, x, r, d) {
+    const fv = (v) => safe(() => V().fmtVal(v, r.unit, r.kind), String(v)); const bands = (d && d.bands) || {}; const set = BANDS.filter((b) => bands[b] != null);
+    const whenOf = (b) => (r.kind === 'status' ? `reads ${fv(bands[b])}` : `${d.dir === 'below' ? 'falls below' : 'rises above'} ${fv(bands[b])}`) + (b === 'emergency' || +x.hold === 0 ? ', on the first reading' : x.hold != null ? ` and stays there for ${x.hold} min` : '');
+    const what = `<p>At every plant that has a <b>${esc(lt.typeName)}</b> with a <b>${esc(r.name)}</b> reading, and has accepted it:</p>` + (set.length ? list(set.map((b) => `${sev(b)} when it ${esc(whenOf(b))}: opens an issue.`)) : '<p class="hp-none">It has no limits in the library, so it does nothing until a plant sets them.</p>')
+      + '<p class="hp-s">A plant that changed a limit keeps its own. A plant can also make a range trigger a task instead.</p>';
+    const told = '<p class="hp-s">On a Live plant. On a new plant nothing is sent.</p>' + list(set.map((b) => `${sev(b)} ${toldFor(null, b).join('; ')}.`));
+    const must = list(set.map((b) => `${sev(b)} ${esc(clock(b))}`).concat([diagLine(x.flowId)]));
+    return wrap('What this alert does at a plant, who is told, and what they must do', part('What these settings do', what) + part('Who is told', told) + part('What they must do', must));
+  }
+  function typeTask(lt, x) {
+    const shared = ['routine', 'work', 'test'].includes(x.workType);
+    const what = `<p>At every plant that has a <b>${esc(lt.typeName)}</b> and has accepted it, the task comes due ${esc(x.everyText || '')}. ${shared ? 'It is one task for the type at the plant, with a line for each piece of equipment.' : 'Each piece of equipment gets its own.'} It starts when the plant goes live.</p>`;
+    const told = `<p>${who(null, 'l1', 'in the app')}, when it is due. If it runs late it shows as Overdue on the plant's Tasks tab.</p>`;
+    return wrap('What this task does at a plant, who is told, and what they must do', part('What these settings do', what) + part('Who is told', told) + part('What they must do', '<p>Do its steps, tick each one, and mark the task done.</p>'));
+  }
+  /* ── a flow ────────────────────────────────────────────────────────────────────────────────────────── */
+  function flow(f, used) {
+    if (!f) return ''; const st = arr(f.steps); const lines = arr(used && used.lines);
+    const usedHtml = lines.length ? list(lines.slice(0, 4).map((x) => esc(x)).concat(lines.length > 4 ? [`and ${lines.length - 4} more`] : [])) : '<p class="hp-none">Nothing starts it yet, so nobody sees it.</p>';
+    if (f.kind === 'diagnostic') {
+      const ids = [...new Set(st.flatMap((s) => Object.values(s.answers || {}).filter((a) => a && a.t === 'cause').map((a) => a.id)))];
+      const what = `<p>It finds the root cause of an issue by asking up to <b>${plural(st.length, 'question')}</b>, one at a time. Each answer leads to the next question or lands on one of <b>${plural(ids.length, 'root cause')}</b>, and a root cause names the fix flow that puts it right.</p>`;
+      const told = '<p>Nobody is told by the flow itself. It opens for whoever starts the issue, an Operator or a Lead, on these:</p>' + usedHtml;
+      const must = '<p>Check each thing on site and answer. When it lands on a root cause, do that fix flow, check the reading is back inside its limits, and close the issue. If no answer fits, say what was found.</p>';
+      return wrap('What this flow does, who uses it, and what they must do', part('What it does', what) + part('Who uses it', told) + part('What they must do', must), true, 'hp-card');
+    }
+    const fix = f.use === 'fix';
+    const what = `<p>It is the steps of ${fix ? 'a fix' : 'a task'}: ${stepsLine(f, 'step') || 'no steps yet.'}</p>`;
+    const told = (fix ? '<p>Whoever is fixing the issue, an Operator or a Lead, once the diagnostic flow lands on:</p>' : `<p>${who(null, 'l1', 'in the app')}, when the task is due:</p>`) + usedHtml;
+    const must = '<p>Do each step in order and tick it. Take the photo where one is required, and record the reading where one is asked for. Then mark it done.</p>';
+    return wrap('What this flow does, who uses it, and what they must do', part('What it does', what) + part('Who uses it', told) + part('What they must do', must), true, 'hp-card');
+  }
+
+  W.V7HELP73 = { alert, task, proposal, typeAlert, typeTask, flow };
 }());

@@ -81,7 +81,8 @@
   function plantOf(key) { const v = V(); return key && v ? call(() => v.plant(key), null) : null; }
   function tabs(key) {
     const p = plantOf(key) || {};
-    return TABS.map(([id, label, suf]) => ({ id, label, href: base(key) + suf, count: id === 'issues' && p.openIssues ? p.openIssues : id === 'differences' && p.differences ? p.differences : null }));
+    const fl = W.V7FLAG73 ? W.V7FLAG73.tabFlags(key) : {};
+    return TABS.map(([id, label, suf]) => ({ id, label, href: base(key) + suf, flag: fl[id] || null, count: id === 'issues' && p.openIssues ? p.openIssues : id === 'differences' && p.differences ? p.differences : null }));
   }
   function trialStart(key) {
     const ts = arr(call(() => V().alerts(key, { state: 'trial' }), [])).map((a) => a.trialSince).filter(isNum);
@@ -638,7 +639,7 @@
         parts.push(empty(msg, show !== 'all' ? btn('Show all', { href: qs('all') }) : ''));
       } else parts.push(`<div class="p7-cards">${cards.join('')}</div>`);
       if (show === 'undecided' && c.blocked) parts.push(note(`${pl(c.blocked, 'more proposal')} can't be used yet: ${c.blocked === 1 ? 'it needs' : 'they need'} a reading the plant graph doesn't send, or a connection between equipment (next phase). They stay listed, greyed, under "Can't be used yet".`, 'quiet'));
-      return frame(key, 'library', parts.join(''), { crumbs: [{ label: 'What the library brings' }], title: 'What the library brings', sub });
+      return frame(key, 'library', `<div class="p7-sec-h"><h2>What the library brings</h2><p>${esc(sub)}</p></div>` + parts.join(''));
     });
   }
 
@@ -780,7 +781,7 @@
         name: `<a href="${esc(taskHref(key, t.id))}">${esc(t.name)}</a><div class="p7-sub">${where}</div>`,
         every: `${esc(cap(t.everyText || ''))}${t.source ? ' ' + U.sourceChip(t.source) : ''}${t.runHours && t.runHours.overrideId && t.basis === 'either' ? ` <span class="muted small">run-hours:</span> ${U.sourceChip(t.runHours)}` : ''}${t.source && t.source.notInLib && t.source.chip !== 'notinlib' ? '<div class="p7-sub">Not in the library</div>' : ''}<div class="p7-sub">${esc(t.workLabel || '')}</div>`,
         due, last: t.lastDone != null ? fmtDay(t.lastDone) : '<span class="muted">—</span>',
-        st: chip(t.statusLabel || cap(t.status || ''), { tone: t.overdue ? 'bad' : stTone }),
+        st: chip(t.statusLabel || cap(t.status || ''), { tone: t.overdue ? 'bad' : stTone }) + (W.V7FLAG73 ? W.V7FLAG73.chip(W.V7FLAG73.task(key, t), { small: true }) : ''),
       };
     });
   }

@@ -47,7 +47,8 @@
     const all = flows(); const inKind = (f, k) => (k === 'diagnostic' ? isDiag(f) : k === 'fix' ? f.use === 'fix' : !isDiag(f) && f.use !== 'fix');
     const s = SEARCH.q.trim().toLowerCase();
     const rows0 = all.filter((f) => inKind(f, kind) && (!s || `${f.name} ${arr(f.forTypes).join(' ')}`.toLowerCase().includes(s)));
-    const rows = SEARCH.all || s ? rows0 : rows0.slice(0, 40);
+    if (SEARCH.inc && W.V7FLAG73) rows0.splice(0, rows0.length, ...rows0.filter((f) => W.V7FLAG73.flow(f).length));
+    const rows = SEARCH.all || s || SEARCH.inc ? rows0 : rows0.slice(0, 40);
     const tabs = filters([
       { label: 'Diagnostic flows', href: '#/flows?kind=diagnostic', on: kind === 'diagnostic', count: all.filter((f) => inKind(f, 'diagnostic')).length },
       { label: 'Fix flows', href: '#/flows?kind=fix', on: kind === 'fix', count: all.filter((f) => inKind(f, 'fix')).length },
@@ -57,15 +58,17 @@
       : kind === 'fix' ? 'A fix flow is the steps that put one root cause right. A diagnostic flow sends people here.'
         : 'A task flow is the steps of a routine round, preventive maintenance, a calibration or a manual test.';
     const how = `<ol class="fl-how"><li><b>An issue opens</b><span>from an alert, or someone reports a problem</span></li><li><b>Diagnostic flow</b><span>questions, one at a time</span></li><li><b>Root cause</b><span>where the questions land</span></li><li><b>Fix flow</b><span>the steps that put it right</span></li></ol>`;
+    const nInc = W.V7FLAG73 ? all.filter((f) => inKind(f, kind) && W.V7FLAG73.flow(f).length).length : 0;
+    const incBtn = nInc ? btn(SEARCH.inc ? 'Show all' : `Show the ${nInc} incomplete`, { act: 'fl:search', data: { inc: SEARCH.inc ? '0' : '1' }, small: true, kind: SEARCH.inc ? 'secondary' : 'ghost' }) : '';
     const search = `<input type="search" class="fl-search" placeholder="Search by name or equipment type" aria-label="Search flows" value="${esc(SEARCH.q)}" data-act="fl:search" data-live>`;
     const table = rows.length ? UI.table({
       cols: [{ label: 'Flow', key: 'name' }, { label: 'For', key: 'for' }, { label: kind === 'diagnostic' ? 'Questions' : 'Steps', key: 'n', cls: 'nowrap' }, { label: 'Used by', key: 'used' }],
-      rows: rows.map((f) => { const u = usedBy(f); return { _href: `#/flows/${enc(f.id)}`, name: `<a href="#/flows/${esc(enc(f.id))}">${esc(f.name)}</a>${isDiag(f) ? '' : `<div class="muted small">${esc(USE[f.use] || 'Flow')}</div>`}`, for: esc(short(arr(f.forTypes).join(', ') || 'Any equipment', 60)), n: String(arr(f.steps).length), used: u.n ? `<span title="${esc(u.lines.slice(0, 12).join('\n'))}">${esc(short(u.lines[0], 54))}${u.n > 1 ? ` <span class="muted">+${u.n - 1}</span>` : ''}</span>` : '<span class="muted">Not used yet</span>' }; }),
+      rows: rows.map((f) => { const u = usedBy(f); return { _href: `#/flows/${enc(f.id)}`, name: `<a href="#/flows/${esc(enc(f.id))}">${esc(f.name)}</a> ${W.V7FLAG73 ? W.V7FLAG73.chip(W.V7FLAG73.flow(f), { small: true }) : ''}${isDiag(f) ? '' : `<div class="muted small">${esc(USE[f.use] || 'Flow')}</div>`}`, for: esc(short(arr(f.forTypes).join(', ') || 'Any equipment', 60)), n: String(arr(f.steps).length), used: u.n ? `<span title="${esc(u.lines.slice(0, 12).join('\n'))}">${esc(short(u.lines[0], 54))}${u.n > 1 ? ` <span class="muted">+${u.n - 1}</span>` : ''}</span>` : '<span class="muted">Not used yet</span>' }; }),
     }) : empty('No flow matches.');
     const more = !SEARCH.all && !s && rows0.length > rows.length ? `<p class="fl-more">${btn(`Show all ${rows0.length}`, { act: 'fl:search', data: { all: '1' }, small: true, kind: 'ghost' })}</p>` : '';
     return UI.page({
       title: 'Flows', sub: 'The questions that find a root cause, and the steps that put it right. Open one to see it, try it, or change it.',
-      body: how + tabs + card({ title: kind === 'diagnostic' ? 'Diagnostic flows' : kind === 'fix' ? 'Fix flows' : 'Task flows', sub: what, body: `<div class="fl-bar">${search}</div>${table}${more}`, actions: [btn(kind === 'diagnostic' ? 'New diagnostic flow' : 'New flow', { act: 'fl:new', data: { kind }, kind: 'primary' })] }),
+      body: how + tabs + card({ title: kind === 'diagnostic' ? 'Diagnostic flows' : kind === 'fix' ? 'Fix flows' : 'Task flows', sub: what, body: `<div class="fl-bar">${search}${incBtn}</div>${table}${more}`, actions: [btn(kind === 'diagnostic' ? 'New diagnostic flow' : 'New flow', { act: 'fl:new', data: { kind }, kind: 'primary' })] }),
       cls: 'pg-flows',
     });
   }
@@ -121,10 +124,10 @@
     const probs = pr.length ? note(`<b>${plural(pr.length, 'thing')} to finish:</b><ul class="fl-probs">${pr.slice(0, 6).map((x) => `<li>${esc(x)}</li>`).join('')}</ul>${pr.length > 6 ? `<p class="small">and ${pr.length - 6} more</p>` : ''}`, 'warn') : '';
     const body = editing
       ? `${editHtml(f)}${probs}<div class="fl-savebar">${btn('Save changes', { act: 'fl:save', kind: 'primary' })}${btn('Discard', { act: 'fl:discard', kind: 'ghost' })}<span class="muted small">Everything that uses this flow follows it once saved.</span></div>`
-      : `<div class="fl-cols"><div>${card({ title: isDiag(f) ? plural(arr(f.steps).length, 'question') : plural(arr(f.steps).length, 'step'), sub: isDiag(f) ? 'Asked one at a time. Each answer leads to the next question or to a root cause.' : 'Done in this order.', body: readSteps(f), actions: [btn('Edit', { act: 'fl:edit', data: { id: f.id }, kind: 'primary' })] })}${probs}</div><div>${tryHtml(f)}${usedCard}</div></div>`;
+      : `${W.V7HELP73 ? W.V7HELP73.flow(f, u) : ''}<div class="fl-cols"><div>${card({ title: isDiag(f) ? plural(arr(f.steps).length, 'question') : plural(arr(f.steps).length, 'step'), sub: isDiag(f) ? 'Asked one at a time. Each answer leads to the next question or to a root cause.' : 'Done in this order.', body: readSteps(f), actions: [btn('Edit', { act: 'fl:edit', data: { id: f.id }, kind: 'primary' })] })}${probs}</div><div>${tryHtml(f)}${usedCard}</div></div>`;
     return UI.page({
       crumbs: [{ label: 'Flows', href: `#/flows?kind=${isDiag(f) ? 'diagnostic' : f.use === 'fix' ? 'fix' : 'task'}` }, { label: f.name || 'New flow' }],
-      title: f.name || 'New flow', chips: [chip(kindWord, { tone: 'muted' }), editing ? chip('Editing: not saved yet', { tone: 'warn' }) : chip(`Version ${f.version || 1}`, { tone: 'muted' })],
+      title: f.name || 'New flow', chips: [W.V7FLAG73 ? W.V7FLAG73.chip(W.V7FLAG73.flow(f)) : '', chip(kindWord, { tone: 'muted' }), editing ? chip('Editing: not saved yet', { tone: 'warn' }) : chip(`Version ${f.version || 1}`, { tone: 'muted' })],
       sub: `For ${arr(f.forTypes).join(', ') || 'any equipment'}`, body, cls: 'pg-flows pg-flow',
     });
   }
@@ -171,7 +174,7 @@
   const dstep = (el) => (DRAFT ? arr(DRAFT.flow.steps).find((s) => String(s.id) === String(ga(el, 'step'))) : null);
   const nextId = (f) => arr(f.steps).reduce((m, s) => Math.max(m, +s.id || 0), 0) + 1;
   const blankStep = (f) => (isDiag(f) ? { id: nextId(f), type: 'question', text: '', answers: { Yes: { t: 'open' }, No: { t: 'open' } } } : { id: nextId(f), type: 'instruction', text: '' });
-  UI.on('fl:search', (el) => { if (ga(el, 'all')) SEARCH.all = true; else { SEARCH.q = el.value || ''; } UI.render(); return false; });
+  UI.on('fl:search', (el) => { if (ga(el, 'inc')) SEARCH.inc = ga(el, 'inc') === '1'; else if (ga(el, 'all')) SEARCH.all = true; else { SEARCH.q = el.value || ''; } UI.render(); return false; });
   UI.on('fl:new', (el) => {
     const diag = ga(el, 'kind') === 'diagnostic'; const id = `f_new_${Date.now().toString(36)}`;
     const f = { id, name: '', kind: diag ? 'diagnostic' : 'action', forTypes: [], forStage: null, use: diag ? 'diagnostic' : ga(el, 'kind') === 'fix' ? 'fix' : 'round', version: 0, status: 'draft', steps: [] };

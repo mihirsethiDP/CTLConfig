@@ -233,7 +233,7 @@
   }
   function alertLine(key, al) {
     const r = alertRate(key, al);
-    return `<div class="o-al-r">${a(alertHref(key, al.id), al.name)} ${stateChip(al.state)} <span class="muted">${esc(r.text)}</span>${r.chips.join(' ')}</div>${W.V7HELP73 ? W.V7HELP73.alert(key, al.id) : ''}`;
+    return `<div class="o-al-r">${a(alertHref(key, al.id), al.name)} ${stateChip(al.state)} <span class="muted">${esc(r.text)}</span>${r.chips.join(' ')} ${W.V7FLAG73 ? W.V7FLAG73.chip(W.V7FLAG73.alert(key, al)) : ''}</div>${W.V7HELP73 ? W.V7HELP73.alert(key, al.id) : ''}`;
   }
   function pendingProposals(key, eqId) {
     const P = plantOf(key); if (!P || P.state !== 'commissioning') return [];
@@ -289,7 +289,7 @@
         const hold = dt.hold != null ? dt.hold : x.hold; const clear = dt.clear != null ? dt.clear : x.clear;
         const flow = x.flowId ? safe(() => V().flowOf(x.flowId), null) : null;
         const inDraft = dt.hold != null || dt.clear != null;
-        return `<div class="o-al-r"><b>${esc(x.name)}</b> <span class="muted">must hold for ${esc(hold)} min · must clear for ${esc(clear)} min${flow ? ` · starts ${esc(flow.name)}` : ''}</span>${inDraft ? ' ' + draftChip() : ''} ${btn('Change times', { act: 'obj:timing', data: { mode: 'type', code: lt.code, alert: x.name }, small: true, kind: 'ghost' })}</div>`;
+        return `<div class="o-al-r"><b>${esc(x.name)}</b> <span class="muted">must hold for ${esc(hold)} min · must clear for ${esc(clear)} min${flow ? ` · starts ${esc(flow.name)}` : ''}</span>${inDraft ? ' ' + draftChip() : ''} ${btn('Change times', { act: 'obj:timing', data: { mode: 'type', code: lt.code, alert: x.name }, small: true, kind: 'ghost' })} ${W.V7FLAG73 && !flow ? W.V7FLAG73.chip(['No diagnostic flow, so people are not led to a root cause.']) : ''}</div>${W.V7HELP73 ? W.V7HELP73.typeAlert(lt, { name: x.name, hold, clear, flowId: x.flowId }, r, d) : ''}`;
       });
       return {
         dir: d.dir, bands: d.bands,
@@ -372,7 +372,7 @@
       chip(`Criticality: ${e.tierLabel || TIER[e.tier] || ''}`, { title: 'How much the plant depends on it' }) + ' ' + sourceChip(e.tierSource),
       /* v7: only when a Run status reading says so (its latest sample) */
       e.runState ? chip(e.runState === 'running' ? 'Running' : 'Stopped', { tone: e.runState === 'running' ? 'ok' : 'muted', title: 'From its Run status reading (sample)' }) : '',
-    ].concat(W.V7STRUCT73 ? W.V7STRUCT73.chips(key, e.id) : []);
+    ].concat(W.V7STRUCT73 ? W.V7STRUCT73.chips(key, e.id) : []).concat(W.V7FLAG73 ? [W.V7FLAG73.chip(W.V7FLAG73.equipment(key, e.id).filter((x) => !/^Not placed/.test(x)))] : []);
   }
   function instBanners(key, P, e, openRecs, props, all) {
     const out = [];
@@ -471,7 +471,7 @@
       const shared = t.eqIds && t.eqIds.length > 1 ? `Shared task for ${esc(String(t.line || '').split(' · ').pop() || plural(t.eqIds.length, 'piece'))}: ${esc(arr(t.tags).join(', '))}` : '';
       const conf = t.toConfirm ? ' ' + chip('to confirm', { tone: 'muted', title: 'One task per type at the plant, with a line per equipment: still to confirm' }) : '';
       return {
-        task: H(`${a(taskHref(key, t.id), t.name)}${conf}<div class="muted small">${esc(t.workLabel || '')}${shared ? ' · ' + shared : ''}</div>`),
+        task: H(`${a(taskHref(key, t.id), t.name)}${conf} ${W.V7FLAG73 ? W.V7FLAG73.chip(W.V7FLAG73.task(key, t), { small: true }) : ''}<div class="muted small">${esc(t.workLabel || '')}${shared ? ' · ' + shared : ''}</div>`),
         every: H(`${esc(cap(t.everyText || everyText(t.every)))} ${t.source ? sourceChip(t.source) : ''}`),
         due: dueCell(t),
         last: t.lastDone ? fmtDay(t.lastDone) : H('<span class="muted">Not yet</span>'),
@@ -576,7 +576,7 @@
       const draftEv = x.draftEvery || (dr && dr.schedules ? dr.schedules[x.name] : null);
       const evText = draftEv ? `${esc(cap(x.draftEveryText || everyText(draftEv)))} <span class="o-was">was ${esc(x.everyText)}</span> ${draftChip()}` : `${esc(cap(x.everyText))} ${chipNamed('lib')}`;
       return {
-        task: H(`<b>${esc(x.name)}</b><div class="muted small">${esc(x.workLabel || '')}</div>`),
+        task: H(`<b>${esc(x.name)}</b><div class="muted small">${esc(x.workLabel || '')}</div>${W.V7HELP73 ? W.V7HELP73.typeTask(lt, x) : ''}`),
         every: H(evText),
         act: x.every && x.every.n ? H(btn('Change how often', { act: 'obj:cadence', data: { mode: 'type', code: lt.code, schedule: x.name }, small: true, kind: 'ghost' })) : '',
       };
@@ -902,7 +902,7 @@
     return UI.page({
       crumbs: crumbs0.concat([{ label: P.name, href: plantHref(key) }, { label: 'Equipment', href: plantHref(key, 'equipment') }].concat(e ? [{ label: e.tag, href: eqHref(key, e.id) }] : []).concat([{ label: al.name }])),
       title: al.name,
-      chips: [stateChip(al.state), al.fromLibrary ? chipNamed('lib') : chip('Not in the library', { tone: 'changed' }), e ? chip(e.tag, { mono: true, href: eqHref(key, e.id), title: 'Its equipment' }) : ''],
+      chips: [W.V7FLAG73 ? W.V7FLAG73.chip(W.V7FLAG73.alert(key, al)) : '', stateChip(al.state), al.fromLibrary ? chipNamed('lib') : chip('Not in the library', { tone: 'changed' }), e ? chip(e.tag, { mono: true, href: eqHref(key, e.id), title: 'Its equipment' }) : ''],
       sub: what,
       banner: bans.slice(0, 2).join(''),
       body: parts.filter(Boolean).join(''),
