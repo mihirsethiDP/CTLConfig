@@ -49,6 +49,14 @@ const wl = ed.ok ? V.whereItLands('OS_TANK') : null; const pub = ed.ok ? V.publi
 const after = V.limitsOf('vedanta', 'v_eq1_PH', 'below').perBand.emergency;
 check('D11', 'Vedanta\'s own Emergency limit on EQ-1 pH (4.0) survives a library safety change', before.value === 4 && pub.ok && after.value === 4 && after.overrideId === before.overrideId && !!wl, `${before.value} → ${after.value} ${pub.error || ''}`);
 
+/* the workflow a range starts */
+V.reset();
+const otherDiag = g.SEED.flows.find((f) => f.kind === 'diagnostic' && f.id !== V.alert('manesar', 'a_do_at2').flowId).id;
+const sf = V.setAlertFlow('manesar', 'a_do_at2', otherDiag); const picked = V.alert('manesar', 'a_do_at2');
+check('flows', 'an alert can start another diagnostic flow at this plant; a fix flow is refused', sf.ok && sf.changed && picked.flowId === otherDiag && !V.setAlertFlow('manesar', 'a_do_at2', 'f_blower').ok, JSON.stringify(sf));
+const tf = V.setLineWork('manesar', 'bl1_amps', 'above', 'caution', { name: 'Clean the blower intake filters', flowId: 'f_blower' });
+check('flows', 'a task a range triggers can carry a flow: its steps show on the task', tf.ok && V.task('manesar', 'lw_bl1_filter').flowId === 'f_blower' && V.task('manesar', 'lw_bl1_filter').steps.length >= 7);
+
 /* the calls file */
 const made = g.V7_CALLS_MADE; const cards = g.V7_DECISIONS;
 check('calls', '28 of the 29 cards carry a call that names one of their options; D10 is parked', Object.keys(made).length === 28 && !made.D10 && Object.entries(made).every(([id, m]) => { const d = cards.find((c) => c.id === id); return d && (m.opt === 'other' || (Number.isInteger(m.opt) && m.opt >= 0 && m.opt < d.options.length)) && m.by && m.atText; }));

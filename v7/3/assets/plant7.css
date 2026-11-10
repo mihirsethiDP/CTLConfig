@@ -112,3 +112,11 @@ details.p7-grp > summary:hover .p7-sum-t { color: var(--accent-strong); }
 /* v7 (card D22): a shared task is one line per type on the review, as on the Tasks tab */
 .p7-shared-h { margin: 6px 0 4px; font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-3); }
 .p7-shared > summary .p7-sum-t .muted { font-weight: 400; }
+
+/* v7/3: what a plant inherits from the library, and why not */
+.inh-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.inh { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; gap: 12px; align-items: baseline; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.inh:last-child { border-bottom: 0; }
+.inh > b { font: 600 20px var(--font); text-align: right; }
+.inh-ok > b { color: var(--ok-ink); } .inh-warn > b { color: var(--warn-ink); }
+.inh-l { display: block; font-weight: 600; } .inh-w { display: block; font-size: 13px; color: var(--ink-2); }

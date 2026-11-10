@@ -77,7 +77,7 @@
   const say = (html, o) => U.toast(`<span>${html}</span>`, o);  /* toasts: escaped html, always wrapped so it is never escaped twice */
 
   /* ── the plant frame (shared by every plant route, also ui7/lib7/work7) ─────────────────────────────────────── */
-  const TABS = [['home', 'Home', ''], ['structure', 'Structure', '/structure'], ['equipment', 'Equipment', '/equipment'], ['readings', 'Readings', '/readings'], ['issues', 'Issues', '/issues'], ['tasks', 'Tasks', '/tasks'], ['differences', 'Differences', '/differences'], ['activity', 'Activity', '/activity']];
+  const TABS = [['home', 'Home', ''], ['structure', 'Structure', '/structure'], ['library', 'Library', '/library'], ['equipment', 'Equipment', '/equipment'], ['readings', 'Readings', '/readings'], ['issues', 'Issues', '/issues'], ['tasks', 'Tasks', '/tasks'], ['differences', 'Differences', '/differences'], ['activity', 'Activity', '/activity']];
   function plantOf(key) { const v = V(); return key && v ? call(() => v.plant(key), null) : null; }
   function tabs(key) {
     const p = plantOf(key) || {};
@@ -518,6 +518,22 @@
     return `<details class="p7-grp p7-shared"${open ? ' open' : ''}>${sum}<div class="p7-grp-b"><p class="p7-more">One task for the type at this plant, with a line per piece of equipment. Leave one out below, with a reason.</p><ul class="p7-props">${g.props.map((x) => propRow(key, { ...x, name: `${x.tag}${x.eqName ? ' ' + x.eqName : ''}` }, alertIds)).join('')}</ul></div></details>`;
   }
   const C_WT = (w) => ({ routine: 'Routine check', work: 'Routine work', test: 'Manual testing' }[w] || 'Task');
+  /* v7/3: what this plant inherits from the library, what it could but does not, and why */
+  function inheritCard(key, lr, c, qs) {
+    const all = [].concat(...lr.map((r) => arr(r.proposals).map((x) => ({ ...x, tag: x.tag || r.tag })))); const p = plantOf(key);
+    const needs = {}; let next = 0; all.filter((x) => x.blockedBy).forEach((x) => { if (x.nextPhase) { next++; return; } const m = /Needs an? (.+?) reading/.exec(x.blockedBy); const k = m ? m[1] : x.blockedBy; needs[k] = (needs[k] || 0) + 1; });
+    const left = all.filter((x) => x.decided === 'rejected'); const whyLeft = {}; left.forEach((x) => { const k = x.reason || 'No reason given'; whyLeft[k] = (whyLeft[k] || 0) + 1; });
+    const needList = Object.entries(needs).sort((a, b) => b[1] - a[1]);
+    const row = (n, label, why, href, tone) => `<li class="inh${tone ? ' inh-' + tone : ''}"><b>${n}</b><div><span class="inh-l">${label}</span>${why ? `<span class="inh-w">${why}</span>` : ''}</div>${href && n ? `<a href="${esc(href)}">See them</a>` : ''}</li>`;
+    const rows = [
+      row(c.accepted || 0, 'Inherited', 'Accepted here; they follow the library until someone changes a value.', qs('decided'), 'ok'),
+      row(c.undecided, 'Could be inherited: waiting for a decision', c.undecided ? 'Nobody has accepted them or left them out yet.' : '', qs('undecided'), c.undecided ? 'warn' : ''),
+      row(needList.reduce((s, x) => s + x[1], 0), 'Not inherited: the reading is missing', needList.length ? `The plant graph has no ${esc(needList.slice(0, 6).map(([k, n]) => `${k} (${n})`).join(', '))}${needList.length > 6 ? ` and ${needList.length - 6} more` : ''} reading on that equipment. Add the sensor in the plant graph and they can be accepted.` : '', qs('blocked'), ''),
+      row(next, 'Not inherited: reads a connection between equipment', next ? 'This phase reads sensors on the equipment only. These arrive in the next phase.' : '', qs('blocked'), ''),
+      row(left.length, 'Not inherited: left out at this plant', left.length ? esc(Object.entries(whyLeft).slice(0, 4).map(([k, n]) => `“${k}” (${n})`).join(', ')) : 'Nothing has been left out on purpose.', qs('decided'), ''),
+    ];
+    return card({ title: `What ${p ? p.name : 'this plant'} inherits from the library`, sub: 'Every alert and task the library has for this plant\'s equipment, by what happened to it. Nothing is inherited without its reading.', body: `<ul class="inh-list">${rows.join('')}</ul>` });
+  }
   function libCounts(rows) {
     const c = { undecided: 0, decided: 0, accepted: 0, rejected: 0, blocked: 0, all: 0 };
     rows.forEach((r) => arr(r.proposals).forEach((p) => { c.all++; if (p.blockedBy) c.blocked++; else if (p.decided) { c.decided++; c[p.decided] = (c[p.decided] || 0) + 1; } else c.undecided++; }));
@@ -556,6 +572,7 @@
       const sub = live
         ? `${p.name} is Live. For each piece of equipment the library proposes alerts and tasks; alerts you accept now run On trial for 7 days before they reach people.`
         : 'For each piece of equipment the library proposes alerts and tasks, each limit with a chip saying where it comes from. Accepted alerts go On trial: trial firings are recorded, nothing is sent until go live.';
+      parts.push(inheritCard(key, lr, c, qs));
       const undEq = lr.filter((r) => arr(r.proposals).some((x) => !x.decided && !x.blockedBy)).length;
       const summary = stats([
         { value: String(lc.undecided), label: `to decide (${pl(lc.tasks, 'task')}, ${pl(lc.alerts, 'alert')})`, tone: lc.undecided ? 'warn' : null },
@@ -610,7 +627,7 @@
         parts.push(empty(msg, show !== 'all' ? btn('Show all', { href: qs('all') }) : ''));
       } else parts.push(`<div class="p7-cards">${cards.join('')}</div>`);
       if (show === 'undecided' && c.blocked) parts.push(note(`${pl(c.blocked, 'more proposal')} can't be used yet: ${c.blocked === 1 ? 'it needs' : 'they need'} a reading the plant graph doesn't send, or a connection between equipment (next phase). They stay listed, greyed, under "Can't be used yet".`, 'quiet'));
-      return frame(key, 'home', parts.join(''), { crumbs: [{ label: 'What the library brings' }], title: 'What the library brings', sub });
+      return frame(key, 'library', parts.join(''), { crumbs: [{ label: 'What the library brings' }], title: 'What the library brings', sub });
     });
   }
 

@@ -163,3 +163,8 @@ details.o-more summary { cursor: pointer; color: var(--accent); font-size: 13.5p
 .o-band-t .o-band-d[hidden], .o-band-t .o-band-e[hidden] { display: none; }
 .o-trig-t { display: flex; flex-wrap: wrap; gap: 6px; flex: 1 1 220px; min-width: 0; } .o-trig-t input { flex: 1 1 180px; min-width: 0; } .o-trig-t[hidden], .o-trig-i[hidden] { display: none; }
 .o-band-d select { width: auto; }
+
+/* v7/3: the workflow a range starts */
+.o-trig-i, .o-trig-t { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; flex: 1 1 100%; min-width: 0; font-size: 13px; }
+.o-trig-l { display: inline-flex; gap: 6px; align-items: center; font-weight: 600; min-width: 0; max-width: 100%; } .o-trig-l select { font-weight: 400; max-width: 260px; min-width: 0; }
+.o-trig-how, .o-trig-tl { display: inline-flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; }

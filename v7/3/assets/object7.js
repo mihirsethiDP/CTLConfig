@@ -989,19 +989,41 @@
   }
   /* v7/3 (card D29): each range says what it triggers. An issue starts the alert's diagnostic flow and tells people by its
      severity; a task is raised at the plant or a unit process. A range that is off shows the empty slot. */
+  /* v7/3: pick the workflow a range starts. diag: the questions that find the root cause (each root cause names its fix flow);
+     task: the steps of the job. Flows open in a new tab, so the sheet keeps what you typed. */
+  const libFlows73 = () => arr(W.CTL && W.CTL.S && W.CTL.S.lib ? W.CTL.S.lib.flows : (W.SEED || {}).flows);
+  const libCauses73 = () => arr(W.CTL && W.CTL.S && W.CTL.S.lib ? W.CTL.S.lib.causes : (W.SEED || {}).causes);
+  function flowSelect(kind, st, attrs, cur) {
+    const all = libFlows73().filter((f) => (kind === 'diag' ? f.kind === 'diagnostic' : f.kind !== 'diagnostic' && f.use !== 'fix'));
+    const near = all.filter((f) => arr(f.forTypes).includes(st.typeName) || f.id === cur); const rest = all.filter((f) => !near.includes(f));
+    const opt = (f) => `<option value="${esc(f.id)}"${f.id === cur ? ' selected' : ''}>${esc(f.name)}</option>`;
+    return `<select ${attrs}><option value=""${cur ? '' : ' selected'}>${kind === 'diag' ? 'None yet' : 'No steps yet'}</option>${near.length ? `<optgroup label="For ${esc(st.typeName || 'this equipment')}">${near.map(opt).join('')}</optgroup>` : ''}<optgroup label="Other flows">${rest.map(opt).join('')}</optgroup></select>`;
+  }
+  const newTab = (href, label) => `<a href="${esc(href)}" target="_blank" rel="noopener">${esc(label)} ↗</a>`;
+  function howHtml(flowId) {
+    const f = flowId ? libFlows73().find((x) => x.id === flowId) : null;
+    if (!f) return `<span class="lw-does">No questions yet, so the person says what they found.</span> ${newTab('#/flows?kind=diagnostic', 'Set one up in Flows')}`;
+    const ids = [...new Set(arr(f.steps).flatMap((s) => Object.values(s.answers || {}).filter((a) => a && a.t === 'cause').map((a) => a.id)))];
+    const fixed = ids.filter((id) => { const c = libCauses73().find((x) => x.id === id); return c && c.fix; }).length;
+    return `<span class="lw-does">How it is resolved: ${plural(arr(f.steps).length, 'question')} lead to ${plural(ids.length, 'root cause')}, ${fixed} with a fix flow.</span> ${newTab(`#/flows/${encodeURIComponent(f.id)}`, 'Open or edit')}`;
+  }
+  function taskFlowLinks(flowId) {
+    const f = flowId ? libFlows73().find((x) => x.id === flowId) : null;
+    return f ? `<span class="lw-does">${plural(arr(f.steps).length, 'step')}.</span> ${newTab(`#/flows/${encodeURIComponent(f.id)}`, 'Open or edit')}` : newTab('#/flows?kind=task', 'Set one up in Flows');
+  }
   function trigAlert(st) { return st.mode === 'instance' ? arr(safe(() => V().alerts(st.key, { sensorId: st.sensorId }), [])).find((x) => x.dir === st.dir) || null : null; }
   function tbRow(st, b) {
     const on = st.vals[b] !== ''; const al = trigAlert(st);
-    const flow = al && al.flowId ? `starts <a href="#/flows/${esc(encodeURIComponent(al.flowId))}">${esc(al.flowName || 'its diagnostic flow')}</a>` : 'no diagnostic flow yet: <a href="#/flows?kind=diagnostic">choose one in Flows</a>';
+    const flow = st.mode === 'instance' ? `<label class="o-trig-l">Diagnostic flow ${flowSelect('diag', st, `data-dflow="1" aria-label="Diagnostic flow for ${esc(bandName(b))}"`, st.flowSel)}</label><span class="o-trig-how">${howHtml(st.flowSel)}</span>` : '';
     const told = b === 'caution' ? 'shown in the app and the morning email' : esc(String(sevClock(b)).toLowerCase());
     const where = st.mode === 'instance' && W.V7STRUCT73 ? W.V7STRUCT73.filedOptions(st.key, st.eqId) : [];
     const whereSel = where.length > 1 ? `<select data-filed="${b}" aria-label="Where the task is filed">${where.map((x) => `<option value="${esc(x.id)}"${String(st.filedAt && st.filedAt[b] != null ? st.filedAt[b] : (where[0] || {}).id) === String(x.id) ? ' selected' : ''}>at ${esc(x.label)}</option>`).join('')}</select>` : '';
     let does;
     if (st.mode !== 'instance') does = `<div class="o-band-d"${on ? '' : ' hidden'}><span class="lw-does">What it triggers is set at each plant</span></div>`;
-    else if (b === 'emergency') does = `<div class="o-band-d"${on ? '' : ' hidden'}><span class="o-trig-k">Triggers</span><span class="lw-does"><b>An issue</b>, on the first reading: ${flow}; calls everyone and sounds the hooter</span></div>`;
+    else if (b === 'emergency') does = `<div class="o-band-d"${on ? '' : ' hidden'}><span class="o-trig-k">Triggers</span><span class="lw-does"><b>An issue</b>, on the first reading; calls everyone and sounds the hooter</span><span class="o-trig-i">${flow}</span></div>`;
     else does = `<div class="o-band-d"${on ? '' : ' hidden'}><span class="o-trig-k">Triggers</span><select data-does="${b}" aria-label="What the ${esc(bandName(b))} range triggers"><option value="issue"${st.does[b] !== 'task' ? ' selected' : ''}>An issue</option><option value="task"${st.does[b] === 'task' ? ' selected' : ''}>A task</option></select>`
-      + `<span class="lw-does o-trig-i"${st.does[b] === 'task' ? ' hidden' : ''}>${flow}; ${told}</span>`
-      + `<span class="o-trig-t"${st.does[b] === 'task' ? '' : ' hidden'}><input type="text" data-taskname="${b}" value="${esc(st.taskName[b] || '')}" placeholder="Name the task, e.g. Clean the intake filters" aria-label="The task the ${esc(bandName(b))} range raises">${whereSel}</span></div>`;
+      + `<span class="o-trig-i"${st.does[b] === 'task' ? ' hidden' : ''}>${flow}<span class="lw-does">Told: ${told}</span></span>`
+      + `<span class="o-trig-t"${st.does[b] === 'task' ? '' : ' hidden'}><input type="text" data-taskname="${b}" value="${esc(st.taskName[b] || '')}" placeholder="Name the task, e.g. Clean the intake filters" aria-label="The task the ${esc(bandName(b))} range raises">${whereSel}<label class="o-trig-l">Steps ${flowSelect('task', st, `data-tflow="${b}" aria-label="Task flow for ${esc(bandName(b))}"`, (st.taskFlow || {})[b] || '')}</label><span class="o-trig-tl" data-b="${b}">${taskFlowLinks((st.taskFlow || {})[b])}</span></span></div>`;
     const slot = st.mode === 'instance' ? `<div class="o-band-e"${on ? ' hidden' : ''}><span class="o-trig-k">Triggers</span><span class="muted">Nothing yet. Switch this range on to choose what it triggers.</span></div>` : '';
     return `<div class="o-band o-band-t" data-row="${b}"><div class="o-band-k"><button type="button" class="o-tog" role="switch" aria-checked="${on}" aria-label="${esc(bandName(b))} line" data-act="obj:ltog" data-band="${b}"><i></i></button>${sev(b)}</div>`
       + does + slot
@@ -1028,7 +1050,7 @@
       const want = st.does[b] === 'task' && bands[b] != null ? String(st.taskName[b] || '').trim() : null;
       if (st.does[b] === 'task' && bands[b] != null && !want && !out.err) out.err = `Name the task the ${bandName(b)} line raises.`;
       if (was && !want) { out.removes.push(b); words.push(`The ${bandName(b)} line opens an issue again.`); }
-      else if (want && (want !== was || String((st.filedAt || {})[b] || '') !== String((st.filedAt0 || {})[b] || ''))) { out.sets.push(b); const up = (st.filedAt || {})[b] ? safe(() => V().unitProcess(st.key, st.filedAt[b]), null) : null; words.push(`The ${bandName(b)} range triggers the task "${want}" at ${up ? up.tag : 'the plant'}.`); }
+      else if (want && (want !== was || String((st.filedAt || {})[b] || '') !== String((st.filedAt0 || {})[b] || '') || String((st.taskFlow || {})[b] || '') !== String((st.taskFlow0 || {})[b] || ''))) { out.sets.push(b); const up = (st.filedAt || {})[b] ? safe(() => V().unitProcess(st.key, st.filedAt[b]), null) : null; words.push(`The ${bandName(b)} range triggers the task "${want}" at ${up ? up.tag : 'the plant'}.`); }
     });
     out.text = words.join(' '); return out;
   }
@@ -1052,8 +1074,9 @@
     BANDS.forEach((b) => { const p = pb[b] || {}; st.cur[b] = num(p.value); st.base[b] = num(p.baseValue); st.lib[b] = num(p.libValue); st.form[b] = num(p.formValue); st.vals[b] = st.cur[b] == null ? '' : String(st.cur[b]); });
     prefillWhy(st, key, BANDS.map((b) => (pb[b] || {}).overrideId));
     st.other = otherSide(st); st.does = {}; st.taskName = {}; st.does0 = {}; st.taskName0 = {};
-    st.filedAt = {}; st.filedAt0 = {};
-    arr(safe(() => V().lineWork(key, { sensorId, dir }), [])).forEach((w) => { st.does[w.band] = st.does0[w.band] = 'task'; st.taskName[w.band] = st.taskName0[w.band] = w.name; st.filedAt[w.band] = st.filedAt0[w.band] = w.filed && w.filed.kind === 'up' ? w.filed.id : ''; });
+    st.filedAt = {}; st.filedAt0 = {}; st.taskFlow = {}; st.taskFlow0 = {};
+    { const al0 = arr(safe(() => V().alerts(key, { sensorId }), [])).find((x) => x.dir === dir) || null; st.alertId = al0 ? al0.id : null; st.flowSel = st.flowSel0 = (al0 && al0.flowId) || ''; }
+    arr(safe(() => V().lineWork(key, { sensorId, dir }), [])).forEach((w) => { st.does[w.band] = st.does0[w.band] = 'task'; st.taskName[w.band] = st.taskName0[w.band] = w.name; st.filedAt[w.band] = st.filedAt0[w.band] = w.filed && w.filed.kind === 'up' ? w.filed.id : ''; st.taskFlow[w.band] = st.taskFlow0[w.band] = w.flowId || ''; });
     return st;
   }
   function lsFromType(code, reading, dir0) {
@@ -1151,6 +1174,8 @@
         const t = ev.target; if (!LS || !t || !t.getAttribute) return; const b = t.getAttribute('data-band'); if (b && t.tagName !== 'BUTTON') LS.vals[b] = t.value;
         const d = t.getAttribute('data-does'); if (d) LS.does[d] = t.value; const tn = t.getAttribute('data-taskname'); if (tn) LS.taskName[tn] = t.value;
         const fd = t.getAttribute('data-filed'); if (fd) { LS.filedAt = LS.filedAt || {}; LS.filedAt[fd] = t.value; }
+        if (t.hasAttribute && t.hasAttribute('data-dflow')) LS.flowSel = t.value;
+        const tf = t.getAttribute('data-tflow'); if (tf) { LS.taskFlow = LS.taskFlow || {}; LS.taskFlow[tf] = t.value; }
         readWhy(el, LS); lsUpdate(el);
       };
       el.addEventListener('input', h); el.addEventListener('change', h); el._oBound = true;
@@ -1218,6 +1243,7 @@
       const tog = q1(row, '.o-tog'); if (tog) tog.setAttribute('aria-checked', String(st.vals[b] !== ''));
       const does = q1(row, '.o-band-d'); if (does) { setHidden(does, st.vals[b] === ''); setHidden(q1(row, '.o-trig-t'), st.does[b] !== 'task'); setHidden(q1(row, '.o-trig-i'), st.does[b] === 'task'); }
       setHidden(q1(row, '.o-band-e'), st.vals[b] !== '');
+      if (st.mode === 'instance') { const ds = q1(row, 'select[data-dflow]'); if (ds && ds.value !== String(st.flowSel || '')) ds.value = st.flowSel || ''; setHtml(q1(row, '.o-trig-how'), howHtml(st.flowSel)); setHtml(q1(row, '.o-trig-tl'), taskFlowLinks((st.taskFlow || {})[b])); }
       const back = q1(row, '.o-back'); if (back) { setHidden(back, !v.view[b].back); if (st.mode === 'instance') back.textContent = baseIsForm(st, b) ? 'Back to the plant graph value' : 'Back to the library value'; }
     });
     st.showWhy = st.showWhy || v.needsWhy;
@@ -1251,7 +1277,8 @@
     if (err) { st.err = err; if (el) lsUpdate(el); return false; }
     const what = changesText(st, bands); const tk = st.mode === 'instance' ? taskChanges(st, bands) : { removes: [], sets: [], text: '', err: null };
     if (tk.err) { st.err = tk.err; if (el) lsUpdate(el); return false; }
-    if (!what && !tk.text) { UI.closeSheet(); UI.toast('Nothing changed.'); return false; }
+    const flowChanged = st.mode === 'instance' && st.alertId && String(st.flowSel || '') !== String(st.flowSel0 || '');
+    if (!what && !tk.text && !flowChanged) { UI.closeSheet(); UI.toast('Nothing changed.'); return false; }
     if (st.mode === 'type') {
       const r = safe(() => V().editLib(st.code, { reading: st.reading, dir: st.dir, bands }), null);
       if (!r || !r.ok) { st.err = (r && r.error) || 'That did not save.'; if (el) lsUpdate(el); return false; }
@@ -1267,10 +1294,12 @@
       tk.removes.forEach((b) => safe(() => V().setLineWork(st.key, st.sensorId, st.dir, b, { name: st.taskName0[b] }), null));
       st.err = (r && r.error) || 'That did not save.'; if (r && r.needsReason) st.forceWhy = true; if (el) lsUpdate(el); return false;
     }
-    const bad = tk.sets.map((b) => ({ b, r: safe(() => V().setLineWork(st.key, st.sensorId, st.dir, b, { name: String(st.taskName[b]).trim(), filedAt: (st.filedAt || {})[b] || null }), null) })).find((x) => !x.r || !x.r.ok);
+    const bad = tk.sets.map((b) => ({ b, r: safe(() => V().setLineWork(st.key, st.sensorId, st.dir, b, { name: String(st.taskName[b]).trim(), filedAt: (st.filedAt || {})[b] || null, flowId: (st.taskFlow || {})[b] || null }), null) })).find((x) => !x.r || !x.r.ok);
     UI.closeSheet(); LS = null;
     const why = opts.reason === 'tuned' ? ' Tuned for this plant.' : opts.reason === 'fornow' ? ` For now, until ${fmtDay(Date.parse(st.until + 'T06:00:00+05:30'))}.` : '';
-    const tail = (tk.text ? ' ' + tk.text : '') + (bad ? ` ${bad.r ? bad.r.error : 'A task did not save.'}` : '');
+    let flowText = '';
+    if (flowChanged) { const fr = safe(() => V().setAlertFlow(st.key, st.alertId, st.flowSel || null), null); const fn = libFlows73().find((x) => x.id === st.flowSel); flowText = fr && fr.ok ? ` Its issues now start ${fn ? fn.name : 'the library\'s diagnostic flow'}.` : ` ${(fr && fr.error) || 'The diagnostic flow did not save.'}`; }
+    const tail = (tk.text ? ' ' + tk.text : '') + flowText + (bad ? ` ${bad.r ? bad.r.error : 'A task did not save.'}` : '');
     UI.toast(what ? `Limits saved on ${st.name}${st.tag ? ` (${st.tag})` : ''}: ${what}.${why}${tail}` : tail.trim());
     return undefined;
   }

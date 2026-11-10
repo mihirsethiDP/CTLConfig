@@ -660,7 +660,7 @@ window.V7 = (function () {
   }
   function alertView(key, a) {
     const s = sensorRaw(key, a.sensor) || {}; const e = alertEq(key, a); const dir = alertDir(key, a); const st = alertState(key, a.id); const P = PS(key); const rec = P.alerts[a.id] || {};
-    const bi = bandsInfo(key, a.sensor, dir) || { bands: norm4(null) }; const flow = withPlant(key, () => C.diagFor(a));
+    const bi = bandsInfo(key, a.sensor, dir) || { bands: norm4(null) }; const flow = diagOfAlert(key, a);
     const open = P.issues.find((i) => i.alertId === a.id && i.status !== 'closed');
     return { id: a.id, name: a.name, eqId: e ? e.id : null, eqTag: e ? e.tag : null, sensorId: a.sensor, sensorName: s.name, sensorTag: s.tag, unit: s.unit, kind: s.kind, dir, dirWord: dirWord(dir), state: st, stateLabel: LABELS.alertState[st], since: rec.since || null, trialSince: rec.trialSince || null, trialUntil: rec.trialUntil || null, bands: { ...bi.bands }, entryBand: BANDS.find((b) => bi.bands[b] != null) || null, hold: timingInfo(key, a.id, 'hold'), clear: timingInfo(key, a.id, 'clear'), emergencyFirst: true, flowId: flow ? flow.id : null, flowName: flow ? flow.name : null, issueTypeId: withPlant(key, () => C.alertIssue(a)) || null, fromLibrary: !!(e && libAlertFor(e.type, s.name, dir)), openIssueId: open ? open.id : null, gated: !!a.gate, clockText: 'Start by / fix by follow the severity', nextPhase: !!s.nextPhase };
   }
@@ -712,7 +712,7 @@ window.V7 = (function () {
   const ilog = (iss, at, text) => iss.log.push({ at, text });
   function openAlertIssue(key, a, f, terms, at, opts) {
     const P = PS(key); const s = sensorRaw(key, a.sensor); const e = alertEq(key, a); const commissioning = P.state === 'commissioning';
-    const flow = withPlant(key, () => C.diagFor(a));
+    const flow = diagOfAlert(key, a);
     const iss = { id: nextId('is'), plant: key, alertId: a.id, issueTypeId: withPlant(key, () => C.alertIssue(a)) || null, title: a.name, eqId: e ? e.id : null, sensorId: a.sensor, band: f.band, peak: f.peak, opened: at, closed: null, cleared: null, status: 'open', terms: { limit: terms.bands[f.band], band: f.band, hold: terms.hold, clear: terms.clear, dir: terms.dir, unit: terms.unit, bands: { ...terms.bands } }, commissioning, told: [], diag: { flowId: flow ? flow.id : null, path: [], causeId: null }, fix: { flowId: null, done: [] }, causedBy: null, falseAlarm: false, closedHow: null, short: null, log: [] };
     iss.told = tellList(key, f.band, commissioning, at);
     const v = fmtVal(f.peak, s.unit, s.kind), lim = fmtVal(terms.bands[f.band], s.unit, s.kind);
@@ -745,7 +745,7 @@ window.V7 = (function () {
     const at = lim && lim.bands ? lim.bands[lw.band] : null;
     const alert = dOf(key).alerts.find((a) => a.sensor === lw.sensorId && alertDir(key, a) === lw.dir) || null;
     const up = lw.filedAt ? upOf(key, lw.filedAt) : null; const filed = up ? { kind: 'up', id: up.id, tag: up.tag, text: up.tag } : { kind: 'plant', id: '', tag: '', text: 'the plant' };
-    return { filed, id: lw.id, name: lw.name, why: lw.why || '', sensorId: lw.sensorId, dir: lw.dir, band: lw.band, bandLabel: BAND_LABEL[lw.band], limit: at, limitText: at == null ? '' : fmtVal(at, s ? s.unit : '', s ? s.kind : ''), eqId: e ? e.id : null, eqTag: e ? e.tag : '', reading: s ? s.name : '', unit: s ? s.unit || '' : '', kind: s ? s.kind || '' : '', alertId: alert ? alert.id : null, alertName: alert ? alert.name : '',
+    return { filed, id: lw.id, name: lw.name, why: lw.why || '', sensorId: lw.sensorId, dir: lw.dir, band: lw.band, bandLabel: BAND_LABEL[lw.band], limit: at, limitText: at == null ? '' : fmtVal(at, s ? s.unit : '', s ? s.kind : ''), eqId: e ? e.id : null, eqTag: e ? e.tag : '', reading: s ? s.name : '', unit: s ? s.unit || '' : '', kind: s ? s.kind || '' : '', alertId: alert ? alert.id : null, alertName: alert ? alert.name : '', flowId: lw.flowId || null, flowName: lw.flowId && libFlow(lw.flowId) ? libFlow(lw.flowId).name : '',
       whenText: `When ${e ? e.tag + ' ' : ''}${s ? s.name : 'the reading'} ${lw.dir === 'below' ? 'falls below' : 'rises above'} ${at == null ? 'its line' : fmtVal(at, s ? s.unit : '', s ? s.kind : '')} (${BAND_LABEL[lw.band]})`, at: lw.at || null, by: lw.by || null };
   }
   function lineWork(key, opts) { const o = opts || {}; return lineWorkOf(key).filter((lw) => (!o.sensorId || lw.sensorId === o.sensorId) && (!o.dir || lw.dir === o.dir) && (!o.eqId || lineWorkView(key, lw).eqId === o.eqId)).map((lw) => lineWorkView(key, lw)); }
@@ -765,8 +765,9 @@ window.V7 = (function () {
       touch(); persist(); return { ok: true, changed: true };
     }
     const lim = bandsInfo(key, sensorId, dir); if (!lim || !lim.bands || lim.bands[band] == null) return { ok: false, error: `${s.name} has no ${BAND_LABEL[band]} line ${dir === 'below' ? 'below' : 'above'}. Set the line first.` };
-    if (i >= 0) { if (list[i].name === name && (list[i].filedAt || null) === filedAt) return { ok: true, changed: false }; const old = list[i].name; list[i].name = name; list[i].filedAt = filedAt; if (opts.why != null) list[i].why = String(opts.why); addActivity(now(), key, `Renamed the task the ${BAND_LABEL[band]} line on ${e ? e.tag + ' ' : ''}${s.name} raises: "${old}" → "${name}"`, 'config'); touch(); persist(); return { ok: true, changed: true, id: list[i].id }; }
-    const lw = { id: nextId('lw'), name, sensorId, dir, band, filedAt, why: opts && opts.why ? String(opts.why) : '', at: now(), by: ME };
+    const flowId = opts && opts.flowId !== undefined ? (opts.flowId || null) : (i >= 0 ? list[i].flowId || null : null);
+    if (i >= 0) { if (list[i].name === name && (list[i].filedAt || null) === filedAt && (list[i].flowId || null) === flowId) return { ok: true, changed: false }; list[i].flowId = flowId; const old = list[i].name; list[i].name = name; list[i].filedAt = filedAt; if (opts.why != null) list[i].why = String(opts.why); addActivity(now(), key, `Renamed the task the ${BAND_LABEL[band]} line on ${e ? e.tag + ' ' : ''}${s.name} raises: "${old}" → "${name}"`, 'config'); touch(); persist(); return { ok: true, changed: true, id: list[i].id }; }
+    const lw = { id: nextId('lw'), name, sensorId, dir, band, filedAt, flowId, why: opts && opts.why ? String(opts.why) : '', at: now(), by: ME };
     list.push(lw); if (P.state === 'live') P.tasks[lw.id] = { due: null, lastDone: null, status: 'armed', done: [], history: [], startedAt: null };
     addActivity(now(), key, `The ${BAND_LABEL[band]} line on ${e ? e.tag + ' ' : ''}${s.name} now raises the task "${name}" at ${whereText} instead of an issue`, 'config');
     touch(); persist(); return { ok: true, changed: true, id: lw.id };
@@ -869,7 +870,7 @@ window.V7 = (function () {
         out.push({ id: sc.id, kind: 'single', name: sc.name, workType: sc.workType, typeName: e ? e.type : null, code: e ? e.dbType || e.code : null, scheduleIds: [sc.id], eqIds: e ? [e.id] : [], plantLevel: !e, sc });
       });
       /* v7: condition-based work is filed at the plant (eqIds empty: it is no equipment's task); its line names the equipment it reads */
-      lineWorkOf(key).forEach((lw) => { const w = lineWorkView(key, lw); out.push({ id: lw.id, kind: 'line', name: lw.name, workType: 'condition', workLabel: 'Condition-based work', typeName: null, code: null, scheduleIds: [], eqIds: [], tags: [], plantLevel: true, upId: w.filed.kind === 'up' ? w.filed.id : null, filed: w.filed, toConfirm: false, line: `${lw.name} · ${w.filed.text}`, shared: null, every: null, everyText: w.whenText, basis: 'condition', intervalH: null, perDay: 0, source: null, flowId: null, generalTaskId: null, anchor: 'line', statutory: false, from: w, sc: null }); });
+      lineWorkOf(key).forEach((lw) => { const w = lineWorkView(key, lw); out.push({ id: lw.id, kind: 'line', name: lw.name, workType: 'condition', workLabel: 'Condition-based work', typeName: null, code: null, scheduleIds: [], eqIds: [], tags: [], plantLevel: true, upId: w.filed.kind === 'up' ? w.filed.id : null, filed: w.filed, toConfirm: false, line: `${lw.name} · ${w.filed.text}`, shared: null, every: null, everyText: w.whenText, basis: 'condition', intervalH: null, perDay: 0, source: null, flowId: lw.flowId || null, generalTaskId: null, anchor: 'line', statutory: false, from: w, sc: null }); });
       return out.map((v) => {
         if (v.kind === 'line') return v;
         const sc = v.sc; const n = v.eqIds.length; const I = intervalH(sc, rateOfEq(eqRaw(key, v.eqIds[0])));
@@ -974,6 +975,16 @@ window.V7 = (function () {
   const issue = (key, id) => issueRaw(key, id);
   const libFlow = (id) => (id ? (C.S.lib && C.S.lib.flows.find((f) => f.id === id)) || ((window.SEED && window.SEED.flows) || []).find((f) => f.id === id) || null : null);
   const flowOf = (id) => libFlow(id);
+  /* v7/3: the diagnostic flow an alert's issues start: the plant's own pick, else the library's */
+  const diagOfAlert = (key, a) => (a && a.flowPick && libFlow(a.flowPick)) || withPlant(key, () => C.diagFor(a));
+  function setAlertFlow(key, alertId, flowId) {
+    const a = alertRaw(key, alertId); if (!a) return { ok: false, error: 'No such alert.' }; const f = flowId ? libFlow(flowId) : null;
+    if (flowId && (!f || f.kind !== 'diagnostic')) return { ok: false, error: 'Pick a diagnostic flow.' };
+    const was = diagOfAlert(key, a); if ((was ? was.id : null) === (f ? f.id : null)) return { ok: true, changed: false };
+    if (f) a.flowPick = f.id; else delete a.flowPick;
+    addActivity(now(), key, `${a.name}: its issues now start ${f ? `the diagnostic flow ${f.name}` : 'the library\'s diagnostic flow'}${was ? ` (was ${was.name})` : ''}`, 'config');
+    touch(); persist(); return { ok: true, changed: true };
+  }
   const causeOf = (id) => (id ? (C.S.lib && C.S.lib.causes.find((c) => c.id === id)) || ((window.SEED && window.SEED.causes) || []).find((c) => c.id === id) || null : null);
   function fixFlowFor(causeId, sensorName) { const c = causeOf(causeId); if (!c) return null; if (c.fix && libFlow(c.fix)) return libFlow(c.fix); if (c.sensorFault) { const id = (window.CAL_FLOWS || {})[sensorName] || window.CAL_FLOW_DEFAULT; return libFlow(id); } return null; }
   function diagFor(key, iss) { const i = typeof iss === 'string' ? issueRaw(key, iss) : iss; if (!i) return null; return libFlow(i.diag && i.diag.flowId); }
@@ -1884,7 +1895,7 @@ window.V7 = (function () {
     checklist, noLimitsYet, eachOf, goLivePreview, goLive, returnToCommissioning,
     issues, issue, tasks, task, report, answer, chooseCause, diagStep, startFix, fixStep, verify, close, startTask, doTaskStep, doneTask, setLastDone,
     flowOf, diagFor, causeOf, fixFlowFor, linkedTask, taskForGeneral, issueTypes, issueTerms, reportSensorFault, causesFor,
-    taskGroups, tasksPerDay, coverage, lineWork, setLineWork, structure: (key) => structOf(key), unitProcess: upOf, controlGroupOf: cgOfEq,
+    taskGroups, tasksPerDay, coverage, lineWork, setLineWork, setAlertFlow, structure: (key) => structOf(key), unitProcess: upOf, controlGroupOf: cgOfEq,
     libTypes, libType, libVersion, libDraft, editLib, discardDraft, whereItLands, publish,
     activity, log,
     LABELS, BANDS, fmtVal, limitsText, sevClock, bandLabel: (b) => BAND_LABEL[b] || '', everyText, plantName,
