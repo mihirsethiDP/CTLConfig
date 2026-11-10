@@ -166,6 +166,42 @@
     o = o || {};
     return U.btn(o.label || 'Report a problem', { act: 'work:report', data: { plant: key, eq: eqId || null }, kind: o.kind || 'secondary', small: !!o.small, title: 'Open an issue for something a person saw, with its diagnostic' });
   }
+  /* v7/3: what can open an issue at this plant, as it is set up — every alert on the equipment with its state, the alerts the
+     library proposes that nobody has decided, and the ones that cannot be used because the plant graph sends no such reading.
+     One row per alert and equipment type. This is what the Issues tab shows while a plant is being set up. */
+  function issueSetup(key, eqF) {
+    const v = V(); const live = call(() => v.state(key), '') === 'live';
+    const alerts = arr(call(() => v.alerts(key), [])).filter((a) => !a.nextPhase && (!eqF || a.eqId === eqF));
+    const props = arr(call(() => v.libraryReview(key), [])).flatMap((r) => arr(r.proposals)).filter((p) => p.kind === 'alert' && !p.decided && (!eqF || p.eqId === eqF));
+    const waiting = props.filter((p) => !p.blockedBy); const blocked = props.filter((p) => p.blockedBy);
+    const sub = live ? 'Every alert below opens an issue when its reading crosses a limit.' : 'What will open an issue once the plant is Live. Until then nothing opens: alerts On trial only count trial firings.';
+    const libBtn = waiting.length ? U.btn(`Decide the ${waiting.length} proposed`, { href: `${base(key)}/library`, kind: 'primary', small: true }) : '';
+    if (!alerts.length && !props.length) return U.section('Issues this plant can raise', U.empty('Nothing here can open an issue yet. Alerts arrive from the library for each piece of equipment that sends a reading.'), { sub, cls: 'wk-setup' });
+    const typeOf = (eqId) => { const e = call(() => v.eq(key, eqId), null); return (e && e.type) || ''; };
+    const G = {}; const order = [];
+    const add = (name, type, item) => { const k = name + '|' + type; if (!G[k]) { G[k] = { name, type, items: [] }; order.push(G[k]); } G[k].items.push(item); };
+    alerts.forEach((a) => add(String(a.name).replace(/\s+\u2014\s+.*$/, ''), typeOf(a.eqId), { state: a.state, tag: a.eqTag, eqId: a.eqId, href: hrefAlert(key, a.id), when: call(() => v.limitsText(a.bands, a.dir, a.unit, a.kind), ''), then: a.flowName ? `Diagnostic flow: ${flowName({ name: a.flowName })}` : 'No diagnostic flow yet' }));
+    waiting.forEach((p) => add(p.name, p.typeName || typeOf(p.eqId), { state: 'proposed', tag: p.tag, eqId: p.eqId, href: hrefEq(key, p.eqId), when: p.detail || '', then: 'The diagnostic flow the library gives it', soft: true }));
+    blocked.forEach((p) => add(p.name, p.typeName || typeOf(p.eqId), { state: 'blocked', tag: p.tag, eqId: p.eqId, href: hrefEq(key, p.eqId), why: p.blockedBy }));
+    const LABEL = { proposed: 'Proposed', draft: 'Draft', trial: 'On trial', on: 'On', off: 'Off', blocked: 'Can\u2019t be used yet' }; const TONE = { proposed: 'warn', blocked: 'muted', on: 'ok', off: 'muted' }; const SEQ = ['proposed', 'draft', 'trial', 'on', 'off', 'blocked'];
+    const uniq = (xs) => [...new Set(xs.filter(Boolean))];
+    const usable = order.filter((g) => g.items.some((i) => i.state !== 'blocked')); const dead = order.filter((g) => g.items.every((i) => i.state === 'blocked'));
+    const rank = (g) => (g.items.some((i) => i.state === 'proposed') ? 0 : 1);
+    usable.sort((a, b) => rank(a) - rank(b) || a.type.localeCompare(b.type) || a.name.localeCompare(b.name));
+    const tagLinks = (items0, n) => { const seen = new Set(); const items = items0.filter((i) => (seen.has(i.tag) ? false : seen.add(i.tag))); return tagLinksOf(items, n); };
+    const tagLinksOf = (items, n) => items.slice(0, n).map((i) => `<a class="mono" href="${esc(i.href)}">${esc(i.tag)}</a>`).join(' ') + (items.length > n ? ` <span class="muted">and ${items.length - n} more</span>` : '');
+    const rows = usable.map((g) => {
+      const act = g.items.filter((i) => i.state !== 'blocked'); const whens = uniq(act.map((i) => i.when)); const firm = act.filter((i) => !i.soft); const thens = uniq((firm.length ? firm : act).map((i) => i.then));
+      return { n: `<b>${esc(g.name)}</b><div class="muted small">${esc(g.type)}</div>`, e: tagLinks(act, 6),
+        s: SEQ.filter((s) => g.items.some((i) => i.state === s)).map((s) => { const c = g.items.filter((i) => i.state === s).length; return U.chip(`${LABEL[s]}${g.items.length > 1 ? ' \u00b7 ' + c : ''}`, { tone: TONE[s] || '' }); }).join(' '),
+        w: whens.length === 1 ? esc(whens[0]) : whens.length ? '<span class="muted">Set on each piece of equipment</span>' : '<span class="muted">No limits yet</span>', t: thens.length === 1 ? esc(thens[0]) : '<span class="muted">Set on each alert</span>' };
+    });
+    const table = rows.length ? U.table({ cols: [{ label: 'Issue', key: 'n' }, { label: 'Equipment', key: 'e' }, { label: 'State', key: 's' }, { label: 'Opens when', key: 'w' }, { label: 'Then', key: 't' }], rows, cls: 'wk-setup-t' }) : U.empty('No alert here can be used yet: the plant graph sends none of the readings they need.');
+    const nSet = alerts.length; const bits = [nSet ? `${plural(nSet, 'alert')} set up` : '', waiting.length ? `${waiting.length} proposed, waiting for a decision` : '', blocked.length ? `${blocked.length} can\u2019t be used yet` : ''].filter(Boolean);
+    const why = {}; blocked.forEach((p) => { (why[p.blockedBy] = why[p.blockedBy] || []).push(p); });
+    const deadHtml = blocked.length ? `<details class="wk-setup-more"><summary>${blocked.length} can\u2019t be used yet, and why</summary>${Object.keys(why).map((k) => { const names = uniq(why[k].map((p) => p.name)); return `<p><b>${esc(k)}</b> \u00b7 ${plural(why[k].length, 'alert')} on ${plural(uniq(why[k].map((p) => p.eqId)).length, 'piece')} of equipment<br><span class="muted">${esc(names.slice(0, 8).join(', '))}${names.length > 8 ? ` and ${names.length - 8} more` : ''}</span></p>`; }).join('')}<p class="muted small">Add the sensor in the plant graph and read it again, and these arrive as proposed.</p></details>` : '';
+    return U.section('Issues this plant can raise', `<p class="wk-setup-sum">${esc(bits.join(' \u00b7 '))}</p>${table}${deadHtml}`, { sub, actions: [libBtn], cls: 'wk-setup' });
+  }
   function issuesPage(params) {
     const key = params.plant; const p = plantOf(key); if (!p) return noPlant();
     const q = params._q || {};
@@ -195,7 +231,7 @@
     let body;
     if (!all.length) {
       const none = eqF ? `No issues on ${tagOf(key, eqF)}.` : p.state === 'commissioning' ? 'No issues yet.' : 'No issues yet. Move the story clock on to see alerts open them.';
-      return frame(key, 'issues', `<div class="wk">${U.section('Issues', '', { sub: p.state === 'commissioning' ? 'An issue is what opens once the plant is Live. During Commissioning no alert opens one; a person can report a problem at any time.' : 'An issue is what opens when an alert fires, or when a person reports a problem.', actions: [reportButton(key, eqF, { kind: 'primary' })] })}${p.state === 'commissioning' ? lead : ''}${eqF ? filtersHtml : ''}<div class="wk-list">${U.empty(none)}</div></div>`);
+      return frame(key, 'issues', `<div class="wk">${U.section('Issues', '', { sub: p.state === 'commissioning' ? 'An issue is what opens once the plant is Live. During Commissioning no alert opens one; a person can report a problem at any time.' : 'An issue is what opens when an alert fires, or when a person reports a problem.', actions: [reportButton(key, eqF, { kind: 'primary' })] })}${eqF ? filtersHtml : ''}${p.state === 'commissioning' ? issueSetup(key, eqF) + `<p class="p7-quietline">No issue has opened or been reported at this plant.</p>` : `<div class="wk-list">${U.empty(none)}</div>` + issueSetup(key, eqF)}</div>`);
     }
     const listOf = (list, empty, limit) => {
       if (!list.length) return U.empty(empty);
@@ -210,7 +246,7 @@
       body = listOf(groups[show], EMPTY[show], show === 'closed' || show === 'false' ? 25 : 0);
     }
     const head = U.section('Issues', '', { sub: p.state === 'commissioning' ? 'An issue is what opens once the plant is Live. During Commissioning no alert opens one; a person can report a problem at any time.' : 'An issue is what opens when an alert fires, or when a person reports a problem.', actions: [reportButton(key, eqF, { kind: 'primary' })] });
-    return frame(key, 'issues', `<div class="wk">${head}${lead}${filtersHtml}<div class="wk-list">${body}</div></div>`);
+    return frame(key, 'issues', `<div class="wk">${head}${lead}${filtersHtml}<div class="wk-list">${body}</div>${issueSetup(key, eqF)}</div>`);
   }
 
   /* ── one issue ─────────────────────────────────────────────────────────────────────────────────────────── */

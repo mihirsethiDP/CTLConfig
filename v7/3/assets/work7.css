@@ -123,3 +123,13 @@
   .wk-q, .wk-read label { font-size: 16px; }
   .wk-ans .btn { flex: 1 1 0; }
 }
+
+/* v7/3: the Issues tab's set-up list */
+.wk-setup { margin-top: 22px; }
+.wk-setup-sum { margin: 0 0 10px; color: var(--ink-2); font-size: 13.5px; }
+.wk-setup-t td { vertical-align: top; }
+.wk-setup-t a.mono { padding: 1px 5px; border-radius: 4px; background: var(--surface-3, var(--surface-2)); white-space: nowrap; text-decoration: none; line-height: 1.9; }
+.wk-setup-more { margin: 12px 0 0; border: 1px solid var(--line); border-radius: 8px; padding: 0 12px; }
+.wk-setup-more > summary { cursor: pointer; padding: 9px 0; font-weight: 500; color: var(--accent-strong); }
+.wk-setup-more[open] { padding-bottom: 10px; }
+.wk-setup-more p { margin: 0 0 8px; font-size: 13.5px; }
