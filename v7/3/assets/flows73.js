@@ -76,7 +76,7 @@
   /* ── one flow: read ───────────────────────────────────────────────────────────────────────────────── */
   const stepNo = (f, id) => { const i = arr(f.steps).findIndex((s) => String(s.id) === String(id)); return i < 0 ? null : i + 1; };
   function outcomeHtml(f, a) {
-    if (!a || a.t === 'open') return '<span class="fl-out fl-open">Not known yet</span>';
+    if (!a || a.t === 'open') return '<span class="fl-out fl-open">Ends here: the person says what they found</span>';
     if (a.t === 'step') { const n = stepNo(f, a.id); return n ? `<span class="fl-out fl-next">Question ${n}</span>` : '<span class="fl-out fl-bad">A question that was removed</span>'; }
     const c = causeById(a.id); const fx = c && c.fix ? flowById(c.fix) : null;
     return `<span class="fl-out fl-cause"><b>Root cause</b> ${esc(c ? c.name : 'not found')}</span>${fx ? `<a class="fl-fix" href="#/flows/${esc(enc(fx.id))}">Fix: ${esc(fx.name)} →</a>` : '<span class="fl-fix muted">No fix flow yet</span>'}`;
@@ -90,7 +90,7 @@
     steps.forEach((s, i) => {
       if (!String(s.text || '').trim()) out.push(`Question ${i + 1} has no text.`);
       if (!reach.has(String(s.id))) out.push(`Question ${i + 1} is never reached: no answer leads to it.`);
-      Object.entries(s.answers || {}).forEach(([k, a]) => { if (!a || a.t === 'open') out.push(`Question ${i + 1}, "${k}": not known yet.`); else if (a.t === 'step' && !stepNo(f, a.id)) out.push(`Question ${i + 1}, "${k}" leads to a question that was removed.`); else if (a.t === 'cause' && !causeById(a.id)) out.push(`Question ${i + 1}, "${k}" names a root cause that is not in the library.`); });
+      Object.entries(s.answers || {}).forEach(([k, a]) => { /* an answer that ends the flow with "say what you found" is a valid ending, not something left to finish */ if (!a || a.t === 'open') return; if (a.t === 'step' && !stepNo(f, a.id)) out.push(`Question ${i + 1}, "${k}" leads to a question that was removed.`); else if (a.t === 'cause' && !causeById(a.id)) out.push(`Question ${i + 1}, "${k}" names a root cause that is not in the library.`); });
     });
     return out;
   }
@@ -112,7 +112,7 @@
     } else if (TRY.at.t === 'cause') {
       const c = causeById(TRY.at.id); const fx = c && c.fix ? flowById(c.fix) : null;
       now = `<div class="fl-land"><span class="fl-land-k">Root cause</span><b>${esc(c ? c.name : 'not found')}</b>${fx ? `<a href="#/flows/${esc(enc(fx.id))}">Next: ${esc(fx.name)} →</a>` : '<span class="muted">No fix flow yet</span>'}</div>`;
-    } else now = '<div class="fl-land"><span class="fl-land-k">Not known yet</span><b>This answer leads nowhere yet.</b><span class="muted">The person is asked to say what they found.</span></div>';
+    } else now = '<div class="fl-land"><span class="fl-land-k">The flow ends here</span><b>No root cause from these questions.</b><span class="muted">The person is asked to say what they found.</span></div>';
     return card({ title: 'Try it', sub: 'Answer as an operator would. Nothing is saved.', body: trail + now, actions: TRY.path.length ? [btn('Start again', { act: 'fl:retry', data: { id: f.id }, small: true, kind: 'ghost' })] : [], cls: 'fl-try' });
   }
   function flowPage(params) {
@@ -145,7 +145,7 @@
   function answerEdit(f, s, k) {
     const a = (s.answers || {})[k] || { t: 'open' }; const steps = arr(f.steps);
     const to = a.t === 'step' ? `step:${a.id}` : a.t === 'cause' ? 'cause' : 'open';
-    const opts = steps.filter((x) => x.id !== s.id).map((x) => [`step:${x.id}`, `Go to question ${stepNo(f, x.id)}: ${short(x.text || 'no text yet', 44)}`]).concat([['cause', 'Land on a root cause'], ['open', 'Not known yet']]);
+    const opts = steps.filter((x) => x.id !== s.id).map((x) => [`step:${x.id}`, `Go to question ${stepNo(f, x.id)}: ${short(x.text || 'no text yet', 44)}`]).concat([['cause', 'Land on a root cause'], ['open', 'End here: the person says what they found']]);
     let extra = '';
     if (a.t === 'cause') {
       const c = causeById(a.id); const fixes = flows().filter((x) => x.use === 'fix'); const types = arr(f.forTypes);

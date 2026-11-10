@@ -1,6 +1,6 @@
 /* v7/3 · flag73.js — one visible flag for anything incomplete, with what is missing. An item is incomplete when a person still
    has to finish it before it works as set up: an alert with no limits or no diagnostic flow, a task with no steps, a flow with
-   questions that lead nowhere or a root cause with no fix flow, equipment not placed in the structure, a structure not confirmed,
+   a question nothing reaches or a root cause with no fix flow (an answer that ends the flow is fine), equipment not placed in the structure, a structure not confirmed,
    library items nobody has decided. The same test feeds the flag on the item, the mark on its tab and the count in the top bar.
    window.V7FLAG73 = { chip(reasons, {small}) · flow(f) · alert(key, al) · task(key, t) · equipment(key, eqId) · tabFlags(key)
    · flowsCount() } — every reasons list is plain sentences; an empty list means complete. */

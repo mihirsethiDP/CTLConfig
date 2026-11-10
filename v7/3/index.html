@@ -185,6 +185,7 @@
   <li><b>Flows.</b> The top bar has a Flows page with the diagnostic flows, the fix flows and the task flows. Open one to read it, try it by answering as an operator would, or edit it: add, reorder and remove steps, send each answer to another question or to a root cause, and give a root cause its fix flow. The page lists what is left to finish before you save. <a href="prototype.html#/flows">Open Flows</a>.</li>
   <li><b>Structure.</b> Each plant has a Structure tab: its unit processes by stage, the equipment that takes part in each, its control groups, and the equipment not placed yet. <a href="prototype.html#/p/digitalpaani/structure">DigitalPaani's proposed structure</a>.</li>
   <li><b>What each range triggers.</b> On a reading's limits, the bar has four handles and each range has a Triggers slot: an issue with its diagnostic flow, or a task with its steps. Either one sits on that reading's equipment. <a href="prototype.html#/p/manesar/eq/bl1">Open BL-1 and choose Change limits</a>.</li>
+  <li><b>Test a plant graph.</b> Two readers for any plant-graph JSON. The first finds every piece of equipment and its database equipment type, and lists type codes the database does not have. The second finds the sensors on that equipment, from the same file or from a separate list. Load the result and it becomes the plant being set up, so the whole flow can be walked on it. <a href="prototype.html#/ingest">Open Test a plant graph</a>.</li>
 </ul>
 
 <h2 id="cards"><span class="n">4</span>Every card</h2>
@@ -192,7 +193,7 @@
 <div id="dec-list"><noscript><p class="callout warn">The decision cards are rendered from <code>assets/decisions7.js</code> and need JavaScript.</p></noscript></div>
 
 <h2 id="run"><span class="n">5</span>How to run and reset</h2>
-<p>Open <a href="prototype.html#/plants">prototype.html</a>. v7/3 keeps its story in its own browser storage (<code>ctl73.estate.v1</code>, <code>ctl73.overlay.v1</code>), so playing it never changes v7/1. "Reset the story" in the top bar starts it again, and puts every flow back as the library shipped it. Your own calls in v7/3 are kept under <code>ctl73.decisions</code>. The calls made live in <code>assets/calls73.js</code>. Checks: <code>node tests/smoke.js</code> and <code>node tests/v73.test.js</code> from this folder.</p>
+<p>Open <a href="prototype.html#/plants">prototype.html</a>. v7/3 keeps its story in its own browser storage (<code>ctl73.estate.v1</code>, <code>ctl73.overlay.v1</code>), so playing it never changes v7/1. "Reset the story" in the top bar starts it again, and puts every flow back as the library shipped it. Your own calls in v7/3 are kept under <code>ctl73.decisions</code>, and a plant graph you loaded under <code>ctl73.ingest</code>. The calls made live in <code>assets/calls73.js</code>. Checks: <code>node tests/smoke.js</code>, <code>node tests/v73.test.js</code> and <code>node tests/ingest73.test.js</code> from this folder.</p>
 
 </article>
 </div></div>

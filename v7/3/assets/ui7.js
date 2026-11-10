@@ -777,7 +777,7 @@
   function routes() { return ROUTES.slice(); }
 
   /* ── shell ─────────────────────────────────────────────────────────────────────────────────────────────── */
-  const NAV = [['All Plants', '#/plants', /^(plants|p)$/], ['Library', '#/library', /^library$/], ['Flows', '#/flows', /^flows$/], ['Differences', '#/differences', /^differences$/], ['Activity', '#/activity', /^activity$/], ['Decisions', '#/decisions', /^decisions$/]];
+  const NAV = [['All Plants', '#/plants', /^(plants|p)$/], ['Library', '#/library', /^library$/], ['Flows', '#/flows', /^flows$/], ['Test a plant graph', '#/ingest', /^ingest$/], ['Differences', '#/differences', /^differences$/], ['Activity', '#/activity', /^activity$/], ['Decisions', '#/decisions', /^decisions$/]];
   function navHtml(path) {
     const first = String(path || '').split('/')[0] || 'plants';
     const diffs = /^p\/[^/]+\/differences/.test(path || '');
