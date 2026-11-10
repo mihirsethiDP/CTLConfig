@@ -32,7 +32,7 @@ window.V7_CALLS_MADE = {
   D25: { opt: 2, by: 'Alexander', atText: 'Tue 3 Nov' },
   D27: { opt: 0, by: 'Alexander', atText: 'Tue 3 Nov' },
   /* the team's feedback on the prototypes, taken up by Mihir */
-  D28: { opt: 1, by: 'Mihir', atText: 'Thu 5 Nov', note: 'Settled.' },
+  D28: { opt: 'other', by: 'Mihir', atText: 'Tue 10 Nov', note: 'Any task or issue a reading triggers sits on that equipment. No separate condition-based section.' },
   D29: { opt: 1, by: 'Mihir', atText: 'Thu 5 Nov', note: 'Four handles, and a slot per range for what it triggers.' },
 };
 window.V7_BUILT73 = {
@@ -48,7 +48,7 @@ window.V7_BUILT73 = {
   D10: ['Parked', 'Not in focus for now. The phone card and the equipment page stay as v7/1 has them.'],
   D11: ['Partly built', 'A library change never replaces a value a plant changed itself, safety changes included. Not built yet: plants applying an update themselves; followers still change when the library publishes, with a dated note.'],
   D26: ['Built', "Each piece of equipment keeps its type's criticality; a plant changes it with a reason."],
-  D28: ['Built', 'A range on an equipment alert triggers an issue or a task. The task is filed at a unit process the equipment takes part in, or at the plant.'],
-  D29: ['Built', 'The limits sheet has the bar with four handles, and each range has a "Triggers" slot: an issue with its diagnostic flow, or a task with where it is filed.'],
+  D28: ['Built', 'A range on a reading triggers an issue or a task, and both sit on that reading\'s equipment. The Tasks tabs list such a task with the equipment\'s other tasks; there is no separate condition-based section.'],
+  D29: ['Built', 'The limits sheet has the bar with four handles, and each range has a "Triggers" slot: an issue with its diagnostic flow, or a task with its steps.'],
 };
 window.V7_DEC_KEY = 'ctl73.decisions';

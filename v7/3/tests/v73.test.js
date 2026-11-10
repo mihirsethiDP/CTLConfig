@@ -32,12 +32,12 @@ check('D7', 'Vedanta: the blower changeover is one task for the control group Bl
 check('D3', 'Vedanta (a new plant): its pH Emergency on Wed 28 Oct opened no issue and is kept as a trial firing', V.issues('vedanta').length === 0 && V.trialStats('vedanta', 'a_3f').recorded.firings.some((f) => f.band === 'emergency' && V.fmt(f.start) === 'Wed 28 Oct, 15:10'));
 check('D3', 'Manesar (Live) still opens issues', V.issues('manesar').length > 0);
 
-/* D28: where condition-based work is filed */
+/* D28: a task a reading triggers sits on that reading's equipment, like the issue */
 const lw = V.lineWork('manesar');
-check('D28', 'BL-1\'s Caution range triggers a task at the plant; AT-1\'s MLSS range one at AT-1', lw.find((w) => w.sensorId === 'bl1_amps').filed.kind === 'plant' && lw.find((w) => w.sensorId === 'at1_mlss').filed.id === 'at1');
-check('D28', 'AT-1\'s tasks list it; BL-1\'s do not', V.tasks('manesar', { eqId: 'at1' }).some((t) => t.id === 'lw_at1_sludge') && !V.tasks('manesar', { eqId: 'bl1' }).some((t) => t.kind === 'line'));
-const mv = V.setLineWork('manesar', 'bl1_amps', 'above', 'caution', { name: 'Clean the blower intake filters', filedAt: 'at2' });
-check('D28', 'a task can move to a unit process the equipment serves, never onto equipment', mv.ok && V.task('manesar', 'lw_bl1_filter').upId === 'at2' && !V.setLineWork('manesar', 'bl1_amps', 'above', 'caution', { name: 'x', filedAt: 'bl1' }).ok);
+check('D28', 'BL-1\'s Caution range triggers a task on BL-1; AT-1\'s MLSS range one on AT-1', lw.find((w) => w.sensorId === 'bl1_amps').filed.id === 'bl1' && lw.find((w) => w.sensorId === 'at1_mlss').filed.id === 'at1');
+check('D28', 'each equipment\'s tasks list its own; neither is a task of the plant', V.tasks('manesar', { eqId: 'at1' }).some((t) => t.id === 'lw_at1_sludge') && V.tasks('manesar', { eqId: 'bl1' }).some((t) => t.id === 'lw_bl1_filter') && V.tasks('manesar').filter((t) => t.kind === 'line').every((t) => !t.plantLevel && t.eqIds.length === 1));
+const mv = V.setLineWork('vedanta', 'v_p1_AMP', 'above', 'caution', { name: 'Check the pump strainer' });
+check('D28', 'a new one on P-1\'s motor current sits on P-1', mv.ok && V.lineWork('vedanta', { sensorId: 'v_p1_AMP' })[0].filed.tag === 'P-1' && V.tasks('vedanta', { eqId: V.lineWork('vedanta', { sensorId: 'v_p1_AMP' })[0].eqId }).some((t) => t.name === 'Check the pump strainer'), mv.error);
 const adv = V.advance(24 * 60);
 check('D28', 'BL-1 crossing 44 A raises the task and opens no BL-1 issue', adv.tasksDue.some((x) => x.id === 'lw_bl1_filter') && !adv.opened.some((o) => /BL-1/.test(o.title)));
 

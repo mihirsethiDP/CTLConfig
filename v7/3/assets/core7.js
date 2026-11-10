@@ -744,7 +744,8 @@ window.V7 = (function () {
     const s = sensorRaw(key, lw.sensorId); const e = s ? homeOf(key, s) : null; const lim = bandsInfo(key, lw.sensorId, lw.dir);
     const at = lim && lim.bands ? lim.bands[lw.band] : null;
     const alert = dOf(key).alerts.find((a) => a.sensor === lw.sensorId && alertDir(key, a) === lw.dir) || null;
-    const up = lw.filedAt ? upOf(key, lw.filedAt) : null; const filed = up ? { kind: 'up', id: up.id, tag: up.tag, text: up.tag } : { kind: 'plant', id: '', tag: '', text: 'the plant' };
+    /* v7/3: what a reading triggers sits on that reading's equipment, task and issue alike */
+    const filed = e ? { kind: 'eq', id: e.id, tag: e.tag, text: e.tag } : { kind: 'plant', id: '', tag: '', text: 'the plant' };
     return { filed, id: lw.id, name: lw.name, why: lw.why || '', sensorId: lw.sensorId, dir: lw.dir, band: lw.band, bandLabel: BAND_LABEL[lw.band], limit: at, limitText: at == null ? '' : fmtVal(at, s ? s.unit : '', s ? s.kind : ''), eqId: e ? e.id : null, eqTag: e ? e.tag : '', reading: s ? s.name : '', unit: s ? s.unit || '' : '', kind: s ? s.kind || '' : '', alertId: alert ? alert.id : null, alertName: alert ? alert.name : '', flowId: lw.flowId || null, flowName: lw.flowId && libFlow(lw.flowId) ? libFlow(lw.flowId).name : '',
       whenText: `When ${e ? e.tag + ' ' : ''}${s ? s.name : 'the reading'} ${lw.dir === 'below' ? 'falls below' : 'rises above'} ${at == null ? 'its line' : fmtVal(at, s ? s.unit : '', s ? s.kind : '')} (${BAND_LABEL[lw.band]})`, at: lw.at || null, by: lw.by || null };
   }
@@ -756,8 +757,7 @@ window.V7 = (function () {
     const list = lineWorkOf(key); const i = list.findIndex((lw) => lw.sensorId === sensorId && lw.dir === dir && lw.band === band);
     const name = opts && opts.name != null ? String(opts.name).trim() : null;
     const filedAt = opts && opts.filedAt !== undefined ? (opts.filedAt || null) : (i >= 0 ? list[i].filedAt || null : null);
-    if (name && filedAt && !upOf(key, filedAt)) return { ok: false, error: 'Condition-based work is filed at a unit process or the plant, never on equipment.' };
-    const whereText = filedAt ? upOf(key, filedAt).tag : 'the plant';
+    const whereText = e ? e.tag : 'the plant';
     if (name == null || name === '') {
       if (i < 0) return { ok: true, changed: false };
       const was = list[i]; list.splice(i, 1); const st = P.tasks[was.id]; if (st && st.status !== 'doing') delete P.tasks[was.id];
@@ -769,7 +769,7 @@ window.V7 = (function () {
     if (i >= 0) { if (list[i].name === name && (list[i].filedAt || null) === filedAt && (list[i].flowId || null) === flowId) return { ok: true, changed: false }; list[i].flowId = flowId; const old = list[i].name; list[i].name = name; list[i].filedAt = filedAt; if (opts.why != null) list[i].why = String(opts.why); addActivity(now(), key, `Renamed the task the ${BAND_LABEL[band]} line on ${e ? e.tag + ' ' : ''}${s.name} raises: "${old}" → "${name}"`, 'config'); touch(); persist(); return { ok: true, changed: true, id: list[i].id }; }
     const lw = { id: nextId('lw'), name, sensorId, dir, band, filedAt, flowId, why: opts && opts.why ? String(opts.why) : '', at: now(), by: ME };
     list.push(lw); if (P.state === 'live') P.tasks[lw.id] = { due: null, lastDone: null, status: 'armed', done: [], history: [], startedAt: null };
-    addActivity(now(), key, `The ${BAND_LABEL[band]} line on ${e ? e.tag + ' ' : ''}${s.name} now raises the task "${name}" at ${whereText} instead of an issue`, 'config');
+    addActivity(now(), key, `The ${BAND_LABEL[band]} line on ${e ? e.tag + ' ' : ''}${s.name} now triggers the task "${name}" on ${whereText} instead of an issue`, 'config');
     touch(); persist(); return { ok: true, changed: true, id: lw.id };
   }
   const wasLive = (P) => P.goLiveAt != null || (P.returned || []).length > 0;
@@ -870,7 +870,7 @@ window.V7 = (function () {
         out.push({ id: sc.id, kind: 'single', name: sc.name, workType: sc.workType, typeName: e ? e.type : null, code: e ? e.dbType || e.code : null, scheduleIds: [sc.id], eqIds: e ? [e.id] : [], plantLevel: !e, sc });
       });
       /* v7: condition-based work is filed at the plant (eqIds empty: it is no equipment's task); its line names the equipment it reads */
-      lineWorkOf(key).forEach((lw) => { const w = lineWorkView(key, lw); out.push({ id: lw.id, kind: 'line', name: lw.name, workType: 'condition', workLabel: 'Condition-based work', typeName: null, code: null, scheduleIds: [], eqIds: [], tags: [], plantLevel: true, upId: w.filed.kind === 'up' ? w.filed.id : null, filed: w.filed, toConfirm: false, line: `${lw.name} · ${w.filed.text}`, shared: null, every: null, everyText: w.whenText, basis: 'condition', intervalH: null, perDay: 0, source: null, flowId: lw.flowId || null, generalTaskId: null, anchor: 'line', statutory: false, from: w, sc: null }); });
+      lineWorkOf(key).forEach((lw) => { const w = lineWorkView(key, lw); out.push({ id: lw.id, kind: 'line', name: lw.name, workType: 'condition', workLabel: 'Raised by a reading', typeName: null, code: null, scheduleIds: [], eqIds: w.eqId ? [w.eqId] : [], tags: w.eqId ? [w.eqTag] : [], plantLevel: !w.eqId, upId: null, filed: w.filed, toConfirm: false, line: `${lw.name} · ${w.filed.text}`, shared: null, every: null, everyText: w.whenText, basis: 'condition', intervalH: null, perDay: 0, source: null, flowId: lw.flowId || null, generalTaskId: null, anchor: 'line', statutory: false, from: w, sc: null }); });
       return out.map((v) => {
         if (v.kind === 'line') return v;
         const sc = v.sc; const n = v.eqIds.length; const I = intervalH(sc, rateOfEq(eqRaw(key, v.eqIds[0])));

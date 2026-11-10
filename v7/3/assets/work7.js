@@ -568,7 +568,7 @@
     if (t.kind === 'line') {
       const w = t.from || {}; const rd = w.eqId ? `<a href="${esc(base(key) + '/eq/' + encodeURIComponent(w.eqId))}">${esc(w.eqTag)} ${esc(w.reading)}</a>` : esc(w.reading || '');
       rows.length = 0;
-      rows.push(['Filed at', t.filed && t.filed.kind === 'up' ? H(`<a href="${esc(base(key) + '/eq/' + encodeURIComponent(t.filed.id))}">${esc(t.filed.tag)}</a> <span class="muted small">· unit process</span>`) : 'The plant'], ['Raised when', H(`${rd} ${esc(w.dir === 'below' ? 'falls below' : 'rises above')} its ${esc(w.bandLabel || '')} line, now ${esc(w.limitText || '—')}. That line opens no issue; the next line out does.`)]);
+      rows.push(['On', t.filed && t.filed.id ? H(`<a href="${esc(base(key) + '/eq/' + encodeURIComponent(t.filed.id))}">${esc(t.filed.tag)}</a>`) : 'The plant'], ['Raised when', H(`${rd} ${esc(w.dir === 'below' ? 'falls below' : 'rises above')} its ${esc(w.bandLabel || '')} line, now ${esc(w.limitText || '—')}. That line opens no issue; the next line out does.`)]);
       if (w.why) rows.push(['Why', w.why]);
       rows.push(['Now', !live ? 'Raised once the plant is live' : t.status === 'due' || t.status === 'doing' ? H(`Raised ${esc(fmt(t.raisedAt || t.due))}${t.raisedBy ? `, at ${esc(call(() => V().fmtVal(t.raisedBy.value, w.unit || '', w.kind), String(t.raisedBy.value)))}` : ''}${t.overdue ? ' ' + U.chip('Overdue', { tone: 'bad' }) : ''}`) : 'Waiting for the reading to cross the line']);
       rows.push(['Last done', t.lastDone ? fmt(t.lastDone) : 'Not yet']);

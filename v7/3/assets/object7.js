@@ -169,7 +169,7 @@
   /* v7: what a line raises at the plant (condition-based work), under the reading's limits */
   function lineWorkHtml(key, sensorId, dir) {
     const ws = arr(safe(() => V().lineWork(key, { sensorId, dir }), [])); if (!ws.length) return '';
-    return `<ul class="lw-list">${ws.map((w) => { const t = safe(() => V().task(key, w.id), null); return `<li>${sev(w.band)} <span class="lw-does">raises</span> ${a(taskHref(key, w.id), w.name)} <span class="lw-does">at the plant${t ? ' · ' + esc(t.statusLabel) : ''}, instead of an issue</span></li>`; }).join('')}</ul>`;
+    return `<ul class="lw-list">${ws.map((w) => { const t = safe(() => V().task(key, w.id), null); return `<li>${sev(w.band)} <span class="lw-does">raises</span> ${a(taskHref(key, w.id), w.name)} <span class="lw-does">on this equipment${t ? ' · ' + esc(t.statusLabel) : ''}, instead of an issue</span></li>`; }).join('')}</ul>`;
   }
   function hasLimits(lim) { return !!lim && BANDS.some((b) => num(lim.bands && lim.bands[b]) != null); }
 
@@ -487,7 +487,7 @@
     if (undecided.length) out += note(H(`The library proposes ${plural(undecided.length, 'more task')} for ${esc(e.tag)}: ${undecided.map((p) => esc(p.name)).join(', ')}. ${a(plantHref(key, 'library'), 'Decide in What the library brings')}`), 'info');
     /* v7: condition-based work is the plant's, never this equipment's: say which of its readings raise some */
     const lw = arr(safe(() => V().lineWork(key, { eqId: e.id }), []));
-    if (lw.length) out += note(H(`Condition-based work is filed at the plant. ${esc(e.tag)}'s readings raise ${lw.map((w) => `${a(taskHref(key, w.id), w.name)} (${esc(w.reading)}, ${esc(w.bandLabel)} line)`).join(' and ')}.`), 'quiet');
+
     out += `<p class="o-hint">Every task at ${esc(P.name)}: ${a(plantHref(key, 'tasks'), 'Tasks')}</p>`;
     return out;
   }
@@ -1016,14 +1016,14 @@
     const on = st.vals[b] !== ''; const al = trigAlert(st);
     const flow = st.mode === 'instance' ? `<label class="o-trig-l">Diagnostic flow ${flowSelect('diag', st, `data-dflow="1" aria-label="Diagnostic flow for ${esc(bandName(b))}"`, st.flowSel)}</label><span class="o-trig-how">${howHtml(st.flowSel)}</span>` : '';
     const told = b === 'caution' ? 'shown in the app and the morning email' : esc(String(sevClock(b)).toLowerCase());
-    const where = st.mode === 'instance' && W.V7STRUCT73 ? W.V7STRUCT73.filedOptions(st.key, st.eqId) : [];
+    const where = [];   /* v7/3: the task sits on this reading's equipment, like the issue: nothing to choose */
     const whereSel = where.length > 1 ? `<select data-filed="${b}" aria-label="Where the task is filed">${where.map((x) => `<option value="${esc(x.id)}"${String(st.filedAt && st.filedAt[b] != null ? st.filedAt[b] : (where[0] || {}).id) === String(x.id) ? ' selected' : ''}>at ${esc(x.label)}</option>`).join('')}</select>` : '';
     let does;
     if (st.mode !== 'instance') does = `<div class="o-band-d"${on ? '' : ' hidden'}><span class="lw-does">What it triggers is set at each plant</span></div>`;
     else if (b === 'emergency') does = `<div class="o-band-d"${on ? '' : ' hidden'}><span class="o-trig-k">Triggers</span><span class="lw-does"><b>An issue</b>, on the first reading; calls everyone and sounds the hooter</span><span class="o-trig-i">${flow}</span></div>`;
     else does = `<div class="o-band-d"${on ? '' : ' hidden'}><span class="o-trig-k">Triggers</span><select data-does="${b}" aria-label="What the ${esc(bandName(b))} range triggers"><option value="issue"${st.does[b] !== 'task' ? ' selected' : ''}>An issue</option><option value="task"${st.does[b] === 'task' ? ' selected' : ''}>A task</option></select>`
       + `<span class="o-trig-i"${st.does[b] === 'task' ? ' hidden' : ''}>${flow}<span class="lw-does">Told: ${told}</span></span>`
-      + `<span class="o-trig-t"${st.does[b] === 'task' ? '' : ' hidden'}><input type="text" data-taskname="${b}" value="${esc(st.taskName[b] || '')}" placeholder="Name the task, e.g. Clean the intake filters" aria-label="The task the ${esc(bandName(b))} range raises">${whereSel}<label class="o-trig-l">Steps ${flowSelect('task', st, `data-tflow="${b}" aria-label="Task flow for ${esc(bandName(b))}"`, (st.taskFlow || {})[b] || '')}</label><span class="o-trig-tl" data-b="${b}">${taskFlowLinks((st.taskFlow || {})[b])}</span></span></div>`;
+      + `<span class="o-trig-t"${st.does[b] === 'task' ? '' : ' hidden'}><input type="text" data-taskname="${b}" value="${esc(st.taskName[b] || '')}" placeholder="Name the task, e.g. Clean the intake filters" aria-label="The task the ${esc(bandName(b))} range raises"><span class="lw-does">on ${esc(st.eqTag || 'this equipment')}</span>${whereSel}<label class="o-trig-l">Steps ${flowSelect('task', st, `data-tflow="${b}" aria-label="Task flow for ${esc(bandName(b))}"`, (st.taskFlow || {})[b] || '')}</label><span class="o-trig-tl" data-b="${b}">${taskFlowLinks((st.taskFlow || {})[b])}</span></span></div>`;
     const slot = st.mode === 'instance' ? `<div class="o-band-e"${on ? ' hidden' : ''}><span class="o-trig-k">Triggers</span><span class="muted">Nothing yet. Switch this range on to choose what it triggers.</span></div>` : '';
     return `<div class="o-band o-band-t" data-row="${b}"><div class="o-band-k"><button type="button" class="o-tog" role="switch" aria-checked="${on}" aria-label="${esc(bandName(b))} line" data-act="obj:ltog" data-band="${b}"><i></i></button>${sev(b)}</div>`
       + does + slot
@@ -1050,7 +1050,7 @@
       const want = st.does[b] === 'task' && bands[b] != null ? String(st.taskName[b] || '').trim() : null;
       if (st.does[b] === 'task' && bands[b] != null && !want && !out.err) out.err = `Name the task the ${bandName(b)} line raises.`;
       if (was && !want) { out.removes.push(b); words.push(`The ${bandName(b)} line opens an issue again.`); }
-      else if (want && (want !== was || String((st.filedAt || {})[b] || '') !== String((st.filedAt0 || {})[b] || '') || String((st.taskFlow || {})[b] || '') !== String((st.taskFlow0 || {})[b] || ''))) { out.sets.push(b); const up = (st.filedAt || {})[b] ? safe(() => V().unitProcess(st.key, st.filedAt[b]), null) : null; words.push(`The ${bandName(b)} range triggers the task "${want}" at ${up ? up.tag : 'the plant'}.`); }
+      else if (want && (want !== was || String((st.filedAt || {})[b] || '') !== String((st.filedAt0 || {})[b] || '') || String((st.taskFlow || {})[b] || '') !== String((st.taskFlow0 || {})[b] || ''))) { out.sets.push(b); const up = (st.filedAt || {})[b] ? safe(() => V().unitProcess(st.key, st.filedAt[b]), null) : null; words.push(`The ${bandName(b)} range triggers the task "${want}" on ${st.eqTag || 'this equipment'}.`); }
     });
     out.text = words.join(' '); return out;
   }

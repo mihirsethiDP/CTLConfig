@@ -806,17 +806,16 @@
       const a = Math.round(call(() => v.tasksPerDay(key, { each: false }), 0)); const e = Math.round(call(() => v.tasksPerDay(key, { each: true }), 0));
       const each = call(() => v.eachOf(key).phrase, 'if each piece of equipment gets its own');   /* v7: one wording on every plant */
       const both = `${a} ${a === 1 ? 'task' : 'tasks'} a day${e !== a ? ` (${e} ${each} — to confirm)` : ''}`;
-      const show = ['all', 'shared', 'each', 'condition'].includes(q.show) ? q.show : 'all';
+      const show = ['all', 'shared', 'each'].includes(q.show) ? q.show : 'all';
       const due = live ? ts.filter((t) => t.status === 'due' || t.status === 'doing' || t.overdue) : [];
       const groups = ts.filter((t) => t.kind === 'group'); const singles = ts.filter((t) => t.kind !== 'group' && !t.plantLevel); const plantL = ts.filter((t) => t.kind !== 'group' && t.kind !== 'line' && t.plantLevel); const lineL = ts.filter((t) => t.kind === 'line');
       const parts = [];
       parts.push(`<p class="lead">${live ? `<b>${esc(both)}.</b> ` : `<b>When the plant goes live: ${esc(both)}.</b> First due dates are spread across each task's own interval, so day one is not a pile-up. `}Routine checks, routine work and manual tests are one task per type at this plant, with a line for each piece of equipment; maintenance and calibration stay on each piece of equipment.</p>`);
-      parts.push(filters([{ label: 'All', href: `${b}/tasks`, on: show === 'all', count: ts.length }, { label: 'One per type', href: `${b}/tasks?show=shared`, on: show === 'shared', count: groups.length }, { label: 'On each piece of equipment', href: `${b}/tasks?show=each`, on: show === 'each', count: singles.length + plantL.length }].concat(lineL.length ? [{ label: 'Condition-based', href: `${b}/tasks?show=condition`, on: show === 'condition', count: lineL.length }] : [])));
+      parts.push(filters([{ label: 'All', href: `${b}/tasks`, on: show === 'all', count: ts.length }, { label: 'One per type', href: `${b}/tasks?show=shared`, on: show === 'shared', count: groups.length }, { label: 'On each piece of equipment', href: `${b}/tasks?show=each`, on: show === 'each', count: singles.length + plantL.length }]));
       if (due.length && show === 'all') parts.push(card({ title: due.length === 1 ? 'One task due now' : `${due.length} tasks due now`, body: taskTable(key, due, live), tone: due.some((t) => t.overdue) ? 'bad' : 'warn' }));
-      if (show === 'all' || show === 'condition') if (lineL.length) parts.push(card({ title: 'Condition-based work', sub: 'Raised when a reading on equipment crosses a range that triggers a task. Filed at a unit process or the plant, never on the equipment; that range opens no issue.', body: lineTable(key, lineL, live) }));
-      if (show === 'condition') return frame(key, 'tasks', parts.join(''));
+      if (false) parts.push(card({ title: 'Condition-based work', sub: 'Raised when a reading on equipment crosses a range that triggers a task. Filed at a unit process or the plant, never on the equipment; that range opens no issue.', body: lineTable(key, lineL, live) }));
       if (show !== 'each' && groups.length) parts.push(card({ title: 'One task per type', sub: 'Routine checks, routine work and manual tests: one task for the type at this plant, with a line per piece of equipment. To confirm with the plant team.', body: taskTable(key, groups, live) }));
-      if (show !== 'shared' && singles.length) parts.push(card({ title: 'On each piece of equipment', sub: 'Preventive maintenance and calibration stay with the equipment they are done on.', body: taskTable(key, singles, live) }));
+      if (show !== 'shared' && singles.length) parts.push(card({ title: 'On each piece of equipment', sub: 'Preventive maintenance and calibration stay with the equipment they are done on. So does a task one of its readings triggers.', body: taskTable(key, singles, live) }));
       if (show !== 'shared' && plantL.length) parts.push(card({ title: 'The plant', sub: 'Rounds and checks for the plant as a whole.', body: taskTable(key, plantL, live) }));
       if (!live) parts.push(note('Tasks start when the plant goes live. A task can carry the date it was last done (on its page); its first due date then counts from that date.', 'quiet'));
       return frame(key, 'tasks', parts.join(''));
