@@ -587,7 +587,7 @@
     const histCard = hist.length ? U.card({ title: 'Done before', body: `<ul class="wk-hist">${hist.map((h) => `<li><span>${esc(fmt(h.done))}</span>${h.late ? U.chip('late', { tone: 'warn' }) : U.chip('on time', { tone: 'ok' })}</li>`).join('')}</ul>` }) : '';
     const chips = [U.chip(t.workLabel || 'Task', { tone: 'muted' }), U.chip(t.statusLabel || cap(t.status), { tone: TASK_TONE[t.status] || 'muted' })];
     const lead = live && (t.status === 'due' || t.overdue) ? `<p class="lead has-att">${t.overdue ? 'Overdue' : 'Due now'}: ${t.kind === 'line' ? 'raised' : 'it was due'} ${esc(fmt(t.due))}.</p>` : '';
-    const body = lead + U.card({ title: 'About this task', body: U.kv(rows) }) + stepsCard + histCard;
+    const body = lead + (W.V7HELP73 ? W.V7HELP73.task(key, t.id, { open: true, cls: 'hp-card' }) : '') + U.card({ title: 'About this task', body: U.kv(rows) }) + stepsCard + histCard;
     return U.page({ crumbs: [{ label: 'All Plants', href: '#/plants' }, { label: p.name, href: base(key) }, { label: 'Tasks', href: base(key) + '/tasks' }, { label: cleanTaskName(t.name) }],
       title: cleanTaskName(t.name), sub: cleanTaskName(t.line || ''), chips, banner: fromBanner(key, q), body, cls: 'wk wk-task' });
   }

@@ -233,7 +233,7 @@
   }
   function alertLine(key, al) {
     const r = alertRate(key, al);
-    return `<div class="o-al-r">${a(alertHref(key, al.id), al.name)} ${stateChip(al.state)} <span class="muted">${esc(r.text)}</span>${r.chips.join(' ')}</div>`;
+    return `<div class="o-al-r">${a(alertHref(key, al.id), al.name)} ${stateChip(al.state)} <span class="muted">${esc(r.text)}</span>${r.chips.join(' ')}</div>${W.V7HELP73 ? W.V7HELP73.alert(key, al.id) : ''}`;
   }
   function pendingProposals(key, eqId) {
     const P = plantOf(key); if (!P || P.state !== 'commissioning') return [];
@@ -889,6 +889,7 @@
       tone: 'quiet',
     });
     const parts = [];
+    if (W.V7HELP73) parts.push(W.V7HELP73.alert(key, al.id, { open: true, cls: 'hp-card' }));
     if (al.state === 'draft') parts.push(stateCard(key, P, al));
     if (ts && (al.state === 'trial' || !live)) parts.push(trialCard(key, P, al, s || { unit: al.unit, kind: al.kind }, ts, params._q));
     if (live && al.state === 'on') { parts.push(liveCard(key, al)); parts.push(issuesCard); }

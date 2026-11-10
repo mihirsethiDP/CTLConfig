@@ -1,0 +1,17 @@
+/* v7/3 · help73.css — the helper: what the settings do, who is told, what they must do */
+.hp { margin: 8px 0 0; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2, #f3f5f3); font-size: 13.5px; }
+.hp > summary { cursor: pointer; padding: 6px 10px; display: flex; align-items: center; gap: 8px; color: var(--accent-strong); font-weight: 500; list-style: none; }
+.hp > summary::-webkit-details-marker { display: none; }
+.hp-q { flex: 0 0 auto; width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid currentColor; font: 600 11px var(--font); display: inline-grid; place-items: center; }
+.hp[open] > summary { border-bottom: 1px solid var(--line); }
+.hp-b { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; }
+.hp-p { padding: 10px 12px; border-right: 1px solid var(--line); min-width: 0; } .hp-p:last-child { border-right: 0; }
+.hp-p h4 { margin: 0 0 6px; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+.hp-p p { margin: 0 0 6px; } .hp-p p:last-child { margin-bottom: 0; }
+.hp-ul { margin: 0 0 6px; padding: 0; list-style: none; display: grid; gap: 6px; } .hp-ul li { line-height: 1.45; }
+.hp-s { color: var(--ink-2); font-size: 12.5px; } .hp-none { color: var(--ink-3); }
+.hp-card { background: var(--surface); border-radius: var(--r); margin: 0 0 16px; box-shadow: var(--shadow-sm); }
+.hp-card > summary { padding: 12px 16px; font-size: 14.5px; font-weight: 600; color: var(--ink); }
+.hp-card .hp-p { padding: 14px 16px; }
+.p7-prop .hp { margin-top: 6px; }
+@media (max-width: 900px) { .hp-b { grid-template-columns: minmax(0, 1fr); } .hp-p { border-right: 0; border-bottom: 1px solid var(--line); } .hp-p:last-child { border-bottom: 0; } }

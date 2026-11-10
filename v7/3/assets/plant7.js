@@ -484,7 +484,7 @@
       right = btn('Accept', { act: 'p7:lib-accept', data: d, small: true, title: p.kind === 'alert' ? 'It goes On trial: trial firings are recorded, nothing is sent' : 'It starts at go live' }) + btn('Not for this plant', { act: 'p7:lib-reject', data: d, small: true, kind: 'ghost' });
     }
     const why = p.decided === 'rejected' && p.reason ? `<div class="p7-prop-w">Why: ${esc(p.reason)}</div>` : '';
-    return `<li class="${cls}"><div class="p7-prop-k">${propKind(p)}</div><div class="p7-prop-m"><div class="p7-prop-n">${esc(p.name)}</div><div class="p7-prop-d">${propDetail(p)}</div>${why}</div><div class="p7-prop-a">${right}</div></li>`;
+    return `<li class="${cls}"><div class="p7-prop-k">${propKind(p)}</div><div class="p7-prop-m"><div class="p7-prop-n">${esc(p.name)}</div><div class="p7-prop-d">${propDetail(p)}</div>${why}${W.V7HELP73 ? W.V7HELP73.proposal(key, p) : ''}</div><div class="p7-prop-a">${right}</div></li>`;
   }
   /* v7 (card D22): routine checks, routine work and manual tests are one task per type at the plant (the Tasks tab's rule), so the
      review lists each once per type, naming its equipment; one line is accepted or left out for all of them, and opening it lets
