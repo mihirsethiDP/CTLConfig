@@ -546,16 +546,26 @@
     if (show === 'blocked') return ps.filter((p) => p.blockedBy);
     return ps;
   }
-  function eqStatus(r) {
-    const c = libCounts([r]);
-    return [c.undecided ? `<b>${c.undecided} to decide</b>` : '', c.accepted ? `${c.accepted} accepted` : '', c.rejected ? `${c.rejected} not for this plant` : '', c.blocked ? `${c.blocked} can't be used yet` : ''].filter(Boolean).join(' · ') || 'Nothing proposed';
+  /* the line under a piece of equipment: what this view lists first, then a link to what it leaves out. Tasks shared by the type
+     are decided once on the type's shared lines, so they are counted apart */
+  function eqStatus(r, show, key) {
+    const own = arr(r.proposals).filter((p) => !isShared(p)); const sh = arr(r.proposals).filter(isShared);
+    const und = own.filter((p) => !p.decided && !p.blockedBy).length; const acc = own.filter((p) => p.decided === 'accepted').length; const rej = own.filter((p) => p.decided === 'rejected').length; const blocked = own.filter((p) => p.blockedBy).length;
+    const shUnd = sh.filter((p) => !p.decided && !p.blockedBy).length;
+    const to = (s2, text) => `<a href="${esc(`${base(key)}/library?show=${s2}&eq=${enc(r.eqId)}`)}">${text}</a>`;
+    const parts = { und: und ? `<b>${und} to decide</b>` : '', sh: shUnd ? `${shUnd} more to decide in the tasks shared by the type` : '', acc: acc ? `${acc} accepted` : '', rej: rej ? `${rej} not for this plant` : '', bl: blocked ? `${blocked} can't be used yet` : '' };
+    let out;
+    if (show === 'blocked') out = [parts.bl ? `<b>${blocked} can't be used yet</b>` : '', und + shUnd ? to('undecided', `${und + shUnd} to decide`) : '', acc ? to('decided', `${acc} accepted`) : ''];
+    else if (show === 'decided') out = [parts.acc, parts.rej, und + shUnd ? to('undecided', `${und + shUnd} to decide`) : '', blocked ? to('blocked', `${blocked} can't be used yet`) : ''];
+    else out = [parts.und, parts.sh, parts.acc, parts.rej, parts.bl];
+    return out.filter(Boolean).join(' · ') || 'Nothing proposed';
   }
   function eqBlock(key, r, show, open, alertIds) {
     const ps = visibleProps(r, show); if (!ps.length) return '';
     const und = arr(r.proposals).filter((p) => !p.decided && !p.blockedBy).length;
     const label = r.eqId === 'plant' ? '<span class="p7-sum-t">The plant itself</span>' : `<span class="p7-sum-t"><span class="mono">${esc(r.tag)}</span> ${esc(r.name || '')}</span>`;
-    const act = und > 1 ? btn(`Accept these ${und}`, { act: 'p7:lib-accept-eq', data: { plant: key, eq: r.eqId }, small: true, title: `Accept the ${und} undecided for ${r.eqId === 'plant' ? 'the plant' : r.tag}` }) : '';
-    const sum = `<summary><span class="p7-sum-main">${label}<span class="p7-sum-s">${eqStatus(r)}</span></span><span class="p7-sum-r">${act}</span></summary>`;
+    const act = und > 1 && show !== 'blocked' && show !== 'decided' ? btn(`Accept all ${und} for ${r.eqId === 'plant' ? 'the plant' : r.tag}`, { act: 'p7:lib-accept-eq', data: { plant: key, eq: r.eqId }, small: true, title: `Accept everything undecided for ${r.eqId === 'plant' ? 'the plant' : r.tag}, the tasks shared by its type included` }) : '';
+    const sum = `<summary><span class="p7-sum-main">${label}<span class="p7-sum-s">${eqStatus(r, show, key)}</span></span><span class="p7-sum-r">${act}</span></summary>`;
     const link = r.eqId !== 'plant' ? `<p class="p7-more"><a href="${esc(eqHref(key, r.eqId))}">Open ${esc(r.tag)} →</a></p>` : '';
     return `<details class="p7-grp p7-eq"${open ? ' open' : ''}>${sum}<div class="p7-grp-b"><ul class="p7-props">${ps.map((p) => propRow(key, p, alertIds)).join('')}</ul>${link}</div></details>`;
   }
@@ -608,10 +618,11 @@
         if (!blocks.length && !shared.length) return;
         const tc = libCounts(rows); const undRows = rows.filter((r) => arr(r.proposals).some((x) => !x.decided && !x.blockedBy)).length; const code = (rows[0] && call(() => v.eq(key, rows[0].eqId).dbType, null)) || null;
         const undNames = uniq([].concat(...rows.map((r) => arr(r.proposals).filter((x) => !x.decided && !x.blockedBy).map((x) => x.name))));
-        const sub = `${pieces(rows.length)}${tc.undecided ? ` · ${tc.undecided} to decide` : ' · all decided'}${tc.blocked ? ` · ${tc.blocked} can't be used yet` : ''}${undNames.length && show !== 'decided' ? `. To decide: ${shortList(undNames, 3)}` : ''}`;
+        const sub = show === 'blocked' ? `${pieces(rows.length)} · ${tc.blocked} can't be used yet, each with what it needs${tc.undecided ? `. <a href="${esc(qs('undecided'))}">${tc.undecided} more are waiting for a decision</a>` : ''}`
+          : `${pieces(rows.length)}${tc.undecided ? ` · ${tc.undecided} to decide` : ' · all decided'}${tc.blocked ? ` · ${tc.blocked} can't be used yet` : ''}${undNames.length && show !== 'decided' ? `. To decide: ${shortList(undNames, 3)}` : ''}`;
         cards.push(card({
           title: code ? `<a href="${esc(libHref(code))}">${esc(typeName)}</a>` : typeName, sub, body: (shared.length ? `<h4 class="p7-shared-h">Shared by the type · one line each</h4>${shared.join('')}` : '') + (shared.length && blocks.length ? '<h4 class="p7-shared-h">On each piece of equipment</h4>' : '') + blocks.join(''),
-          actions: [undRows > 1 ? btn(`Accept all for ${countType(rows.length, typeName)}`, { act: 'p7:lib-accept-type', data: { plant: key, type: typeName }, kind: 'primary' }) : tc.undecided ? '' : chip('All decided', { tone: 'ok' })],
+          actions: [show === 'blocked' ? '' : undRows > 1 ? btn(`Accept all for ${countType(rows.length, typeName)}`, { act: 'p7:lib-accept-type', data: { plant: key, type: typeName }, kind: 'primary' }) : tc.undecided ? '' : chip('All decided', { tone: 'ok' })],
           cls: 'p7-type',
         }));
       });
