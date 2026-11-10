@@ -208,15 +208,24 @@
     const sn = sensors(sdoc, eq); if (!sn.ok) return { ok: false, step: 2, eq, error: sn.error };
     return { ok: true, eq, sn, model: build(eq, sn, meta) };
   }
-  const kept = () => { try { const o = JSON.parse(W.localStorage.getItem(KEY) || 'null'); return o && o.eq ? o : null; } catch (e) { return null; } };
+  let SESSION = null;   /* a plant graph loaded when the browser had no room to keep it: it lasts until the page is reloaded */
+  const kept = () => { try { const o = JSON.parse(W.localStorage.getItem(KEY) || 'null'); return o && (o.model || o.eq) ? o : SESSION; } catch (e) { return SESSION; } };
+  const namesOf = (sn) => { const o = {}; arr(sn && sn.rows).forEach((s) => { if (s.reads) o[s.tag] = s.reads; }); return o; };
+  const putNames = (names) => { if (W.SCADA_SENSOR_MAP) Object.keys(names || {}).forEach((t) => { if (!W.SCADA_SENSOR_MAP[t]) W.SCADA_SENSOR_MAP[t] = names[t]; }); };
   function use(eqText, snText, meta) {
     const r = read(eqText, snText, meta); if (!r.ok) return r;
-    const save = { eq: JSON.stringify(slim(parse(eqText).doc)), sn: String(snText || '').trim() ? JSON.stringify(slim(parse(snText).doc)) : '', meta: { name: r.model.name, type: r.model.type }, at: Date.now() };
-    try { W.localStorage.setItem(KEY, JSON.stringify(save)); } catch (e) { return { ok: false, step: 3, error: 'This file is too large to keep in the browser. It was not loaded.' }; }
+    /* what is kept is the small model the console reads (equipment, sensors, pipes), never the files themselves. If the
+       browser still has no room, the plant graph is loaded for this session only. */
+    const save = { model: r.model, names: namesOf(r.sn), at: Date.now() }; SESSION = null;
+    try { W.localStorage.removeItem(KEY); W.localStorage.setItem(KEY, JSON.stringify(save)); } catch (e) { SESSION = { ...save, session: true }; r.session = true; }
     put(r.model); return r;
   }
-  function clear() { try { W.localStorage.removeItem(KEY); } catch (e) { /* ignore */ } put(null); }
-  function applyKept() { const k = kept(); if (!k) return false; const r = read(k.eq, k.sn, k.meta); if (!r.ok) { clear(); return false; } put(r.model); return true; }
+  function clear() { SESSION = null; try { W.localStorage.removeItem(KEY); } catch (e) { /* ignore */ } put(null); }
+  function applyKept() {
+    const k = kept(); if (!k) return false;
+    if (k.model && Array.isArray(k.model.equipment) && k.model.equipment.length) { putNames(k.names); put(clone(k.model)); return true; }
+    const r = k.eq ? read(k.eq, k.sn, k.meta) : { ok: false }; if (!r.ok) { clear(); return false; } put(r.model); return true;
+  }
   const sampleText = () => (W.SCADA_LAYOUTS && W.SCADA_LAYOUTS[PLANT] ? JSON.stringify(W.SCADA_LAYOUTS[PLANT], null, 1) : '');
 
   W.V7INGEST = { parse, equipment, sensors, build, read, use, clear, kept, sampleText, applyKept, PLANT };

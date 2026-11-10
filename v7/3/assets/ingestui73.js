@@ -74,7 +74,7 @@
     const k = IN.kept(); const name = V() && V().plantName ? V().plantName(IN.PLANT) : 'DigitalPaani';
     const nEq = V() ? arr(V().equipment(IN.PLANT)).length : 0;
     const keptCard = k
-      ? note(`<b>${esc(name)} is running on the plant graph you loaded on ${esc(UI.fmt ? new Date(k.at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '')}</b>: ${plural(nEq, 'piece')} of equipment. Resetting the story keeps it. ${btn('Open the plant', { href: `#/p/${IN.PLANT}`, small: true, kind: 'primary' })} ${btn('Use the built-in plant graph again', { act: 'in:clear', small: true, kind: 'ghost' })}`, 'ok')
+      ? note(`<b>${esc(name)} is running on the plant graph you loaded on ${esc(UI.fmt ? new Date(k.at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '')}</b>: ${plural(nEq, 'piece')} of equipment. ${k.session ? 'It is held for this session only: the browser has no room to keep it, so reloading the page goes back to the built-in one.' : 'Resetting the story keeps it.'} ${btn('Open the plant', { href: `#/p/${IN.PLANT}`, small: true, kind: 'primary' })} ${btn('Use the built-in plant graph again', { act: 'in:clear', small: true, kind: 'ghost' })}`, 'ok')
       : '';
     const how = '<ol class="fl-how in-how"><li><b>1 · Equipment</b><span>every node, and its equipment type</span></li><li><b>2 · Sensors</b><span>what is linked to each piece</span></li><li><b>3 · Load</b><span>as the plant being set up</span></li><li><b>Walk the flow</b><span>structure, library, limits, go live</span></li></ol>';
 
@@ -140,7 +140,7 @@
       onOk: () => {
         const r = IN.use(ING.eqText, ING.own ? ING.snText : '', { name: ING.name });
         if (!r.ok) { if (r.step === 2) ING.err2 = r.error; else ING.err1 = r.error; UI.toast(r.error); UI.render(); return false; }
-        restart(`Loaded: ${plural(r.eq.rows.length, 'piece')} of equipment and ${plural(r.sn.rows.length, 'sensor')}. The plant is ready to set up.`);
+        restart(r.session ? `Loaded for this session: ${plural(r.eq.rows.length, 'piece')} of equipment and ${plural(r.sn.rows.length, 'sensor')}. The browser has no room to keep it, so reloading the page goes back to the built-in plant graph.` : `Loaded: ${plural(r.eq.rows.length, 'piece')} of equipment and ${plural(r.sn.rows.length, 'sensor')}. The plant is ready to set up.`);
         UI.go(`#/p/${IN.PLANT}`); return false;
       },
     });

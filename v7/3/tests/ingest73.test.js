@@ -35,7 +35,7 @@ const eqW = IN.equipment(wrapped); const snW = eqW.ok ? IN.sensors(eqW.src, eqW)
 check('wrapped', 'an export wrapped in { results: { layout } } is read: one more piece of equipment, the same sensors', eqW.ok && eqW.rows.length === before.eq + 1 && snW.rows.length === before.sn, eqW.error || `${eqW.rows.length}/${snW.rows.length}`);
 check('wrapped', 'the valve named "3456" is a Two way Valve tagged 3456', eqW.ok && eqW.rows.some((r) => r.id === 'eq-3456' && r.tag === '3456' && r.typeName === 'Two way Valve'), eqW.ok ? JSON.stringify(eqW.rows.find((r) => r.id === 'eq-3456')) : '');
 const usedW = IN.use(JSON.stringify(wrapped), '', {}); V.reset();
-check('wrapped', 'it loads, and what is kept has no drawing markup', usedW.ok && V.equipment(DP).length === before.eq + 1 && !!V.eq(DP, 'eq-3456') && !/markup|ports/.test(IN.kept().eq) && IN.kept().eq.length < JSON.stringify(wrapped).length / 2, usedW.error);
+check('wrapped', 'it loads, and what is kept has no drawing markup', usedW.ok && V.equipment(DP).length === before.eq + 1 && !!V.eq(DP, 'eq-3456') && !/markup|ports/.test(JSON.stringify(IN.kept())) && JSON.stringify(IN.kept()).length < JSON.stringify(wrapped).length / 2, usedW.error);
 IN.clear(); V.reset();
 
 /* reader 2 on the real export */
@@ -89,7 +89,12 @@ check('records', 'the collection alone also gives the equipment: five pieces wit
 const usedR = IN.use(text, JSON.stringify(recs), {}); V.reset();
 const names = (id) => V.sensors(DP).filter((s) => String(s.id).startsWith(id + '_')).map((s) => s.name).sort().join();
 check('records', 'loaded: the blower has Auto / manual, Run status, Trip contact and Under Maintenance; the screen chamber its bar-screen levels', usedR.ok && names(blwRow.id) === 'Auto / manual,Run status,Trip contact,Under Maintenance' && names(scRow.id) === 'Bar Screen 100%,Bar Screen 25%' && V.sensors(DP).length === 9, names(blwRow.id) + ' | ' + names(scRow.id) + ' | ' + V.sensors(DP).length);
-check('records', 'what is kept is the slim collection, and it reads back the same', IN.applyKept() === true && !/Color|dataInputType/.test(IN.kept().sn) && g.SCADA_SAMPLES[DP].equipment.reduce((n, e) => n + e.sensors.length, 0) === 9);
+check('records', 'what is kept is the small model, not the files, and it reads back the same', IN.applyKept() === true && !IN.kept().eq && JSON.stringify(IN.kept()).length < 60000 && g.SCADA_SAMPLES[DP].equipment.reduce((n, e) => n + e.sensors.length, 0) === 9 && g.SCADA_SENSOR_MAP.BS25 === 'Bar Screen 25%', String(JSON.stringify(IN.kept()).length));
+/* a browser with no room left: the plant graph still loads, for this session */
+IN.clear(); V.reset(); const set0 = g.localStorage.setItem; g.localStorage.setItem = (k, v) => { if (k === 'ctl73.ingest') throw new Error('QuotaExceededError'); return set0(k, v); };
+const usedQ = IN.use(text, JSON.stringify(recs), {}); let threwQ = null; try { V.reset(); } catch (e) { threwQ = e; }
+check('records', 'with no room in the browser it loads for this session and says so', usedQ.ok && usedQ.session === true && !threwQ && V.sensors(DP).length === 9 && IN.kept() && IN.kept().session === true && g.localStorage.getItem('ctl73.ingest') == null);
+g.localStorage.setItem = set0;
 IN.clear(); V.reset();
 
 /* reader 2 from a separate list */
@@ -105,7 +110,7 @@ check('load', 'the plant being set up now has the changed equipment and sensors'
 check('load', 'the new blower is a blower with a motor-current reading; the unknown type came in with nothing', !!V.eq(DP, 'cell-new-2') && V.sensors(DP).some((s) => String(s.id).startsWith('cell-new-2') && s.name === 'Motor current') && !!V.eq(DP, 'eq-new-1'));
 check('load', 'the structure keeps what still exists and lists the new equipment as not placed', V.structure(DP).ups.length === before.ups && V.structure(DP).unplaced.includes('cell-new-2') && V.structure(DP).unplaced.includes('eq-new-1'));
 check('load', 'the other plants are untouched and the flow still runs: library review, tasks, checklist', V.equipment('manesar').length > 0 && Array.isArray(V.libraryReview(DP)) && V.libraryReview(DP).length > 0 && Array.isArray(V.tasks(DP)) && !!V.checklist(DP));
-check('load', 'it is kept: applying it again after a reload gives the same plant', IN.applyKept() === true && g.SCADA_SAMPLES[DP].equipment.length === before.eq + 2 && !!IN.kept());
+check('load', 'it is kept: applying it again after a reload gives the same plant', IN.applyKept() === true && g.SCADA_SAMPLES[DP].equipment.length === before.eq + 2 && !!IN.kept() && V.structure(DP).unplaced.includes('cell-new-2'));
 /* a much smaller plant: three nodes */
 const tiny = { layout: { cells: [{ type: 'PMP', id: 'a', equipmentId: 'pa', attrs: { label: { text: 'Feed Pump - 1' } } }, { type: 'PMP', id: 'b', equipmentId: 'pb', attrs: { label: { text: 'Feed Pump - 2' } } }, { type: 'TANK', id: 'c', equipmentId: 'tc', attrs: { label: { text: 'Raw Water Tank' } } }, { type: 'LEVEL_SENSOR', id: 'w', level: 40, attrs: { label: { text: 'Level' } } }, { type: 'standard.Link', id: 'l', source: { id: 'w' }, target: { id: 'c' } }, { type: 'Pipe', id: 'p', source: { id: 'c' }, target: { id: 'a' } }] } };
 const u2 = IN.use(JSON.stringify(tiny), JSON.stringify([{ equipmentTag: 'FP-1', widget: 'NUMBER_SENSOR', code: 'AMP' }]), {}); let threw = null; try { V.reset(); } catch (e) { threw = e; }
