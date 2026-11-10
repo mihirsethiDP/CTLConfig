@@ -46,16 +46,16 @@
     return out;
   }
   function equipment(key, eqId) {
-    const out = []; const S3 = W.V7STRUCT73;
-    if (S3 && arr(S3.unplaced(key)).includes(eqId)) out.push('Not placed in a unit process yet.');
+    const out = []; const STR = W.V7STRUCT73;
+    if (STR && arr(STR.unplaced(key)).includes(eqId)) out.push('Not placed in a unit process yet.');
     const al = arr(safe(() => V().alerts(key, { eqId }), [])).filter((a) => alert(key, a).length).length; if (al) out.push(`${plural(al, 'alert')} incomplete.`);
     const ts = arr(safe(() => V().tasks(key, { eqId }), [])).filter((t) => task(key, t).length).length; if (ts) out.push(`${plural(ts, 'task')} incomplete.`);
     return out;
   }
   /* what each plant tab still has to finish: {tabId: sentence} */
   function tabFlags(key) {
-    const out = {}; const S3 = W.V7STRUCT73; const st = safe(() => V().structure(key), null);
-    if (S3 && st && arr(st.ups).length) { const left = arr(S3.unplaced(key)).length; const bits = []; if (!S3.confirmed(key)) bits.push('the structure is not confirmed'); if (left) bits.push(`${plural(left, 'piece')} of equipment not placed`); if (bits.length) out.structure = bits.join('; '); }
+    const out = {}; const STR = W.V7STRUCT73; const st = safe(() => V().structure(key), null);
+    if (STR && st && arr(st.ups).length) { const left = arr(STR.unplaced(key)).length; const bits = []; if (!STR.confirmed(key)) bits.push('the structure is not confirmed'); if (left) bits.push(`${plural(left, 'piece')} of equipment not placed`); if (bits.length) out.structure = bits.join('; '); }
     const und = arr(safe(() => V().libraryReview(key), [])).reduce((n, r) => n + arr(r.proposals).filter((p) => !p.decided && !p.blockedBy).length, 0); if (und) out.library = `${und} library ${und === 1 ? 'item' : 'items'} waiting for a decision`;
     const ts = arr(safe(() => V().tasks(key), [])).filter((t) => task(key, t).length).length; if (ts) out.tasks = `${plural(ts, 'task')} incomplete`;
     const eqs = arr(safe(() => V().equipment(key), [])).filter((e) => equipment(key, e.id).length).length; if (eqs) out.equipment = `${plural(eqs, 'piece')} of equipment with something incomplete`;
