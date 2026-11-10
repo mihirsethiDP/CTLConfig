@@ -564,6 +564,16 @@
       ['Next due', nextDue],
       ['Last done', H(`<input type="date" class="wk-date" name="wk-last" aria-label="Last done" value="${esc(lastIso)}" max="${esc(today)}" data-act="work:lastdone" data-plant="${esc(key)}" data-id="${esc(t.id)}"><span class="field-h wk-dh">${live ? 'Optional. Next due counts from it.' : 'Optional. At go live the first due date counts from it.'}</span>`)],
     ];
+    /* v7: condition-based work: a line on an equipment reading raises it at the plant; it has no interval and no last-done date to set */
+    if (t.kind === 'line') {
+      const w = t.from || {}; const rd = w.eqId ? `<a href="${esc(base(key) + '/eq/' + encodeURIComponent(w.eqId))}">${esc(w.eqTag)} ${esc(w.reading)}</a>` : esc(w.reading || '');
+      rows.length = 0;
+      rows.push(['On', 'The plant'], ['Raised when', H(`${rd} ${esc(w.dir === 'below' ? 'falls below' : 'rises above')} its ${esc(w.bandLabel || '')} line, now ${esc(w.limitText || '—')}. That line opens no issue; the next line out does.`)]);
+      if (w.why) rows.push(['Why', w.why]);
+      rows.push(['Now', !live ? 'Raised once the plant is live' : t.status === 'due' || t.status === 'doing' ? H(`Raised ${esc(fmt(t.raisedAt || t.due))}${t.raisedBy ? `, at ${esc(call(() => V().fmtVal(t.raisedBy.value, w.unit || '', w.kind), String(t.raisedBy.value)))}` : ''}${t.overdue ? ' ' + U.chip('Overdue', { tone: 'bad' }) : ''}`) : 'Waiting for the reading to cross the line']);
+      rows.push(['Last done', t.lastDone ? fmt(t.lastDone) : 'Not yet']);
+      if (live && w.eqId) rows.push(['The line', H(U.btn('Change the line', { act: 'obj:limits', data: { plant: key, sensor: w.sensorId, dir: w.dir }, kind: 'ghost', small: true }))]);
+    }
     if (t.statutory) rows.push(['Required by law', 'Yes']);
     /* v7: run-hours work is counted by its hour meter (it only counts while the equipment runs), from the last service or go live */
     if (t.basis === 'meter' || t.basis === 'either') rows.push(['Run hours', t.meter ? (live ? `Counted by its hour meter: ${Math.max(0, Math.round(t.meter.left))} run-hours to go (meter at ${Math.round(t.meter.now)} h, due at ${Math.round(t.meter.at)} h; about ${t.meter.rateDay} h a day)` : 'Counted by its hour meter from go live') : (live ? 'Counted by its hour meter since go live' : 'Counted by its hour meter once the plant is live')]);
@@ -571,12 +581,12 @@
     let stepsBody;
     if (!steps.length) stepsBody = U.empty('No steps are written for this task.');
     else stepsBody = checklist(steps, { prefix: 'task', done: t.done, act: 'work:taskstep', disabled: !live, data: (st) => ({ plant: key, id: t.id, step: st.id }), chips: (st) => stepChips(st, f), links: (st) => linkLines(key, null, st, null) });
-    const doneBtn = live ? U.btn(t.status === 'upcoming' ? 'Mark it done now' : 'Mark the task done', { act: 'work:taskdone', data: { plant: key, id: t.id }, kind: 'primary' }) : '';
+    const doneBtn = live && !(t.kind === 'line' && t.status !== 'due' && t.status !== 'doing') ? U.btn(t.status === 'upcoming' ? 'Mark it done now' : 'Mark the task done', { act: 'work:taskdone', data: { plant: key, id: t.id }, kind: 'primary' }) : '';
     const stepsCard = U.card({ title: 'Steps', sub: steps.length ? `${n} of ${steps.length} ticked` : '', body: stepsBody + (live ? '' : U.note('Tasks start when the plant goes live. Until then the steps are here to read.', 'quiet')), foot: doneBtn || null });
     const hist = arr(t.history).slice(-5).reverse();
     const histCard = hist.length ? U.card({ title: 'Done before', body: `<ul class="wk-hist">${hist.map((h) => `<li><span>${esc(fmt(h.done))}</span>${h.late ? U.chip('late', { tone: 'warn' }) : U.chip('on time', { tone: 'ok' })}</li>`).join('')}</ul>` }) : '';
     const chips = [U.chip(t.workLabel || 'Task', { tone: 'muted' }), U.chip(t.statusLabel || cap(t.status), { tone: TASK_TONE[t.status] || 'muted' })];
-    const lead = live && (t.status === 'due' || t.overdue) ? `<p class="lead has-att">${t.overdue ? 'Overdue' : 'Due now'}: it was due ${esc(fmt(t.due))}.</p>` : '';
+    const lead = live && (t.status === 'due' || t.overdue) ? `<p class="lead has-att">${t.overdue ? 'Overdue' : 'Due now'}: ${t.kind === 'line' ? 'raised' : 'it was due'} ${esc(fmt(t.due))}.</p>` : '';
     const body = lead + U.card({ title: 'About this task', body: U.kv(rows) }) + stepsCard + histCard;
     return U.page({ crumbs: [{ label: 'All Plants', href: '#/plants' }, { label: p.name, href: base(key) }, { label: 'Tasks', href: base(key) + '/tasks' }, { label: cleanTaskName(t.name) }],
       title: cleanTaskName(t.name), sub: cleanTaskName(t.line || ''), chips, banner: fromBanner(key, q), body, cls: 'wk wk-task' });

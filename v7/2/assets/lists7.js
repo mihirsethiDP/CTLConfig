@@ -202,6 +202,12 @@
       out.push({ kind: 'condition', id: r.workId, name: r.name, href: `${base(key)}/trigger/${enc(r.workId)}`, subject: r.subject || subjectFor(key, r.eqId), order: 10000 + i, phase, statusText: phaseText(phase),
         cadence: { text: (c && c.text) || '', chip: f ? f.chip : null, work: '' }, rank: ord.rank(r.subject) });
     });
+    /* v7/2: condition-based work: a Task a line on an Issue Trigger raises, filed at a unit process or the plant */
+    arr(call(() => v.lineWork(key), [])).forEach((w, i) => {
+      const t = call(() => v.task(key, w.id), null); const subject = (t && t.subject) || null; const phase = live ? 'live' : 'trial';
+      out.push({ kind: 'condition', id: w.id, name: w.name, href: `${base(key)}/task/${enc(w.id)}`, subject, order: 15000 + i, phase, statusText: phaseText(phase),
+        cadence: { text: w.whenText, chip: null, work: 'Condition-based work' }, rank: ord.rank(subject) });
+    });
     return out;
   }
   /* proposals the bindings pass has not turned into Triggers yet (undecided or can't resolve): listed with ?show=draft */

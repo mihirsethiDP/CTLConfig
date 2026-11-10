@@ -578,6 +578,7 @@
     return fmt(t.due);
   }
   function cadenceCell(key, t) {
+    if (t.kind === 'line') { const w = t.from || {}; return H(`<a href="${esc(sensorHref(key, w.sensorId, `zone.${w.dir}.${w.band}`))}">${esc(w.whenText || '')}</a> ${chip('Raised by a line', { tone: 'muted' })}`); }
     const sid = arr(t.scheduleIds)[0] || t.id;
     const c = call('cadenceOf', key, sid);
     const txt = c ? c.everyText : (t.everyText || '');
@@ -604,6 +605,9 @@
   }
   function eqTasksTab(key, P, e, tasks, conds) {
     let out = card({ title: tasks.length ? plural(tasks.length, 'Task') : 'No scheduled Tasks', sub: tasksSub(P), body: tasks.length ? UI.table({ cols: TASK_COLS, rows: taskRows(key, tasks) }) : '' });
+    /* v7/2: condition-based work is never filed on equipment: say which of its readings raise some, and where it is filed */
+    const lw = arr(call('lineWork', key, { eqId: e.id }));
+    if (lw.length) out += note(H(`Condition-based work is filed at a unit process or the plant. ${esc(e.tag)}'s readings raise ${lw.map((w) => `${a(taskHref(key, w.id), w.name)} (${esc(w.reading)}, ${esc(w.bandLabel)} line; filed at ${esc(w.filed.text)})`).join(' and ')}.`), 'quiet');
     if (conds.length) out += card({ title: 'Done when a reading says so', sub: 'A condition Task comes due when its reading crosses the do-when value.', body: list(conds.map((c) => ({ title: H(a(trigHref(key, c.workId), c.name)), sub: H(`${esc(c.text)} ${srcChip(c.perField.doWhen.chip)}`) }))) });
     const parts = arr(e.participatesIn);
     if (parts.length) out += `<p class="o-hint">Work on ${esc(parts.map((p) => p.tag).join(' and '))} is filed on ${parts.length === 1 ? 'that unit process' : 'those unit processes'}.</p>`;
@@ -905,6 +909,94 @@
         + formRow(key, target, 4);
     }).join('');
   }
+  /* v7/2: the threshold bar over a sensor's Zones — both sides on one bar. Dragging a line (or typing its value) opens that Zone's
+     override form with the new value, so the reason and the save stay where every Zone change is made. ZRANGE keeps a scale you set. */
+  const ZRANGE = {};
+  function zbSides(key, s) {
+    const sides = {}; const L = LEDGER();
+    arr(s.dirs).forEach((dir) => {
+      const z = call('zoneInfo', key, s.id, dir); if (!z) return; const b0 = {};
+      BANDS.forEach((b) => {
+        let val = z.bands ? num(z.bands[b]) : null;
+        const t = { kind: 'zone', sensorId: s.id, dir, band: b };
+        if (L && typeof L.isOpen === 'function' && safe(() => L.isOpen(key, t), false)) { const st = safe(() => L._forms[L._fk(key, t)], null); if (st && st.raw !== '' && isFinite(+st.raw)) val = +st.raw; }
+        b0[b] = val;
+      });
+      sides[dir] = b0;
+    });
+    return sides;
+  }
+  function zbOpts(key, s) {
+    const sides = zbSides(key, s); const all = []; Object.keys(sides).forEach((d) => BANDS.forEach((b) => all.push(sides[d][b])));
+    const rk = `${key}|${s.id}`; const range = ZRANGE[rk] || UI.tbRange(Array.isArray(s.valid) ? s.valid : null, all, s.latest ? num(s.latest.v) : null);
+    const tasks = {}; arr(call('lineWork', key, { sensorId: s.id })).forEach((w) => { tasks[`${w.dir}:${w.band}`] = w.name; });
+    return { active: 'both', sides, range, value: s.latest ? num(s.latest.v) : null, unit: s.unit, kind: s.kind, tasks, valueButtons: true,
+      hint: 'Drag a line, or click its value: that Zone\'s change opens below, where you give the reason and save. The range only sets the scale.' };
+  }
+  /* hand a dragged or typed value to the Zone's override form, and render so the form shows it */
+  function zbHand(key, s, dir, b, v) {
+    const L = LEDGER(); const t = { kind: 'zone', sensorId: s.id, dir, band: b };
+    if (L && typeof L.open === 'function') { const st = safe(() => L.open(key, t), null); if (st) st.raw = String(v); }
+    else { openOverride(key, t); const f = fsOf(key, t); f.value = v; }
+    UI.render();
+    if (typeof document !== 'undefined' && document.getElementById) { const row = document.getElementById(`f-zone.${dir}.${b}`); if (row && row.scrollIntoView) row.scrollIntoView({ block: 'nearest' }); }
+  }
+  function zbBind() {
+    if (typeof document === 'undefined' || !document.querySelectorAll) return;
+    document.querySelectorAll('.o-zbar[data-zbar]').forEach((box) => {
+      const [key, sid] = String(box.getAttribute('data-zbar')).split('|'); const s = sensorOf(key, sid); if (!s) return;
+      let live = zbOpts(key, s); UI.tbSync(box, live);
+      UI.tbBind(box, {
+        get: () => live,
+        onValue: (b, v, dir) => { live = { ...live, sides: { ...live.sides, [dir]: { ...live.sides[dir], [b]: v } } }; UI.tbSync(box, live); },
+        onEnd: (b, dir) => { const v = live.sides[dir] && live.sides[dir][b]; if (v != null) zbHand(key, s, dir, b, v); },
+        onPick: (b, dir) => { const v = live.sides[dir] && live.sides[dir][b]; if (v != null) zbHand(key, s, dir, b, v); },
+        onRange: (lo, hi) => { ZRANGE[`${key}|${sid}`] = [lo, hi]; live = { ...live, range: [lo, hi] }; UI.tbSync(box, live); },
+      });
+    });
+  }
+  if (typeof UI.afterRender === 'function') UI.afterRender(zbBind);
+
+  /* v7/2: what a line raises (condition-based work): under a Trigger's bands, and on the sensor where it is set */
+  function lineWorkHtml(key, sensorId, dir) {
+    const ws = arr(call('lineWork', key, { sensorId, dir })); if (!ws.length) return '';
+    return `<ul class="lw-list">${ws.map((w) => { const t = call('task', key, w.id); return `<li>${sev(w.band)} <span class="lw-does">raises the Task</span> ${a(taskHref(key, w.id), w.name)} <span class="lw-does">at ${esc(w.filed.text)}${t ? ' · ' + esc(t.statusLabel) : ''}, instead of an Issue</span></li>`; }).join('')}</ul>`;
+  }
+  /* each line set on this sensor, and what it does: opens an Issue, or raises a Task at a unit process (one the equipment takes part in,
+     or the unit process the sensor sits on) or the plant. Emergency always opens an Issue. */
+  const LW = {};   // drafts of the line form, by key|sensor|dir|band
+  function lineWorkWhere(key, s) {
+    const node = nodeOf(key, s.eqId); const up = node && isUpId(key, node.id);
+    const ups = up ? [{ id: node.id, tag: node.tag }] : arr(safe(() => V().membershipOf(key, s.eqId).participatesIn, [])).map((m) => ({ id: m.upId, tag: m.tag }));
+    return ups.concat([{ id: '', tag: 'the plant' }]);
+  }
+  function lwDraft(key, s, dir, b) {
+    const w = arr(call('lineWork', key, { sensorId: s.id, dir })).find((x) => x.band === b) || null; const where = lineWorkWhere(key, s);
+    return { does: w ? 'task' : 'issue', name: w ? w.name : '', at: w ? (w.filed.kind === 'up' ? w.filed.id : '') : (where[0] ? where[0].id : '') };
+  }
+  function lineWorkCard(key, s, dirs) {
+    if (s.kind === 'status' || s.kind === 'meter') return '';
+    const where = lineWorkWhere(key, s); const rows = [];
+    dirs.forEach((dir) => {
+      const z = call('zoneInfo', key, s.id, dir); if (!z) return;
+      BANDS.filter((b) => z.bands && num(z.bands[b]) != null).forEach((b) => {
+        const w = arr(call('lineWork', key, { sensorId: s.id, dir })).find((x) => x.band === b) || null;
+        const k = `${key}|${s.id}|${dir}|${b}`;
+        const head = `${sev(b)} <span class="muted small">${esc(dir === 'below' ? 'falls below' : 'rises above')} ${esc(fv(z.bands[b], s.unit, s.kind))}</span>`;
+        if (b === 'emergency') { rows.push(`<div class="o-lw"><div class="o-lw-k">${head}</div><div class="o-lw-d"><span class="lw-does">Opens an Issue and calls everyone</span></div></div>`); return; }
+        /* read-only until Change: no input on the sensor page until a form opens */
+        if (!LW[k]) { rows.push(`<div class="o-lw"><div class="o-lw-k">${head}</div><div class="o-lw-d"><span class="lw-does">${w ? `Raises the Task ${a(taskHref(key, w.id), w.name)} at ${esc(w.filed.text)}, instead of an Issue` : 'Opens an Issue'}</span>${btn('Change', { act: 'obj:lwopen', data: { k }, small: true, kind: 'ghost' })}</div></div>`); return; }
+        const d = LW[k];
+        const sel = `<select data-act="obj:lwset" data-k="${esc(k)}" data-f="does" aria-label="What the ${esc(bandName(b))} line does"><option value="issue"${d.does !== 'task' ? ' selected' : ''}>Opens an Issue</option><option value="task"${d.does === 'task' ? ' selected' : ''}>Raises a Task</option></select>`;
+        const more = d.does === 'task' ? `<input type="text" data-act="obj:lwset" data-k="${esc(k)}" data-f="name" value="${esc(d.name)}" placeholder="Name the Task" aria-label="The Task the ${esc(bandName(b))} line raises"> <select data-act="obj:lwset" data-k="${esc(k)}" data-f="at" aria-label="Filed at">${where.map((x) => `<option value="${esc(x.id)}"${x.id === d.at ? ' selected' : ''}>at ${esc(x.tag)}</option>`).join('')}</select>` : '';
+        const changed = (d.does === 'task') !== !!w || (w && (d.name.trim() !== w.name || (d.at || '') !== (w.filed.kind === 'up' ? w.filed.id : '')));
+        const save = (changed ? btn('Save', { act: 'obj:lwsave', data: { k }, small: true, kind: 'primary' }) : '') + btn('Cancel', { act: 'obj:lwcancel', data: { k }, small: true, kind: 'ghost' });
+        rows.push(`<div class="o-lw"><div class="o-lw-k">${head}</div><div class="o-lw-d">${sel}${more}${save}</div></div>`);
+      });
+    });
+    if (!rows.length) return '';
+    return card({ title: 'What each line does', sub: 'A line opens an Issue, or raises a Task at a unit process or the plant: that is condition-based work, never filed on equipment. The next line out still opens the Issue.', body: rows.join(''), id: 'c-lines' });
+  }
   function zonesEditor(key, sensorId, o) {
     o = o || {}; const q = o.q || (safe(() => UI.current().params._q, {}) || {});
     if (String(sensorId || '').startsWith('m:')) return note('Hand-test results stay in the task record: they have no sensor, so no Zones.', 'quiet');
@@ -913,13 +1005,14 @@
     const dirs = arr(s.dirs);
     if (!dirs.length) return note(s.kind === 'meter' ? 'It counts up: run-hours Tasks read it. It has no Zones.' : 'It reads ON or OFF. It has no Zones.', 'quiet');
     const v = s.latest ? num(s.latest.v) : null;
+    const thb = s.kind === 'status' ? '' : `<div class="o-zbar" data-zbar="${esc(key)}|${esc(s.id)}">${UI.tbHtml(zbOpts(key, s))}</div>`;
     const tables = dirs.map((dir) => {
       const z = call('zoneInfo', key, s.id, dir); if (!z) return '';
-      const bar = s.kind === 'status' ? '' : bandBar({ dir, bands: z.bands, value: v, valid: Array.isArray(s.valid) ? s.valid : null, unit: s.unit });
+      const bar = '';
       return `<div class="o-zone"><h3 class="o-zone-h">${esc(dir === 'below' ? 'Falls below' : 'Rises above')}${z.templateName ? ` <span class="muted small">· ${esc(z.templateName)} v${esc(z.templateVersion || 1)}${z.proposed ? ' (proposed)' : ''}</span>` : ''}</h3>${bar ? `<div class="o-dir-bar">${bar}</div>` : ''}`
         + `<div class="t-wrap"><table class="t t-stack o-zt"><thead><tr><th>Band</th><th>Limit</th><th>Source</th><th class="r"></th></tr></thead><tbody>${zoneRows(key, s, z, q)}</tbody></table></div></div>`;
     }).join('');
-    return `<div class="o-zones">${tables}<p class="o-hint">Emergency fires on the first reading (fixed)</p></div>`;
+    return `<div class="o-zones">${thb}${tables}<p class="o-hint">Emergency fires on the first reading (fixed)</p>${lineWorkCard(key, s, dirs)}</div>`;
   }
   function followRow(key, al) {
     const tb = call('triggerBands', key, al.id) || {};
@@ -980,7 +1073,7 @@
       title: H(`Bands · ${esc(al.sensorName || 'reading')} <span class="mono muted">${esc(al.sensorTag || '')}</span>`),
       sub: `${al.dir === 'below' ? 'Falls below' : 'Rises above'} its limits. They follow the sensor's Zones.`,
       body: `<div class="t-wrap"><table class="t t-stack o-zt"><thead><tr><th>Band</th><th>Limit</th><th>Source</th><th class="r"></th></tr></thead><tbody>${rows}</tbody></table></div>`
-        + `<p class="o-hint">${esc(LIMITS_FOOT)}</p><p class="o-hint">Emergency band: fires on the first reading (fixed)</p>`,
+        + `<p class="o-hint">${esc(LIMITS_FOOT)}</p><p class="o-hint">Emergency band: fires on the first reading (fixed)</p>` + lineWorkHtml(key, al.sensorId, al.dir),
       actions: [btn('Edit on sensor', { href: sensorHref(key, al.sensorId), small: true })],
       id: 'c-bands',
     });
@@ -1365,6 +1458,19 @@
   function targetOf(el) { try { return JSON.parse(ga(el, 'target') || 'null'); } catch (e) { return null; } }
   function fixHash(h) { try { if (W.history && W.history.replaceState && W.location && W.location.hash !== h) W.history.replaceState(null, '', h); } catch (e) { /* ignore */ } }
 
+  UI.on('obj:lwopen', (el) => { const k = ga(el, 'k'); if (!k) return false; const [key, sid, dir, b] = k.split('|'); const s = sensorOf(key, sid); if (!s) return false; LW[k] = lwDraft(key, s, dir, b); return undefined; });
+  UI.on('obj:lwcancel', (el) => { const k = ga(el, 'k'); if (k) delete LW[k]; return undefined; });
+  UI.on('obj:lwset', (el) => {
+    const k = ga(el, 'k'); const f = ga(el, 'f'); if (!k || !f) return false; const [key, sid, dir, b] = k.split('|'); const s = sensorOf(key, sid); if (!s) return false;
+    const d = LW[k] || lwDraft(key, s, dir, b); d[f] = el.value; LW[k] = d; return undefined;
+  });
+  UI.on('obj:lwsave', (el) => {
+    const k = ga(el, 'k'); const d = LW[k]; if (!k || !d) return false; const [key, sid, dir, b] = k.split('|');
+    const r = safe(() => V().setLineWork(key, sid, dir, b, d.does === 'task' ? { name: d.name, filedAt: d.at || null } : { name: null }), null);
+    if (!r || !r.ok) { UI.toast((r && r.error) || 'That did not save.'); return false; }
+    delete LW[k]; const w = arr(call('lineWork', key, { sensorId: sid, dir })).find((x) => x.band === b);
+    UI.toast(w ? `The ${bandName(b)} line now raises "${w.name}" at ${w.filed.text}.` : `The ${bandName(b)} line opens an Issue again.`); return undefined;
+  });
   UI.on('obj:ov', (el) => { const t = targetOf(el); const key = ga(el, 'plant'); if (!t || !key) return false; openOverride(key, t); return undefined; });
   UI.on('obj:ovclose', () => { if (OPEN) { const id = fsKey(OPEN.key, OPEN.target); delete FS[id]; } OPEN = null; return undefined; });
   UI.on('obj:ovanyway', (el) => { const st = FS[ga(el, 'fs')]; if (!st) return false; st.anyway = true; st.err = null; return undefined; });

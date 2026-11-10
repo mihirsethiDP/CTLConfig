@@ -196,6 +196,123 @@
     return hit;
   }
 
+  /* v7: the threshold bar — the product's threshold-setting control (range min and max, a coloured bar, a handle per line with its value
+     under it), with v7's four lines on each side. o: {active:'above'|'below'|'both', sides:{above:{band:value},below:{…}} (only the sides
+     the reading has), range:[lo,hi] (scale only), value, unit, kind, step, tasks:{band:name} or {'dir:band':name} (lines that raise a
+     task), otherLabel, editOther, hint, valueButtons (each value a button that calls onPick: no typed input on the bar)}. With one side active its value inputs carry data-band (the limits sheet reads them like any input);
+     with both, data-zone="dir.band". tbHtml renders it; tbSync(root,o) moves regions and handles in place (inputs keep focus while you
+     type or drag); tbBind(root,{get, onValue(band,value,dir), onRange(lo,hi), onEnd(band,dir)}) wires the drag, the arrow keys and the
+     range boxes. */
+  const TB_ICON = '<svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M8 1.6 15 14H1z" fill="currentColor"/><path d="M8 6v3.6M8 11.4v.8" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></svg>';
+  const TB_PEN = '<svg class="thb-pen" viewBox="0 0 16 16" width="11" height="11" aria-hidden="true"><path d="M2 11.6V14h2.4l7.1-7.1-2.4-2.4zM13.7 4.7a.8.8 0 0 0 0-1.1l-1.3-1.3a.8.8 0 0 0-1.1 0l-1 1 2.4 2.4z" fill="currentColor"/></svg>';
+  const tbSidesOn = (o) => (o.active === 'both' ? ['below', 'above'].filter((d) => (o.sides || {})[d]) : [o.active]);
+  const tbTask = (o, dir, b) => { const t = o.tasks || {}; return o.active === 'both' ? t[`${dir}:${b}`] : t[b]; };
+  function tbRegions(o) {
+    const lo = +o.range[0], hi = +o.range[1]; const regs = []; const S = o.sides || {}; const on = tbSidesOn(o);
+    const side = (dir) => (S[dir] ? BANDS.filter((b) => isNum(S[dir][b])).map((b) => ({ b, t: +S[dir][b], dir })) : []);
+    const below = side('below'), above = side('above');
+    // below: deepest band at the bottom of the scale; each band runs from its own line down to the next deeper one
+    below.forEach((x, i) => regs.push({ b: x.b, dir: 'below', off: !on.includes('below'), a: i + 1 < below.length ? below[i + 1].t : lo, z: x.t }));
+    above.forEach((x, i) => regs.push({ b: x.b, dir: 'above', off: !on.includes('above'), a: x.t, z: i + 1 < above.length ? above[i + 1].t : hi }));
+    regs.push({ b: 'ok', dir: null, off: false, a: below.length ? below[0].t : lo, z: above.length ? above[0].t : hi });
+    return regs;
+  }
+  const tbRegHtml = (o) => tbRegions(o).map((r, i) => `<span class="thb-reg thb-${r.b}${r.off ? ' thb-off' : ''}" data-reg="${i}"></span>`).join('');
+  function tbPos(o, v) { const lo = +o.range[0], hi = +o.range[1]; return clamp(((v - lo) / ((hi - lo) || 1)) * 100, 0, 100); }
+  /* handles closer than one label's width go down a row (as many rows as it takes); gap is that width as % of the track */
+  function tbRows(o, gap) {
+    const g = isNum(gap) ? +gap : 28; const hs = [];
+    tbSidesOn(o).forEach((dir) => { const S = (o.sides || {})[dir] || {}; BANDS.filter((b) => isNum(S[b])).forEach((b) => hs.push({ b, dir, k: `${dir}:${b}`, v: +S[b], p: tbPos(o, +S[b]) })); });
+    hs.sort((x, y) => x.p - y.p);
+    const ends = []; hs.forEach((h) => { let r = 0; while (ends[r] != null && h.p - ends[r] < g) r++; ends[r] = h.p; h.row = r; });
+    return hs;
+  }
+  function tbHandle(o, h) {
+    const unit = o.unit || ''; const both = o.active === 'both'; const name = both ? `${bandName(h.b)} ${h.dir === 'below' ? 'low' : 'high'}` : bandName(h.b);
+    const inp = both ? `data-zone="${h.dir}.${h.b}"` : `data-band="${h.b}"`; const task = tbTask(o, h.dir, h.b);
+    return `<div class="thb-h thb-h-${h.b}" data-h="${h.k}">`
+      + `<span class="thb-stem"></span><span class="thb-pin" role="slider" tabindex="0" aria-label="${esc(name)} line" aria-valuemin="${esc(o.range[0])}" aria-valuemax="${esc(o.range[1])}" aria-valuenow="${esc(h.v)}">${TB_ICON}</span>`
+      + `<span class="thb-lab">${esc(name)}</span>`
+      + (o.valueButtons ? `<button type="button" class="thb-val thb-valb" ${inp} aria-label="${esc('Change the ' + name + ' line')}"><span class="thb-v">${esc(h.v)}</span><span class="thb-u">${esc(unit)}</span>${TB_PEN}</button>`
+        : `<label class="thb-val"><input type="number" step="any" inputmode="decimal" ${inp} value="${esc(h.v)}" aria-label="${esc(name)} limit"><span class="thb-u">${esc(unit)}</span>${TB_PEN}</label>`)
+      + (task ? `<span class="thb-task" title="${esc('Raises the task: ' + task)}">raises a task</span>` : '') + '</div>';
+  }
+  function tbHtml(o) {
+    const unit = o.unit || '';
+    const handles = tbRows(o).map((h) => tbHandle(o, h)).join('');
+    const now = isNum(o.value) ? `<span class="thb-now" data-now><b>Now ${esc(num(o.value, unit))}</b></span>` : '';
+    const keys = ['ok', ...BANDS].map((b) => `<span class="thb-key"><i class="thb-${b}"></i>${esc(b === 'ok' ? 'Safe' : bandName(b))}</span>`).join('');
+    const other = o.otherLabel ? `<span class="thb-other"><i class="thb-key-off"></i>${esc(o.otherLabel)}${o.editOther ? ' ' + o.editOther : ''}</span>` : '';
+    return `<div class="thb" data-active="${esc(o.active)}">`
+      + `<div class="thb-range"><label class="thb-box"><span>Range min</span><input type="number" step="any" class="thb-lo" value="${esc(o.range[0])}" aria-label="Range min"></label>`
+      + `<p class="thb-hint">${esc(o.hint || 'Drag a line, or type its value. The range only sets the scale; it is not saved.')}</p>`
+      + `<label class="thb-box"><span>Range max</span><input type="number" step="any" class="thb-hi" value="${esc(o.range[1])}" aria-label="Range max"></label></div>`
+      + `<div class="thb-bar"><div class="thb-track">${tbRegHtml(o)}</div>${now}<div class="thb-hs">${handles}</div></div>`
+      + `<div class="thb-legend">${keys}${other}</div></div>`;
+  }
+  function tbSync(root, o) {
+    if (!root || !root.querySelector) return;
+    const regs = tbRegions(o);
+    if (root.querySelectorAll('.thb-reg').length !== regs.length) { const t = root.querySelector('.thb-track'); if (t) t.innerHTML = tbRegHtml(o); }
+    root.querySelectorAll('.thb-reg').forEach((el, i) => { const r = regs[i]; if (!r) return; const l = tbPos(o, Math.min(r.a, r.z)); const w = r.z < r.a ? 0 : tbPos(o, Math.max(r.a, r.z)) - l; el.style.left = l.toFixed(2) + '%'; el.style.width = Math.max(0, w).toFixed(2) + '%'; el.classList.toggle('thb-off', !!r.off); });
+    const tr = root.querySelector('.thb-track'); const tw = tr && tr.getBoundingClientRect ? tr.getBoundingClientRect().width : 0;
+    const rows = tbRows(o, tw > 0 ? (112 / tw) * 100 : 28); const depth = rows.reduce((m, h) => Math.max(m, h.row), 0);
+    const hsBox = root.querySelector('.thb-hs'); if (hsBox) hsBox.style.height = (92 + depth * 82) + 'px';
+    rows.forEach((h) => {
+      const el = root.querySelector(`.thb-h[data-h="${h.k}"]`); if (!el) return;
+      el.style.left = h.p.toFixed(2) + '%'; el.style.setProperty('--row', String(h.row)); el.classList.toggle('al-l', h.p < 8); el.classList.toggle('al-r', h.p > 92);
+      let tk = el.querySelector('.thb-task'); const want = tbTask(o, h.dir, h.b);
+      if (want && !tk) { el.insertAdjacentHTML('beforeend', '<span class="thb-task">raises a task</span>'); tk = el.querySelector('.thb-task'); }
+      if (tk) { if (want) tk.title = 'Raises the task: ' + want; else tk.remove(); }
+      const pin = el.querySelector('.thb-pin'); if (pin) pin.setAttribute('aria-valuenow', String(h.v));
+      const inp = el.querySelector('input'); if (inp && document.activeElement !== inp && String(inp.value) !== String(h.v)) inp.value = h.v;
+      const vb = el.querySelector('.thb-v'); if (vb && vb.textContent !== String(h.v)) vb.textContent = String(h.v);
+    });
+    const nw = root.querySelector('[data-now]'); if (nw && isNum(o.value)) nw.style.left = tbPos(o, +o.value).toFixed(2) + '%';
+  }
+  function tbStep(o) { const span = Math.abs(+o.range[1] - +o.range[0]) || 1; if (isNum(o.step)) return +o.step; const raw = span / 200; const p = Math.pow(10, Math.floor(Math.log10(raw))); return [1, 2, 5, 10].map((m) => m * p).find((x) => x >= raw) || p; }
+  function tbSnap(o, v) { const st = tbStep(o); const d = Math.max(0, -Math.floor(Math.log10(st) + 1e-9)); return +((Math.round(v / st) * st).toFixed(d)); }
+  /* a line stays between its neighbours on its side (each band goes further out) */
+  function tbClampLine(o, b, v, dir) {
+    const side = dir || (o.active === 'both' ? 'above' : o.active);
+    const S = (o.sides || {})[side] || {}; const set = BANDS.filter((x) => isNum(S[x]) || x === b); const i = set.indexOf(b); const st = tbStep(o);
+    const prev = i > 0 ? +S[set[i - 1]] : null; const next = i + 1 < set.length ? +S[set[i + 1]] : null;
+    const lo = +o.range[0], hi = +o.range[1]; let x = clamp(v, Math.min(lo, hi), Math.max(lo, hi));
+    if (side === 'above') { if (prev != null) x = Math.max(x, prev + st); if (next != null) x = Math.min(x, next - st); }
+    else { if (prev != null) x = Math.min(x, prev - st); if (next != null) x = Math.max(x, next + st); }
+    return tbSnap(o, x);
+  }
+  function tbBind(root, h) {
+    if (!root || root._tbBound || typeof root.addEventListener !== 'function') return; root._tbBound = true;
+    let drag = null;
+    const keyOf = (el) => { const hd = el && el.closest ? el.closest('.thb-h') : null; if (!hd) return null; const k = String(hd.getAttribute('data-h') || ''); const i = k.indexOf(':'); return { hd, dir: k.slice(0, i), b: k.slice(i + 1) }; };
+    const valueAt = (o, clientX) => { const tr = root.querySelector('.thb-track'); const r = tr.getBoundingClientRect(); const f = clamp((clientX - r.left) / (r.width || 1), 0, 1); return +o.range[0] + f * (+o.range[1] - +o.range[0]); };
+    root.addEventListener('pointerdown', (ev) => { const t = ev.target.closest && ev.target.closest('.thb-pin, .thb-stem, .thb-lab'); if (!t) return; const k = keyOf(t); if (!k) return; drag = k; k.hd.classList.add('is-drag'); try { t.setPointerCapture(ev.pointerId); } catch (e) { /* ignore */ } ev.preventDefault(); });
+    root.addEventListener('pointermove', (ev) => { if (!drag) return; const o = h.get(); h.onValue(drag.b, tbClampLine(o, drag.b, valueAt(o, ev.clientX), drag.dir), drag.dir); });
+    const end = () => { if (!drag) return; const d = drag; d.hd.classList.remove('is-drag'); drag = null; if (h.onEnd) h.onEnd(d.b, d.dir); };
+    root.addEventListener('pointerup', end); root.addEventListener('pointercancel', end);
+    root.addEventListener('click', (ev) => { const bt = ev.target.closest && ev.target.closest('.thb-valb'); if (!bt || !h.onPick) return; const k = keyOf(bt); if (k) h.onPick(k.b, k.dir); });
+    root.addEventListener('keydown', (ev) => {
+      const pin = ev.target.closest && ev.target.closest('.thb-pin'); if (!pin) return; const k = keyOf(pin); if (!k) return; const o = h.get();
+      const S = (o.sides || {})[k.dir] || {}; const step = { ArrowRight: 1, ArrowUp: 1, ArrowLeft: -1, ArrowDown: -1, PageUp: 10, PageDown: -10 }[ev.key]; if (!step) return;
+      ev.preventDefault(); h.onValue(k.b, tbClampLine(o, k.b, +S[k.b] + step * tbStep(o), k.dir), k.dir); if (h.onEnd) h.onEnd(k.b, k.dir);
+    });
+    root.addEventListener('change', (ev) => {
+      const t = ev.target; if (!t || !t.classList) return;
+      if (t.classList.contains('thb-lo') || t.classList.contains('thb-hi')) { const lo = root.querySelector('.thb-lo'), hi = root.querySelector('.thb-hi'); if (h.onRange && isNum(lo.value) && isNum(hi.value) && +hi.value > +lo.value) h.onRange(+lo.value, +hi.value); return; }
+      const z = t.getAttribute && t.getAttribute('data-zone'); if (z && h.onTyped) { const [dir, b] = z.split('.'); if (isNum(t.value)) h.onTyped(b, +t.value, dir); }
+    });
+  }
+  /* the scale a threshold bar starts on: what the reading can read, else around its lines and its value */
+  function tbRange(valid, vals, value) {
+    if (Array.isArray(valid) && isNum(valid[0]) && isNum(valid[1]) && +valid[1] > +valid[0]) return [+valid[0], +valid[1]];
+    const pts = vals.filter(isNum).map(Number).concat(isNum(value) ? [+value] : []);
+    if (!pts.length) return [0, 100];
+    const mn = Math.min(...pts), mx = Math.max(...pts), span = (mx - mn) || Math.abs(mx) || 1;
+    const nice = (x, up) => { const p = Math.pow(10, Math.floor(Math.log10(Math.abs(span)) || 0)); return (up ? Math.ceil(x / p) : Math.floor(x / p)) * p; };
+    return [mn >= 0 ? Math.max(0, nice(mn - span * 0.5, false)) : nice(mn - span * 0.5, false), nice(mx + span * 0.5, true)];
+  }
+
   /* The band bar: valid range as the track, a coloured region per band, the current value as a marker. */
   function bandBar(o) {
     o = o || {};
@@ -1049,7 +1166,7 @@
 
   W.V7UI = {
     // kit
-    esc, txt, plain, h, page, chip, sourceChip, stateChip, sampleTag, sev, bandName, BANDS, bandOf, bandBar, table, card, section, kv, list, empty,
+    esc, txt, plain, h, page, chip, sourceChip, stateChip, sampleTag, sev, bandName, BANDS, bandOf, bandBar, tbHtml, tbSync, tbBind, tbRange, tbClampLine, table, card, section, kv, list, empty,
     note, banner, stats, filters, progress, field, radios, btn, link, phone, num, numEnd, rate, dur, formAnswers, plural, fmt, fmtDay, plantName, isNum,
     // dom
     openSheet, refreshSheet, closeSheet, sheetEl, modal, closeModal, confirm, toast, copy, addCss,

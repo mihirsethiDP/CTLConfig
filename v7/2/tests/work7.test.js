@@ -178,7 +178,7 @@ check('list', 'open first: "Open · 1" leads, then "Closed · …"; the row has 
 check('list', 'the row opens the Issue; the subject chip, when it is this file\'s own, opens the unit process', r.own.includes(`data-href="#/p/${M}/issue/${ID}"`) && (!!(W.V7STRUCT && W.V7STRUCT.subjectChip) || r.own.includes(`href="#/p/${M}/up/at2"`)));
 r = render(`#/p/${M}/issues?show=eq`);
 const eqIss = all.filter((i) => i.subject && i.subject.kind === 'eq');
-check('list', '?show=eq lists only Issues on equipment', eqIss.length > 0 && eqIss.every((i) => r.own.includes(`/issue/${i.id}"`)) && !r.own.includes(`/issue/${ID}"`) && /Equipment \d+/.test(r.ownText));
+check('list', '?show=eq lists only Issues on equipment (none at Manesar\'s seed: BL-1\'s Caution firings raise its intake-filter Task)', eqIss.every((i) => r.own.includes(`/issue/${i.id}"`)) && !r.own.includes(`/issue/${ID}"`) && /Equipment \d+/.test(r.ownText));
 r = render(`#/p/${M}/issues?show=plant`);
 check('list', '?show=plant: none at Manesar, said plainly', has(r, 'No Issues on the plant itself.'));
 r = render(`#/p/${M}/issues?show=false`);

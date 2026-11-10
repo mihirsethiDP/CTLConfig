@@ -370,7 +370,7 @@
       const rows = arr(safe(() => _.libraryReview(key), [])); let n = 0;
       rows.forEach((r) => arr(r.proposals).forEach((p) => { if (p.blockedBy || p.decided) return; const ok = safe(() => { _.materialize(key, p.eqId, now()); const kind = p.kind === 'alert' ? 'alert' : p.kind === 'condition' ? 'condition' : 'task'; const it = _.findItem(key, p.eqId, kind, p.name); if (!it) return false; if (it.type === 'alert') _.putAlertState(key, it.obj.id, 'active'); else it.obj.status = 'active'; return true; }, false); if (ok) n++; }));
       _.touch();
-      return { accepted: n, tasks: _.buildTasks(key).length, tasksPerDay: _.tasksPerDay(key), issueTriggers: activeIssueTriggers(key).length };
+      return { accepted: n, tasks: _.buildTasks(key).filter((v) => v.kind !== 'line').length, tasksPerDay: _.tasksPerDay(key), issueTriggers: activeIssueTriggers(key).length };
     });
   }
 
@@ -591,7 +591,7 @@
   /* every scheduled Task's first due date if the plant went live at `at` (a pure preview) */
   function goLiveTasks(key, at0, opts) {
     const P = PS(key); if (!P || !dOf(key)) return null; const at = at0 != null ? at0 : now(); const only = opts && opts.eqId;
-    const rows = _.buildTasks(key).filter((v) => !only || v.eqIds.includes(only)).map((v) => { const r = firstDueAt(key, v.sc, P.tasks[v.id] || {}, at); return { taskId: v.id, scheduleId: v.sc.id, eqId: v.eqIds[0] || null, eqTag: v.eqIds.length ? tagOf(key, v.eqIds[0]) : null, name: v.name, workType: v.workType, due: r.due, why: r.why, anchorFrom: r.anchorFrom }; });
+    const rows = _.buildTasks(key).filter((v) => v.kind !== 'line' && (!only || v.eqIds.includes(only))).map((v) => { const r = firstDueAt(key, v.sc, P.tasks[v.id] || {}, at); return { taskId: v.id, scheduleId: v.sc.id, eqId: v.eqIds[0] || null, eqTag: v.eqIds.length ? tagOf(key, v.eqIds[0]) : null, name: v.name, workType: v.workType, due: r.due, why: r.why, anchorFrom: r.anchorFrom }; });
     const sd = serviceDates(key, { light: true });
     return { at, scheduled: rows.length, dueToday: rows.filter((r) => r.due <= at).length, fromDates: rows.filter((r) => r.why === 'service').length, eqDated: sd.entered, eqWithPM: sd.total, perDay: _.tasksPerDay(key), rows };
   }

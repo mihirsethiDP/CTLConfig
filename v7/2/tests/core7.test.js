@@ -144,6 +144,9 @@ if (MODE === '--core') {
   check('trial', 'a limit change leaves the recorded trial firings in place; the noisy mark stays', okL.ok && V.trialStats('vedanta', 'a_3d').count === 76 && V.isNoisy('vedanta', 'a_3d') && V.checklist('vedanta').gaps.some((g) => g.id === 'noisy'), okL.error);
   const fornow = V.setAlertTiming('manesar', 'a_do_at2', { hold: 15 }, { reason: 'fornow', until: '2026-10-30', note: 'DO probe being cleaned' });
   const nTrial0 = __.PS('vedanta').trialLog.length;
+  /* v7/2: BL-1's Caution line raises "Clean the blower intake filters" at the plant (tests/linework72.test.js follows that); this walk
+     follows the Issue the line opens once it no longer raises the Task */
+  check('advance', 'a line that raised a Task opens an Issue again once the Task is taken off it', V.setLineWork('manesar', 'bl1_amps', 'above', 'caution', { name: null }).changed === true);
   const adv = V.advance(24 * 60);
   const mOpened = adv.opened.filter((o) => o.plant === 'manesar');
   check('advance', 'clock moves to Fri 30 Oct, 09:00', V.fmt(V.now()) === 'Fri 30 Oct, 09:00', adv.summary);
@@ -181,7 +184,7 @@ if (MODE === '--core') {
   check('issue', 'no Issue type is marked "to confirm"', V.issueTypes().every((i) => i.homeToConfirm === false));
 
   /* ── 7. Tasks: one per subject ── */
-  check('tasks', 'no set-level groups at any plant; every Task is single, on one subject, with no "to confirm" or "shared"', KEYS.every((k) => V.taskGroups(k).length === 0 && V.tasks(k).every((t) => t.kind === 'single' && t.eqIds.length <= 1 && !('toConfirm' in t) && !('shared' in t))));
+  check('tasks', 'no set-level groups at any plant; every Task is single, on one subject, with no "to confirm" or "shared"', KEYS.every((k) => V.taskGroups(k).length === 0 && V.tasks(k).every((t) => (t.kind === 'single' || t.kind === 'line') && t.eqIds.length <= 1 && !('toConfirm' in t) && !('shared' in t))));
   check('tasks', 'one Tasks-a-day figure ({each} gives the same)', KEYS.every((k) => V.tasksPerDay(k) === V.tasksPerDay(k, { each: true })));
 
   /* ── 8. go live: no Trigger changes status, the trial ends ── */
@@ -396,13 +399,13 @@ V.advance(60); V.persist();
 const keys = [...store.keys()].sort();
 check('persist', 'v7/2 writes ctl72.estate.v1 and ctl72.overlay.v1, and no v7/1 key', keys.includes('ctl72.estate.v1') && keys.includes('ctl72.overlay.v1') && keys.every((k) => k.startsWith('ctl72.') || k === 'ctl7.decisions'), keys.join(','));
 const ov = JSON.parse(store.get('ctl72.overlay.v1'));
-check('persist', 'the saved story is v72-story-3 and the estate carries the same stamp', ov.story === 'v72-story-3' && JSON.parse(store.get('ctl72.estate.v1')).stamp === `v72-story-3:${ov.saves}`);
+check('persist', 'the saved story is v72-story-4 and the estate carries the same stamp', ov.story === 'v72-story-4' && JSON.parse(store.get('ctl72.estate.v1')).stamp === `v72-story-4:${ov.saves}`);
 const tmp = path.join(os.tmpdir(), `core72-test-${process.pid}.json`); fs.writeFileSync(tmp, JSON.stringify(Object.fromEntries(store)));
 const rel = child(['--reload'], { LOAD72_STORE: tmp }); try { fs.unlinkSync(tmp); } catch (e) { /* ignore */ }
 const here = { now: V.fmt(V.now()), seq: V.S.seq, tseq: V.S.tseq, trial: __.PS('vedanta').trialLog.length, open: V.issues('manesar', { status: 'open' }).map((i) => i.id), states: KEYS.map((k) => V.alerts(k).map((a) => `${a.id}:${a.state}`).join(',')).join('|'), overrides: V.S.overrides.length };
 check('persist', 'a reload restores the story from the ctl72 keys (clock, counters, trial log, Issues, states, ledger)', !rel.error && rel.now === here.now && rel.now === 'Thu 29 Oct, 10:00' && rel.seq === here.seq && rel.tseq === here.tseq && rel.trial === here.trial && JSON.stringify(rel.open) === JSON.stringify(here.open) && rel.states === here.states && rel.overrides === here.overrides && rel.sha === sha(JSON.stringify(V.S)), rel.error || JSON.stringify({ ...rel, states: undefined }));
 const ov2 = JSON.parse(store.get('ctl72.overlay.v1')); ov2.story = 'v72-story-0'; store.set('ctl72.overlay.v1', JSON.stringify(ov2)); V.boot();
-check('persist', 'a saved story with another version reseeds both stores', V.fmt(V.now()) === 'Thu 29 Oct, 09:00' && JSON.parse(store.get('ctl72.overlay.v1')).story === 'v72-story-3' && JSON.parse(store.get('ctl72.estate.v1')).stamp === `v72-story-3:${JSON.parse(store.get('ctl72.overlay.v1')).saves}` && JSON.stringify(V.S).length === seedJson.length);
+check('persist', 'a saved story with another version reseeds both stores', V.fmt(V.now()) === 'Thu 29 Oct, 09:00' && JSON.parse(store.get('ctl72.overlay.v1')).story === 'v72-story-4' && JSON.parse(store.get('ctl72.estate.v1')).stamp === `v72-story-4:${JSON.parse(store.get('ctl72.overlay.v1')).saves}` && JSON.stringify(V.S).length === seedJson.length);
 V.advance(60); V.persist();
 const ov3 = JSON.parse(store.get('ctl72.overlay.v1')); ov3.saves += 1; store.set('ctl72.overlay.v1', JSON.stringify(ov3)); V.boot();
 check('persist', 'a save whose estate stamp does not match reseeds both stores', V.fmt(V.now()) === 'Thu 29 Oct, 09:00' && JSON.stringify(V.S) === seedJson);

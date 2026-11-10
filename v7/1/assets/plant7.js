@@ -486,13 +486,45 @@
     const why = p.decided === 'rejected' && p.reason ? `<div class="p7-prop-w">Why: ${esc(p.reason)}</div>` : '';
     return `<li class="${cls}"><div class="p7-prop-k">${propKind(p)}</div><div class="p7-prop-m"><div class="p7-prop-n">${esc(p.name)}</div><div class="p7-prop-d">${propDetail(p)}</div>${why}</div><div class="p7-prop-a">${right}</div></li>`;
   }
+  /* v7 (card D22): routine checks, routine work and manual tests are one task per type at the plant (the Tasks tab's rule), so the
+     review lists each once per type, naming its equipment; one line is accepted or left out for all of them, and opening it lets
+     one piece of equipment be left out with a reason */
+  const SHARED_WORK = ['routine', 'work', 'test'];
+  const isShared = (p) => p.kind === 'task' && p.eqId !== 'plant' && SHARED_WORK.includes(p.workType);
+  function sharedGroups(rows) {
+    const m = new Map();
+    rows.forEach((r) => arr(r.proposals).filter(isShared).forEach((x) => { const k = x.name; if (!m.has(k)) m.set(k, { name: x.name, typeName: r.typeName, workType: x.workType, props: [] }); m.get(k).props.push({ ...x, tag: x.tag || r.tag, eqName: r.name }); }));
+    return [...m.values()];
+  }
+  const groupState = (g) => { const live = g.props.filter((x) => !x.blockedBy); return { und: live.filter((x) => !x.decided).length, acc: live.filter((x) => x.decided === 'accepted').length, rej: live.filter((x) => x.decided === 'rejected').length, blocked: g.props.length - live.length, n: g.props.length }; };
+  /* lines to decide: a shared task counts once for its type; everything else once per piece of equipment */
+  function lineCounts(rows) {
+    const c = { undecided: 0, tasks: 0, alerts: 0, all: 0 };
+    const byType = new Map(); rows.forEach((r) => { if (!byType.has(r.typeName)) byType.set(r.typeName, []); byType.get(r.typeName).push(r); });
+    byType.forEach((rs) => {
+      sharedGroups(rs).forEach((g) => { const st = groupState(g); c.all++; if (st.und) { c.undecided++; c.tasks++; } });
+      rs.forEach((r) => arr(r.proposals).filter((x) => !isShared(x)).forEach((x) => { c.all++; if (!x.decided && !x.blockedBy) { c.undecided++; if (x.kind === 'alert') c.alerts++; else c.tasks++; } }));
+    });
+    return c;
+  }
+  function sharedBlock(key, g, show, open, alertIds) {
+    const st = groupState(g);
+    if (show === 'undecided' && !st.und) return ''; if (show === 'decided' && !(st.acc + st.rej)) return ''; if (show === 'blocked' && !st.blocked) return '';
+    const pids = g.props.filter((x) => !x.decided && !x.blockedBy).map((x) => x.pid).join(',');
+    const status = [st.und ? `<b>${st.und} to decide</b>` : '', st.acc ? `${st.acc} accepted` : '', st.rej ? `${st.rej} left out` : '', st.blocked ? `${st.blocked} can't be used yet` : ''].filter(Boolean).join(' · ');
+    const acts = st.und ? btn(st.und === 1 ? 'Accept' : `Accept for all ${st.und}`, { act: 'p7:lib-accept-group', data: { plant: key, pids }, small: true, title: 'One task for the type at this plant, with a line per piece of equipment' }) + btn('Not for this plant', { act: 'p7:lib-reject-group', data: { plant: key, pids, name: g.name }, small: true, kind: 'ghost' }) : '';
+    const label = `<span class="p7-sum-t">${esc(g.name)} <span class="muted">· ${esc(countType(g.props.length, g.typeName))}</span></span>`;
+    const sum = `<summary><span class="p7-sum-main">${label}<span class="p7-sum-s">${esc(C_WT(g.workType))} · ${status}</span></span><span class="p7-sum-r">${acts}</span></summary>`;
+    return `<details class="p7-grp p7-shared"${open ? ' open' : ''}>${sum}<div class="p7-grp-b"><p class="p7-more">One task for the type at this plant, with a line per piece of equipment. Leave one out below, with a reason.</p><ul class="p7-props">${g.props.map((x) => propRow(key, { ...x, name: `${x.tag}${x.eqName ? ' ' + x.eqName : ''}` }, alertIds)).join('')}</ul></div></details>`;
+  }
+  const C_WT = (w) => ({ routine: 'Routine check', work: 'Routine work', test: 'Manual testing' }[w] || 'Task');
   function libCounts(rows) {
     const c = { undecided: 0, decided: 0, accepted: 0, rejected: 0, blocked: 0, all: 0 };
     rows.forEach((r) => arr(r.proposals).forEach((p) => { c.all++; if (p.blockedBy) c.blocked++; else if (p.decided) { c.decided++; c[p.decided] = (c[p.decided] || 0) + 1; } else c.undecided++; }));
     return c;
   }
   function visibleProps(r, show) {
-    const ps = arr(r.proposals);
+    const ps = arr(r.proposals).filter((p) => !isShared(p));
     if (show === 'undecided') { const und = ps.filter((p) => !p.decided && !p.blockedBy); return und.length ? und.concat(ps.filter((p) => p.blockedBy)) : []; }
     if (show === 'decided') return ps.filter((p) => p.decided && !p.blockedBy);
     if (show === 'blocked') return ps.filter((p) => p.blockedBy);
@@ -515,7 +547,7 @@
     return guard(params, (key, q) => {
       const v = V(); const b = base(key); const live = v.state(key) === 'live'; const p = plantOf(key);
       const lr = arr(call(() => v.libraryReview(key), []));
-      const c = libCounts(lr);
+      const c = libCounts(lr); const lc = lineCounts(lr);
       const show = SHOWS.includes(q.show) ? q.show : c.undecided ? 'undecided' : 'all';
       const qs = (s) => `${b}/library?show=${s}`;
       const alertIds = {}; arr(call(() => v.alerts(key), [])).forEach((a) => { alertIds[a.name] = a.id; });
@@ -526,23 +558,23 @@
         : 'For each piece of equipment the library proposes alerts and tasks, each limit with a chip saying where it comes from. Accepted alerts go On trial: trial firings are recorded, nothing is sent until go live.';
       const undEq = lr.filter((r) => arr(r.proposals).some((x) => !x.decided && !x.blockedBy)).length;
       const summary = stats([
-        { value: String(c.undecided), label: 'to decide', tone: c.undecided ? 'warn' : null },
+        { value: String(lc.undecided), label: `to decide (${pl(lc.tasks, 'task')}, ${pl(lc.alerts, 'alert')})`, tone: lc.undecided ? 'warn' : null },
         { value: String(c.accepted || 0), label: `accepted${trial ? ` · ${trial} alerts On trial` : ''}` },
         { value: String(c.rejected || 0), label: 'not for this plant' },
         { value: String(c.blocked), label: "can't be used yet" },
       ]);
       parts.push(card({
-        title: c.undecided ? `${pl(c.undecided, 'proposal')} to decide` : 'Every proposal is decided',
-        sub: c.undecided ? (undEq > 1 ? 'Accept a whole type at once, or open a piece of equipment to decide one by one.' : 'Decide it below.') : `${trial ? `${pl(trial, 'alert')} ${trial === 1 ? 'is' : 'are'} On trial. ` : ''}You can still change any decision below.`,
+        title: c.undecided ? `${pl(lc.undecided, 'line')} to decide (${pl(lc.tasks, 'task')}, ${pl(lc.alerts, 'alert')})` : 'Every proposal is decided',
+        sub: c.undecided ? `${undEq > 1 ? 'Accept a whole type at once, or open a piece of equipment to decide one by one.' : 'Decide it below.'} A routine check, routine work or manual test shared by a type is one line, as on the Tasks tab${c.undecided !== lc.undecided ? `: ${c.undecided} proposals in all` : ''}.` : `${trial ? `${pl(trial, 'alert')} ${trial === 1 ? 'is' : 'are'} On trial. ` : ''}You can still change any decision below.`,
         body: summary,
-        actions: [c.undecided && undEq > 1 ? btn(`Accept all ${c.undecided}`, { act: 'p7:lib-accept-all', data: { plant: key }, kind: 'primary' }) : !c.undecided && !live ? btn('Back to Readiness', { href: b, kind: call(() => v.checklist(key).canGoLive, false) ? 'primary' : 'secondary' }) : ''],
+        actions: [c.undecided && undEq > 1 ? btn(`Accept all ${lc.undecided}`, { act: 'p7:lib-accept-all', data: { plant: key }, kind: 'primary' }) : !c.undecided && !live ? btn('Back to Readiness', { href: b, kind: call(() => v.checklist(key).canGoLive, false) ? 'primary' : 'secondary' }) : ''],
         tone: c.undecided ? null : 'ok',
       }));
       parts.push(filters([
-        { label: 'To decide', href: qs('undecided'), on: show === 'undecided', count: c.undecided },
+        { label: 'To decide', href: qs('undecided'), on: show === 'undecided', count: lc.undecided },
         { label: 'Decided', href: qs('decided'), on: show === 'decided', count: c.decided },
         { label: "Can't be used yet", href: qs('blocked'), on: show === 'blocked', count: c.blocked },
-        { label: 'All', href: qs('all'), on: show === 'all', count: c.all },
+        { label: 'All', href: qs('all'), on: show === 'all', count: lc.all },
       ]));
       /* group equipment rows by stored type, in the order SCADA groups them; the plant itself last */
       const order = arr(call(() => v.scadaReview(key).groups, [])).map((g) => g.typeName);
@@ -554,13 +586,14 @@
       const isOpen = (r) => (q.eq ? r.eqId === q.eq : openAll);
       const cards = [];
       byType.forEach((rows, typeName) => {
+        const shared = sharedGroups(rows).map((g) => sharedBlock(key, g, show, false, alertIds)).filter(Boolean);
         const blocks = rows.map((r) => eqBlock(key, r, show, isOpen(r), alertIds)).filter(Boolean);
-        if (!blocks.length) return;
+        if (!blocks.length && !shared.length) return;
         const tc = libCounts(rows); const undRows = rows.filter((r) => arr(r.proposals).some((x) => !x.decided && !x.blockedBy)).length; const code = (rows[0] && call(() => v.eq(key, rows[0].eqId).dbType, null)) || null;
         const undNames = uniq([].concat(...rows.map((r) => arr(r.proposals).filter((x) => !x.decided && !x.blockedBy).map((x) => x.name))));
         const sub = `${pieces(rows.length)}${tc.undecided ? ` · ${tc.undecided} to decide` : ' · all decided'}${tc.blocked ? ` · ${tc.blocked} can't be used yet` : ''}${undNames.length && show !== 'decided' ? `. To decide: ${shortList(undNames, 3)}` : ''}`;
         cards.push(card({
-          title: code ? `<a href="${esc(libHref(code))}">${esc(typeName)}</a>` : typeName, sub, body: blocks.join(''),
+          title: code ? `<a href="${esc(libHref(code))}">${esc(typeName)}</a>` : typeName, sub, body: (shared.length ? `<h4 class="p7-shared-h">Shared by the type · one line each</h4>${shared.join('')}` : '') + (shared.length && blocks.length ? '<h4 class="p7-shared-h">On each piece of equipment</h4>' : '') + blocks.join(''),
           actions: [undRows > 1 ? btn(`Accept all for ${countType(rows.length, typeName)}`, { act: 'p7:lib-accept-type', data: { plant: key, type: typeName }, kind: 'primary' }) : tc.undecided ? '' : chip('All decided', { tone: 'ok' })],
           cls: 'p7-type',
         }));
@@ -723,6 +756,15 @@
       };
     });
   }
+  /* v7: condition-based work: what raises it (a line on an equipment reading) instead of how often */
+  function lineTable(key, list, live) {
+    const rows = list.map((t) => {
+      const w = t.from || {}; const rd = w.eqId ? `<a href="${esc(eqHref(key, w.eqId))}">${esc(w.whenText || '')}</a>` : esc(w.whenText || '');
+      const st = !live ? '<span class="muted">At go live</span>' : t.status === 'due' || t.status === 'doing' ? `<span class="${t.overdue ? 'tx-bad' : 'tx-warn'}">Raised ${esc(fmt(t.raisedAt || t.due))}</span>${t.raisedBy ? `<div class="p7-sub">at ${esc(fmtVal(t.raisedBy.value, w.unit || '', w.kind))}</div>` : ''}` : '<span class="muted">—</span>';
+      return { _href: taskHref(key, t.id), name: `<a href="${esc(taskHref(key, t.id))}">${esc(t.name)}</a><div class="p7-sub">The plant</div>`, when: rd, due: st, last: t.lastDone != null ? fmtDay(t.lastDone) : '<span class="muted">—</span>', st: chip(t.statusLabel || cap(t.status || ''), { tone: t.overdue ? 'bad' : { due: 'warn', doing: 'info' }[t.status] || 'muted' }) };
+    });
+    return table({ cols: [{ label: 'Task', key: 'name' }, { label: 'Raised when', key: 'when' }, { label: 'Raised', key: 'due', cls: 'nowrap' }, { label: 'Last done', key: 'last', cls: 'nowrap' }, { label: 'State', key: 'st' }], rows });
+  }
   function taskTable(key, list, live) {
     return table({ cols: [{ label: 'Task', key: 'name' }, { label: 'How often', key: 'every' }, { label: 'Next due', key: 'due', cls: 'nowrap' }, { label: 'Last done', key: 'last', cls: 'nowrap' }, { label: 'State', key: 'st' }], rows: taskRows(key, list, live) });
   }
@@ -736,13 +778,15 @@
       const a = Math.round(call(() => v.tasksPerDay(key, { each: false }), 0)); const e = Math.round(call(() => v.tasksPerDay(key, { each: true }), 0));
       const each = call(() => v.eachOf(key).phrase, 'if each piece of equipment gets its own');   /* v7: one wording on every plant */
       const both = `${a} ${a === 1 ? 'task' : 'tasks'} a day${e !== a ? ` (${e} ${each} — to confirm)` : ''}`;
-      const show = ['all', 'shared', 'each'].includes(q.show) ? q.show : 'all';
+      const show = ['all', 'shared', 'each', 'condition'].includes(q.show) ? q.show : 'all';
       const due = live ? ts.filter((t) => t.status === 'due' || t.status === 'doing' || t.overdue) : [];
-      const groups = ts.filter((t) => t.kind === 'group'); const singles = ts.filter((t) => t.kind !== 'group' && !t.plantLevel); const plantL = ts.filter((t) => t.kind !== 'group' && t.plantLevel);
+      const groups = ts.filter((t) => t.kind === 'group'); const singles = ts.filter((t) => t.kind !== 'group' && !t.plantLevel); const plantL = ts.filter((t) => t.kind !== 'group' && t.kind !== 'line' && t.plantLevel); const lineL = ts.filter((t) => t.kind === 'line');
       const parts = [];
       parts.push(`<p class="lead">${live ? `<b>${esc(both)}.</b> ` : `<b>When the plant goes live: ${esc(both)}.</b> First due dates are spread across each task's own interval, so day one is not a pile-up. `}Routine checks, routine work and manual tests are one task per type at this plant, with a line for each piece of equipment; maintenance and calibration stay on each piece of equipment.</p>`);
-      parts.push(filters([{ label: 'All', href: `${b}/tasks`, on: show === 'all', count: ts.length }, { label: 'One per type', href: `${b}/tasks?show=shared`, on: show === 'shared', count: groups.length }, { label: 'On each piece of equipment', href: `${b}/tasks?show=each`, on: show === 'each', count: singles.length + plantL.length }]));
+      parts.push(filters([{ label: 'All', href: `${b}/tasks`, on: show === 'all', count: ts.length }, { label: 'One per type', href: `${b}/tasks?show=shared`, on: show === 'shared', count: groups.length }, { label: 'On each piece of equipment', href: `${b}/tasks?show=each`, on: show === 'each', count: singles.length + plantL.length }].concat(lineL.length ? [{ label: 'Condition-based', href: `${b}/tasks?show=condition`, on: show === 'condition', count: lineL.length }] : [])));
       if (due.length && show === 'all') parts.push(card({ title: due.length === 1 ? 'One task due now' : `${due.length} tasks due now`, body: taskTable(key, due, live), tone: due.some((t) => t.overdue) ? 'bad' : 'warn' }));
+      if (show === 'all' || show === 'condition') if (lineL.length) parts.push(card({ title: 'Condition-based work', sub: 'Raised when a reading on equipment crosses a line that raises a task. Filed at the plant, never on the equipment; that line opens no issue.', body: lineTable(key, lineL, live) }));
+      if (show === 'condition') return frame(key, 'tasks', parts.join(''));
       if (show !== 'each' && groups.length) parts.push(card({ title: 'One task per type', sub: 'Routine checks, routine work and manual tests: one task for the type at this plant, with a line per piece of equipment. To confirm with the plant team.', body: taskTable(key, groups, live) }));
       if (show !== 'shared' && singles.length) parts.push(card({ title: 'On each piece of equipment', sub: 'Preventive maintenance and calibration stay with the equipment they are done on.', body: taskTable(key, singles, live) }));
       if (show !== 'shared' && plantL.length) parts.push(card({ title: 'The plant', sub: 'Rounds and checks for the plant as a whole.', body: taskTable(key, plantL, live) }));
@@ -848,7 +892,7 @@
   });
   U.on('p7:lib-accept-all', (el) => {
     const key = dget(el, 'plant'); const p = plantOf(key);
-    const c = libCounts(arr(call(() => V().libraryReview(key), [])));
+    const lr0 = arr(call(() => V().libraryReview(key), [])); const c = libCounts(lr0); const lc = lineCounts(lr0);
     /* v7: the consequence before the click, by plant state: on a Live plant alerts reach people after 7 days On trial and tasks start
        now, so the tasks a day before and after are shown (worked out by core's dry run of the same Accept all) */
     const pv = call(() => V().acceptAllPreview(key, {}), null); const live = pv ? pv.live : V().state(key) === 'live';
@@ -856,9 +900,9 @@
     const alertsLine = pv && !pv.alerts ? 'No alert is among them.' : live ? `${pv ? `${pl(pv.alerts, 'alert')} run` : 'Alerts run'} On trial for 7 days, then reach people.` : `${pv ? `${pl(pv.alerts, 'alert')} run` : 'Alerts run'} On trial: trial firings are recorded, nothing is sent.`;
     const tasksLine = !pv ? (live ? 'Tasks start now.' : 'Tasks start at go live.') : !pv.newTasks ? 'No new tasks.' : live ? `<b>Tasks start now: ${perDay(pv.after)}, up from ${pv.before.perDay} a day.</b>` : `Tasks start at go live: ${perDay(pv.after)}.`;
     U.confirm({
-      title: `Accept all ${c.undecided} proposals?`,
+      title: `Accept all ${lc.undecided} lines?`,
       body: `<p>Every undecided alert and task the library proposes for ${esc(p ? p.name : 'this plant')} is accepted.</p><ul class="p7-changes"><li>${alertsLine}</li><li${live && pv && pv.newTasks ? ' class="p7-loud"' : ''}>${tasksLine}</li></ul><p>You can still leave any of them out afterwards.</p>`,
-      ok: `Accept all ${c.undecided}`,
+      ok: `Accept all ${lc.undecided}`,
       onOk: () => {
         const r = call(() => V().acceptAllFor(key, {}), { ok: false });
         say(r.ok ? `Accepted ${pl(r.count || 0, 'proposal')}; ${esc(acceptTail(r))}.${afterDecide(key)}` : 'That did not work.', { ms: 7000 });
@@ -867,6 +911,26 @@
     return false;
   });
   U.on('p7:lib-reject', (el) => { openReject(dget(el, 'plant'), dget(el, 'pid')); return false; });
+  U.on('p7:lib-accept-group', (el) => {
+    const key = dget(el, 'plant'); const pids = String(dget(el, 'pids') || '').split(',').filter(Boolean); let n = 0; let name = '';
+    pids.forEach((pid) => { const pr = findProp(key, pid); if (pr) name = pr.name; const r = call(() => V().decide(key, pid, 'accept'), { ok: false }); if (r.ok) n++; });
+    say(`Accepted: ${esc(name)}, one task for ${pl(n, 'piece')} of equipment${V().state(key) === 'live' ? '' : '. It starts at go live'}.${afterDecide(key)}`, { ms: 7000 });
+  });
+  U.on('p7:lib-reject-group', (el) => {
+    const key = dget(el, 'plant'); const pids = dget(el, 'pids'); const name = dget(el, 'name') || 'it';
+    const quick = `<div class="p7-quick">${REASONS.map((t) => btn(t, { act: 'p7:reason-pick', data: { text: t }, small: true })).join('')}</div>`;
+    const body = `<p>The library keeps it; ${esc(plantOf(key).name)} leaves it out for every piece of equipment it was proposed for. Say why, so the next person knows.</p>${quick}` + U.field({ label: 'Why', html: '<textarea id="p7-reason" placeholder="In a few words"></textarea>' });
+    U.modal({ title: `Not for this plant: ${name}`, body, foot: btn('Cancel', { act: 'ui:close', data: { what: 'modal' }, kind: 'ghost' }) + btn('Not for this plant', { act: 'p7:lib-reject-group-confirm', data: { plant: key, pids }, kind: 'primary' }) });
+    return false;
+  });
+  U.on('p7:lib-reject-group-confirm', (el) => {
+    const key = dget(el, 'plant'); const pids = String(dget(el, 'pids') || '').split(',').filter(Boolean); const r0 = reasonFrom(el);
+    if (!r0.text) { needReason(r0.ta, 'Say why it is not for this plant.'); return false; }
+    let n = 0; let name = ''; pids.forEach((pid) => { const pr = findProp(key, pid); if (pr) name = pr.name; const r = call(() => V().decide(key, pid, 'reject', { reason: r0.text }), { ok: false }); if (r.ok) n++; });
+    U.closeModal(true);
+    say(`Left out at this plant: ${esc(name)}, for ${pl(n, 'piece')} of equipment.${afterDecide(key)}`, { ms: 7000 });
+    return undefined;
+  });
   U.on('p7:reason-pick', (el) => { const r = reasonFrom(el); if (r.ta) { r.ta.value = dget(el, 'text') || ''; if (r.ta.classList) r.ta.classList.remove('bad'); try { r.ta.focus(); } catch (e) { /* ignore */ } } return false; });
   U.on('p7:lib-reject-confirm', (el) => {
     const key = dget(el, 'plant'); const pid = dget(el, 'pid'); const r0 = reasonFrom(el);

@@ -137,3 +137,22 @@ details.o-more summary { cursor: pointer; color: var(--accent); font-size: 13.5p
   .o-vrow-m { grid-column: 1; }
   .o-days { gap: 4px; }
 }
+
+/* v7: the limits sheet with the threshold bar: a switch per line, what it does, where its value comes from */
+.o-bands-t { margin-top: 4px; }
+.o-band-t { grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "k d" "m m" "h h"; align-items: center; }
+.o-band-t .o-band-k { grid-area: k; } .o-band-t .o-band-d { grid-area: d; justify-content: flex-end; } .o-band-t .o-band-m { grid-area: m; } .o-band-t .o-band-h { grid-area: h; margin: 0; }
+.o-band-t .o-band-m:empty { display: none; }
+.o-band-t .o-band-k { flex-direction: row; align-items: center; gap: 8px; }
+.o-tog { position: relative; width: 34px; height: 20px; border-radius: 999px; border: 0; padding: 0; background: #cdd5d2; cursor: pointer; flex-shrink: 0; }
+.o-tog i { position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, .2); transition: left .12s; }
+.o-tog[aria-checked="true"] { background: var(--primary); }
+.o-tog[aria-checked="true"] i { left: 17px; }
+.o-tog:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.o-band-d { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; min-width: 0; }
+.o-band-d select { max-width: 100%; }
+.o-band-d input[type="text"] { flex: 1 1 180px; min-width: 0; }
+
+
+/* v7 (card D24): the trial replayed with today's limits, beside the firings kept as they happened */
+.o-today { margin: 8px 0 0; font-size: 13.5px; color: var(--ink-2); }

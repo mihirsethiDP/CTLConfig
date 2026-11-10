@@ -108,3 +108,7 @@ details.p7-grp > summary:hover .p7-sum-t { color: var(--accent-strong); }
 /* v7: blind spots beyond the first three fold away */
 .p7-more-d { margin-top: 4px; }
 .p7-more-d > summary { cursor: pointer; color: var(--ink-2); font-size: 13px; padding: 6px 0; list-style-position: inside; }
+
+/* v7 (card D22): a shared task is one line per type on the review, as on the Tasks tab */
+.p7-shared-h { margin: 6px 0 4px; font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-3); }
+.p7-shared > summary .p7-sum-t .muted { font-weight: 400; }

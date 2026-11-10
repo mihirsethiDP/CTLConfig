@@ -252,7 +252,7 @@ if (process.argv.includes('--fill-actions')) {
   const WEEK = { 'ctl7.decisions': JSON.stringify({ v: 1, answers: { D3: { opt: 1, note: '', at: '' }, D15: { opt: 'other', note: 'Ask Alex first', at: '' }, D2: { opt: 2, note: '', at: '' } } }), 'ctl7.study': JSON.stringify({ v: 1, answers: { 'study-words': 2 } }) };
   const GROUPS = (G.V7DEC.ARISINGS || ['First review']).map((a) => [a, CARDS.filter((d) => (d.arose || 'First review') === a)]).filter(([, ds]) => ds.length);
   const slugOf = (a) => 'group-' + String(a).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-  const TITLE_OF = { 'First review': 'From the first review of Alex\'s packs', 'Reviewing v7/1': 'From reviewing v7/1', 'Designing v7/2': 'From designing v7/2', 'Building v7/2': 'From building v7/2' };
+  const TITLE_OF = { 'First review': 'From the first review of Alex\'s packs', 'Reviewing v7/1': 'From reviewing v7/1', 'Designing v7/2': 'From designing v7/2', 'Building v7/2': 'From building v7/2', 'Team feedback': 'From the team\'s feedback on the prototypes' };
   const v72Links = [];                               // [page key, route] for every link into v7/2's prototype
   for (const pg of PAGES) {
     if (!fs.existsSync(pg.file)) continue;
@@ -557,7 +557,8 @@ if (process.argv.includes('--fill-actions')) {
   const readme = read(path.join(SITE, ['README', 'md'].join('.')));
   const v7lines = readme.split('\n').filter((l) => /^- `v7\//.test(l));
   const line2 = v7lines.find((l) => /^- `v7\/2\/` /.test(l)) || '';
-  ok(v7lines.length === 4 && v7lines.some((l) => /^- `v7\/` /.test(l)) && v7lines.some((l) => /^- `v7\/challenges\.html` /.test(l)) && v7lines.some((l) => /^- `v7\/1\/` /.test(l) && /prototype\.html/.test(l) && /index\.html/.test(l))
+  const line3 = v7lines.find((l) => /^- `v7\/3\/` /.test(l)) || '';   /* v7/3, the decided build, once it exists */
+  ok(v7lines.length === (line3 ? 5 : 4) && (!line3 || (/prototype\.html/.test(line3) && /index\.html/.test(line3))) && v7lines.some((l) => /^- `v7\/` /.test(l)) && v7lines.some((l) => /^- `v7\/challenges\.html` /.test(l)) && v7lines.some((l) => /^- `v7\/1\/` /.test(l) && /prototype\.html/.test(l) && /index\.html/.test(l))
     && (READY ? /prototype\.html/.test(line2) && /index\.html/.test(line2) && !/in build/.test(line2) : /^- `v7\/2\/` — v7\/2 \(Alex's model as drafted\) — in build/.test(line2)),
   `README: the overview, the challenges doc, v7/1 and v7/2 (${READY ? 'published: its prototype and hand-off' : '"in build"'})`, v7lines.map((l) => l.slice(0, 40)).join(' | '));
   clean(v7lines.join('\n'), 'README\'s v7 lines');

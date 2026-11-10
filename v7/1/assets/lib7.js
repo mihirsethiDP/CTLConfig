@@ -325,8 +325,9 @@
   /* ════════════════════════════════════════════════════════════════════════════════════════════════════════
      DIFFERENCES  #/differences  and  #/p/:plant/differences
      ════════════════════════════════════════════════════════════════════════════════════════════════════════ */
-  const SHOW_DIF = [['all', 'All'], ['libchanged', 'Library changed since'], ['review', 'Review due'], ['unrecorded', 'Reason not recorded'], ['notinlib', 'Not in the library'], ['ended', 'Ended']];
+  const SHOW_DIF = [['all', 'All'], ['oldlib', 'Probably never chosen'], ['libchanged', 'Library changed since'], ['review', 'Review due'], ['unrecorded', 'Reason not recorded'], ['notinlib', 'Not in the library'], ['ended', 'Ended']];
   const SHOW_NOTE = {
+    oldlib: 'Values equal to the library\'s own fixed number while the plant\'s value now comes from the SCADA form: probably never chosen here. Adopt the SCADA form value, or keep it with a reason.',
     libchanged: 'The library changed after these plants changed the value. Keep the plant\'s value, or go back to the library\'s new one.',
     review: 'Their review date has passed. Keep each one with a new date, or send it back to the library.',
     unrecorded: 'Changed before reasons were kept. Keep each one with a reason, or send it back to the library.',
@@ -340,13 +341,13 @@
     if (type) { live = live.filter((o) => o.typeCode === type); ended = ended.filter((o) => o.typeCode === type); }
     return { live, ended };
   }
-  function difOk(o, show) { return show === 'libchanged' ? o.state === 'libchanged' : show === 'review' ? o.state === 'review' : show === 'unrecorded' ? o.reason === 'unrecorded' : show === 'notinlib' ? o.reason === 'notinlib' : true; }
+  function difOk(o, show) { return show === 'oldlib' ? !!o.oldLib : show === 'libchanged' ? o.state === 'libchanged' : show === 'review' ? o.state === 'review' : show === 'unrecorded' ? o.reason === 'unrecorded' : show === 'notinlib' ? o.reason === 'notinlib' : true; }
   function counts(key, type) {
     const { live, ended } = difLists(key, type); const c = { ended: ended.length };
     SHOW_DIF.forEach(([id]) => { if (id !== 'ended') c[id] = live.filter((o) => difOk(o, id)).length; });
     return c;
   }
-  const rankOf = (o) => (o.state === 'ended' ? 9 : o.state === 'libchanged' ? 0 : o.state === 'review' ? 1 : o.state === 'same' ? 1.5 : o.reason === 'unrecorded' ? 2 : o.reason === 'notinlib' ? 3 : 4);
+  const rankOf = (o) => (o.state === 'ended' ? 9 : o.state === 'libchanged' ? 0 : o.state === 'review' ? 1 : o.state === 'same' ? 1.5 : o.oldLib ? 1.8 : o.reason === 'unrecorded' ? 2 : o.reason === 'notinlib' ? 3 : 4);
   function sortDifs(list) {
     const order = plants().map((p) => p.key);
     return list.slice().sort((a, b) => rankOf(a) - rankOf(b) || order.indexOf(a.plant) - order.indexOf(b.plant) || String(a.tag || '').localeCompare(String(b.tag || ''), 'en', { numeric: true }) || String(a.what).localeCompare(String(b.what)));
@@ -364,19 +365,20 @@
     if (o.state === 'same') return chip(o.baseFrom === 'form' ? 'Now the same as the SCADA form' : 'Now the same as the library', { tone: 'ok', title: 'The value it differed from now equals this plant’s value: going back ends the difference and changes nothing' });
     if (o.state === 'review') return chip('Review due', { tone: 'warn' });
     if (o.state === 'ended') return chip('Ended', { tone: 'muted' });
+    if (o.oldLib) return chip('Probably never chosen here', { tone: 'warn', title: 'It equals the library\'s own fixed number; the plant\'s base is now the SCADA form' });
     if (o.reason === 'unrecorded') return chip('Reason not recorded', { tone: 'warn' });
     if (o.reason === 'notinlib') return chip('Not in the library', { tone: 'info' });
     return chip('OK', { tone: 'ok' });
   }
   function nextStep(o) {
     if (o.state === 'ended') return null;
-    if (o.state === 'libchanged' || o.state === 'same') return 'revert';
+    if (o.state === 'libchanged' || o.state === 'same' || o.oldLib) return 'revert';
     if (o.state === 'review' || o.reason === 'unrecorded') return 'keep';
     if (o.reason === 'notinlib') return 'suggest';
     return null;
   }
   /* v7: "Back to the SCADA form value" when the base is the form; its reason in plain words ("22 kW motor") */
-  const backText = (o) => o.backText || (o.baseFrom === 'form' ? 'Back to the SCADA form value' : 'Back to the library value');
+  const backText = (o) => (o.oldLib ? 'Adopt the SCADA form value' : o.backText || (o.baseFrom === 'form' ? 'Back to the SCADA form value' : 'Back to the library value'));
   /* v7: the form's reason only when it says more than the chip ("22 kW motor"), never "(from the SCADA form)" after "SCADA form" */
   const formWhy = (o) => String(o.baseWhy || '').replace(/^From the SCADA form:?\s*/i, '');
   const baseName = (o) => (o.baseFrom === 'form' ? `the SCADA form's ${val(o.libValue)}${formWhy(o) ? ` (${formWhy(o)})` : ''}` : `the library's ${val(o.libValue)}`);
@@ -389,6 +391,7 @@
       if (o.state === 'same') vals.push(`<span class="dif-was">Now the same as the ${form ? 'SCADA form' : 'library'}${o.baseValue && o.baseValue !== o.libValue ? ` (it was ${esc(val(o.baseValue))} when this was changed)` : ''}: going back changes nothing</span>`);
       else if (o.state === 'libchanged' || o.baseDiffers) vals.push(`<span class="dif-was">The ${form ? 'SCADA form' : 'library'} was ${esc(val(o.baseValue))} when this was changed</span>`);
     }
+    if (o.oldLib) vals.push(`<span class="dif-was">Same as the library's fixed number (${esc(val(o.oldLibText))}): probably never chosen here${o.plantValue === '—' || /none/.test(String(o.plantValue)) ? `. Adopting adds the band at ${esc(val(o.libValue))}` : ''}</span>`);
     const why = o.reason === 'unrecorded' ? 'Reason not recorded (changed before reasons were kept)'
       : o.reason === 'notinlib' ? 'Added at this plant'
         : o.reasonLabel || '';

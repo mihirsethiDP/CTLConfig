@@ -140,3 +140,11 @@ td.o-acts { white-space: nowrap; }
 }
 /* long source chips wrap inside the Card's tiles and narrow cells instead of running past the edge */
 .o-tile .chip, .o-zt .chip, .o-field-v .chip { height: auto; min-height: 22px; white-space: normal; line-height: 1.35; padding-top: 2px; padding-bottom: 2px; }
+
+/* v7/2: the threshold bar over the Zones, and what each line does */
+.o-zbar { margin-bottom: 14px; }
+.o-lw { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.o-lw:last-child { border-bottom: 0; }
+.o-lw-k { display: flex; gap: 8px; align-items: baseline; }
+.o-lw-d { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.o-lw-d input[type="text"] { min-width: 0; flex: 1 1 200px; }

@@ -253,7 +253,7 @@ if (CARDS.some((d) => 'both' in d)) { const b = CARDS.filter((d) => idN(d.id) <=
 /* ── 1b. the newer fields ──────────────────────────────────────────────────────────────────────────────────────
    All optional: a card without them renders as before. Each rule is checked wherever a card carries the field, so the
    card content can be merged in one go; bad fixtures (copies, never the live cards) prove each rule fires. */
-const ARISE = ['First review', 'Reviewing v7/1', 'Designing v7/2', 'Building v7/2'];
+const ARISE = ['First review', 'Reviewing v7/1', 'Designing v7/2', 'Building v7/2', 'Team feedback'];
 const NEWTEXT = ['short', 'v71Short', 'v72Short', 'v72Does'];
 const words = (t) => String(t).trim().split(/\s+/).filter(Boolean).length;
 const pathOf = (h) => String(h == null ? '' : h).replace(/^#\/?/, '').split('?')[0].replace(/\/+$/, '');
@@ -895,8 +895,7 @@ if (HERE === '2' && V && typeof V.reset === 'function') (() => {
     ['D24', 'v72Does', `Wed 28 Oct's Emergency on pH low · EQ-1`],
     ['D25', 'v72Does', `set ${S(() => migr.atText, '?')}, review by ${S(() => migr.reviewByText, '?')}, author not recorded`],
     ['D25', 'v72Does', `AMP-BL1's Caution ${ovOf(/AMP-BL1 · Caution/).valueText} (base ${ovOf(/AMP-BL1 · Caution/).baseText}), Minor ${ovOf(/AMP-BL1 · Minor/).valueText} (base ${ovOf(/AMP-BL1 · Minor/).baseText}) and Major ${ovOf(/AMP-BL1 · Major/).valueText === 'no value' ? 'none' : ovOf(/AMP-BL1 · Major/).valueText} (base ${ovOf(/AMP-BL1 · Major/).baseText})`],
-    ['D25', 'v72Does', `do-when ${ovOf(/do when/).valueText} (base ${ovOf(/do when/).baseText}) and done-when ${ovOf(/done when/).valueText} (base ${ovOf(/done when/).baseText})`],
-    ['D25', 'options', `Five of Manesar's ${F.migrated} migrated values`],
+    ['D25', 'options', `Three of Manesar's ${F.migrated} migrated values`],
     ['D26', 'v72Does', `raises V-1 from ${S(() => bw[0].libValue, '?')} to ${S(() => bw[0].value, '?')} (it serves MGF-1) and DT-1 and CV-1 from ${S(() => bw[1].libValue, '?')} to ${S(() => bw[1].value, '?')} (UF-1)`],
     ['D26', 'v72Does', `raises the ${word(raisedBy(/^UFBP-/, 'B', 'A'))} UF backwash pumps from B to A and ${word(raisedBy(/^UF(F|P|BO)V-/, 'C', 'A'))} UF valves from C to A`],
     ['D26', 'options', `(${dpRaised.length} at DigitalPaani, ${bw.filter((t) => t && t.src === 'derived' && t.value !== t.libValue).length} at Bawal)`],
@@ -904,7 +903,7 @@ if (HERE === '2' && V && typeof V.reset === 'function') (() => {
     ['R14', 'reading', `'${zoneText('manesar', 'eq1_lvl', 'above', 'caution')}'`],
     ['R18', 'reading', `so it falls on ${F.migratedReview.replace(/^\w+ /, '')}`],
     ['R24', 'reading', `${F.vedDueOnGoLive} of Vedanta's ${F.vedScheduled} scheduled Tasks`],
-    ['R35', 'reading', `keeps ${String(ovOf(/do when/).valueText).replace(/ A$/, '')} / ${ovOf(/done when/).valueText} as two Migrated overrides against a worked-out ${String(ovOf(/do when/).baseText).replace(/ A$/, '')} / ${ovOf(/done when/).baseText}`],
+    ['R35', 'reading', `Manesar's intake-filter work is the Task BL-1's Caution line raises`],
   ];
   const textOf = (who, field) => {
     if (/^R\d+$/.test(who)) { const r = reading(+who.slice(1)); return [r.title, r.drafts, r.reading, r.why].join('\n'); }

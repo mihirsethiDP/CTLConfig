@@ -94,9 +94,7 @@ window.SEED = {
   /* Condition-based work = Trigger with outcome 'task', triggerType 'alert' (routine): fires on a rising edge of a reading on
      the equipment and re-arms on the opposite threshold; escalate, when set, also raises an issue above a worse threshold.
      The intake filter job starts below the current alert (44 A on BL-1, a 22 kW blower with 40 A full load). */
-  conditionWork: [
-    { id: 'w_intake', name: 'Clean intake filter', subject: { kind: 'eq', id: 'bl1' }, sensor: 'bl1_amps', doWhen: 42, doneWhen: 38, flow: 'f_blower', escalate: null, status: 'active', open: 0, template: 't_blw' },
-  ],
+  conditionWork: [],   /* v7: none on equipment; core7's lineWork raises condition-based work at the plant (v7/2: or a unit process) */
 
   milestones: [
     { id: 'm1', name: 'DO held above 2.5 mg/L for 24 hours', on: 'at2_do', status: 'active', count: 14 },

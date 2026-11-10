@@ -211,8 +211,8 @@ attempt('Triggers · Manesar (Live)', () => {
   ok('the lead names the window and the drafts in the review queue, from coverage()', lead.includes(`${cov.window.label}: ${cov.triggers.issues}`) && lead.includes(cov.triggers.draftsText), lead);
   const tt = taskTrigTable(body); const single = V.cadenceOf('manesar', 'w_sludge');
   ok('a single-use Task Trigger shows both chips', tt && tt.rows.some((r) => r.text.includes(single.chip.text) && r.text.includes(single.chip.extra[0].text)), single && single.chip);
-  const cond = V.conditionOf('manesar', 'w_intake');
-  ok('a condition Task Trigger reads its do when / done when and the override chip', tt && tt.rows.some((r) => r.text.includes(cond.text) && r.text.includes(cond.perField.doWhen.chip.text)), cond.text);
+  /* v7/2: condition-based work is a Task a line on an Issue Trigger raises: listed with the line it reads */
+  ok('a condition-based Task reads the line that raises it', tt && tt.rows.some((r) => r.text.includes('Clean the blower intake filters') && r.text.includes('When BL-1 Motor current rises above 44 A (Caution)')), tt && tt.rows.map((r) => r.text).join(' | ').slice(0, 300));
 });
 attempt('Triggers · Manesar drafts and undecided', () => {
   const body = B.triggers('manesar', { show: 'draft' }); const a = issueTable(body); const t = taskTrigTable(body);

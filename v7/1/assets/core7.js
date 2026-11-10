@@ -51,6 +51,10 @@
    Flows:     flowOf(id) · diagFor(key,issue) · causeOf(id) · fixFlowFor(causeId,sensorName?) · linkedTask(stepRef) → {kind,id,name,flowId,
               steps,all} | null (stepRef: {flowId,stepId} or a step) · taskForGeneral(key,generalTaskId,eqId?) · issueTypes(typeName)
    Tasks:     taskGroups(key) · tasksPerDay(key,{each})
+   Condition: lineWork(key,{sensorId,dir,eqId}) → [{id,name,why,sensorId,dir,band,bandLabel,limit,limitText,eqId,eqTag,reading,alertId,whenText}]
+              setLineWork(key,sensorId,dir,band,{name,why}) (name null removes) · condition-based work is filed at the plant, never on equipment:
+              a line on an equipment alert raises it (Live plant, alert On) instead of opening an issue; a task's kind 'line', status 'armed'
+              while it waits for its reading; done puts it back to waiting
    Coverage:  coverage(key) → {state,since,days,alerts:[{alertId,name,firesPerDay,falseAlarmShare,medianCloseH,issues}],blindSpots,gaps,
               changes,totals}
    Library:   libTypes() (56) · libType(code) · libVersion(code) · libDraft(code) · editLib(code,{reading,dir,bands}|{schedule,every}|
@@ -92,7 +96,7 @@ window.V7 = (function () {
   if (!C) throw new Error('core7.js needs app.js (window.CTL) loaded first');
 
   /* ── constants ─────────────────────────────────────────────────────────────────────────────── */
-  const OVERLAY = 'ctl7.overlay.v1', OVERLAY_V = 1, STORY = 'v7-story-3';   /* v7: story 2 = AT-2 DO back by 09:55, its diagnosis started at 07:50; story 3 = every seeded issue in Activity, an open issue's Lowest/Highest kept per poll, never-done work's new interval kept from the change date; an older saved story reseeds */
+  const OVERLAY = 'ctl7.overlay.v1', OVERLAY_V = 1, STORY = 'v7-story-5';   /* v7: story 5 = trial firings kept as records (card D24); story 4 = condition-based work is a task that a line on an equipment alert raises at the plant; story 2 = AT-2 DO back by 09:55, its diagnosis started at 07:50; story 3 = every seeded issue in Activity, an open issue's Lowest/Highest kept per poll, never-done work's new interval kept from the change date; an older saved story reseeds */
   const MIN = 60000, HOUR = 60 * MIN, DAY = 24 * HOUR, POLL = 15 * MIN, IST = 330 * MIN;
   const T = (s) => Date.parse(s + ':00+05:30');                       // 'YYYY-MM-DDTHH:MM' in IST
   const NOW0 = T('2026-10-29T09:00');
@@ -108,7 +112,15 @@ window.V7 = (function () {
     manesar: { sample: true, realLayout: false, state: 'live', since: T('2026-09-01T09:00') },
     bawal: { sample: true, realLayout: false, state: 'live', since: T('2026-07-15T09:00') },
   };
-  const HOME_TO_CONFIRM = ['i_mb_bod', 'i_mb_ammonia', 'i_mb_tss', 'i_mb_odour', 'i_ts_yellow'];
+  /* v7: condition-based work is filed at the plant, never on equipment: a line on an equipment alert raises it. Manesar's two:
+     BL-1's Caution line (a blocked intake filter makes the blower draw more current) and AT-1's MLSS line (time to waste sludge). */
+  const LINE_WORK_SEED = {
+    manesar: [
+      { id: 'lw_bl1_filter', name: 'Clean the blower intake filters', sensorId: 'bl1_amps', dir: 'above', band: 'caution', why: 'A blocked intake filter makes the blower draw more current', at: T('2026-09-01T09:00'), by: 'Sunny Verma' },
+      { id: 'lw_at1_sludge', name: 'Waste extra sludge', sensorId: 'at1_mlss', dir: 'above', band: 'minor', why: 'MLSS above the line means too much sludge in the aeration tank', at: T('2026-09-01T09:00'), by: 'Sunny Verma' },
+    ],
+  };
+  const HOME_TO_CONFIRM =['i_mb_bod', 'i_mb_ammonia', 'i_mb_tss', 'i_mb_odour', 'i_ts_yellow'];
   const GROUPED = ['routine', 'work', 'test'];
   const RUN_HOURS_PER_DAY = 20, STANDBY_RUN_HOURS_PER_DAY = 1;   /* v7: the hour meter counts run time: duty equipment ~20 h a day, standby ~1 */
   const LABELS = {
@@ -119,7 +131,7 @@ window.V7 = (function () {
     reason: { tuned: 'Tuned for this plant', fornow: 'For now, until …', unrecorded: 'Not recorded (changed before reasons were kept)', notinlib: 'Not in the library' },
     overrideState: { ok: 'OK', same: 'Now the same as the library', libchanged: 'Library changed since', review: 'Review due', ended: 'Ended' },
     issueStatus: { open: 'Open', diagnosing: 'Diagnosing', fixing: 'Fixing', verifying: 'Verifying', closed: 'Closed' },
-    taskStatus: { upcoming: 'Upcoming', due: 'Due', doing: 'In progress', waiting: 'Starts at go live' },
+    taskStatus: { upcoming: 'Upcoming', due: 'Due', doing: 'In progress', waiting: 'Starts at go live', armed: 'Waiting for the reading' },
     workType: C.WT_LABEL,
     tier: C.TIER_LABEL,
   };
@@ -562,7 +574,11 @@ window.V7 = (function () {
     const st = PS(key) && PS(key).alerts[alertId]; if (!st || st.trialSince == null) return null;
     return cached(`trial:${key}:${alertId}`, () => {
       const to = st.state === 'trial' ? now() : (st.trialEnd || now()); const r = replay(key, alertId, { from: st.trialSince, to });
-      return { ...r, since: st.trialSince, trialDays: r.days, noisy: r.perDay > 10, mostlyShort: r.count > 0 && r.shortShare >= 0.5, sample: true };
+      /* v7 (card D24): the records as they happened beside the replay with today's limits; noisy judges today's limits */
+      const recs = (PS(key).trialLog || []).filter((x) => x.alertId === alertId && x.start >= st.trialSince && x.start <= to).map((x) => ({ ...x, steps: x.steps.slice(), minutes: x.end != null ? (x.end - x.start) / MIN : null }));
+      const ended = recs.filter((x) => x.end != null); const days = r.days || Math.max(1 / 24, (to - st.trialSince) / DAY);
+      const recorded = { count: recs.length, perDay: recs.length / days, shortShare: ended.length ? ended.filter((x) => x.short).length / ended.length : 0, firings: recs, days };
+      return { ...r, since: st.trialSince, trialDays: r.days, noisy: r.perDay > 10, mostlyShort: r.count > 0 && r.shortShare >= 0.5, sample: true, recorded, todayCount: r.count, todayPerDay: r.perDay };
     });
   }
   function isNoisy(key, alertId) { const st = alertState(key, alertId); if (st === 'trial') { const ts = trialStats(key, alertId); return !!(ts && ts.noisy); } if (st === 'on') { const r = replay(key, alertId, { from: now() - 7 * DAY, to: now() }); return !!r && r.perDay > 10; } return false; }
@@ -705,6 +721,47 @@ window.V7 = (function () {
     iss.status = 'closed'; iss.closed = at; iss.closedHow = how; ilog(iss, at, text);
     if (!(opts && opts.quiet)) addActivity(at, key, `Issue closed: ${iss.title}${how === 'false alarm' ? ' (false alarm)' : how === 'reading' ? ' (the reading came back)' : ''}`, 'issue', how === 'reading' ? null : ME);
   }
+  /* ── condition-based work: a task a line on an equipment alert raises, filed at the plant ──────────────────────────── */
+  const lineWorkOf = (key) => { const P = PS(key); return P ? (P.lineWork || (P.lineWork = [])) : []; };
+  const lineWorkOn = (key, sensorId, dir) => lineWorkOf(key).filter((lw) => lw.sensorId === sensorId && lw.dir === dir);
+  const isTaskLine = (key, sensorId, dir, band) => lineWorkOn(key, sensorId, dir).some((lw) => lw.band === band);
+  /* raised once; it is raised again only after someone completes it */
+  function raiseLineWork(key, lw, t, v, out, quiet) {
+    const P = PS(key); const st = P.tasks[lw.id];
+    if (st && (st.status === 'due' || st.status === 'doing')) return;
+    const s = sensorRaw(key, lw.sensorId); const e = s ? homeOf(key, s) : null;
+    P.tasks[lw.id] = { due: t, lastDone: st ? st.lastDone : null, status: 'due', done: [], history: st ? st.history || [] : [], startedAt: null, raisedAt: t, raisedBy: { band: lw.band, value: v } };
+    if (!quiet) addActivity(t, key, `Task raised: ${lw.name}, ${e ? e.tag + ' ' : ''}${s ? said(s, v) : ''} (${BAND_LABEL[lw.band]} line)`, 'task', null);
+    if (out && out.tasksDue) out.tasksDue.push({ plant: key, id: lw.id, name: lw.name, due: t });
+  }
+  /* the line's words: "When BL-1 Motor current rises above 44 A (Caution)" — the limit is read live, so moving the line moves the task */
+  function lineWorkView(key, lw) {
+    const s = sensorRaw(key, lw.sensorId); const e = s ? homeOf(key, s) : null; const lim = bandsInfo(key, lw.sensorId, lw.dir);
+    const at = lim && lim.bands ? lim.bands[lw.band] : null;
+    const alert = dOf(key).alerts.find((a) => a.sensor === lw.sensorId && alertDir(key, a) === lw.dir) || null;
+    return { id: lw.id, name: lw.name, why: lw.why || '', sensorId: lw.sensorId, dir: lw.dir, band: lw.band, bandLabel: BAND_LABEL[lw.band], limit: at, limitText: at == null ? '' : fmtVal(at, s ? s.unit : '', s ? s.kind : ''), eqId: e ? e.id : null, eqTag: e ? e.tag : '', reading: s ? s.name : '', unit: s ? s.unit || '' : '', kind: s ? s.kind || '' : '', alertId: alert ? alert.id : null, alertName: alert ? alert.name : '',
+      whenText: `When ${e ? e.tag + ' ' : ''}${s ? s.name : 'the reading'} ${lw.dir === 'below' ? 'falls below' : 'rises above'} ${at == null ? 'its line' : fmtVal(at, s ? s.unit : '', s ? s.kind : '')} (${BAND_LABEL[lw.band]})`, at: lw.at || null, by: lw.by || null };
+  }
+  function lineWork(key, opts) { const o = opts || {}; return lineWorkOf(key).filter((lw) => (!o.sensorId || lw.sensorId === o.sensorId) && (!o.dir || lw.dir === o.dir) && (!o.eqId || lineWorkView(key, lw).eqId === o.eqId)).map((lw) => lineWorkView(key, lw)); }
+  /* set (or with name null, remove) the task a line raises. One task per line; the line must be set on that reading. */
+  function setLineWork(key, sensorId, dir, band, opts) {
+    const P = PS(key); if (!P) return { ok: false, error: 'No such plant.' }; if (!BANDS.includes(band)) return { ok: false, error: 'Pick a line.' };
+    const s = sensorRaw(key, sensorId); if (!s) return { ok: false, error: 'No such reading.' }; const e = homeOf(key, s);
+    const list = lineWorkOf(key); const i = list.findIndex((lw) => lw.sensorId === sensorId && lw.dir === dir && lw.band === band);
+    const name = opts && opts.name != null ? String(opts.name).trim() : null;
+    if (name == null || name === '') {
+      if (i < 0) return { ok: true, changed: false };
+      const was = list[i]; list.splice(i, 1); const st = P.tasks[was.id]; if (st && st.status !== 'doing') delete P.tasks[was.id];
+      addActivity(now(), key, `The ${BAND_LABEL[band]} line on ${e ? e.tag + ' ' : ''}${s.name} no longer raises "${was.name}"; it opens an issue again`, 'config');
+      touch(); persist(); return { ok: true, changed: true };
+    }
+    const lim = bandsInfo(key, sensorId, dir); if (!lim || !lim.bands || lim.bands[band] == null) return { ok: false, error: `${s.name} has no ${BAND_LABEL[band]} line ${dir === 'below' ? 'below' : 'above'}. Set the line first.` };
+    if (i >= 0) { if (list[i].name === name) return { ok: true, changed: false }; const old = list[i].name; list[i].name = name; if (opts.why != null) list[i].why = String(opts.why); addActivity(now(), key, `Renamed the task the ${BAND_LABEL[band]} line on ${e ? e.tag + ' ' : ''}${s.name} raises: "${old}" → "${name}"`, 'config'); touch(); persist(); return { ok: true, changed: true, id: list[i].id }; }
+    const lw = { id: nextId('lw'), name, sensorId, dir, band, why: opts && opts.why ? String(opts.why) : '', at: now(), by: ME };
+    list.push(lw); if (P.state === 'live') P.tasks[lw.id] = { due: null, lastDone: null, status: 'armed', done: [], history: [], startedAt: null };
+    addActivity(now(), key, `The ${BAND_LABEL[band]} line on ${e ? e.tag + ' ' : ''}${s.name} now raises the task "${name}" at the plant instead of an issue`, 'config');
+    touch(); persist(); return { ok: true, changed: true, id: lw.id };
+  }
   const furthest = (dir, a, b) => (a == null ? b : b == null ? a : dir === 'below' ? Math.min(a, b) : Math.max(a, b));
   /* run the engine from the plant's last poll to toT. Live alerts open issues; trial alerts record firings and open a real issue only at Emergency. */
   function runEngine(key, toT, out, opts) {
@@ -717,13 +774,29 @@ window.V7 = (function () {
       const tr = P.eng[a.id] || (P.eng[a.id] = newTracker());
       const cur = termsOf(key, a.id); if (!cur) return;
       let open = P.issues.find((i) => i.alertId === a.id && i.status !== 'closed') || null;
+      /* v7 (card D24): a firing on trial is kept as it happened, with the limit it crossed; tuning later never rewrites it */
+      if (!P.trialLog) P.trialLog = [];
+      let trec = st === 'trial' ? P.trialLog.find((r) => r.alertId === a.id && r.end == null) || null : null;
       for (let t = firstPollAfter(fromT); t <= toT; t += POLL) {
         const terms = open ? { ...cur, bands: open.terms.bands, hold: open.terms.hold, clear: open.terms.clear, dir: open.terms.dir } : cur;
         const v = valueOf(key, a.sensor, t); const ev = trackStep(tr, t, v, terms, gateOn(key, terms.gate, t));
         /* v7: an open issue's Lowest/Highest is the furthest reading so far, kept on every poll while it is open (never the value at
            opening, never a later, milder firing's) */
         if (open && tr.f) open.peak = furthest(open.terms.dir, open.peak, tr.f.peak);
+        if (trec && tr.f) trec.peak = furthest(terms.dir, trec.peak, tr.f.peak);
+        if (ev && st === 'trial') {
+          if (ev.type === 'start') { trec = { alertId: a.id, start: t, end: null, band: ev.f.band, firstBand: ev.f.band, peak: ev.f.peak, limit: terms.bands[ev.f.band], steps: [], short: false }; P.trialLog.push(trec); }
+          else if (ev.type === 'up' && trec) { trec.band = ev.band; trec.steps.push({ t, band: ev.band }); }
+          else if (ev.type === 'end' && trec) { trec.end = t; trec.peak = furthest(terms.dir, trec.peak, ev.f.peak); trec.short = isShort(trec); trec = null; }
+        }
         if (!ev) continue;
+        /* v7: a line that creates a task raises it (Live plant, alert On) and opens no issue; a deeper line opens the issue as before */
+        const band = ev.type === 'start' ? ev.f.band : ev.type === 'up' ? ev.band : null;
+        if (band && st === 'on' && P.state === 'live') {
+          lineWorkOn(key, a.sensor, terms.dir).filter((lw) => RANK[lw.band] <= RANK[band]).forEach((lw) => raiseLineWork(key, lw, t, v, out, quiet));
+          if (!open && isTaskLine(key, a.sensor, terms.dir, band)) { nextId('is'); continue; }   /* the firing keeps its number, so the story's later ids stay as they were */
+          if (!open && ev.type === 'up' && band !== 'emergency' && isTaskLine(key, a.sensor, terms.dir, ev.f.firstBand)) { open = openAlertIssue(key, a, { ...ev.f, band }, terms, t, { quiet }); if (out) out.opened.push({ id: open.id, plant: key, title: open.title, band, opened: t }); continue; }
+        }
         if (ev.type === 'start') {
           if (st === 'trial' && out) out.trial.push({ plant: key, alertId: a.id, name: a.name, start: t, band: ev.f.band });
           /* v7: a new firing deeper than the open issue's band is a step up (rule 10: it escalates by its own terms; Emergency calls) */
@@ -779,7 +852,10 @@ window.V7 = (function () {
         }
         out.push({ id: sc.id, kind: 'single', name: sc.name, workType: sc.workType, typeName: e ? e.type : null, code: e ? e.dbType || e.code : null, scheduleIds: [sc.id], eqIds: e ? [e.id] : [], plantLevel: !e, sc });
       });
+      /* v7: condition-based work is filed at the plant (eqIds empty: it is no equipment's task); its line names the equipment it reads */
+      lineWorkOf(key).forEach((lw) => { const w = lineWorkView(key, lw); out.push({ id: lw.id, kind: 'line', name: lw.name, workType: 'condition', workLabel: 'Condition-based work', typeName: null, code: null, scheduleIds: [], eqIds: [], tags: [], plantLevel: true, toConfirm: false, line: `${lw.name} · the plant`, shared: null, every: null, everyText: w.whenText, basis: 'condition', intervalH: null, perDay: 0, source: null, flowId: null, generalTaskId: null, anchor: 'line', statutory: false, from: w, sc: null }); });
       return out.map((v) => {
+        if (v.kind === 'line') return v;
         const sc = v.sc; const n = v.eqIds.length; const I = intervalH(sc, rateOfEq(eqRaw(key, v.eqIds[0])));
         const gt = sc.task ? C.taskById(sc.task) : C.taskByFlow(sc.flow);
         return { id: v.id, kind: v.kind, name: v.name, workType: v.workType, workLabel: C.WT_LABEL[v.workType] || v.workType, typeName: v.typeName, code: v.code, scheduleIds: v.scheduleIds, eqIds: v.eqIds, tags: v.eqIds.map((id) => (eqRaw(key, id) || {}).tag), plantLevel: !!v.plantLevel, toConfirm: v.kind === 'group', line: v.kind === 'group' ? `${v.name} · ${n} ${noun(v.typeName, n)}` : v.plantLevel ? `${v.name} · the plant` : `${v.name} · ${(eqRaw(key, v.eqIds[0]) || {}).tag}`, shared: v.kind === 'group' && n > 1 ? `shared task for ${n} ${noun(v.typeName, n)}` : null, every: C.cadenceOf(sc), everyText: C.every(sc), basis: sc.basis, intervalH: I, perDay: 24 / I, source: cadenceInfo(key, sc.id), flowId: sc.flow || (gt && gt.flow) || null, generalTaskId: gt ? gt.id : null, anchor: sc.anchor || 'fixed', statutory: !!sc.statutory, sc };
@@ -789,12 +865,14 @@ window.V7 = (function () {
   const taskIdOfSchedule = (key, scId) => { const t = buildTasks(key).find((x) => x.scheduleIds.includes(scId)); return t ? t.id : null; };
   function taskStateOf(key, id) {
     const P = PS(key); const st = P.tasks[id];
+    if (lineWorkOf(key).some((lw) => lw.id === id)) { const h = st ? st.history || [] : []; if (P.state !== 'live') return { due: null, lastDone: st ? st.lastDone : null, status: 'waiting', done: [], history: h }; return st && (st.status === 'due' || st.status === 'doing') ? st : { due: null, lastDone: st ? st.lastDone : null, status: 'armed', done: [], history: h, raisedAt: null }; }
     if (P.state !== 'live') return { due: null, lastDone: st ? st.lastDone : null, status: 'waiting', done: st ? st.done || [] : [], history: st ? st.history || [] : [] };
     return st || { due: null, lastDone: null, status: 'upcoming', done: [], history: [] };
   }
   function ensureTaskStates(key, mode) {
     const P = PS(key); if (P.state !== 'live') return;
     buildTasks(key).forEach((v) => {
+      if (v.kind === 'line') { if (!P.tasks[v.id]) P.tasks[v.id] = { due: null, lastDone: null, status: 'armed', done: [], history: [], startedAt: null }; return; }
       if (P.tasks[v.id] && P.tasks[v.id].due != null) return; const I = v.intervalH * HOUR; const prev = P.tasks[v.id] || {};
       /* v7: run-hours work is not spread: it falls due when its hour meter gets there (from the reading at its last service, or at go live) */
       const mp = meterProfile(key, v.sc);
@@ -807,12 +885,12 @@ window.V7 = (function () {
   function taskView(key, v) {
     const st = taskStateOf(key, v.id); const f = v.flowId ? C.flow(v.flowId) || flowOf(v.flowId) : null;
     const { sc: sc0, ...vv } = v;   /* v7: the raw schedule stays inside core */
-    return { ...vv, meter: meterProfile(key, sc0) ? meterLeft(key, sc0, st) : null, runHours: sc0 && sc0.meter && (sc0.basis === 'meter' || sc0.basis === 'either') ? runHoursInfo(key, sc0.id) : null, due: st.due, lastDone: st.lastDone, status: st.status, statusLabel: LABELS.taskStatus[st.status], overdue: st.status !== 'waiting' && st.due != null && now() > st.due + Math.max(2, v.intervalH * 0.2) * HOUR, done: (st.done || []).slice(), steps: f ? f.steps.map((x) => ({ id: x.id, type: x.type, text: x.text, link: x.link || null, links: x.links || null })) : [], history: (st.history || []).slice(), startedAt: st.startedAt || null };
+    return { ...vv, meter: meterProfile(key, sc0) ? meterLeft(key, sc0, st) : null, runHours: sc0 && sc0.meter && (sc0.basis === 'meter' || sc0.basis === 'either') ? runHoursInfo(key, sc0.id) : null, due: st.due, lastDone: st.lastDone, status: st.status, statusLabel: LABELS.taskStatus[st.status], overdue: st.status !== 'waiting' && st.status !== 'armed' && st.due != null && now() > st.due + (v.kind === 'line' ? 24 : Math.max(2, v.intervalH * 0.2)) * HOUR, raisedAt: st.raisedAt || null, raisedBy: st.raisedBy || null, done: (st.done || []).slice(), steps: f ? f.steps.map((x) => ({ id: x.id, type: x.type, text: x.text, link: x.link || null, links: x.links || null })) : [], history: (st.history || []).slice(), startedAt: st.startedAt || null };
   }
   function tasks(key, opts) {
     const o = opts || {}; if (!PS(key)) return [];
     return buildTasks(key).map((v) => taskView(key, v)).filter((t) => (!o.eqId || t.eqIds.includes(o.eqId)) && (!o.status || (o.status === 'open' ? ['due', 'doing'].includes(t.status) : t.status === o.status)))
-      .sort((a, b) => ({ doing: 0, due: 1, upcoming: 2, waiting: 3 }[a.status] - { doing: 0, due: 1, upcoming: 2, waiting: 3 }[b.status]) || ((a.due || 0) - (b.due || 0)));
+      .sort((a, b) => ({ doing: 0, due: 1, upcoming: 2, armed: 3, waiting: 4 }[a.status] - { doing: 0, due: 1, upcoming: 2, armed: 3, waiting: 4 }[b.status]) || ((a.due || 0) - (b.due || 0)));
   }
   function task(key, id) { const v = buildTasks(key).find((x) => x.id === id || x.scheduleIds.includes(id)); return v ? taskView(key, v) : null; }
   const taskGroups = (key) => tasks(key).filter((t) => t.kind === 'group');
@@ -821,7 +899,9 @@ window.V7 = (function () {
   function doTaskStep(key, id, stepId) { const v = task(key, id); if (!v) return { ok: false, error: 'No such task.' }; const P = PS(key); const st = P.tasks[v.id] || (P.tasks[v.id] = { due: null, lastDone: null, status: 'doing', done: [], history: [] }); const k = String(stepId); st.done = st.done || []; const i = st.done.map(String).indexOf(k); if (i >= 0) st.done.splice(i, 1); else st.done.push(stepId); if (st.status === 'due' || st.status === 'upcoming') { st.status = 'doing'; st.startedAt = now(); } touch(); persist(); return { ok: true, done: st.done.slice() }; }
   function doneTask(key, id) {
     const v = task(key, id); if (!v) return { ok: false, error: 'No such task.' }; const P = PS(key); if (P.state !== 'live') return { ok: false, error: 'Tasks start when the plant goes live.' };
-    const st = P.tasks[v.id] || (P.tasks[v.id] = { due: now(), lastDone: null, status: 'due', done: [], history: [] }); const I = v.intervalH * HOUR;
+    const st = P.tasks[v.id] || (P.tasks[v.id] = { due: now(), lastDone: null, status: 'due', done: [], history: [] });
+    if (v.kind === 'line') { if (st.status !== 'due' && st.status !== 'doing') return { ok: false, error: 'Nothing to do yet: the task is raised when the reading crosses its line.' }; (st.history = st.history || []).push({ due: st.due, done: now(), late: st.due != null && now() > st.due + 24 * HOUR, raisedBy: st.raisedBy || null }); Object.assign(st, { lastDone: now(), due: null, status: 'armed', done: [], startedAt: null, raisedAt: null, raisedBy: null }); touch(); persist(); return { ok: true, task: task(key, v.id) }; }
+    const I = v.intervalH * HOUR;
     (st.history = st.history || []).push({ due: st.due, done: now(), late: st.due != null && now() > st.due + Math.max(2, v.intervalH * 0.2) * HOUR });
     let next = v.anchor === 'last' || st.due == null ? now() + I : st.due + I; while (next <= now()) next += I;
     const md = meterDue(key, v.sc, { lastDone: now() }); if (md != null) next = md;   /* v7: run-hours work: from the meter reading now */
@@ -830,7 +910,8 @@ window.V7 = (function () {
   }
   function setLastDone(key, id, date) {
     const v = task(key, id); if (!v) return { ok: false, error: 'No such task.' }; const ms = toMs(date); if (ms == null) return { ok: false, error: 'Pick a date.' }; if (ms > now()) return { ok: false, error: 'Last done cannot be in the future.' };
-    const P = PS(key); const st = P.tasks[v.id] || (P.tasks[v.id] = { due: null, lastDone: null, status: 'upcoming', done: [], history: [] }); st.lastDone = ms; st.calDue = null;
+    const P = PS(key); if (v.kind === 'line') return { ok: false, error: 'Condition-based work has no last done date: it is raised by its reading.' };
+    const st = P.tasks[v.id] || (P.tasks[v.id] = { due: null, lastDone: null, status: 'upcoming', done: [], history: [] }); st.lastDone = ms; st.calDue = null;
     if (P.state === 'live') { const md = meterDue(key, v.sc, { lastDone: ms }); st.due = md != null ? md : ms + v.intervalH * HOUR; st.status = st.status === 'doing' ? 'doing' : st.due <= now() ? 'due' : 'upcoming'; }
     addActivity(now(), key, `${v.name}: last done set to ${fmtDay(ms)}`, 'config'); touch(); persist(); return { ok: true, task: task(key, v.id) };
   }
@@ -1248,6 +1329,8 @@ window.V7 = (function () {
   function setLimits(key, sensorId, dir, bands, opts) {
     const o = opts || {}; const s = sensorRaw(key, sensorId); if (!s) return { ok: false, error: 'No such reading.' }; if (s.nextPhase) return { ok: false, error: `${s.name} is read on a connection: next phase.` };
     const next = norm4(bands); const D2 = dir || primaryDir(key, sensorId); const err = validateBands(next, D2, s); if (err) return { ok: false, error: err };
+    const orphan = lineWorkOn(key, sensorId, D2).find((lw) => next[lw.band] == null);   /* v7: a line that raises a task cannot be removed under it */
+    if (orphan) return { ok: false, error: `The ${BAND_LABEL[orphan.band]} line raises the task "${orphan.name}". Stop it raising the task before you remove the line.` };
     const bi = bandsInfo(key, sensorId, D2); const rov = ovReading(key, sensorId, D2); const t = now(); const changed = []; const ids = [];
     BANDS.forEach((b) => { if (!same(next[b], bi.perBand[b].value)) changed.push({ band: b, from: bi.perBand[b].value, to: next[b] }); });
     if (!changed.length) return { ok: true, changed: [], overrides: [] };
@@ -1362,8 +1445,12 @@ window.V7 = (function () {
     if (t.kind === 'tier') { const e = eqRaw(key, t.eqId) || {}; eqId = e.id; tag = e.tag; typeName = e.type; what = `${e.tag} · criticality`; }
     libRaw = o.reason === 'notinlib' ? null : currentBaseOf(key, o);
     const st = ovState(key, o); const bs = o.reason === 'notinlib' ? { from: null, why: null } : baseSourceOf(key, o);
+    /* v7 (card D25): a value nobody recorded a reason for that equals the library's own fixed number, while the plant's base is now the
+       SCADA form's rule: probably never chosen here. It is kept, marked, and listed first so a review can adopt the rule in one step. */
+    let oldLib = null;
+    if (o.reason === 'unrecorded' && t.kind === 'limit' && bs.from === 'form' && typeName) { const s0 = sensorRaw(key, t.sensorId) || {}; const lb = libBands(typeName, s0.name, t.dir, false); if (lb && same(lb[t.band], o.value)) oldLib = { value: lb[t.band], text: lb[t.band] == null ? 'none' : fmtVal(lb[t.band], s0.unit, s0.kind) }; }
     /* v7: baseFrom 'form'|'lib' says whether libValue is the SCADA form's value (with its reason, e.g. "From the SCADA form: 22 kW motor") or the library's */
-    return { ...o, baseFrom: bs.from, baseWhy: bs.why, baseLabel: bs.from === 'form' ? 'SCADA form' : bs.from === 'lib' ? 'Library' : null, backText: bs.from === 'form' ? 'Back to the SCADA form value' : 'Back to the library value', plantName: plantName(key), state: st, stateLabel: LABELS.overrideState[st], reasonLabel: o.reason === 'fornow' && o.until ? `For now, until ${fmtDay(o.until)}` : LABELS.reason[o.reason], what, eqId, tag, typeName, typeCode: typeName ? codeOfType(typeName) : null, plantValue: fmtTargetValue(key, o, o.value), libValue: o.reason === 'notinlib' ? 'Not in the library' : fmtTargetValue(key, o, libRaw), baseValue: o.reason === 'notinlib' ? null : fmtTargetValue(key, o, o.base), libRaw, baseDiffers: st === 'libchanged', sameAsLib: st === 'same', atText: o.at != null ? fmtDay(o.at) : '—', reviewByText: o.reviewBy != null ? fmtDay(o.reviewBy) : '—', untilText: o.until != null ? fmtDay(o.until) : null, authorText: o.author || 'Not recorded' };
+    return { ...o, baseFrom: bs.from, baseWhy: bs.why, baseLabel: bs.from === 'form' ? 'SCADA form' : bs.from === 'lib' ? 'Library' : null, backText: bs.from === 'form' ? 'Back to the SCADA form value' : 'Back to the library value', plantName: plantName(key), state: st, stateLabel: LABELS.overrideState[st], reasonLabel: o.reason === 'fornow' && o.until ? `For now, until ${fmtDay(o.until)}` : LABELS.reason[o.reason], what, eqId, tag, typeName, typeCode: typeName ? codeOfType(typeName) : null, plantValue: fmtTargetValue(key, o, o.value), libValue: o.reason === 'notinlib' ? 'Not in the library' : fmtTargetValue(key, o, libRaw), baseValue: o.reason === 'notinlib' ? null : fmtTargetValue(key, o, o.base), libRaw, baseDiffers: st === 'libchanged', sameAsLib: st === 'same', atText: o.at != null ? fmtDay(o.at) : '—', reviewByText: o.reviewBy != null ? fmtDay(o.reviewBy) : '—', untilText: o.until != null ? fmtDay(o.until) : null, authorText: o.author || 'Not recorded', oldLib: !!oldLib, oldLibText: oldLib ? oldLib.text : null };
   }
   function overrides(opts) {
     const o = opts || {}; const list = S.overrides.filter((x) => !o.plant || x.plant === o.plant).map((x) => ovDecorate(x.plant, x));
@@ -1446,7 +1533,7 @@ window.V7 = (function () {
     const readingsL = cat.sensors.map((s) => { const dirs = [...new Set(t.alerts.filter((a) => a.sensorKind === s.name).map((a) => a.direction))]; if (!dirs.length) dirs.push(s.direction || 'above'); return { name: s.name, tag: s.tag, unit: s.unit, kind: s.kind, valid: s.valid, dirs: dirs.map((dir) => libLimits(cat.type, s.name, dir, { draft: !!dr })) }; });
     return { code, typeName: cat.type, family: familyOf(cat), archetype: cat.archetype, tier: cat.tier, version: libVersion(code), draft: dr ? libDraft(code) : null, readings: readingsL,
       alerts: t.alerts.map((a) => ({ name: a.name, reading: a.sensorKind, dir: a.direction, bands: norm4(a.limits), hold: libTiming(cat.type, a.sensorKind, a.direction, 'hold'), clear: libTiming(cat.type, a.sensorKind, a.direction, 'clear'), flowId: a.flow || null, issueTypeId: a.issue || null, nextPhase: C.onConnection(a.sensorKind) })),
-      schedules: t.schedules.map((x) => ({ name: x.name, workType: x.workType, workLabel: C.WT_LABEL[x.workType] || x.workType, every: libEveryOf(x), everyText: x.workType === 'condition' ? `when ${x.sensorKind} passes ${x.doWhen}` : C.every(x), draftEvery: dr && dr.schedules[x.name] ? dr.schedules[x.name] : null, draftEveryText: dr && dr.schedules[x.name] ? everyWith(x, dr.schedules[x.name]) : null, generalTaskId: x.task || null, flowId: x.flow || null })),
+      schedules: t.schedules.filter((x) => x.workType !== 'condition').map((x) => ({ name: x.name, workType: x.workType, workLabel: C.WT_LABEL[x.workType] || x.workType, every: libEveryOf(x), everyText: x.workType === 'condition' ? `when ${x.sensorKind} passes ${x.doWhen}` : C.every(x), draftEvery: dr && dr.schedules[x.name] ? dr.schedules[x.name] : null, draftEveryText: dr && dr.schedules[x.name] ? everyWith(x, dr.schedules[x.name]) : null, generalTaskId: x.task || null, flowId: x.flow || null })),
       issues: issueTypes(cat.type), generalTasks: C.tasksOf(cat.type).map((x) => ({ id: x.id, name: x.name, workType: x.workType, frequency: x.frequency, flowId: x.flow })), nextPhase: cat.nextPhase || { readings: [], alerts: [], work: [] },
       plants: (libTypes().find((x) => x.code === code) || {}).plants || [], changes: S.lib.changes.filter((c) => c.code === code), suggestions: suggestions(code), confirm: cat.confirm || null };
   }
@@ -1611,7 +1698,7 @@ window.V7 = (function () {
 
   /* ── seeding the story ────────────────────────────────────────────────────────────────── */
   function freshState() { return { v: OVERLAY_V, story: STORY, lib6: libPrint(), now: NOW0, seq: 0, aseq: 0, plants: {}, overrides: [], lib: { versions: {}, drafts: {}, changes: [], suggestions: [] }, activity: [] }; }
-  function plantState(key) { const m = PLANT_META[key]; return { key, state: m.state, since: m.since, sample: m.sample, realLayout: m.realLayout, scadaReadAt: m.since, scada: { accepted: {} }, decisions: {}, alerts: {}, eng: {}, engineAt: NOW0, issues: [], tasks: {}, mat: {}, returned: [], goLiveAt: m.state === 'live' ? m.since : null }; }
+  function plantState(key) { const m = PLANT_META[key]; return { key, state: m.state, since: m.since, sample: m.sample, realLayout: m.realLayout, scadaReadAt: m.since, scada: { accepted: {} }, decisions: {}, alerts: {}, eng: {}, engineAt: NOW0, issues: [], tasks: {}, mat: {}, returned: [], goLiveAt: m.state === 'live' ? m.since : null, lineWork: (LINE_WORK_SEED[key] || []).map((x) => ({ ...x })) }; }
   function importDifferences(key) {
     const d = dOf(key);
     withPlant(key, () => d.equipment.forEach((e) => C.ensureForm(e)));
@@ -1660,6 +1747,16 @@ window.V7 = (function () {
     const P = PS(key); P.engineAt = lastPollAtOrBefore(NOW0 - 30 * DAY); P.eng = {}; const sink = { opened: [], closed: [], trial: [], tasksDue: [] };
     runEngine(key, NOW0, sink, { quiet: true });
     const ops = dOf(key).people.filter((p) => p.role === 'l1'); const leads = dOf(key).people.filter((p) => p.role === 'l3');
+    /* v7: condition-based work the lines raised: the Operator did what was raised more than 12 hours ago, a few hours later */
+    lineWorkOf(key).forEach((lw) => {
+      const st = P.tasks[lw.id]; if (!st || st.status !== 'due' || st.raisedAt == null) return; const s = sensorRaw(key, lw.sensorId); const e = s ? homeOf(key, s) : null;
+      addActivity(st.raisedAt, key, `Task raised: ${lw.name}, ${e ? e.tag + ' ' : ''}${s ? said(s, st.raisedBy.value) : ''} (${BAND_LABEL[lw.band]} line)`, 'task', null);
+      if (st.raisedAt > NOW0 - 12 * HOUR) return;
+      const h = mix(h32(lw.id + st.raisedAt), 7); const at = Math.round((st.raisedAt + (2 + 6 * h) * HOUR) / MIN) * MIN; const who = ops[Math.floor(h * 10) % Math.max(1, ops.length)];
+      st.history.push({ due: st.raisedAt, done: at, late: false, raisedBy: st.raisedBy, by: who ? who.name : null });
+      Object.assign(st, { lastDone: at, due: null, status: 'armed', raisedAt: null, raisedBy: null });
+      addActivity(at, key, `Task done: ${lw.name}`, 'task', who ? who.name : null);
+    });
     /* v7: Activity lists every seeded issue's opening and closing (who closed it, false alarm where it was one), like the Issues tab */
     P.issues.forEach((iss) => {
       const opened = () => addActivity(iss.opened, key, `Issue opened: ${iss.title} at ${BAND_LABEL[iss.band]}`, 'issue', null);
@@ -1771,7 +1868,7 @@ window.V7 = (function () {
     checklist, noLimitsYet, eachOf, goLivePreview, goLive, returnToCommissioning,
     issues, issue, tasks, task, report, answer, chooseCause, diagStep, startFix, fixStep, verify, close, startTask, doTaskStep, doneTask, setLastDone,
     flowOf, diagFor, causeOf, fixFlowFor, linkedTask, taskForGeneral, issueTypes, issueTerms, reportSensorFault, causesFor,
-    taskGroups, tasksPerDay, coverage,
+    taskGroups, tasksPerDay, coverage, lineWork, setLineWork,
     libTypes, libType, libVersion, libDraft, editLib, discardDraft, whereItLands, publish,
     activity, log,
     LABELS, BANDS, fmtVal, limitsText, sevClock, bandLabel: (b) => BAND_LABEL[b] || '', everyText, plantName,

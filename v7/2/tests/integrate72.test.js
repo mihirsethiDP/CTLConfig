@@ -704,7 +704,7 @@ chapter(10);
     click(G, d.h, /^(Edit|Change)$/, { where: { param: 'motorRating' } });
     const D = W.V7OBJ._test.getDP(); D.value = '18.5'; D.note = 'Nameplate checked: the motor was swapped for an 18.5 kW one';
     const pv = V.designParamPreview(MAN, { kind: 'eq', id: 'bl1' }, 'motorRating', 18.5); const dt = dialog(G, W.V7OBJ._test.dpBody(D), 'Motor rating sheet');
-    ok(G, 'preview "AMP-BL1 keeps 44 A (Override): base moved 40.0 → 33.6 A" (Minor 42.0 → 35.3, Major 46.0 → 38.6), the intake filter\'s thresholds, "Motor current high · BL-1 follows AMP-BL1"', pv.lines.every((l) => has(dt, l)) && /AMP-BL1 keeps 44 A \(Override\): base moved 40\.0 → 33\.6 A/.test(pv.lines.join(' ')) && /Clean intake filter on BL-1 keeps 42 A \/ 38 A \(Override\)/.test(pv.lines.join(' ')) && /Motor current high · BL-1 follows AMP-BL1/.test(pv.lines.join(' ')), pv.lines.join(' | '));
+    ok(G, 'preview "AMP-BL1 keeps 44 A (Override): base moved 40.0 → 33.6 A" (Minor 42.0 → 35.3, Major 46.0 → 38.6), "Motor current high · BL-1 follows AMP-BL1", no intake-filter job on equipment', pv.lines.every((l) => has(dt, l)) && /AMP-BL1 keeps 44 A \(Override\): base moved 40\.0 → 33\.6 A/.test(pv.lines.join(' ')) && !/intake filter/i.test(pv.lines.join(' ')) && /Motor current high · BL-1 follows AMP-BL1/.test(pv.lines.join(' ')), pv.lines.join(' | '));
     click(G, sheetHtml(), 'Cancel');
     ok(G, 'Cancel: BL-1 keeps 22 kW', V.designParams(MAN, { kind: 'eq', id: 'bl1' }).find((r) => r.key === 'motorRating').value === 22);
   });
@@ -739,7 +739,7 @@ chapter(11);
   ok(G, '"0 past review"', V.deviations({}).counts.pastreview === 0 && has(text(render('#/deviations')), '0 past review'));
   /* (4) Reason: Migrated */
   p = page(G, '#/deviations?reason=migrated'); c = V.deviations({}).counts; const mig = V.overrides({ reason: 'migrated' });
-  ok(G, `"Reason: Migrated (${c.byReason.migrated})": rows "… · Migrated · 58 d" with "Set before 1 Sep 2026 · who: not recorded", review by 30 Nov 2026`, has(p.t, `Migrated (${c.byReason.migrated})`) && c.byReason.migrated === 14 && mig.every((o) => V.fmtDate(o.reviewBy) === '30 Nov 2026') && (p.t.match(/Set before 1 Sep 2026 · who: not recorded/g) || []).length >= mig.length, c.byReason.migrated);
+  ok(G, `"Reason: Migrated (${c.byReason.migrated})": rows "… · Migrated · 58 d" with "Set before 1 Sep 2026 · who: not recorded", review by 30 Nov 2026`, has(p.t, `Migrated (${c.byReason.migrated})`) && c.byReason.migrated === 12 && mig.every((o) => V.fmtDate(o.reviewBy) === '30 Nov 2026') && (p.t.match(/Set before 1 Sep 2026 · who: not recorded/g) || []).length >= mig.length, c.byReason.migrated);
   /* (5) a row → MLSS-AT1's sensor page, Minor highlighted */
   const ml = mig.find((o) => o.target.sensorId === 'at1_mlss');
   ok(G, 'a row opens MLSS-AT1\'s sensor page with Minor highlighted', ml.href === '#/p/manesar/sensor/at1_mlss?f=zone.below.minor' && p.h.includes(`href="${ml.href}"`) && /is-target/.test(render(ml.href)));

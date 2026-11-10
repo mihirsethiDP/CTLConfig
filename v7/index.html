@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="1/assets/decisions7.css?v=3">
+<link rel="stylesheet" href="1/assets/decisions7.css?v=4">
 <style>
   /* The look and tokens of v7/1's hand-off doc, in light and dark. The table of challenges uses decisions7.css. */
   :root {
@@ -75,6 +75,7 @@
 
   /* the two prototypes */
   .two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; margin-top: 36px; }
+  .v3 { margin-top: 18px; }
   .vcard { background: var(--surface); border: 1px solid var(--line); border-top: 4px solid var(--v1-line); border-radius: var(--r-lg); padding: 20px 24px 22px; min-width: 0; display: flex; flex-direction: column; }
   .vcard.v2 { border-top-color: var(--v2-line); }
   .vc-h { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
@@ -170,6 +171,14 @@
   </article>
 </section>
 
+<section class="v3" aria-labelledby="v3-h">
+  <article class="vcard v1" aria-labelledby="v3-h">
+    <div class="vc-h"><span class="vc-n">v7/3</span><h2 id="v3-h">The decided build</h2></div>
+    <p>Builds the calls made on the decision cards, 28 of the 29 so far. It starts from v7/1 and adds unit processes and control groups from the plant graph, nothing sent on a new plant, the threshold bar with what each range triggers, and a Flows page to read, try and edit diagnostic flows and the steps of every job. Its hand-off says which calls are built in part.</p>
+    <div class="vc-go"><a class="btn p" href="3/prototype.html#/plants">Open the prototype</a><a class="btn s" href="3/prototype.html#/flows">Flows</a><a class="btn s" href="3/index.html">What is decided</a></div>
+  </article>
+</section>
+
 <section id="same" aria-labelledby="same-h">
   <h2 id="same-h">What is the same in both</h2>
   <ul>
@@ -224,7 +233,7 @@
   <p>Earlier versions stay as they were: <a href="../index.html">the first proposal</a>, <a href="../v2/index.html">v2</a>, <a href="../v3/index.html">v3</a>, <a href="../v4/index.html">v4</a>, <a href="../v5/index.html">v5</a> and <a href="../v6/index.html">v6</a>.</p>
 </footer></div>
 
-<script src="1/assets/decisions7.js?v=5"></script>
+<script src="1/assets/decisions7.js?v=11"></script>
 <script>
 /* The v7 overview: reads the shared decision file (1/assets/decisions7.js) and draws the table of every challenge.
    Links into v7/2 appear only once V7DEC.V72_READY is true; until then v7/2 is named as in build, never linked. */

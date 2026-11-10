@@ -138,6 +138,10 @@ check('limits', 'back to the library value ends the change, no reason needed', b
 V.setLimits('vedanta', lv.sensorId, 'above', { caution: 90, major: 95 }, { reason: 'tuned', note: 'The tank fills to 88% on every cycle by design' });
 
 /* ── 4. advance(24h): Manesar opens issues from the series; the For now change ends on its date ─ */
+/* v7: BL-1's Caution line raises "Clean the blower intake filters" at the plant (tests/linework7.test.js follows that); this walk
+   follows the issue the line opens once it no longer raises the task */
+const lwOff = V.setLineWork('manesar', 'bl1_amps', 'above', 'caution', { name: null });
+check('advance', 'a line that raised a task opens an issue again once the task is taken off it', lwOff.ok && lwOff.changed && !V.lineWork('manesar').some((x) => x.sensorId === 'bl1_amps') && /opens an issue again/.test(V.activity({ plant: 'manesar', limit: 1 })[0].text));
 const adv = time('advance 24h', () => V.advance(24 * 60));
 check('advance', 'clock moves to Fri 30 Oct, 09:00', V.fmt(V.now()) === 'Fri 30 Oct, 09:00', adv.summary);
 const mOpened = adv.opened.filter((o) => o.plant === 'manesar');

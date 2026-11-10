@@ -204,7 +204,7 @@
     const put = (body) => { lib.tpl[body.id] = body; lib.tplHistory[body.id] = [{ v: 1, at: null, by: null, kind: null, note: '', reason: null, diffs: [], body: clone(body) }]; };
     const addSet = (set, owner, prefix, contentCode, subject) => {
       set.alerts.forEach((a) => put(trigBody(idFor(prefix, a.name), owner, subject, contentCode, a)));
-      set.schedules.forEach((x) => put(taskBody(idFor(prefix, x.name), owner, subject, contentCode, x)));
+      set.schedules.filter((x) => x.workType !== 'condition').forEach((x) => put(taskBody(idFor(prefix, x.name), owner, subject, contentCode, x)));   /* v7/2: no condition-based work on equipment types */
     };
     (window.CATALOGUE || []).forEach((cat) => { if (isAnchor(cat.code)) return; const set = eqSet(cat.type); if (set) addSet(set, { kind: 'eqType', code: cat.code, typeName: cat.type }, `tpl_${cat.code}`, cat.code, 'eq'); });
     upTypeList().forEach((u) => { const set = upSet(u.id); if (set) addSet(set, { kind: 'upType', id: u.id, typeName: u.name }, `tpl_up_${u.id}`, u.contentFrom, 'up'); });

@@ -385,15 +385,16 @@ const DO = 'tpl_up_activated-sludge_do-low'; const MLSS = 'tpl_up_activated-slud
 /* ── 4. promote, merge, pins, lift ──────────────────────────────────────────────────────────────────────── */
 {
   /* promoting a value whose library rule is a share of a design parameter keeps the parameter: the share is the one that gives
-     the plant's value there, so every other plant still scales with its own motor (Clean intake filter: do when 42 A on a
-     derived 38.0 A) */
-  const TPL = 'tpl_BLW_clean-intake-filter';
-  const cw = V.overrides({}).find((o) => o.kind === 'condition' && o.templateId === TPL && o.target.which === 'doWhen');
+     the plant's value there, so every other plant still scales with its own motor (v7/2: BL-1's Major zone at 50 A on a derived
+     46.0 A; the intake-filter job that was the example is no longer on equipment) */
+  const TPL = 'tpl_BLW_motor-current-high';
+  V.setZone('manesar', 'bl1_amps', 'above', 'major', 50, { reason: 'tuning', note: 'The new impeller draws more at full duty' });
+  const cw = V.overrides({}).find((o) => o.kind === 'zone' && o.templateId === TPL && o.target.band === 'major' && o.value === 50);
   ok(!!cw, 'an override on a derived threshold');
   if (cw) {
     const pr = V.promote(cw.id, { as: 'default' }); const t = text(render(pr.href));
-    const dv = V.templateDraft(TPL); const r = dv && dv.condition && dv.condition.doWhen;
-    const f0 = V.template(TPL).body.condition.doWhen.factor;
+    const dv = V.templateDraft(TPL); const r0 = dv && dv.rules && dv.rules.major; const r = r0 && (r0.rule || r0);
+    const b0 = V.template(TPL).body.rules.major; const f0 = (b0 && (b0.rule || b0)).factor;
     ok(r && r.kind === 'expr' && r.param === 'fullLoadCurrent' && Math.abs((r.factor / f0) * cw.currentBase - cw.value) < 0.05, 'promote on a derived threshold: the draft keeps a share of full-load current that gives the plant its value', JSON.stringify(r));
     ok(has(t, V.overrideById(cw.id).promoteBanner), 'promote on a derived threshold: its banner');
     act('tpl:discard', { 'data-id': TPL }); confirmLast(); ok(!V.templateDraft(TPL), 'derived promote discarded');

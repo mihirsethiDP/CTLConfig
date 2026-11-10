@@ -1,0 +1,125 @@
+/* v7 · work7.css — issues and tasks being worked (work7.js). Uses v7.css tokens; adds only what the work pages need:
+   the four-step rail on an issue (Diagnosis → Root cause → Fix → Verify), the question runner, tick lists, the aside cards. */
+
+/* issues list */
+.wk-list { margin-top: 14px; }
+.wk .lead { margin-top: 2px; }
+.wk-issues { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--shadow-sm); padding: 0 18px; }
+.wk-issues .row { padding: 13px 0; }
+.wk-issues .row.tone-bad, .wk-issues .row.tone-warn { margin-left: -18px; padding-left: 18px; }
+.wk-only { margin-top: 10px; font-size: 13px; color: var(--ink-3); }
+.wk-more { margin-top: 10px; font-size: 13.5px; }
+
+/* the four steps of an issue, as one rail */
+.wk-flow { position: relative; }
+.wk-st { position: relative; display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 16px; padding-bottom: 18px; }
+.wk-st::before { content: ""; position: absolute; left: 15px; top: 36px; bottom: 2px; width: 2px; border-radius: 1px; background: var(--line); }
+.wk-st:last-child { padding-bottom: 0; }
+.wk-st:last-child::before { display: none; }
+.wk-n { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font: 600 13px var(--mono);
+  background: var(--surface); border: 1.5px solid var(--line-2); color: var(--ink-3); position: relative; z-index: 1; }
+.is-done > .wk-n { background: var(--ok-tint); border-color: transparent; color: var(--ok-ink); }
+.is-skip > .wk-n { background: var(--surface-2); border-color: transparent; }
+.is-now > .wk-n { background: var(--primary); border-color: var(--primary); color: #fff; box-shadow: 0 0 0 4px var(--accent-tint); }
+.wk-sb { min-width: 0; }
+.is-now > .wk-sb { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--shadow); }
+.is-done > .wk-sb, .is-skip > .wk-sb, .is-next > .wk-sb { padding-top: 5px; }
+.wk-sh { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+.wk-sh h2 { font-size: 15.5px; }
+.wk-sh p { color: var(--ink-3); font-size: 13px; }
+.wk-sh .prog { margin-left: 6px; }
+.is-now .wk-sh { padding: 16px 20px 0; }
+.is-next .wk-sh h2, .is-skip .wk-sh h2 { color: var(--ink-3); font-weight: 500; }
+.wk-bd { padding-top: 8px; font-size: 14px; }
+.is-now .wk-bd { padding: 12px 20px 18px; }
+.wk-bd > * + * { margin-top: 10px; }
+.wk-sf { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding-top: 8px; }
+.is-now .wk-sf { padding: 12px 20px; border-top: 1px solid var(--line); }
+
+/* the question runner */
+.wk-qn { font-size: 12px; color: var(--ink-3); }
+.wk-q { font-size: 17px; font-weight: 600; line-height: 1.4; color: var(--ink); }
+.wk-ans { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px !important; }
+.wk-ans .btn { min-width: 104px; padding-top: 10px; padding-bottom: 10px; }
+.wk-read label { display: block; font-size: 17px; font-weight: 600; line-height: 1.4; margin-bottom: 12px; }
+.wk-read-in { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.wk-read-in input { width: 160px; }
+.wk-unit { font: 500 13px var(--mono); color: var(--ink-3); }
+.wk-path { list-style: none; }
+.wk-path li { display: flex; justify-content: space-between; gap: 16px; padding: 7px 0; border-bottom: 1px dashed var(--line); font-size: 13.5px; color: var(--ink-2); }
+.wk-path li:last-child { border-bottom: 0; }
+.wk-path b { font-weight: 600; color: var(--ink); white-space: nowrap; }
+.wk-so { margin-top: 14px; }
+.wk-so > summary { cursor: pointer; font-size: 13px; color: var(--accent); width: max-content; max-width: 100%; }
+.wk-so[open] > summary { margin-bottom: 6px; }
+
+/* root cause */
+.wk-cause { font-size: 16px; font-weight: 600; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.wk-cb { font-size: 13.5px; color: var(--ink-2); line-height: 1.5; }
+.wk-cb .chip { margin-right: 4px; }
+
+/* tick lists (fix steps, task steps) */
+.wk-check { list-style: none; }
+.wk-check li { display: grid; grid-template-columns: 22px minmax(0, 1fr); column-gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.wk-check li:last-child { border-bottom: 0; }
+.wk-check input { width: 17px; height: 17px; margin: 2px 0 0; accent-color: var(--accent); cursor: pointer; }
+.wk-check input:disabled { cursor: default; }
+.wk-check label { cursor: pointer; line-height: 1.45; }
+.wk-check input:disabled + label { cursor: default; }
+.wk-i { font: 500 12px var(--mono); color: var(--ink-3); margin-right: 8px; }
+.wk-check li.on .wk-tx { color: var(--ink-3); }
+.wk-ch { display: inline-flex; flex-wrap: wrap; gap: 4px; vertical-align: middle; margin-left: 2px; }
+.wk-ch .chip { height: 20px; font-size: 11.5px; padding: 0 7px; }
+.wk-lk { grid-column: 2; }
+/* v7: a question step is answered Yes / No; the answer stays on it */
+.wk-qa { font-weight: 600; color: var(--accent); line-height: 1.45; text-align: center; }
+.wk-yn { display: flex; gap: 6px; margin-top: 6px; }
+.wk-before { margin-top: 8px; padding: 8px 10px; border-left: 3px solid var(--warn); background: var(--warn-tint); color: var(--ink); }
+.wk-link { margin-top: 5px; font-size: 13.5px; }
+.wk-link a { font-weight: 500; }
+.wk-plain { padding-left: 22px; }
+.wk-plain li { padding: 6px 0; line-height: 1.45; }
+
+/* verify: the reading now */
+.wk-now p { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13.5px; color: var(--ink-2); }
+.wk-now .bb { margin-top: 6px; max-width: 520px; }
+
+/* aside cards */
+.wk-aside .card-t { font-size: 14px; }
+.wk-aside .card-b { font-size: 13.5px; }
+.wk-aside .kv { gap: 6px 16px; }
+.wk-terms { margin-top: 12px; padding: 10px 12px; border-radius: var(--r); background: var(--surface-2); color: var(--ink-2); }
+.wk-aside .note, .wk-aside .muted.small { margin-top: 8px; }
+.wk-told-s { font-weight: 500; }
+.wk-told { list-style: none; margin-top: 8px; }
+.wk-told li { padding: 7px 0; border-bottom: 1px solid var(--line); }
+.wk-told li:last-child { border-bottom: 0; }
+.wk-log { list-style: none; }
+.wk-log li { display: grid; grid-template-columns: 42px minmax(0, 1fr); gap: 8px; padding: 4px 0; line-height: 1.45; }
+.wk-log li .mono { color: var(--ink-3); }
+.wk-log li.wk-day { display: block; padding-top: 10px; font-size: 12px; font-weight: 600; color: var(--ink-3); }
+.wk-log li.wk-day:first-child { padding-top: 0; }
+
+/* task page */
+.wk-date { width: auto !important; max-width: 190px; }
+.wk-dh { display: block; }
+.wk-hist { list-style: none; }
+.wk-hist li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; }
+.wk-hist li:last-child { border-bottom: 0; }
+.wk-every { display: flex; align-items: center; gap: 8px; }
+.wk-every input { width: 90px; }
+.wk-every select { width: auto; }
+.wk-task .card + .card { margin-top: 16px; }
+
+@media (max-width: 760px) {
+  .wk-st { grid-template-columns: 26px minmax(0, 1fr); gap: 10px; }
+  .wk-n { width: 26px; height: 26px; font-size: 12px; }
+  .wk-st::before { left: 12px; top: 30px; }
+  .is-now .wk-sh { padding: 14px 14px 0; }
+  .is-now .wk-bd { padding: 10px 14px 14px; }
+  .is-now .wk-sf { padding: 10px 14px; }
+  .wk-issues { padding: 0 14px; }
+  .wk-issues .row.tone-bad, .wk-issues .row.tone-warn { margin-left: -14px; padding-left: 14px; }
+  .wk-q, .wk-read label { font-size: 16px; }
+  .wk-ans .btn { flex: 1 1 0; }
+}

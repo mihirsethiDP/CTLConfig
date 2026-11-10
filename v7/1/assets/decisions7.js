@@ -6,9 +6,11 @@
    routes only when window.V7UI is present, and never touches V7 (core) state.
 
    GLOBALS READ (never written): window.V7_VARIANT '1' (default) | '2' — which prototype this page belongs to;
+          window.V7_CALLS_MADE {Dn: {opt, by, atText}} — calls already made (v7/3, the decided build): shown as "Decided" until you
+          make your own; window.V7_DEC_KEY — the storage key for your own calls (default 'ctl7.decisions');
           window.V7_PAGE 'app' (default) | 'doc' (a hand-off doc in v7/N/) | 'overview' | 'challenges' (pages in site/v7/).
    DATA   window.V7_DECISIONS: ordered array of cards {id:'D1'…, title (a plain question), short (2–6 words), severity:
-          'Decide before building further'|'Shapes v7'|'Small', arose ('First review'|'Reviewing v7/1'|'Designing v7/2'|'Building v7/2'),
+          'Decide before building further'|'Shapes v7'|'Small', arose ('First review'|'Reviewing v7/1'|'Designing v7/2'|'Building v7/2'|'Team feedback'),
           alexSays, v6Today, mihirsDirection, options:[{label, consequence, recommended}], recommendation, v7Does,
           tellAlex, v71Option, v71Short, v72Option, v72Short, v72Does, both, links:[{label, href, label72, href72}],
           where:{'1':[route patterns], '2':[route patterns]}}. Every field after `tellAlex` is optional: a card without
@@ -1342,7 +1344,7 @@
         }
       ],
       "recommendation": "Option 2. It keeps Alex's shape but uses only the rule SCADA can feed today. Working out each value's source from one function plus a stored change record removes the cause of the BL-1 overwrite; v6's stored tag is the weaker design. Go a step past the contract: drop the fixed amps from the four rated types, so a missing rating shows up on Readiness as 'No limits yet · Add the motor rating in SCADA'. Without that, a 3.7 kW pump that draws about 7 A gets a 40 A limit it never reaches. For the five unrated types, keep the guessed amps marked 'to confirm' and ask the SCADA team to add the rating question. Keep BL-1's 44/48 A as the 'Changed here · Not recorded' example; it is seed data, so this is a choice about the demo.",
-      "v7Does": "Each band's source is worked out on every read and never stored. A plant change shows 'Changed here', or 'Library changed since' when its stored base differs from today's library value. Otherwise motor current from the SCADA form's motor rating shows 'From the SCADA form: 22 kW motor'. Otherwise the chip is 'From the library' or 'No limits yet', and readings between equipment show 'Next phase'. The order is plant change, then SCADA form, then library, matched by reading and direction. The change record keeps value, reason, base and review date. Form answers are read-only ('Fix it in SCADA, then read again'). There is no expression editor and no constant flag. Manesar's BL-1 shows 'Changed here' (reason not recorded) against the SCADA form's 40/42/46 A, and Differences names that base 'SCADA form', not 'Library'. Contract should change: (1) drop the fixed amps from Pump, Submersible Pump, Blower and Screw Press (the Blower library still holds 44/48), so a missing rating gives 'No limits yet'; (2) have the same function cover Blower's 'Clean intake filter' thresholds, which also come from the motor rating.",
+      "v7Does": "Each band's source is worked out on every read and never stored. A plant change shows 'Changed here', or 'Library changed since' when its stored base differs from today's library value. Otherwise motor current from the SCADA form's motor rating shows 'From the SCADA form: 22 kW motor'. Otherwise the chip is 'From the library' or 'No limits yet', and readings between equipment show 'Next phase'. The order is plant change, then SCADA form, then library, matched by reading and direction. The change record keeps value, reason, base and review date. Form answers are read-only ('Fix it in SCADA, then read again'). There is no expression editor and no constant flag. Manesar's BL-1 shows 'Changed here' (reason not recorded) against the SCADA form's 40/42/46 A, and Differences names that base 'SCADA form', not 'Library'. Contract should change: drop the fixed amps from Pump, Submersible Pump, Blower and Screw Press (the Blower library still holds 44/48), so a missing rating gives 'No limits yet'. The intake-filter work needs no rule of its own now: it is a Task BL-1's Caution line raises at the plant.",
       "tellAlex": "On limits in the library: accepted in shape (limits on the sensor, a library rule per band). For this phase I'm narrowing the rule kinds to the one SCADA feeds: motor current from the motor rating. Everything else is a constant per type. Level arrives as a 0–100 % fill, so the tank-height rule and its Readiness gap don't come up yet; the 'rules over design parameters' goal stays open. On your memo's constant flag: none for now. Design parameters are SCADA form answers: read-only in the console and fixed in SCADA, not edited on Details. Your memo's rule that derived limits follow a changed parameter stays in a narrow form: values are worked out on read, so a new rating flows through. Plant changes keep their value, and open issues keep the terms they opened under; there's no freeze. On source chips: v7 shows six (From the library, From the SCADA form, Changed here, Library changed since, No limits yet, Next phase), worked out from your override record (value, reason, base, review date) and never stored. Proposed, Learned, Pinned, Suspended, Locked and Frozen wait until something can set them. 'SCADA' and 'form' stay on screen, against your pack's glossary, because SCADA is where the fix is made.",
       "v71Option": 1,
       "v71Short": "Motor current from SCADA's motor rating, a constant per type for the rest; each value's source worked out on every read.",
@@ -1629,7 +1631,7 @@
       "mihirsDirection": "This phase has no sets: a record sits on one piece of equipment or on the plant (card D7), and shared routine work is grouped on screen only. Mihir hasn't said whether the review should group the same way. The standing brief asks for the simplest screen that shows the consequence.",
       "options": [
         {
-          "label": "Keep the review per equipment (v7/1 today)",
+          "label": "Keep the review per equipment",
           "consequence": "DigitalPaani's review shows 329 proposals to decide (325 tasks, 4 alerts), with a shared task listed once under each piece of equipment: the blower running-parameters log appears five times. 'Accept all for 5 Blowers' takes them in one click, but the counts disagree: the 329 decided here become 217 rows on the Tasks tab. Leaving one blower out is one click.",
           "recommended": false
         },
@@ -1645,13 +1647,13 @@
         }
       ],
       "recommendation": "Option 2. The review is where an admin first meets the plant's work, so it should count that work the way the operator will see it: 221 lines at DigitalPaani instead of 329, and the 217 tasks match the Tasks tab. It reuses the Tasks tab's grouping, so there is one rule, and records still sit on each piece of equipment. Leaving one blower out stays possible, one click deeper. If Mihir takes card D7's plant rounds, both screens change together.",
-      "v7Does": "'What the library brings' lists proposals per piece of equipment, under a card per type. DigitalPaani opens with '329 proposals to decide' (325 tasks and 4 alerts; 130 more can't be used yet). Each type card has 'Accept all for 5 Blowers', and 'Accept all 329' asks first, saying tasks start at go live at about 68 a day (233 if each piece of equipment gets its own). Once accepted, the Tasks tab shows 217 rows: 172 tasks on one piece of equipment, 8 on the plant, and 37 tasks grouped per type with a line per equipment. So the review and the Tasks tab count the same work two ways. If option 2 is chosen, the review takes the Tasks tab's grouping.",
+      "v7Does": "'What the library brings' lists a routine check, routine work or manual test shared by a type once, naming its equipment ('Routine check - Blower running parameters log · 5 Blowers'), with 'Accept for all 5' and 'Not for this plant'. Opening the line shows each blower with its own Accept or 'Not for this plant', which asks for a reason. Alerts, preventive maintenance and calibration stay on each piece of equipment. DigitalPaani opens with '221 lines to decide (217 tasks, 4 alerts)', 329 proposals in all, and once accepted the Tasks tab shows the same 217 rows: 172 tasks on one piece of equipment, 8 on the plant and 37 grouped per type.",
       "tellAlex": "On your bindings pass: one row per template and subject, grouped by unit process with 'Accept n' per group, reads well. Our review lists per equipment while our task list groups shared routine work per type, so the counts disagree (329 against 217 at DigitalPaani). We propose making the review count the way the task list does. No question for you; just noting that your pass and your Tasks list agree for the opposite reason: neither groups.",
-      "v71Option": 0,
-      "v71Short": "Lists each shared task once per piece of equipment (329 to decide at DigitalPaani); the Tasks tab groups them into 217.",
+      "v71Option": 1,
+      "v71Short": "Shared tasks are one line per type on the review, as on the Tasks tab: 221 lines, the 217 tasks matching.",
       "v72Option": 2,
       "v72Short": "One row per Task and subject on the bindings pass and on the Tasks tab: nothing is grouped, so the counts agree.",
-      "v72Does": "v7/2's bindings pass lists one row per template and subject ('Clean intake filter · Task → BL-1'), grouped by unit process, with 'Accept n' per group and 'Accept n and start trial' for everything left; it opens once the structure pass is confirmed. Every Task sits on one subject and nothing is grouped on the Tasks tab either, so each accepted Task is one row on the pass and one row on the Tasks tab. The cost is card D7's: one Tasks-a-day number with every copy in it.",
+      "v72Does": "v7/2's bindings pass lists one row per template and subject ('Bearing service · Task → BL-1'), grouped by unit process, with 'Accept n' per group and 'Accept n and start trial' for everything left; it opens once the structure pass is confirmed. Every Task sits on one subject and nothing is grouped on the Tasks tab either, so each accepted Task is one row on the pass and one row on the Tasks tab. The cost is card D7's: one Tasks-a-day number with every copy in it.",
       "both": false,
       "links": [
         {
@@ -1750,7 +1752,7 @@
       "mihirsDirection": "Mihir has set no direction on trial firings. The standing brief: nothing changes silently, show the consequence before it happens, keep it simple.",
       "options": [
         {
-          "label": "Recount the trial with today's limits after every change (v7/1)",
+          "label": "Recount the trial with today's limits after every change",
           "consequence": "The trial card and the noisy mark follow a fix at once: Vedanta's Level high on EQ-1 goes from 76 firings (12.8 a day, noisy) to 0 the moment its Caution limit moves from 85 to 87%. But the history rewrites itself: lowering pH low's Emergency limit on EQ-1 from 4.0 to 3.5 turns Wed 28 Oct's Emergency (pH 3.7) into a Major firing. v7/1 still has that Emergency only because it opened a real issue (card D3); with nothing sent during Commissioning, the trial card would be its only trace.",
           "recommended": false
         },
@@ -1771,10 +1773,10 @@
         }
       ],
       "recommendation": "Option 3. Records are the right home for what happened: Alex's memo asks for them, and when nothing is sent during Commissioning they are the only trace of an Emergency. But the noisy mark is a prompt to tune, so it should judge the Trigger as it is now, and the 'would have fired' preview already replays the trial with the typed limits. Showing both lines keeps the history honest and lets a fixed Trigger clear at once. If a plant keeps no reading history, option 4 is the fallback; recounting the history itself (v7/1 today) is the weaker option.",
-      "v7Does": "v7/1 never stores a trial firing. The trial card and the noisy mark replay the sample readings over the trial so far with the alert's current limits and timing, so a reasoned change shows at once: moving Level high — EQ-1's Caution from 85 to 87% takes it from 76 firings (12.8 a day) to 0, and the noisy gap leaves Readiness straight away. The same replay rewrites the past: lowering pH low — EQ-1's Emergency limit from 4.0 to 3.5 turns its Emergency on Wed 28 Oct into a Major firing on the trial card. The real Commissioning issue that Emergency opened stays.",
+      "v7Does": "v7/1 keeps each trial firing as it happened, with the limit it crossed, and replays the trial with today's limits beside it. Moving Level high — EQ-1's Caution from 85 to 87% leaves its trial card at 76 firings in 5.9 days and adds 'With today's limits: 0 in 5.9 days'. The noisy mark and Readiness follow that second line, so the gap leaves at once. Lowering pH low — EQ-1's Emergency limit from 4.0 to 3.5 leaves Wed 28 Oct's Emergency on the trial card as it happened; the replay with today's limits would call it Major.",
       "tellAlex": "On trial firings as records: agreed, keep them as history. With nothing sent during Commissioning they're the only trace of an Emergency. One change to the noisy mark: judge it by replaying the trial with the Trigger's current limits (the same replay your 'would have fired' preview uses), shown as a second line on the trial card. Otherwise a Trigger fixed on day 6 stays marked noisy for almost two more days. Does that fit what you meant?",
-      "v71Option": 0,
-      "v71Short": "Recounts the trial with today's limits: a fix clears the noisy mark at once, but past firings change with it.",
+      "v71Option": 2,
+      "v71Short": "Keeps each firing as it happened; the noisy mark judges a replay with today's limits.",
       "v72Option": 1,
       "v72Short": "Keeps each trial firing as a record: history never changes, but a fixed Trigger stays noisy for days.",
       "v72Does": "v7/2 stores each trial firing as a record and never recounts it. After tuning, Level high · EQ-1's trial card still reads 'Fired 76 times in 5.9 days'; the override preview says 'Trial so far: would have fired 0 times instead of 76', yet the noisy gap stays on Readiness until the average falls below 10 a day, about 01:19 on Sat 31 Oct with no new firings. Wed 28 Oct's Emergency on pH low · EQ-1 stays on the trial card whatever its limit becomes, which matters because v7/2 sends nothing and opens no Issue during Commissioning.",
@@ -1816,34 +1818,34 @@
       "short": "Old library numbers at a plant",
       "severity": "Small",
       "arose": "Designing v7/2",
-      "alexSays": "Alex's migration turns every legacy plant value that differs from the library into an override with the reason Migrated and a 90-day review; Migrated is never offered in the form. A condition Task's 'do when' and 'done when' are tunable values like any limit. Alex's limit rules let a library value be a share of a design parameter; v7/2's library writes a blower's motor-current limits that way, and its intake-filter job too, as v6's form rule already did. The drafts don't say what to do with a value that differs only because the library itself moved from a number to a rule.",
+      "alexSays": "Alex's migration turns every legacy plant value that differs from the library into an override with the reason Migrated and a 90-day review; Migrated is never offered in the form. A condition Task's 'do when' and 'done when' are tunable values like any limit. Alex's limit rules let a library value be a share of a design parameter; v7/2's library writes a blower's motor-current limits that way, as v6's form rule already did. The drafts don't say what to do with a value that differs only because the library itself moved from a number to a rule.",
       "v6Today": "v6's Blower type holds fixed numbers: motor current Caution 44 A and Minor 48 A with no Major, and the intake-filter job at 42 A, done at 38 A. Its SCADA form rule would give 40 / 42 / 46 A and 38 / 34 A for a 22 kW motor. Manesar's BL-1 (22 kW) holds exactly the fixed numbers, and nothing records whether anyone chose them.",
       "mihirsDirection": "Mihir has set no rule for migrating plant values. The standing brief: nothing changes silently on a running plant, and show the consequence before it happens.",
       "options": [
         {
           "label": "Keep them as the plant's own values, marked Migrated, with a review date",
-          "consequence": "Nothing moves on a Live plant. Five of Manesar's 15 migrated values are these, all due for review by 30 Nov, and BL-1 keeps no Major motor-current band while every other 22 kW blower gets one at 46 A. A reviewer can't tell a value the plant chose from one it simply never changed.",
+          "consequence": "Nothing moves on a Live plant. Three of Manesar's 13 migrated values are these, all due for review by 30 Nov, and BL-1 keeps no Major motor-current band while every other 22 kW blower gets one at 46 A. A reviewer can't tell a value the plant chose from one it simply never changed.",
           "recommended": false
         },
         {
           "label": "Treat them as leftovers: a value equal to the old library number follows the new rule at migration",
-          "consequence": "BL-1 moves to 40.0 / 42.0 / 46.0 A, gains a Major band, and its intake-filter job starts at 38.0 A instead of 42 A, so it comes due sooner. No review is needed. But a running plant's limits change with nobody looking, and a plant that really chose 44 A loses it.",
+          "consequence": "BL-1 moves to 40.0 / 42.0 / 46.0 A, gains a Major band, and the intake-filter Task its Caution line raises comes due sooner, at 40.0 A instead of 44 A. No review is needed. But a running plant's limits change with nobody looking, and a plant that really chose 44 A loses it.",
           "recommended": false
         },
         {
           "label": "Keep them, and mark the ones that equal the old library number",
-          "consequence": "Nothing moves at migration. Each such value says 'Same as the library's old number: probably never chosen here', and the review list puts them first with 'Adopt the library value' one click away, showing what changes (BL-1 gains a Major band at 46 A). Five of Manesar's 15 migrated values carry the mark. Costs one comparison at migration.",
+          "consequence": "Nothing moves at migration. Each such value says 'Same as the library's old number: probably never chosen here', and the review list puts them first with 'Adopt the library value' one click away, showing what changes (BL-1 gains a Major band at 46 A). Three of Manesar's 13 migrated values carry the mark. Costs one comparison at migration.",
           "recommended": true
         }
       ],
       "recommendation": "Option 3. Moving values on a Live plant at migration (option 2) breaks 'nothing changes silently' and would quietly change BL-1's limits. Keeping them unmarked (option 1) is safe but leaves the reviewer guessing, and a blower with no Major band is the kind of thing a 90-day review should catch first. The mark costs one comparison with the old library and turns the review into a quick Adopt or Keep. Manesar is a sample plant, so neither prototype can know what it chose; the review is where a person decides.",
-      "v7Does": "v7/1 shows AMP-BL1's 44 / 48 A and its missing Major band as 'Changed here', reason 'Not recorded (changed before reasons were kept)', against 40 / 42 / 46 A from the SCADA form for a 22 kW motor. The intake-filter job keeps 42 / 38 A and is not listed in Differences at all: v7/1 has no record for a condition's thresholds and doesn't work them out from the form. So the same leftover shows as a plant change in one place and not at all in the other. This is closest to option 1, without its review date or its Migrated mark.",
-      "tellAlex": "On migration: when the library swaps a fixed number for a rule, plants still on the old number show up as overrides nobody chose. Manesar's blower has five. I'd keep them as Migrated, as you say, but mark the ones that equal the old library value so the review can adopt the rule in one step. Is Migrated meant to cover these, or should migration adopt the rule where a plant never changed the value?",
-      "v71Option": null,
-      "v71Short": "Closest to option 1: keeps them as changed here, reason not recorded, no review date; the intake-filter values aren't listed at all.",
+      "v7Does": "v7/1 shows AMP-BL1's 44 / 48 A and its missing Major band as 'Changed here', reason not recorded, against 40 / 42 / 46 A from the SCADA form for a 22 kW motor, and marks each one 'Probably never chosen here': it equals the Blower library's own fixed number. Differences lists the three first, has a 'Probably never chosen' filter, and offers 'Adopt the SCADA form value' on each; the Major row says adopting adds the band at 46 A. The intake-filter work has no thresholds of its own any more: it is a Task BL-1's Caution line raises at the plant, so it moves with that line.",
+      "tellAlex": "On migration: when the library swaps a fixed number for a rule, plants still on the old number show up as overrides nobody chose. Manesar's blower has three. I'd keep them as Migrated, as you say, but mark the ones that equal the old library value so the review can adopt the rule in one step. Is Migrated meant to cover these, or should migration adopt the rule where a plant never changed the value?",
+      "v71Option": 2,
+      "v71Short": "Marks the three 'Probably never chosen here', lists them first, with Adopt one click away.",
       "v72Option": 0,
-      "v72Short": "Keeps all five as Migrated overrides, review by 30 Nov; nothing marks them as the library's old numbers.",
-      "v72Does": "v7/2 migrates all five as overrides with the reason Migrated, set 1 Sep 2026, review by 30 Nov 2026, author not recorded: AMP-BL1's Caution 44 A (base 40.0 A), Minor 48 A (base 42.0 A) and Major none (base 46.0 A), and the Clean intake filter job's do-when 42 A (base 38.0 A) and done-when 38 A (base 34.0 A). Without the last two, BL-1's intake-filter job would move to 38.0 / 34.0 A with nobody told. Nothing marks them as the library's old numbers.",
+      "v72Short": "Keeps all three as Migrated overrides, review by 30 Nov; nothing marks them as the library's old numbers.",
+      "v72Does": "v7/2 migrates all three as overrides with the reason Migrated, set 1 Sep 2026, review by 30 Nov 2026, author not recorded: AMP-BL1's Caution 44 A (base 40.0 A), Minor 48 A (base 42.0 A) and Major none (base 46.0 A). The intake-filter work has no do-when or done-when of its own any more: it is a Task BL-1's Caution line raises at the plant, so it follows that line and its override. Nothing marks them as the library's old numbers.",
       "both": false,
       "links": [
         {
@@ -1867,8 +1869,7 @@
         "2": [
           "p/manesar/sensor/bl1_amps",
           "p/manesar/eq/bl1/:tab?",
-          "p/manesar/deviations",
-          "p/manesar/trigger/w_intake"
+          "p/manesar/deviations"
         ]
       }
     },
@@ -1987,6 +1988,122 @@
         ],
         "2": [
           "p/manesar"
+        ]
+      }
+    },
+    {
+      "id": "D28",
+      "title": "Where should condition-based work live, and what should raise it?",
+      "short": "Condition-based work from a line",
+      "severity": "Shapes v7",
+      "arose": "Team feedback",
+      "alexSays": "Alex's drafts make condition-based work a Trigger whose outcome is a Task. It sits on a piece of equipment and reads that equipment's own reading, with a 'do when' and a 'done when' value tuned like any limit. The Blower's intake-filter job is the example: do it at 95% of full-load current, done below 85%.",
+      "v6Today": "v6 files condition-based work on a piece of equipment with its own two numbers: Manesar's BL-1 'Clean intake filter' comes due when its motor current passes 42 A and is done below 38 A. The same reading already has an alert at 44 A. So one reading carries two sets of lines, set in two places, and the work sits on the blower even when the job is the aeration tank's.",
+      "mihirsDirection": "Feedback from the team on 5 Nov, which Mihir took up: condition-based work doesn't belong on equipment. It belongs to a unit process or the plant, and the alerts already on the equipment feed it. Show both in one view. Mihir chose a line on the alert that creates a Task as well as one that opens an Issue, filed only at a unit process or the plant, in both prototypes.",
+      "options": [
+        {
+          "label": "Keep it on the equipment, with its own do-when and done-when (v6, the drafts)",
+          "consequence": "Nothing to build. But a reading has two sets of lines in two places that can drift apart, the work sits on the blower rather than where it is done, and the team's feedback is not met.",
+          "recommended": false
+        },
+        {
+          "label": "A line on the equipment's alert raises a Task at a unit process or the plant, instead of an Issue",
+          "consequence": "One bar per reading shows every line and what each one does. The Task reads its line live, so moving the line moves the Task, and the next line out still opens the Issue. Manesar's intake-filter work becomes the Task BL-1's Caution line raises: no Issue at 44 A, an Issue at 48 A. The done-when number goes: the Task is done when someone completes it, and it can be raised again only after that.",
+          "recommended": true
+        },
+        {
+          "label": "A separate condition-work item at the unit process that reads an equipment alert",
+          "consequence": "The work sits in the right place, but there are still two places to look and two sets of numbers, and nothing shows the alert and the work as one.",
+          "recommended": false
+        }
+      ],
+      "recommendation": "Option 2, which both prototypes now build. It answers the feedback with no new kind of object: a line already exists, and what it does becomes a choice. Calls still open inside it:\n\n- A line that raises a Task opens no Issue. I recommend this, so one crossing gives one thing to do; the next line out is the Issue.\n- The done-when number goes. The Task closes when a person completes it. If the team wants the reading to close it, the Task keeps the line's own 'must clear for'.\n- v7/1 has no unit-process level (card D1), so there it is filed at the plant. v7/2 files it at a unit process the equipment takes part in, or at the plant when the equipment serves more than one (BL-1 serves AT-1 and AT-2).\n- Neither library carries these Tasks yet: they are set at each plant. In v7/2 a unit-process type could carry them; v7/1 would need a plant-level library.\n- v7/2 asks for a reason on every change at a Live plant, but changing what a line does is saved without one. That should get the same reason form as a Zone.",
+      "v7Does": "v7/1 builds option 2 at the plant. On a reading's limits sheet, each line has a switch and says what it does: 'Opens an issue' or 'Raises a task at the plant', with the task's name. Manesar has two: BL-1's Caution line at 44 A raises 'Clean the blower intake filters', and AT-1's MLSS line at 4500 mg/L raises 'Waste extra sludge'. Both appear on the plant's Tasks tab under Condition-based work, with the line that raises them. On Thu 29 Oct at 14:25 BL-1 crosses 44 A and the task is raised instead of an issue. BL-1's own Tasks tab carries none and says where its readings' work is filed. Emergency always opens an issue.",
+      "tellAlex": "The team asked that condition-based work move off equipment, so we've made it what a line on an alert does: open an Issue, or raise a Task at a unit process or the plant. It reads the line, so the do-when and done-when numbers go. Does that fit your Trigger model: one Trigger whose lines can have different outcomes?",
+      "v71Option": 1,
+      "v71Short": "A line raises a task at the plant instead of an issue; the plant has no unit process here.",
+      "v72Option": 1,
+      "v72Short": "A line raises a Task at a unit process or the plant; the Blower's own intake-filter job is gone.",
+      "v72Does": "v7/2 builds option 2 in Alex's model. The Blower type no longer carries an intake-filter job, and nothing of the kind is filed on equipment. A sensor's page shows its Zones on one threshold bar, and below them 'What each line does': open an Issue, or raise a Task at a unit process the equipment takes part in or at the plant. Manesar's BL-1 Caution line raises 'Clean the blower intake filters' at the plant, and AT-1's MLSS line raises 'Waste extra sludge' at AT-1. Each sits on its subject's Tasks tab and in the Triggers list with the line it reads. Manesar's migrated values drop from 15 to 13, because the old job's do-when and done-when have nothing left to keep.",
+      "both": true,
+      "links": [
+        {
+          "label": "Manesar's Tasks: condition-based work",
+          "href": "#/p/manesar/tasks?show=condition",
+          "label72": "AMP-BL1: the bar and what each line does",
+          "href72": "#/p/manesar/sensor/bl1_amps"
+        },
+        {
+          "label": "The task the Caution line raises",
+          "href": "#/p/manesar/task/lw_bl1_filter",
+          "label72": "AT-1's Tasks: Waste extra sludge",
+          "href72": "#/p/manesar/up/at1/tasks"
+        }
+      ],
+      "where": {
+        "1": [
+          "p/manesar/tasks",
+          "p/manesar/task/lw_bl1_filter",
+          "p/manesar/task/lw_at1_sludge"
+        ],
+        "2": [
+          "p/manesar/sensor/bl1_amps",
+          "p/manesar/sensor/at1_mlss",
+          "p/manesar/task/lw_bl1_filter",
+          "p/manesar/task/lw_at1_sludge",
+          "p/manesar/up/at1/:tab?"
+        ]
+      }
+    },
+    {
+      "id": "D29",
+      "title": "Should limits be set on the product's threshold bar, with v7's four lines on both sides?",
+      "short": "The threshold bar for limits",
+      "severity": "Small",
+      "arose": "Team feedback",
+      "alexSays": "Alex's drafts give each Zone a value per band and say a plant's change needs a reason. They don't say how a person sets the values on screen.",
+      "v6Today": "v6 sets limits in rows of number boxes, one band a row, one direction at a time, with a gauge above them that only shows.",
+      "mihirsDirection": "Feedback from the team on 5 Nov: the product already has a threshold-setting bar (range min and max, a coloured bar, handles to drag, the value under each handle with a pencil, a zone switch), so reuse it. Mihir chose the same look and interaction with v7's four bands, the low and high sides on one bar.",
+      "options": [
+        {
+          "label": "Use the bar as it is: Safe, Caution, Critical",
+          "consequence": "Pure reuse. But it has three zones and v7 has four lines a side: Minor and Major would have to merge, which changes who is told and how fast.",
+          "recommended": false
+        },
+        {
+          "label": "Extend the bar: four lines a side, low and high on one bar",
+          "consequence": "The same control people know, carrying v7's bands. It needs the component's owner to add bands and a second side, and handles that sit close step down a row so their values stay readable.",
+          "recommended": true
+        },
+        {
+          "label": "Keep the rows of number boxes",
+          "consequence": "Nothing to change, but no reuse and no picture of where the lines sit against the reading.",
+          "recommended": false
+        }
+      ],
+      "recommendation": "Option 2, built in both prototypes. Calls still open:\n\n- The range boxes only set the scale and are not saved, and they start at the range the reading can measure. If the product stores a widget's range, config should not.\n- v7/1 changes one side at a time and shows the other side faded on the same bar. v7/2 has handles on both sides, but a drag or a click on a value opens that Zone's change form, so the reason stays.\n- A line you switch on starts between its neighbours. Lines on a side can't cross: each one goes further out.",
+      "v7Does": "v7/1's limits sheet opens on the bar: Range min and max boxes, the coloured bar with the reading's 'Now' mark, and a handle per line with its value and a pencil. Drag a handle or type its value, and the source chip, the reason and the 7-day replay update as you go. Below the bar each line has a switch, its source and what it does. The other side shows faded on the same bar, with a link to change it. ON/OFF readings keep their rows.",
+      "tellAlex": "We're setting Zones on the product's threshold bar, extended to four lines a side. Each drag still goes through your change form with its reason. Nothing changes in the model.",
+      "v71Option": 1,
+      "v71Short": "The bar in the limits sheet: one side at a time, the other side faded.",
+      "v72Option": 1,
+      "v72Short": "Both sides on the sensor's bar; a drag opens that Zone's change form with its reason.",
+      "v72Does": "v7/2 puts the bar above a sensor's Zones with both sides live. Dragging a handle, or clicking its value, opens that Zone's change form below with the new value, where the reason and the save already are. So the page still has no input until a form opens, apart from the scale boxes. Lines that raise a Task carry a 'raises a task' tag.",
+      "both": true,
+      "links": [
+        {
+          "label": "BL-1: open 'Change limits' on Motor current",
+          "href": "#/p/manesar/eq/bl1",
+          "label72": "AMP-BL1's Zones on the bar",
+          "href72": "#/p/manesar/sensor/bl1_amps"
+        }
+      ],
+      "where": {
+        "1": [
+          "p/manesar/eq/bl1/:tab?"
+        ],
+        "2": [
+          "p/manesar/sensor/:id"
         ]
       }
     }
@@ -2306,8 +2423,8 @@
       "n": 35,
       "title": "Thresholds on condition Tasks",
       "drafts": "A condition Task's 'do when' and 'done when' are tunable values, but the drafts don't say how a plant's old values move across when the library's rule changes.",
-      "reading": "They take an override record like any limit. Manesar's intake-filter job keeps 42 / 38 A as two Migrated overrides against a worked-out 38.0 / 34.0 A.",
-      "why": "Nothing changes silently: without the records, the blower's job would move with nobody told.",
+      "reading": "None are left on equipment: condition-based work is a Task a line on a Trigger raises at a unit process or the plant. Manesar's intake-filter work is the Task BL-1's Caution line raises, so it follows that Zone and its override.",
+      "why": "Nothing changes silently: the Task moves only when its line moves, and a change to the line needs a reason.",
       "card": "D25",
       "confirm": true
     },
@@ -2470,7 +2587,7 @@
     return o ? o.label : '';
   }
   function optName(d, opt) { return opt === 'other' ? 'Something else' : `Option ${+opt + 1}`; }
-  const ARISINGS = ['First review', 'Reviewing v7/1', 'Designing v7/2', 'Building v7/2'];
+  const ARISINGS = ['First review', 'Reviewing v7/1', 'Designing v7/2', 'Building v7/2', 'Team feedback'];
   function idNum(id) { const m = /\d+/.exec(String(id == null ? '' : id)); return m ? +m[0] : 0; }
   function isIndex(d, i) { return typeof i === 'number' && Number.isInteger(i) && i >= 0 && i < ((d && d.options) || []).length; }
   /* the option each prototype builds: v7/1 defaults to the recommended one when the card does not say; null = none of them */
@@ -2499,7 +2616,7 @@
   }
 
   /* ── your call (browser storage, guarded) ────────────────────────────────────────────────────────────── */
-  const KEY = 'ctl7.decisions';
+  const KEY = (typeof W.V7_DEC_KEY === 'string' && W.V7_DEC_KEY) || 'ctl7.decisions';
   let MEM = null;
   function store() {
     if (MEM) return MEM;
@@ -2511,10 +2628,16 @@
   function save() { try { W.localStorage.setItem(KEY, JSON.stringify(store())); } catch (e) { /* storage off: kept for this visit only */ } }
   function validOpt(d, opt) { return opt === 'other' || (Number.isInteger(+opt) && opt !== '' && opt !== null && +opt >= 0 && +opt < (d.options || []).length); }
   function answers() { return Object.assign({}, store().answers); }
+  /* a call already made (v7/3): read-only, stands in for your own call until you make one */
+  function madeOf(id) {
+    const m = W.V7_CALLS_MADE && typeof W.V7_CALLS_MADE === 'object' ? W.V7_CALLS_MADE[id] : null; const d = byId(id);
+    return m && d && m.opt != null && validOpt(d, m.opt) ? { opt: m.opt === 'other' ? 'other' : +m.opt, by: String(m.by || ''), atText: String(m.atText || ''), note: String(m.note || ''), made: true } : null;
+  }
   function answerOf(id) {
     const a = store().answers[id]; const d = byId(id);
-    return a && d && validOpt(d, a.opt) ? a : null;
+    return a && d && validOpt(d, a.opt) ? a : madeOf(id);
   }
+  const madeWho = (m) => [m.by, m.atText].filter(Boolean).join(', ');
   function setAnswer(id, a) {
     const d = byId(id); if (!d) return { ok: false, error: 'No such decision.' };
     const cur = store().answers[id] || {};
@@ -2681,7 +2804,7 @@
   const MARK_OPEN = new Set();                          // strip items a reader opened (kept across re-renders), `${path}|${id}`
   /* the status word never reuses the app's issue status "Open" */
   const NO_CALL = 'No call yet';
-  function markStatus(d) { const a = answerOf(d.id); return a && a.opt != null ? `Your call: ${optName(d, a.opt)}` : NO_CALL; }
+  function markStatus(d) { const a = answerOf(d.id); return a && a.opt != null ? `${a.made ? 'Decided' : 'Your call'}: ${optName(d, a.opt)}` : NO_CALL; }
   function markItem(d, key, v) {
     const k = `${key}|${d.id}`; const b1 = builds(d, '1'); const b2 = builds(d, '2');
     const lines = d.both === true && b1
@@ -2735,6 +2858,7 @@
   function callDoc(d) {
     const a = answerOf(d.id);
     if (!a) return noteOf(d.id) ? '<span class="dk-chip dk-c-muted">Note only</span>' : '<span class="dd-none">No call yet</span>';
+    if (a.made) return `<span class="dk-chip ${a.opt === recommendedIndex(d) ? 'dk-c-ok' : 'dk-c-call'}" title="${esc(`Decided by ${madeWho(a)}`)}">Decided: ${esc(optName(d, a.opt))}${a.opt === recommendedIndex(d) ? ', as recommended' : ''}</span>`;
     if (a.opt === recommendedIndex(d)) return `<span class="dk-chip dk-c-ok">${esc(optName(d, a.opt))}, as recommended</span>`;
     return `<span class="dk-chip dk-c-call" title="${esc(optionText(d, a.opt))}">${esc(optName(d, a.opt))}</span>`;
   }
@@ -2777,9 +2901,9 @@
       + `<p class="dd-count" data-dd-count>${countHtml()}</p>`
       + `<div class="dd-tw"><table class="dd-table"><thead><tr>${head.map((t) => `<th scope="col">${esc(t)}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div></section>`;
   }
-  const GROUP_TITLE = { 'First review': 'From the first review of Alex\'s packs', 'Reviewing v7/1': 'From reviewing v7/1', 'Designing v7/2': 'From designing v7/2', 'Building v7/2': 'From building v7/2' };
+  const GROUP_TITLE = { 'First review': 'From the first review of Alex\'s packs', 'Reviewing v7/1': 'From reviewing v7/1', 'Designing v7/2': 'From designing v7/2', 'Building v7/2': 'From building v7/2', 'Team feedback': 'From the team\'s feedback on the prototypes' };
   /* each group carries an anchor the docs' contents link to: #group-first-review, #group-reviewing-v7-1, #group-designing-v7-2,
-     #group-building-v7-2 */
+     #group-building-v7-2, #group-team-feedback */
   function groupId(a) { return 'group-' + (String(a || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'questions'); }
   function docCard(d, x) {
     const H = `h${x.level + 1}`; const id = esc(d.id); const rec = recommendedIndex(d); const v = variant();
@@ -2937,6 +3061,7 @@
     const a = answerOf(d.id);
     if (!a) return UI.chip(noteOf(d.id) ? 'Note only' : 'Not answered', { tone: 'muted' });
     const rec = recommendedIndex(d);
+    if (a.made) return UI.chip(`Decided: ${optName(d, a.opt)}${a.opt === rec ? ', as recommended' : ''}`, { tone: a.opt === rec ? 'ok' : 'info', title: `${optionText(d, a.opt)} · decided by ${madeWho(a)}` });
     if (a.opt === rec) return UI.chip(`Your call: ${optName(d, a.opt)}, as recommended`, { tone: 'ok' });
     return UI.chip(`Your call: ${optName(d, a.opt)}`, { tone: 'info', title: optionText(d, a.opt) });
   }
@@ -2951,8 +3076,9 @@
     };
     const opts = (d.options || []).map((o, i) => row(i, i, o.label, o.consequence, i === rec)).join('')
       + row('other', 'x', 'Something else: say what in the note', '', false);
-    const note = noteOf(d.id);
-    return `<div class="radios dec-opts" role="radiogroup" aria-label="Your call on ${esc(d.id)}">${opts}</div>`
+    const note = noteOf(d.id); const m = madeOf(d.id);
+    const made = m ? `<p class="dec-made"><b>Decided</b> by ${esc(madeWho(m))}: ${esc(optionText(d, m.opt))}${m.opt === rec ? ', as recommended' : ''}.${m.note ? ` “${esc(m.note)}”` : ''}${a && !a.made ? ' Your own call below differs from it on this page only.' : ' Pick another option to record your own call.'}</p>` : '';
+    return made + `<div class="radios dec-opts" role="radiogroup" aria-label="Your call on ${esc(d.id)}">${opts}</div>`
       + `<div class="dec-note"><label class="field-l" for="dec-note-${esc(d.id)}">Note <span class="muted">(optional, copied with your answer)</span></label>`
       + `<textarea id="dec-note-${esc(d.id)}" rows="2" data-act="dec:note" data-live data-id="${esc(d.id)}" placeholder="A condition, a question back, or what you would do instead">${esc(note)}</textarea></div>`
       + (a || note ? `<div class="dec-clear">${UI.btn('Clear my call', { act: 'dec:clear', data: { id: d.id }, kind: 'ghost', small: true })}</div>` : '');
@@ -3028,7 +3154,10 @@
     const tools = `<div class="dec-tools">${UI.btn('Open all', { act: 'dec:openall', kind: 'ghost', small: true })}${UI.btn('Close all', { act: 'dec:closeall', kind: 'ghost', small: true })}</div>`;
     const intro = `<p class="dec-intro">Each card is one question v7 raises for Mihir: what Alex's pack says, what v6 does, the options with their consequences, a recommendation, and what this prototype does today. Pick your call on each card; it is kept in this browser. Then copy your answers to send them. Calls about the study itself are answered and copied in the challenges doc. ${chalLink(null)}</p>`;
     const v = variant(); const o = v === '2' ? '1' : '2';
-    const sub = all.some(hasPair)
+    const decided = W.V7_CALLS_MADE && typeof W.V7_CALLS_MADE === 'object' ? list().filter((d) => madeOf(d.id)).length : 0;
+    const sub = decided
+      ? `${c.all} questions for Mihir. v7/3, the decided build, behaves as v7/1 (the recommended approach) and records ${decided} calls already made as Decided, with who made them and when; the rest are still open. Each card still says what v7/1 and v7/2 build. Your own calls here are kept apart from v7/1's.`
+      : all.some(hasPair)
       ? `${c.all} questions for Mihir. Each card says what this prototype (${VARIANTS[v].name}, ${v === '1' ? 'the recommended approach' : 'Alex\'s model'}) does and what ${VARIANTS[o].name} (${o === '1' ? 'the recommended approach' : 'Alex\'s model'}) does, with links to both. Your calls are shared with ${VARIANTS[o].name} in this browser.`
       : `${c.all} questions for Mihir, with a recommendation and what v7 does now.`;
     return UI.page({

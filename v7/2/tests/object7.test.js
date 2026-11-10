@@ -30,7 +30,8 @@ const el = (attrs) => ({ getAttribute: (k) => { k = String(k).replace(/^data-/, 
 const act = (name, attrs) => { const fn = UI._handlers[name]; if (!fn) throw new Error('no handler ' + name); return fn(el(attrs || {}), {}); };
 const last = () => UI._last || {};
 const has = (s, sub) => String(s).includes(sub);
-const noInputs = (html) => !/<(input|select|textarea)\b/i.test(String(html).replace(MARK, ''));
+/* v7/2: the threshold bar's range boxes only set its scale (nothing is saved from them), so they are not limit inputs */
+const noInputs = (html) => !/<(input|select|textarea)\b/i.test(String(html).replace(MARK, '').replace(/<input[^>]*class="thb-(lo|hi)"[^>]*>/g, ''));
 const J = (x) => JSON.stringify(x);
 
 /* the words v7/2 never puts on a screen (outside verbatim workbook and library data) */
@@ -102,6 +103,8 @@ section('unit process and equipment');
   const g = V.readingsTab('manesar').groups.find((x) => x.nodeId === 'at2');
   ok('AT-2 Readings: "Reading · Now · Limits · Source · Triggers", each row as the core reads it, "{n} · Edit on sensor"', /Reading Now Limits Source Triggers/.test(tr) && g.rows.filter((x) => !x.nextPhase).every((x) => has(tr, x.limitsText) && has(tr, x.triggerText) && x.chips.every((c) => has(tr, c.text))), g.rows.map((x) => x.triggerText).join(' | '));
   ok('AT-2 Readings: no limit input; every sensor links to its page', noInputs(r) && g.rows.every((x) => has(r, `href="#/p/manesar/sensor/${x.sensorId}"`)));
+  /* v7/2: BL-1's Caution firings now raise its intake-filter Task, so its shared Issue is a problem reported on it */
+  { const it = (V.issueTypesFor('manesar', V.subjectOf('manesar', 'bl1')) || [])[0]; if (it && !V.issues('manesar').some((i) => i.subject && i.subject.id === 'bl1')) V.report('manesar', 'bl1', it.id); }
   const iss = V.issues('manesar', { upId: 'at2', includeShared: true }); const shared = iss.filter((i) => i.shared);
   const ti = text(page('p/manesar/up/at2/issues'));
   ok('the core lists BL-1\'s Issues on AT-2 as shared', shared.length > 0 && shared.every((i) => i.sharedVia === 'bl1'), J(shared.map((i) => i.id)));
@@ -122,7 +125,7 @@ section('unit process and equipment');
   const td = text(page('p/manesar/eq/bl1/details'));
   ok('BL-1 Details: "Participates in" with AT-1 and AT-2, the survey card and the design parameters', /Participates in/.test(td) && has(td, 'AT-1') && has(td, 'AT-2') && has(td, 'The survey is the only source of equipment and sensors. Correct the survey, then re-run identification.') && /Motor rating/.test(td));
   const tk = text(page('p/manesar/eq/bl1/tasks'));
-  ok('BL-1 Tasks: the condition Task and "Work on AT-1 and AT-2 is filed on those unit processes."', has(tk, V.conditionOf('manesar', 'w_intake').text) && has(tk, 'Work on AT-1 and AT-2 is filed on those unit processes.'), tk.slice(-300));
+  ok('BL-1 Tasks: no condition Task on equipment; it names the Task its Caution line raises at the plant, and "Work on AT-1 and AT-2 is filed on those unit processes."', has(tk, 'Condition-based work is filed at a unit process or the plant.') && has(tk, 'Clean the blower intake filters') && has(tk, 'filed at the plant') && has(tk, 'Work on AT-1 and AT-2 is filed on those unit processes.'), tk.slice(-400));
   const ha = page('p/manesar/eq/at2'); const ta = text(ha);
   ok('an anchor id under eq/ renders the unit-process page', has(ta, 'Unit process') && has(ta, 'Type: Activated sludge v1 ↗') && /role="tab"/.test(ha));
   const hb = page('p/manesar/up/bl1');
@@ -265,9 +268,11 @@ section('Trigger page');
   const h = page('p/manesar/trigger/s_hypo'); const t = text(h); const c = V.cadenceOf('manesar', 's_hypo');
   ok('a Task\'s Trigger page: "How often · every week" with its chip and "Single-use · Manesar STP only", [Override]', has(t, `How often · ${c.everyText}`) && has(t, c.chip.text) && has(t, 'Single-use · Manesar STP only') && /Override/.test(t));
   ok('a Task\'s Trigger page links to the Task', has(h, 'href="#/p/manesar/task/s_hypo"'));
-  const co = V.conditionOf('manesar', 'w_intake'); const tc = text(page('p/manesar/trigger/w_intake?f=condition.doWhen'));
-  ok('a condition Task\'s Trigger page: do when and done when, each with its chip', has(tc, co.perField.doWhen.valueText) && has(tc, co.perField.doneWhen.valueText) && has(tc, co.perField.doWhen.chip.text) && has(tc, co.perField.doWhen.chip.small) && has(tc, co.perField.doneWhen.chip.small));
-  ok('?f=condition.doWhen marks that row', /class="o-field is-target" id="f-condition.doWhen"/.test(render('p/manesar/trigger/w_intake?f=condition.doWhen')));
+  /* v7/2: condition-based work is a Task a line raises: its page reads the line; the sensor shows the threshold bar and what each line does */
+  const tc = text(page('p/manesar/task/lw_bl1_filter'));
+  ok('a condition-based Task\'s page: on the plant, raised when BL-1 Motor current rises above its Caution line, now 44 A', has(tc, 'Raised when') && has(tc, 'BL-1 Motor current') && has(tc, 'Caution line, now 44 A') && has(tc, 'The plant'), tc.slice(0, 400));
+  const hs = page('p/manesar/sensor/bl1_amps'); const ts = text(hs);
+  ok('the sensor page: the threshold bar over the Zones (range, a handle per line) and "What each line does" with the Caution line raising the Task', /class="thb"/.test(hs) && /data-zone="above.caution"/.test(hs) && has(ts, 'What each line does') && has(ts, 'Raises the Task Clean the blower intake filters at the plant, instead of an Issue'), ts.slice(ts.indexOf('Zones'), ts.indexOf('Zones') + 400));
   ok('?f=clearing marks the clearing row', /class="o-field is-target" id="f-clearing"/.test(render('p/manesar/trigger/a_do_at2?f=clearing')));
   ok('a Trigger id that is not at the plant shows "Not found"', /Not found/.test(text(render('p/manesar/trigger/nope'))));
 }

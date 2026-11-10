@@ -65,10 +65,9 @@ const stateHash = () => J(V.S);
   check('derived', 'the 4.5 m is a person entry on EQ-1 (by Satyadev Singh, Fri 23 Oct 2026 10:40), used by the level limits', ent && ent.value === 4.5 && ent.source === 'person' && ent.by === 'Satyadev Singh' && V.fmt(ent.at) === 'Fri 23 Oct, 10:40' && ent.usedByText === 'Level limits on LVL-EQ-1', ent && J([ent.value, ent.source, ent.by, ent.usedByText]));
   const vl = V.activity({ plant: 'vedanta' }).find((a) => /^Design parameter on EQ-1/.test(a.text));
   check('derived', 'Vedanta Activity, Fri 23 Oct 10:40: "Design parameter on EQ-1: tank height none → 4.5 m (1 reading resolved): Read off the drawing …"', vl && vl.text === 'Design parameter on EQ-1: tank height none → 4.5 m (1 reading resolved): Read off the drawing during the bindings pass: the plant graph has no height for EQ-1' && V.fmt(vl.at) === 'Fri 23 Oct, 10:40' && vl.who === 'Satyadev Singh', vl && vl.text);
-  const fl = V.conditionOf('manesar', 'w_intake');
-  check('derived', 'the Blower\'s Clean intake filter resolves 38.0 / 34.0 A from BL-1\'s 40.0 A, and Manesar keeps its 42 / 38 A as overrides', fl.perField.doWhen.resolved === 38 && fl.perField.doneWhen.resolved === 34 && fl.doWhen === 42 && fl.doneWhen === 38 && fl.perField.doWhen.overrideId && fl.perField.doneWhen.overrideId, J([fl.perField.doWhen.resolved, fl.perField.doneWhen.resolved, fl.doWhen, fl.doneWhen]));
-  const v3 = V.conditionOf('vedanta', 'w_3z');
-  check('derived', 'Vedanta\'s BL-1 job follows the rule: 19.0 / 17.0 A, Derived', v3 && v3.doWhen === 19 && v3.doneWhen === 17 && v3.perField.doWhen.source === 'derived', v3 && J([v3.doWhen, v3.doneWhen, v3.perField.doWhen.chipText]));
+  /* v7/2: no condition-based work on equipment: the Blower's intake-filter job is a Task BL-1's Caution line raises at the plant, and it reads the line, so it follows the derived limits */
+  const lwI = V.lineWork('manesar', { sensorId: 'bl1_amps' })[0];
+  check('derived', 'no condition-based work on equipment; BL-1’s Caution line raises "Clean the blower intake filters" at the plant at 44 A', !V.conditionOf('manesar', 'w_intake') && !V.conditionOf('vedanta', 'w_3z') && lwI && lwI.band === 'caution' && lwI.limit === 44 && lwI.filed.kind === 'plant', lwI && J([lwI.whenText, lwI.filed.text]));
 }
 
 /* ── 4. gaps (V72-26) and the design-parameter editor (V72-27, V72-28) ── */
@@ -103,7 +102,7 @@ const stateHash = () => J(V.S);
   const bad = [V.setDesignParam(dp, { kind: 'up', id: cct }, 'tankHeight', 25, {}), V.setDesignParam(dp, { kind: 'up', id: cct }, 'tankHeight', -1, {}), V.setDesignParam('manesar', { kind: 'eq', id: 'bl1' }, 'fullLoadCurrent', 30, { note: 'x' })];
   check('params', 'a tank height over 20 m, a negative number and the derived full-load current are refused', bad.every((x) => !x.ok) && bad[0].error === 'Tank height must be 20 m or less.' && bad[1].error === 'Give a positive number.' && /set the motor rating instead/.test(bad[2].error), bad.map((x) => x.error).join(' | '));
   const rows = V.designParams('manesar', { kind: 'eq', id: 'bl1' });
-  check('params', 'BL-1\'s Design parameters: motor rating 22 kW (Survey), full-load current 40.0 A (Derived), each used by AMP-BL1 and the intake-filter job', rows[0].key === 'motorRating' && rows[0].valueText === '22 kW' && rows[0].chipText === 'Survey' && rows[1].key === 'fullLoadCurrent' && rows[1].valueText === '40.0 A' && rows[1].chipText === 'Derived · from the 22 kW motor at 415 V' && /AMP-BL1/.test(rows[0].usedByText) && /Clean intake filter on BL-1/.test(rows[0].usedByText), J(rows.map((x) => [x.key, x.valueText, x.chipText, x.usedByText])));
+  check('params', 'BL-1\'s Design parameters: motor rating 22 kW (Survey), full-load current 40.0 A (Derived), used by AMP-BL1 (no intake-filter job on equipment)', rows[0].key === 'motorRating' && rows[0].valueText === '22 kW' && rows[0].chipText === 'Survey' && rows[1].key === 'fullLoadCurrent' && rows[1].valueText === '40.0 A' && rows[1].chipText === 'Derived · from the 22 kW motor at 415 V' && /AMP-BL1/.test(rows[0].usedByText) && !/intake filter/i.test(rows[0].usedByText), J(rows.map((x) => [x.key, x.valueText, x.chipText, x.usedByText])));
   const pr = V.designParams('manesar', { kind: 'plant' });
   check('params', 'the plant\'s Details: rated flow and the discharge consent limits, each "Used by no limit rule yet"', pr.length === 4 && pr[0].label === 'Rated flow' && pr.every((x) => x.usedByText === 'Used by no limit rule yet' && x.value == null));
   V.reset();
@@ -116,8 +115,8 @@ const stateHash = () => J(V.S);
   const amp = pv.overrides.filter((o) => o.sensorId === 'bl1_amps').map((o) => [o.band, o.keeps, o.baseFrom, o.baseTo]);
   const job = pv.overrides.filter((o) => o.workId === 'w_intake').map((o) => [o.which, o.keeps, o.baseFrom, o.baseTo]);
   check('preview', 'V72-103 · AMP-BL1 keeps 44 A (and 48 A, none) with base moved 40.0 → 33.6, 42.0 → 35.3, 46.0 → 38.6 A', J(amp) === J([['caution', 44, 40, 33.6], ['minor', 48, 42, 35.3], ['major', null, 46, 38.6]]), J(amp));
-  check('preview', 'V72-103 · Clean intake filter keeps 42 / 38 A with base moved 38.0 → 31.9 and 34.0 → 28.6 A', J(job) === J([['doWhen', 42, 38, 31.9], ['doneWhen', 38, 34, 28.6]]), J(job));
-  check('preview', 'its lines: "AMP-BL1 keeps 44 A (Override): base moved 40.0 → 33.6 A …", "Clean intake filter on BL-1 keeps 42 A / 38 A (Override): base moved 38.0 → 31.9 A / 34.0 → 28.6 A", "Motor current high · BL-1 follows AMP-BL1"', /^AMP-BL1 keeps 44 A \(Override\): base moved 40\.0 → 33\.6 A/.test(pv.lines[0]) && pv.lines.includes('Clean intake filter on BL-1 keeps 42 A / 38 A (Override): base moved 38.0 → 31.9 A / 34.0 → 28.6 A') && pv.lines.includes('Motor current high · BL-1 follows AMP-BL1'), J(pv.lines));
+  check('preview', 'V72-103 · no intake-filter job on BL-1 to keep: its Task reads AMP-BL1\'s Caution line, so it moves with it', J(job) === '[]', J(job));
+  check('preview', 'its lines: "AMP-BL1 keeps 44 A (Override): base moved 40.0 → 33.6 A …", "Motor current high · BL-1 follows AMP-BL1", none about an intake-filter job', /^AMP-BL1 keeps 44 A \(Override\): base moved 40\.0 → 33\.6 A/.test(pv.lines[0]) && !pv.lines.some((x) => /intake filter/i.test(x)) && pv.lines.includes('Motor current high · BL-1 follows AMP-BL1'), J(pv.lines));
   check('preview', 'V72-103 · Cancel changes nothing', stateHash() === before);
   const ok = V.setDesignParam('manesar', { kind: 'eq', id: 'bl1' }, 'motorRating', 18.5, { note: 'The motor was swapped for a smaller one' });
   const bl = z('manesar', 'bl1_amps', 'above'); const o1 = V.S.overrides.find((o) => o.plant === 'manesar' && o.target.kind === 'zone' && o.target.sensorId === 'bl1_amps' && o.target.band === 'caution');

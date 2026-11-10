@@ -338,8 +338,8 @@ beat(10, 'Resync DO low · AT-2', ['library'], () => {
 });
 beat(10, 'a design parameter moves a derived base (optional; preview only)', ['library'], () => {
   const ref = { kind: 'eq', id: 'bl1' }; const pk = (V.designParams(MAN, ref).find((x) => x.label === 'Motor rating') || {}).key; const pv = pk ? V.designParamPreview(MAN, ref, pk, 18.5) : null; const ls = (pv && pv.lines) || [];
-  check(10, 'BL-1 motor rating 22 → 18.5 kW: "AMP-BL1 keeps 44 A (Override): base moved 40.0 → 33.6 A" (Minor 42.0 → 35.3, Major 46.0 → 38.6); "Clean intake filter on BL-1 keeps 42 A / 38 A (Override): base moved 38.0 → 31.9 A / 34.0 → 28.6 A"; "Motor current high · BL-1 follows AMP-BL1"',
-    /^AMP-BL1 keeps 44 A \(Override\): base moved 40\.0 → 33\.6 A\b/.test(ls[0] || '') && /42\.0 → 35\.3 A/.test(ls[0]) && /46\.0 → 38\.6 A/.test(ls[0]) && ls.includes('Clean intake filter on BL-1 keeps 42 A / 38 A (Override): base moved 38.0 → 31.9 A / 34.0 → 28.6 A') && ls.includes('Motor current high · BL-1 follows AMP-BL1'), ls.join(' | '));
+  check(10, 'BL-1 motor rating 22 → 18.5 kW: "AMP-BL1 keeps 44 A (Override): base moved 40.0 → 33.6 A" (Minor 42.0 → 35.3, Major 46.0 → 38.6); "Motor current high · BL-1 follows AMP-BL1"; no intake-filter job on equipment to move (its Task reads the Caution line)',
+    /^AMP-BL1 keeps 44 A \(Override\): base moved 40\.0 → 33\.6 A\b/.test(ls[0] || '') && /42\.0 → 35\.3 A/.test(ls[0]) && /46\.0 → 38\.6 A/.test(ls[0]) && !ls.some((x) => /intake filter/i.test(x)) && ls.includes('Motor current high · BL-1 follows AMP-BL1'), ls.join(' | '));
 });
 
 /* ════════ Chapter 11 · Deviations ════════ */

@@ -166,6 +166,11 @@
     }).join('');
     return `<ul class="o-lims">${items}${one ? `<li class="o-lim">${chipOf(rows[0].p, mode)}</li>` : ''}</ul>`;
   }
+  /* v7: what a line raises at the plant (condition-based work), under the reading's limits */
+  function lineWorkHtml(key, sensorId, dir) {
+    const ws = arr(safe(() => V().lineWork(key, { sensorId, dir }), [])); if (!ws.length) return '';
+    return `<ul class="lw-list">${ws.map((w) => { const t = safe(() => V().task(key, w.id), null); return `<li>${sev(w.band)} <span class="lw-does">raises</span> ${a(taskHref(key, w.id), w.name)} <span class="lw-does">at the plant${t ? ' · ' + esc(t.statusLabel) : ''}, instead of an issue</span></li>`; }).join('')}</ul>`;
+  }
   function hasLimits(lim) { return !!lim && BANDS.some((b) => num(lim.bands && lim.bands[b]) != null); }
 
   /* where a type's reading sits at the plants: every sensor of that name on equipment of that type */
@@ -256,7 +261,7 @@
     const dirsOut = lims.map((x) => ({
       dir: x.dir,
       bar: isStatus || s.kind === 'manual' || !hasLimits(x.lim) ? '' : bandBar({ dir: x.dir, bands: x.lim.bands, value: v, valid: validFor(s), unit: s.unit }),
-      line: limitsLine(x.lim, s, 'instance'),
+      line: limitsLine(x.lim, s, 'instance') + lineWorkHtml(key, s.id, x.dir),
     }));
     let extra = '';
     if (isMeter) extra = `<p class="o-hint">${s.kind === 'meter' ? 'Counts up. Run-hours tasks use it; it has no limits.' : 'Worked out from other readings; it has no limits here.'}</p>`;
@@ -480,6 +485,9 @@
       body: tasks.length ? UI.table({ cols: [{ label: 'Task', key: 'task' }, { label: 'How often', key: 'every' }, { label: 'Next due', key: 'due', cls: 'nowrap' }, { label: 'Last done', key: 'last', cls: 'nowrap' }, { label: '', key: 'act', cls: 'r' }], rows }) : '',
     });
     if (undecided.length) out += note(H(`The library proposes ${plural(undecided.length, 'more task')} for ${esc(e.tag)}: ${undecided.map((p) => esc(p.name)).join(', ')}. ${a(plantHref(key, 'library'), 'Decide in What the library brings')}`), 'info');
+    /* v7: condition-based work is the plant's, never this equipment's: say which of its readings raise some */
+    const lw = arr(safe(() => V().lineWork(key, { eqId: e.id }), []));
+    if (lw.length) out += note(H(`Condition-based work is filed at the plant. ${esc(e.tag)}'s readings raise ${lw.map((w) => `${a(taskHref(key, w.id), w.name)} (${esc(w.reading)}, ${esc(w.bandLabel)} line)`).join(' and ')}.`), 'quiet');
     out += `<p class="o-hint">Every task at ${esc(P.name)}: ${a(plantHref(key, 'tasks'), 'Tasks')}</p>`;
     return out;
   }
@@ -769,25 +777,31 @@
     }));
     return UI.table({ cols: [{ label: 'Started', key: 'start', cls: 'nowrap' }, { label: 'Band', key: 'band' }, { label: 'Peak', key: 'peak', cls: 'nowrap' }, { label: 'Lasted', key: 'lasted', cls: 'nowrap' }, { label: '', key: 'short' }], rows, empty: 'No trial firings yet.' });
   }
+  /* v7 (card D24): the trial firings as they happened (kept, never recounted) and, beside them, a replay of the trial with today's
+     limits; the noisy mark and go live judge today's limits, so a fix shows at once and nothing is erased */
   function trialCard(key, P, al, s, ts, q) {
     const all = q && q.all === '1';
-    const shortPct = Math.round((ts.shortShare || 0) * 100);
+    const rec = ts.recorded || { count: ts.count, perDay: ts.perDay, firings: ts.firings, shortShare: ts.shortShare, days: ts.days };
+    const days = n1(ts.trialDays || ts.days); const differs = rec.count !== ts.count;
+    const shortPct = Math.round((rec.shortShare || 0) * 100);
     const st = stats([
-      { value: rt(ts.perDay), label: 'trial firings a day', tone: ts.noisy ? 'warn' : '' },
-      { value: String(ts.count), label: `in ${n1(ts.trialDays || ts.days)} days on trial` },
+      { value: String(rec.count), label: `trial firings in ${days} days, as they happened` },
+      { value: rt(ts.perDay), label: "a day with today's limits", tone: ts.noisy ? 'warn' : '' },
       { value: `${shortPct}%`, label: 'short: 30 min or less, near the limit' },
     ]);
+    const today = `<p class="o-today">With today's limits: <b>${esc(String(ts.count))}</b> in ${esc(days)} days${differs ? ' (the limits changed during the trial; the firings below are kept as they happened)' : ''}.</p>`;
     const verdict = ts.noisy
-      ? note('Noisy: more than 10 trial firings a day, averaged over its trial so far. Move a limit, or make it hold longer before it fires.', 'warn')
+      ? note("Noisy: more than 10 trial firings a day with today's limits, over its trial so far. Move a limit, or make it hold longer before it fires.", 'warn')
       : ts.mostlyShort
         ? note('Mostly short: most firings lasted 30 min or less and peaked within 10% of the limit. Busy, but not noisy.', 'quiet')
-        : ts.count ? note('Not noisy: 10 trial firings a day or fewer.', 'ok') : note('No trial firings with these limits.', 'quiet');   /* v7: the one empty line */
-    const fs = arr(ts.firings);
+        : ts.count ? note("Not noisy: 10 trial firings a day or fewer with today's limits.", 'ok') : note(rec.count ? "Not noisy: with today's limits none of these would have fired." : 'No trial firings with these limits.', rec.count ? 'ok' : 'quiet');
+    const fs = arr(rec.firings);
     const more = fs.length > 12 ? `<p class="o-hint">${all ? a(alertHref(key, al.id), 'Show the latest 12') : a(alertHref(key, al.id) + '?all=1', `Show all ${fs.length}`)}</p>` : '';
+    const hist = { ...ts, firings: fs, count: rec.count, perDay: rec.perDay };
     return card({
       title: H(`Trial firings ${sampleTag()}`),
       sub: P.state === 'commissioning' ? 'Each one is an issue that would have opened. Nothing was sent.' : 'Recorded while on trial. Nothing was sent.',
-      body: st + `<div class="o-verdict">${verdict}</div>` + `<div class="mt">${dayBars(ts)}</div>` + (fs.length ? `<div class="mt">${firingsTable(fs, s, all ? 500 : 12)}</div>` : '') + more,
+      body: st + today + `<div class="o-verdict">${verdict}</div>` + `<div class="mt">${dayBars(hist)}</div>` + (fs.length ? `<div class="mt">${firingsTable(fs, s, all ? 500 : 12)}</div>` : '') + more,
       tone: ts.noisy ? 'warn' : '',
     });
   }
@@ -799,7 +813,7 @@
     return card({
       title: H(`${esc(al.sensorName || 'Reading')} <span class="mono muted">${esc(al.sensorTag || '')}</span>`),
       sub: `${al.kind === 'status' ? `Fires when it reads ${al.dir === 'below' ? 'OFF' : 'ON'}.` : `${dirHead(al.dir)} its limits.`} Limits live on the reading, so every alert on it follows them.`,
-      body: bar + (lim ? limitsLine(lim, sx, 'instance') : chipNamed('none')),
+      body: bar + (lim ? limitsLine(lim, sx, 'instance') : chipNamed('none')) + lineWorkHtml(key, al.sensorId, al.dir),
       actions: [btn('Change limits', { act: 'obj:limits', data: { plant: key, sensor: al.sensorId, dir: al.dir }, small: true, kind: 'primary' })],
     });
   }
@@ -940,6 +954,73 @@
   function errHtml(text) { return text ? esc(text) : ''; }
   function schedule(fn) { if (typeof setTimeout === 'function' && typeof document !== 'undefined' && document && document.body) { clearTimeout(prevTimer); prevTimer = setTimeout(fn, 140); } else fn(); }
 
+  /* v7: the threshold bar in the sheet: both sides of the reading on one bar, the side being changed with handles; status readings
+     (ON/OFF) keep the rows of inputs */
+  const barMode = (st) => st.kind !== 'status';
+  function otherSide(st) {
+    const od = arr(st.dirs).find((d) => d !== st.dir); if (!od) return null;
+    if (st.mode === 'type') {
+      const lt = safe(() => V().libType(st.code), null); const r = lt && arr(lt.readings).find((x) => x.name === st.reading); const d = r && arr(r.dirs).find((x) => x.dir === od);
+      const o = {}; BANDS.forEach((b) => { const p = d && (d.perBand || {})[b]; o[b] = p ? num(p.value) : null; }); return { dir: od, bands: o };
+    }
+    const lim = safe(() => V().limitsOf(st.key, st.sensorId, od), null); return { dir: od, bands: lim && lim.bands ? { ...lim.bands } : {} };
+  }
+  function tbOpts(st) {
+    const bands = lsBands(st); const cur = {}; BANDS.forEach((b) => { cur[b] = Number.isNaN(bands[b]) ? null : bands[b]; });
+    const sides = { [st.dir]: cur }; if (st.other) sides[st.other.dir] = st.other.bands;
+    if (!st.range) st.range = UI.tbRange(st.valid, BANDS.map((b) => cur[b]).concat(st.other ? BANDS.map((b) => st.other.bands[b]) : []), st.value);
+    const tasks = {}; BANDS.forEach((b) => { if (st.does && st.does[b] === 'task') tasks[b] = (st.taskName[b] || '').trim() || 'a task'; });
+    let otherLabel = ''; let editOther = '';
+    if (st.other) {
+      const set = BANDS.filter((b) => num(st.other.bands[b]) != null);
+      otherLabel = `${st.other.dir === 'below' ? 'Low side' : 'High side'}: ${set.length ? set.map((b) => `${bandName(b)} ${fv(st.other.bands[b], st.unit, st.kind)}`).join(', ') : 'no lines'}`;
+      editOther = `<button type="button" class="o-back" data-act="obj:ldir" data-dir="${st.other.dir}">${set.length ? 'Change' : 'Set'} the ${st.other.dir === 'below' ? 'low' : 'high'} side</button>`;
+    }
+    return { active: st.dir, sides, range: st.range, value: st.value, unit: st.unit, kind: st.kind, tasks, otherLabel, editOther };
+  }
+  function tbRefresh(el, st) {
+    const box = q1(el, '.o-ls-bar'); if (!box) return; const o = tbOpts(st);
+    const want = BANDS.filter((b) => num(o.sides[st.dir][b]) != null).map((b) => st.dir + ':' + b).sort().join(',');
+    const have = box.querySelectorAll ? Array.prototype.map.call(box.querySelectorAll('.thb-h'), (x) => x.getAttribute('data-h')).sort().join(',') : '';
+    const tasks = Object.keys(o.tasks).join(',');
+    if (want !== have || (box.getAttribute && box.getAttribute('data-tasks')) !== tasks || !q1(box, '.thb')) { box.innerHTML = UI.tbHtml(o); if (box.setAttribute) box.setAttribute('data-tasks', tasks); }
+    UI.tbSync(box, o);
+  }
+  function tbRow(st, b) {
+    const on = st.vals[b] !== '';
+    const does = st.mode !== 'instance' ? ''
+      : b === 'emergency' ? `<div class="o-band-d"${on ? '' : ' hidden'}><span class="lw-does">Opens an issue and calls everyone</span></div>`
+      : `<div class="o-band-d"${on ? '' : ' hidden'}><select data-does="${b}" aria-label="What the ${esc(bandName(b))} line does"><option value="issue"${st.does[b] !== 'task' ? ' selected' : ''}>Opens an issue</option><option value="task"${st.does[b] === 'task' ? ' selected' : ''}>Raises a task at the plant</option></select>`
+        + `<input type="text" data-taskname="${b}" value="${esc(st.taskName[b] || '')}" placeholder="Name the task, e.g. Clean the intake filters" aria-label="The task the ${esc(bandName(b))} line raises"${st.does[b] === 'task' ? '' : ' hidden'}></div>`;
+    return `<div class="o-band o-band-t" data-row="${b}"><div class="o-band-k"><button type="button" class="o-tog" role="switch" aria-checked="${on}" aria-label="${esc(bandName(b))} line" data-act="obj:ltog" data-band="${b}"><i></i></button>${sev(b)}</div>`
+      + `<div class="o-band-m"><span class="o-band-chip"></span><span class="o-band-ref"></span><button type="button" class="o-back" data-act="obj:lback" data-band="${b}" hidden>${esc(st.mode === 'type' ? 'Back to the published value' : 'Back to the library value')}</button></div>`
+      + does + (b === 'emergency' ? '<p class="o-band-h">Emergency fires on the first reading.</p>' : '') + '</div>';
+  }
+  /* a line switched on starts between its neighbours (or a step further out than the last line, or past the reading) */
+  function tbDefault(st, b) {
+    const o = tbOpts(st); const S = o.sides[st.dir]; const span = Math.abs(o.range[1] - o.range[0]) || 1; const up = st.dir === 'above';
+    const set = BANDS.filter((x) => num(S[x]) != null);
+    const prev = BANDS.slice(0, BANDS.indexOf(b)).reverse().find((x) => set.includes(x)); const next = BANDS.slice(BANDS.indexOf(b) + 1).find((x) => set.includes(x));
+    let v;
+    if (prev && next) v = (S[prev] + S[next]) / 2;
+    else if (prev) v = S[prev] + (up ? 1 : -1) * span * 0.08;
+    else if (next) v = S[next] - (up ? 1 : -1) * span * 0.08;
+    else { const base = num(st.value) != null ? +st.value : (o.range[0] + o.range[1]) / 2; v = base + (up ? 1 : -1) * span * 0.1; }
+    return UI.tbClampLine({ ...o, sides: { [st.dir]: { ...S, [b]: v } } }, b, v);
+  }
+  /* what the sheet's lines raise: tasks to take off (before the lines are saved) and to put on (after) */
+  function taskChanges(st, bands) {
+    const out = { removes: [], sets: [], text: '', err: null }; const words = [];
+    BANDS.forEach((b) => {
+      const was = st.does0[b] === 'task' ? st.taskName0[b] : null;
+      const want = st.does[b] === 'task' && bands[b] != null ? String(st.taskName[b] || '').trim() : null;
+      if (st.does[b] === 'task' && bands[b] != null && !want && !out.err) out.err = `Name the task the ${bandName(b)} line raises.`;
+      if (was && !want) { out.removes.push(b); words.push(`The ${bandName(b)} line opens an issue again.`); }
+      else if (want && want !== was) { out.sets.push(b); words.push(`The ${bandName(b)} line raises "${want}" at the plant.`); }
+    });
+    out.text = words.join(' '); return out;
+  }
+
   /* ── the limits sheet ────────────────────────────────────────────────────────────────────────────────── */
   function lsFromInstance(key, sensorId, dir0) {
     const s = readingOf(key, sensorId); if (!s) return null;
@@ -958,6 +1039,8 @@
     };
     BANDS.forEach((b) => { const p = pb[b] || {}; st.cur[b] = num(p.value); st.base[b] = num(p.baseValue); st.lib[b] = num(p.libValue); st.form[b] = num(p.formValue); st.vals[b] = st.cur[b] == null ? '' : String(st.cur[b]); });
     prefillWhy(st, key, BANDS.map((b) => (pb[b] || {}).overrideId));
+    st.other = otherSide(st); st.does = {}; st.taskName = {}; st.does0 = {}; st.taskName0 = {};
+    arr(safe(() => V().lineWork(key, { sensorId, dir }), [])).forEach((w) => { st.does[w.band] = st.does0[w.band] = 'task'; st.taskName[w.band] = st.taskName0[w.band] = w.name; });
     return st;
   }
   function lsFromType(code, reading, dir0) {
@@ -972,6 +1055,7 @@
       free: false, vals: {}, err: null, showWhy: false, version: lt.version,
     };
     BANDS.forEach((b) => { const p = st.perBand[b] || {}; st.cur[b] = num(p.value); st.base[b] = num(p.libValue); st.lib[b] = st.base[b]; st.vals[b] = st.cur[b] == null ? '' : String(st.cur[b]); });
+    st.other = otherSide(st); st.does = {}; st.taskName = {}; st.does0 = {}; st.taskName0 = {};
     return st;
   }
   function lsBands(st) {
@@ -1024,6 +1108,9 @@
     const intro = st.mode === 'type'
       ? note(`Library values for ${st.typeName}. Saving puts them in the draft of version ${st.version + 1}; no plant changes until the draft is published.`, 'quiet')
       : st.free ? note('The library has no limits for this reading, so these are this plant\'s own.', 'quiet') : '';
+    if (barMode(st)) return `${sw}${intro}<div class="o-ls-bar">${UI.tbHtml(tbOpts(st))}</div><div class="o-bands o-bands-t">${BANDS.map((b) => tbRow(st, b)).join('')}</div>`
+      + (st.mode === 'type' ? '<p class="o-hint">What a line does at a plant, open an issue or raise a task there, is set at each plant.</p>' : '')
+      + `${st.mode === 'type' ? `<div class="o-safety" hidden>${note('Changing Emergency is a safety change: when published it reaches every plant, including the ones that changed it, and it needs a reason.', 'warn')}</div>` : ''}<div class="o-prev" aria-live="polite"></div><p class="field-e o-ls-err" role="alert"></p>${st.mode === 'instance' && !st.free ? whyHtml(st, { fault: !st.manual, scada: true, lib: true }) : ''}`;
     const rows = BANDS.map((b) => `<div class="o-band" data-row="${b}"><div class="o-band-k">${sev(b)}<small>${st.kind === 'status' ? 'fires' : esc(dirWord(st.dir))}</small></div>`
       + `<div class="o-band-v">${lsInput(st, b)}</div>`
       + `<div class="o-band-m"><span class="o-band-chip"></span><span class="o-band-ref"></span><button type="button" class="o-back" data-act="obj:lback" data-band="${b}" hidden>${esc(st.mode === 'type' ? 'Back to the published value' : 'Back to the library value')}</button></div>`
@@ -1047,9 +1134,19 @@
   function lsBind(el) {
     if (!el) return;
     if (!el._oBound && typeof el.addEventListener === 'function') {
-      const h = (ev) => { const t = ev.target; if (!LS || !t) return; const b = t.getAttribute && t.getAttribute('data-band'); if (b && t.tagName !== 'BUTTON') LS.vals[b] = t.value; readWhy(el, LS); lsUpdate(el); };
+      const h = (ev) => {
+        const t = ev.target; if (!LS || !t || !t.getAttribute) return; const b = t.getAttribute('data-band'); if (b && t.tagName !== 'BUTTON') LS.vals[b] = t.value;
+        const d = t.getAttribute('data-does'); if (d) LS.does[d] = t.value; const tn = t.getAttribute('data-taskname'); if (tn) LS.taskName[tn] = t.value;
+        readWhy(el, LS); lsUpdate(el);
+      };
       el.addEventListener('input', h); el.addEventListener('change', h); el._oBound = true;
     }
+    const bar = q1(el, '.o-ls-bar');
+    if (bar && LS && barMode(LS) && UI.tbBind) UI.tbBind(bar, {
+      get: () => tbOpts(LS),
+      onValue: (b, v) => { if (!LS) return; LS.vals[b] = String(v); const inp = q1(bar, `input[data-band="${b}"]`); if (inp) inp.value = String(v); lsUpdate(el); },
+      onRange: (lo, hi) => { if (!LS) return; LS.range = [lo, hi]; lsUpdate(el); },
+    });
     lsUpdate(el);
   }
   function lsPreviewText(st, bands, err) {
@@ -1094,7 +1191,8 @@
   function lsUpdate(el) {
     const st = LS; if (!st || !el) return;
     const v = lsState(st);
-    if (st.kind !== 'status' && !st.manual) {
+    if (barMode(st)) tbRefresh(el, st);
+    else if (st.kind !== 'status' && !st.manual) {
       const ok = {}; BANDS.forEach((b) => { ok[b] = v.err || Number.isNaN(v.bands[b]) ? null : v.bands[b]; });
       setHtml(q1(el, '.o-ls-bar'), v.err ? '' : bandBar({ dir: st.dir, bands: ok, value: st.value, valid: st.valid, unit: st.unit }));
     }
@@ -1102,6 +1200,8 @@
       const row = q1(el, `.o-band[data-row="${b}"]`); if (!row) return;
       setHtml(q1(row, '.o-band-chip'), v.view[b].chip);
       setHtml(q1(row, '.o-band-ref'), esc(v.view[b].ref));
+      const tog = q1(row, '.o-tog'); if (tog) tog.setAttribute('aria-checked', String(st.vals[b] !== ''));
+      const does = q1(row, '.o-band-d'); if (does) { setHidden(does, st.vals[b] === ''); const nm = q1(row, '[data-taskname]'); if (nm) setHidden(nm, st.does[b] !== 'task'); }
       const back = q1(row, '.o-back'); if (back) { setHidden(back, !v.view[b].back); if (st.mode === 'instance') back.textContent = baseIsForm(st, b) ? 'Back to the SCADA form value' : 'Back to the library value'; }
     });
     st.showWhy = st.showWhy || v.needsWhy;
@@ -1133,8 +1233,9 @@
     const el = UI.sheetEl(); if (el) readWhy(el, st);
     const bands = lsBands(st); const err = lsValidate(st, bands);
     if (err) { st.err = err; if (el) lsUpdate(el); return false; }
-    const what = changesText(st, bands);
-    if (!what) { UI.closeSheet(); UI.toast('Nothing changed.'); return false; }
+    const what = changesText(st, bands); const tk = st.mode === 'instance' ? taskChanges(st, bands) : { removes: [], sets: [], text: '', err: null };
+    if (tk.err) { st.err = tk.err; if (el) lsUpdate(el); return false; }
+    if (!what && !tk.text) { UI.closeSheet(); UI.toast('Nothing changed.'); return false; }
     if (st.mode === 'type') {
       const r = safe(() => V().editLib(st.code, { reading: st.reading, dir: st.dir, bands }), null);
       if (!r || !r.ok) { st.err = (r && r.error) || 'That did not save.'; if (el) lsUpdate(el); return false; }
@@ -1143,11 +1244,18 @@
       return undefined;
     }
     const opts = lsNeedsWhy(st, bands) ? { reason: st.reason, note: st.note, until: st.reason === 'fornow' ? st.until : undefined } : {};
-    const r = safe(() => V().setLimits(st.key, st.sensorId, st.dir, bands, opts), null);
-    if (!r || !r.ok) { st.err = (r && r.error) || 'That did not save.'; if (r && r.needsReason) st.forceWhy = true; if (el) lsUpdate(el); return false; }
+    /* v7: a line's task comes off before its line can go; a new task goes on once its line is saved */
+    tk.removes.forEach((b) => safe(() => V().setLineWork(st.key, st.sensorId, st.dir, b, { name: null }), null));
+    const r = what ? safe(() => V().setLimits(st.key, st.sensorId, st.dir, bands, opts), null) : { ok: true };
+    if (!r || !r.ok) {
+      tk.removes.forEach((b) => safe(() => V().setLineWork(st.key, st.sensorId, st.dir, b, { name: st.taskName0[b] }), null));
+      st.err = (r && r.error) || 'That did not save.'; if (r && r.needsReason) st.forceWhy = true; if (el) lsUpdate(el); return false;
+    }
+    const bad = tk.sets.map((b) => ({ b, r: safe(() => V().setLineWork(st.key, st.sensorId, st.dir, b, { name: String(st.taskName[b]).trim() }), null) })).find((x) => !x.r || !x.r.ok);
     UI.closeSheet(); LS = null;
     const why = opts.reason === 'tuned' ? ' Tuned for this plant.' : opts.reason === 'fornow' ? ` For now, until ${fmtDay(Date.parse(st.until + 'T06:00:00+05:30'))}.` : '';
-    UI.toast(`Limits saved on ${st.name}${st.tag ? ` (${st.tag})` : ''}: ${what}.${why}`);
+    const tail = (tk.text ? ' ' + tk.text : '') + (bad ? ` ${bad.r ? bad.r.error : 'A task did not save.'}` : '');
+    UI.toast(what ? `Limits saved on ${st.name}${st.tag ? ` (${st.tag})` : ''}: ${what}.${why}${tail}` : tail.trim());
     return undefined;
   }
 
@@ -1400,7 +1508,7 @@
     const st = LS; if (!st) return false; const d = ga(el, 'dir');
     const nx = st.mode === 'type' ? lsFromType(st.code, st.reading, d) : lsFromInstance(st.key, st.sensorId, d); if (!nx) return false;
     if (st.mode === 'instance') { nx.reason = st.reason || nx.reason; nx.note = st.note || nx.note; nx.until = st.until || nx.until; }
-    LS = nx; UI.refreshSheet({ body: lsBody(nx), foot: lsFoot(nx) }); return false;
+    nx.range = st.range; LS = nx; UI.refreshSheet({ body: lsBody(nx), foot: lsFoot(nx) }); return false;
   });
   UI.on('obj:lback', (el) => {
     const st = LS; if (!st) return false; const b = ga(el, 'band'); const s = UI.sheetEl();
@@ -1409,6 +1517,11 @@
     if (s) lsUpdate(s); return false;
   });
   UI.on('obj:lsave', () => saveLimits());
+  UI.on('obj:ltog', (el) => {
+    const st = LS; if (!st) return false; const b = ga(el, 'band'); const s = UI.sheetEl();
+    st.vals[b] = st.vals[b] !== '' ? '' : String(tbDefault(st, b));
+    if (s) lsUpdate(s); return false;
+  });
   UI.on('obj:vback', (el) => {
     const st = VS; if (!st) return false; const f = ga(el, 'f'); const s = UI.sheetEl(); const lib = st.lib[f];
     if (st.kind === 'cadence' && lib) { st.vals.n = String(lib.n); st.vals.unit = lib.unit; const n = q1(s, '[data-f="n"]'); if (n) n.value = st.vals.n; const u = q1(s, '[data-f="unit"]'); if (u) u.value = st.vals.unit; }

@@ -260,7 +260,7 @@ ok(vis(page('#/p/vedanta/library')) === vis(page('#/p/vedanta/review/bindings'))
   h = page('#/p/vedanta'); const cl = V.checklist(VED);
   ok(cl.canGoLive && vis(h).includes('0 blockers') && vis(h).includes(cl.trial.text) && /13 Triggers active/.test(cl.trial.text), 'Readiness: "0 blockers", banner "… 13 Triggers active …"', cl.trial.text);
   ok(vis(h).includes('No blockers. Gaps don\'t stop go-live.') && /<button[^>]*data-act="plant:golive"[^>]*>Go live<\/button>/.test(h), '"No blockers. Gaps don\'t stop go-live." with "Go live" enabled');
-  ok(vis(h).includes('87 accepted · 87 active · 0 left inactive on purpose'), 'the Bindings card: "87 accepted · 87 active · 0 left inactive on purpose"');
+  ok(vis(h).includes('86 accepted · 86 active · 0 left inactive on purpose'), 'the Bindings card: "86 accepted · 86 active · 0 left inactive on purpose"');
 
   /* the go-live confirmation */
   click(h, 'Go live'); const m = lastModal(); const pv = V.goLivePreview(VED); const mh = modalHtml();

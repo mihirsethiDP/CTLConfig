@@ -253,7 +253,7 @@ if (CARDS.some((d) => 'both' in d)) { const b = CARDS.filter((d) => idN(d.id) <=
 /* ── 1b. the newer fields ──────────────────────────────────────────────────────────────────────────────────────
    All optional: a card without them renders as before. Each rule is checked wherever a card carries the field, so the
    card content can be merged in one go; bad fixtures (copies, never the live cards) prove each rule fires. */
-const ARISE = ['First review', 'Reviewing v7/1', 'Designing v7/2', 'Building v7/2'];
+const ARISE = ['First review', 'Reviewing v7/1', 'Designing v7/2', 'Building v7/2', 'Team feedback'];
 const NEWTEXT = ['short', 'v71Short', 'v72Short', 'v72Does'];
 const words = (t) => String(t).trim().split(/\s+/).filter(Boolean).length;
 const pathOf = (h) => String(h == null ? '' : h).replace(/^#\/?/, '').split('?')[0].replace(/\/+$/, '');
