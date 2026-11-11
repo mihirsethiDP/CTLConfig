@@ -675,6 +675,16 @@ window.V7 = (function () {
   }
   const ROLE = C.ROLE_LABEL || { l1: 'Operator', l3: 'Lead', l4: 'Senior Lead', regular: 'Client viewer' };
   const channelOf = (p) => (!p.phone || !p.phone.verified ? 'in the app' : p.phone.channel === 'wa' ? 'WhatsApp' : p.phone.channel === 'sms' ? 'SMS' : 'in the app');
+  /* v7/4: people are kept in the User Center, which this prototype does not have. So that a plant being set up can be walked
+     all the way to go live, this stands in for it: one Operator and one Lead with verified phones. */
+  function addSamplePeople(key) {
+    const d = dOf(key); if (!d) return { ok: false, error: 'No such plant.' }; d.people = d.people || [];
+    const has = (roles) => d.people.some((p) => roles.includes(p.role) && p.phone && p.phone.verified); let n = 0;
+    if (!has(['l1'])) { d.people.push({ id: 'sp_op', name: 'Sample Operator', role: 'l1', phone: { verified: true, channel: 'wa' }, major: 'now', quiet: '22:00–06:00', sample: true }); n++; }
+    if (!has(['l3', 'l4'])) { d.people.push({ id: 'sp_lead', name: 'Sample Lead', role: 'l3', grant: 'people', phone: { verified: true, channel: 'wa' }, major: 'now', quiet: '22:00–06:00', sample: true }); n++; }
+    if (n) log(key, `Sample people added to stand in for the User Center: ${n === 2 ? 'an Operator and a Lead' : 'one person'} with a verified phone`, 'config');
+    touch(); persist(); return { ok: true, count: n };
+  }
   const people = (key) => (dOf(key) ? dOf(key).people.map((p) => ({ id: p.id, name: p.name, role: p.role, roleLabel: ROLE[p.role] || p.role, grant: p.grant || null, phone: p.phone, channel: channelOf(p), reachable: !!(p.phone && p.phone.verified), quiet: p.quiet })) : []);
   const reachable = (key, role) => people(key).filter((p) => p.role === role && p.reachable);
 
@@ -1886,7 +1896,7 @@ window.V7 = (function () {
   const api = {
     boot, reset, persist,
     now, fmt, fmtDay, fmtDate, fmtTime, fmtDur, advance,
-    plants, plant, state, trialStart, withPlant, equipment, eq, sensors, readings, alerts, alert, schedules, people,
+    plants, plant, state, trialStart, withPlant, equipment, eq, sensors, readings, alerts, alert, schedules, people, addSamplePeople,
     series, latest, replay, previewLimits, trialStats, isNoisy,
     alertState, setAlertState,
     limitsOf, dirs: dirsOf, libLimits, sourceOf, setLimits, setAlertTiming, setCadence, setTier,

@@ -97,13 +97,38 @@
   function notFound(key) {
     return U.page({ crumbs: [{ label: 'All Plants', href: '#/plants' }, { label: 'Not found' }], title: 'No such plant', sub: key ? `There is no plant "${key}" in the prototype.` : '', body: empty('This plant is not in the prototype.', btn('All Plants', { href: '#/plants', kind: 'primary' })) });
   }
+  /* v7/4: while a plant is set up, every tab says where the set-up stands and offers the next thing to do, so no tab is a dead end.
+     The steps are the ones the checklist blocks go live on, in the order they are done. */
+  function setupSteps(key, active) {
+    const v = V(); const b = base(key); const cl = call(() => v.checklist(key), null); if (!cl || cl.state === 'live') return null;
+    const sr = call(() => v.scadaReview(key), { groups: [], notInDb: [] }); const left = arr(sr.groups).filter((g) => !g.accepted).length;
+    const ST = W.V7STRUCT73; const st = call(() => v.structure(key), { ups: [] }); const hasSt = arr(st.ups).length > 0; const stOk = !hasSt || !ST || call(() => ST.confirmed(key), true);
+    const has = (id) => arr(cl.blockers).some((x) => x.id === id); const lib = arr(cl.blockers).find((x) => x.id === 'library');
+    const noPeople = has('operator') || has('lead');
+    const steps = [
+      { id: 'scada', label: 'Plant graph', done: !has('scada') && !has('notindb'), what: has('notindb') ? 'Some equipment has a type the database does not have. Fix it in the plant graph, then read again.' : `Accept what the plant graph found: ${pl(left, 'equipment type')} to go.`,
+        cta: has('notindb') ? btn('See what is wrong', { href: b + '/scada', kind: 'primary', small: true }) : btn(left > 1 ? `Accept all ${left} types` : 'Accept it', { act: 'p7:scada-accept-all', data: { plant: key }, kind: 'primary', small: true }) + btn('Review first', { href: b + '/scada', kind: 'ghost', small: true }) },
+      hasSt ? { id: 'structure', label: 'Structure', done: stOk, what: `Confirm the structure proposed from the plant graph: ${pl(arr(st.ups).length, 'unit process', 'unit processes')}.`, cta: active === 'structure' ? btn('Confirm the structure', { act: 'st:confirm', data: { plant: key }, kind: 'primary', small: true }) : btn('Review the structure', { href: b + '/structure', kind: 'primary', small: true }) } : null,
+      { id: 'library', label: 'Library', done: !has('library') && !has('alerts'), what: lib ? `Decide what the library brings: ${lib.count || 'some'} proposals to accept or leave out.` : 'Accept at least one alert, so that it goes On trial.', cta: active === 'library' ? btn('Accept all of them', { act: 'p7:lib-accept-all', data: { plant: key }, kind: 'primary', small: true, title: 'You see what it does before anything is accepted' }) : btn('Decide them', { href: b + '/library', kind: 'primary', small: true }) },
+      { id: 'people', label: 'People', done: !noPeople, what: 'Nobody can be told yet: go live needs an Operator and a Lead with a verified phone. They come from the User Center, which this prototype does not have.', cta: btn('Add sample people', { act: 'p7:people-sample', data: { plant: key }, kind: 'primary', small: true, title: 'Stands in for the User Center: one Operator and one Lead with verified phones' }) },
+      { id: 'golive', label: 'Go live', done: false, what: 'Everything that blocks go live is done. You see exactly what changes before anything does.', cta: btn('Go live', { act: 'p7:golive', data: { plant: key }, kind: 'primary', small: true }) },
+    ].filter(Boolean);
+    const next = steps.find((s) => !s.done) || steps[steps.length - 1];
+    return { steps, next, gaps: arr(cl.gaps) };
+  }
+  function setupGuide(key, active) {
+    const g = setupSteps(key, active); if (!g) return '';
+    const i = g.steps.indexOf(g.next);
+    const dots = g.steps.map((s, k) => `<li class="sg-step${s.done ? ' is-done' : s === g.next ? ' is-next' : ''}"><span class="sg-n">${s.done ? '\u2713' : k + 1}</span>${esc(s.label)}</li>`).join('');
+    return `<div class="sg" role="status"><ol class="sg-steps">${dots}</ol><div class="sg-now"><div class="sg-now-t"><b>Step ${i + 1} of ${g.steps.length}.</b> ${esc(g.next.what)}</div><div class="sg-now-a">${g.next.cta}</div></div></div>`;
+  }
   function frame(key, active, body, opts) {
     const o = opts || {};
     const p = plantOf(key);
     if (!p) return notFound(key);
     const crumbs = [{ label: 'All Plants', href: '#/plants' }, { label: p.name, href: base(key) }].concat(arr(o.crumbs));
     const chips = [chip(p.type || '—', { mono: true }), U.stateChip(p.state), p.sample ? chip('Sample plant', { tone: 'muted', title: 'A sample plant: its readings are generated samples' }) : chip('Real plant graph', { tone: 'info', title: "The layout is the plant's real plant graph; its readings are samples" })].concat(arr(o.chips));
-    return U.page({ crumbs, title: o.title || p.name, sub: o.sub != null ? o.sub : stateLine(p), chips, actions: o.actions, tabs: tabs(key), active: active || 'home', body, aside: o.aside, banner: o.banner, cls: ('pg-plant ' + (o.cls || '')).trim() });
+    return U.page({ crumbs, title: o.title || p.name, sub: o.sub != null ? o.sub : stateLine(p), chips, actions: o.actions, tabs: tabs(key), active: active || 'home', body, aside: o.aside, banner: (p.state === 'commissioning' ? setupGuide(key, active || 'home') : '') + (o.banner || ''), cls: ('pg-plant ' + (o.cls || '')).trim() });
   }
   function guard(params, fn) {
     const key = params && params.plant;
@@ -204,7 +229,7 @@
     const peopleCard = trackCard({
       title: 'Who is told', done: pe.done, total: pe.total, progText: pe.done >= pe.total ? 'An Operator and a Lead can be reached' : pe.done ? 'One of Operator and Lead can be reached' : 'No Operator or Lead can be reached',
       lines: peopleLines(pe.items).concat(['<span class="muted">Read from the User Center; edited there, not here.</span>']),
-      action: btn('Edit in the User Center', { act: 'p7:usercenter', kind: pe.done >= pe.total ? 'ghost' : 'secondary' }),
+      action: pe.done >= pe.total ? btn('Edit in the User Center', { act: 'p7:usercenter', kind: 'ghost' }) : btn('Add sample people', { act: 'p7:people-sample', data: { plant: key }, kind: 'secondary', title: 'Stands in for the User Center, which this prototype does not have' }),
     });
     return `<div class="p7-tracks">${scadaCard}${libCard}${peopleCard}</div>`;
   }
@@ -682,7 +707,7 @@
           issues: issuesBy[e.id] ? `<span class="tx-warn">${issuesBy[e.id]} open</span>` : '<span class="muted">—</span>',
           diffs: diffsBy[e.id] ? String(diffsBy[e.id]) : '<span class="muted">—</span>',
         }));
-        const head = `<div class="p7-group-h"><h3>${esc(g.typeName)}</h3><span class="muted">${list.length}</span>${!live && !g.accepted ? ' ' + chip('Not accepted yet', { tone: 'warn', href: `${b}/scada?type=${enc(g.typeName)}` }) : ''}${code ? `<a class="p7-group-l" href="${esc(libHref(code))}">In the library →</a>` : ''}</div>`;
+        const head = `<div class="p7-group-h"><h3>${esc(g.typeName)}</h3><span class="muted">${list.length}</span>${!live && !g.accepted ? ' ' + chip('Not accepted yet', { tone: 'warn', href: `${b}/scada?type=${enc(g.typeName)}`, title: 'What the plant graph found for this type has not been accepted yet' }) + ' ' + btn('Accept', { act: 'p7:scada-accept', data: { plant: key, type: g.typeName }, small: true, title: `Accept what the plant graph found for ${g.typeName}: its equipment and readings` }) : ''}${code ? `<a class="p7-group-l" href="${esc(libHref(code))}">In the library →</a>` : ''}</div>`;
         return `<section class="p7-group">${head}${table({ cols: [{ label: 'Tag', key: 'tag' }, { label: 'Name', key: 'name' }, { label: 'Criticality', key: 'tier' }, { label: 'Alerts', key: 'alerts' }, { label: 'Open issues', key: 'issues' }, { label: 'Differences', key: 'diffs', cls: 'num' }], rows })}</section>`;
       }).filter(Boolean);
       const n = (f) => eqs.filter(f).length;
@@ -900,6 +925,7 @@
   }
 
   /* ── actions ──────────────────────────────────────────────────────────────────────────────────────────── */
+  U.on('p7:people-sample', (el) => { const key = dget(el, 'plant'); const r = call(() => V().addSamplePeople(key), { ok: false }); say(r.ok ? 'Added a sample Operator and a sample Lead, each with a verified phone. In the product they come from the User Center.' : 'That did not work.'); });
   U.on('p7:usercenter', () => { U.toast('People are kept in the User Center, outside this prototype. Readiness reads them from there; they are not edited here.'); return false; });
   U.on('p7:scada-fix', () => { U.toast('Fix it in the plant graph, then read again: the console never edits what the plant graph sends.'); return false; });
   U.on('p7:scada-accept', (el) => {
