@@ -60,21 +60,18 @@
     /* a name that is only a number (a valve labelled "3456") has no letters to make a tag from: its tag is its name */
     const tagsUsed = new Set(model.equipment.map((e) => e.tag));
     model.equipment.forEach((e) => { if (/^[A-Za-z]/.test(e.tag || '')) return; let t = (e.label || '').trim() || String(e.id).slice(-6); const b = t; for (let k = 2; tagsUsed.has(t); k++) t = `${b}.${k}`; tagsUsed.add(t); e.tag = t; });
-    /* a node that is the body of a treatment step is offered the unit-process library when other equipment takes part in it,
-       and the equipment library when it stands on its own */
-    const offers = W.V7NODES ? W.V7NODES.plan(model, STRUCT0) : []; const offerOf = {}; offers.forEach((o) => { offerOf[o.eqId] = o; });
     const rows = model.equipment.map((e) => {
-      const o = offerOf[e.id] || null; const det = W.detectDbType(o ? { ...e, offer: o } : e); const known = !det.notInDb;
-      return { id: e.id, cell: e.cell, label: e.label || '(no name)', tag: e.tag, code: e.code, dbType: det.dbType, typeName: known ? det.type : null, known, drawnAs: o ? null : det.drawnAs || null, noName: !e.label, offer: o, read: det.read || null, process: !!(o && o.library === 'process') };
+      const det = W.detectDbType(e); const known = !det.notInDb;
+      return { id: e.id, cell: e.cell, label: e.label || '(no name)', tag: e.tag, code: e.code, dbType: det.dbType, typeName: known ? det.type : null, known, drawnAs: det.drawnAs || null, noName: !e.label };
     });
     if (!rows.length) return { ok: false, error: 'This plant graph has no equipment on it.' };
     const by = {}; const types = [];
-    rows.forEach((r) => { let g = by[r.dbType]; if (!g) { g = by[r.dbType] = { code: r.dbType, name: r.typeName, known: r.known, process: r.process, count: 0, tags: [] }; types.push(g); } g.count++; g.tags.push(r.tag); });
+    rows.forEach((r) => { let g = by[r.dbType]; if (!g) { g = by[r.dbType] = { code: r.dbType, name: r.typeName, known: r.known, count: 0, tags: [] }; types.push(g); } g.count++; g.tags.push(r.tag); });
     types.sort((a, b) => (a.known === b.known ? b.count - a.count || String(a.name || a.code).localeCompare(String(b.name || b.code)) : a.known ? 1 : -1));
     const other = { widgets: 0, drawing: 0, ignored: 0, pipes: cells.filter((c) => c.type === 'Pipe').length, links: cells.filter((c) => c.type === 'standard.Link').length };
     cells.forEach((c) => { if (isLine(c)) return; const row = db(c.equipmentType || c.type); const k = row ? row.kind : 'equipment'; if (k === 'widget') other.widgets++; else if (k === 'drawing') other.drawing++; else if (k === 'ignore') other.ignored++; });
     const nameless = rows.filter((r) => r.noName).length; if (nameless) notes.push(`${plural(nameless, 'piece')} of equipment ${nameless === 1 ? 'has' : 'have'} no name on the drawing.`);
-    return { ok: true, rows, types, unknown: types.filter((t) => !t.known), other, notes, offers, cells: cells.length, site: model.site, drawn: model.drawn, version: model.fromLayout && model.fromLayout.version, model, src, records };
+    return { ok: true, rows, types, unknown: types.filter((t) => !t.known), other, notes, cells: cells.length, site: model.site, drawn: model.drawn, version: model.fromLayout && model.fromLayout.version, model, src, records };
   }
 
   /* ── what a sensor measures, from its abbreviation (the purpose tags) ─────────────────────────
@@ -203,11 +200,7 @@
     const placed = new Set(); ups.forEach((u) => { placed.add(u.id); u.members.forEach((x) => placed.add(x.eqId)); });
     W.V7_STRUCTURE[PLANT] = { ...s0, state: ups.length ? s0.state : 'none', ups, cgs, unplaced: model.equipment.map((e) => e.id).filter((id) => !placed.has(id)) };
   }
-  function put(model) {
-    if (!W.SCADA_SAMPLES) return; if (model) W.SCADA_SAMPLES[PLANT] = model; else if (BUILT_IN) W.SCADA_SAMPLES[PLANT] = clone(BUILT_IN); fitStructure(model);
-    /* which library each unit-process node is offered, and one unit process per such node in the structure */
-    if (model && W.V7NODES) W.V7NODES.apply(W.SCADA_SAMPLES[PLANT], W.V7_STRUCTURE && W.V7_STRUCTURE[PLANT]);
-  }
+  function put(model) { if (!W.SCADA_SAMPLES) return; if (model) W.SCADA_SAMPLES[PLANT] = model; else if (BUILT_IN) W.SCADA_SAMPLES[PLANT] = clone(BUILT_IN); fitStructure(model); }
   function read(eqText, snText, meta) {
     const p = parse(eqText); if (!p.ok) return { ok: false, step: 1, error: p.error };
     const eq = equipment(p.doc); if (!eq.ok) return { ok: false, step: 1, error: eq.error };

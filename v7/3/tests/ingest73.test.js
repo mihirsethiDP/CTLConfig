@@ -11,7 +11,7 @@ g.localStorage = { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem
 const el = () => ({ classList: { toggle() {}, add() {}, remove() {} }, setAttribute() {}, removeAttribute() {}, addEventListener() {}, appendChild() {}, remove() {}, querySelector: () => null, querySelectorAll: () => [], style: {}, dataset: {}, innerHTML: '' });
 g.document = { querySelector: () => null, querySelectorAll: () => [], createElement: el, body: el(), onkeydown: null };
 g.location = { hash: '#/plants', href: 'http://localhost/prototype.html#/plants' }; g.scrollTo = () => {}; g.Blob = g.Blob || function Blob() {}; if (!g.URL) g.URL = {};
-for (const f of ['data.js', 'layout-digitalpaani.js', 'catalogue.js', 'flows.js', 'rca.js', 'app.js', 'runtime.js', 'structure73.js', 'nodes73.js', 'purposetags73.js', 'ingest73.js', 'core7.js', 'calls73.js', 'decisions7.js']) vm.runInThisContext(fs.readFileSync(path.join(A, f), 'utf8'), { filename: f });
+for (const f of ['data.js', 'layout-digitalpaani.js', 'catalogue.js', 'flows.js', 'rca.js', 'app.js', 'runtime.js', 'structure73.js', 'purposetags73.js', 'ingest73.js', 'core7.js', 'calls73.js', 'decisions7.js']) vm.runInThisContext(fs.readFileSync(path.join(A, f), 'utf8'), { filename: f });
 const V = g.V7; const IN = g.V7INGEST; V.boot();
 const results = [];
 function check(area, name, ok, detail) { results.push(!!ok); if (VERBOSE || !ok) console.log(`${ok ? '  ok  ' : '  FAIL'} [${area}] ${name}${detail ? ' — ' + detail : ''}`); }
@@ -22,8 +22,7 @@ const before = { eq: V.equipment(DP).length, sn: V.sensors(DP).length, ups: V.st
 const text = IN.sampleText(); const doc = JSON.parse(text);
 const eq = IN.equipment(doc);
 check('equipment', 'the real export: the same equipment the console reads, each with a database type', eq.ok && eq.rows.length === before.eq && eq.unknown.length === 0 && eq.rows.every((r) => r.known && r.typeName), `${eq.rows && eq.rows.length} vs ${before.eq}`);
-check('equipment', 'the screen chamber is the centre of a treatment step with nothing taking part, so it gets its own equipment type', eq.rows.some((r) => r.label === 'Screen Chamber' && r.dbType === 'OS_TANK_SC' && r.code === 'OS_TANK_SC' && r.offer && r.offer.library === 'equipment' && !r.drawnAs));
-check('equipment', 'each node at the centre of a treatment step says which library it gets and why', eq.offers.length === 23 && eq.offers.filter((o) => o.library === 'process').length === 13 && eq.rows.filter((r) => r.process).length === 13 && eq.offers.every((o) => o.why && o.reason && g.CATALOGUE_BY_CODE[o.code]), `${eq.offers.length} / ${eq.offers.filter((o) => o.library === 'process').length}`);
+check('equipment', 'a node drawn as one shape but stored as another type is read as the stored type', eq.rows.some((r) => r.label === 'Screen Chamber' && r.dbType === 'OS_TANK' && r.code === 'OS_TANK_SC' && r.drawnAs));
 check('equipment', 'types are counted, and every row sits in one', eq.types.reduce((n, t) => n + t.count, 0) === eq.rows.length && eq.types.length > 5);
 check('equipment', 'pipes, widgets and drawing items are counted apart from equipment', eq.other.widgets === 38 && eq.other.pipes > 0 && eq.other.links > 0 && eq.other.drawing > 0, JSON.stringify(eq.other));
 check('equipment', 'not JSON, and JSON with no drawing, are refused in plain words', !IN.parse('{oops').ok && !IN.equipment({ hello: 1 }).ok && !IN.equipment({ layout: { cells: [] } }).ok && !IN.sensors(doc, null).ok);

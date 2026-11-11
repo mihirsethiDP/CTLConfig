@@ -634,7 +634,7 @@ window.V7 = (function () {
   function runStateOf(key, e) { const rs = dOf(key).sensors.find((s) => s.on === 'eq:' + e.id && s.kind === 'status' && s.name === 'Run status' && !s.nextPhase); if (!rs) return null; const l = latest(key, rs.id); return l ? (l.v >= 0.5 ? 'running' : 'stopped') : null; }
   function eqView(key, e) {
     const cat = catByType(e.type); const ti = tierInfo(key, e.id);
-    return { id: e.id, tag: e.tag, name: e.name, typeName: e.type, type: e.type, code: e.code, dbType: e.dbType || e.code, drawn: C.dbName(e.code), stored: e.type, typeDiffers: !!e.code && !!e.dbType && e.code !== e.dbType && !e.offer && !e.subtype, offer: e.offer || null, subtype: e.subtype || null, notInDb: !!e.notInDb, archetype: e.archetype, tier: ti ? ti.value : e.tier, tierLabel: C.TIER_LABEL[ti ? ti.value : e.tier], tierSource: ti, status: e.status, running: runStateOf(key, e) === 'running', runState: runStateOf(key, e), inLibrary: !!cat, form: e.form || null, sensorIds: dOf(key).sensors.filter((s) => s.on === 'eq:' + e.id).map((s) => s.id) };
+    return { id: e.id, tag: e.tag, name: e.name, typeName: e.type, type: e.type, code: e.code, dbType: e.dbType || e.code, drawn: C.dbName(e.code), stored: e.type, typeDiffers: !!e.code && !!e.dbType && e.code !== e.dbType, notInDb: !!e.notInDb, archetype: e.archetype, tier: ti ? ti.value : e.tier, tierLabel: C.TIER_LABEL[ti ? ti.value : e.tier], tierSource: ti, status: e.status, running: runStateOf(key, e) === 'running', runState: runStateOf(key, e), inLibrary: !!cat, form: e.form || null, sensorIds: dOf(key).sensors.filter((s) => s.on === 'eq:' + e.id).map((s) => s.id) };
   }
   const equipment = (key) => cached(`eqs:${key}`, () => (dOf(key) ? dOf(key).equipment.map((e) => eqView(key, e)) : []));
   const eq = (key, id) => { const e = eqRaw(key, id); return e ? eqView(key, e) : null; };
@@ -1102,12 +1102,12 @@ window.V7 = (function () {
   function scadaReview(key) {
     return cached(`scada:${key}`, () => {
       const P = PS(key); const d = dOf(key); const groups = withPlant(key, () => C.typeGroups());
-      const view = (e) => ({ eqId: e.id, tag: e.tag, name: e.name, drawn: C.dbName(e.code), stored: e.type, typeDiffers: !!e.code && !!e.dbType && e.code !== e.dbType && !e.offer && !e.subtype, readings: d.sensors.filter((s) => s.on === 'eq:' + e.id && !s.nextPhase).length, nextPhaseReadings: d.sensors.filter((s) => s.on === 'eq:' + e.id && s.nextPhase).length, form: e.form || null });
+      const view = (e) => ({ eqId: e.id, tag: e.tag, name: e.name, drawn: C.dbName(e.code), stored: e.type, typeDiffers: !!e.code && !!e.dbType && e.code !== e.dbType, readings: d.sensors.filter((s) => s.on === 'eq:' + e.id && !s.nextPhase).length, nextPhaseReadings: d.sensors.filter((s) => s.on === 'eq:' + e.id && s.nextPhase).length, form: e.form || null });
       return {
         readAt: P.scadaReadAt || P.since,
         groups: groups.map((g) => ({ typeName: g.type, code: g.code, count: g.eqs.length, accepted: !!P.scada.accepted[g.type], acceptedAt: P.scada.accepted[g.type] || null, inDb: !!g.entry && !g.eqs.some((e) => e.notInDb), equipment: g.eqs.map(view) })),
         notInDb: d.equipment.filter((e) => e.notInDb).map((e) => ({ eqId: e.id, tag: e.tag, name: e.name, code: e.code, stored: e.dbType })),
-        typeDiffers: d.equipment.filter((e) => e.code && e.dbType && e.code !== e.dbType && !e.offer && !e.subtype).map((e) => ({ eqId: e.id, tag: e.tag, name: e.name, drawn: C.dbName(e.code), stored: e.type })),
+        typeDiffers: d.equipment.filter((e) => e.code && e.dbType && e.code !== e.dbType).map((e) => ({ eqId: e.id, tag: e.tag, name: e.name, drawn: C.dbName(e.code), stored: e.type })),
         nextPhase: d.sensors.filter((s) => s.nextPhase).map((s) => { const e = homeOf(key, s); return { sensorId: s.id, name: s.name, tag: s.tag, eqId: e ? e.id : null, eqTag: e ? e.tag : null }; }),
         elements: withPlant(key, () => C.drawingElements()).reduce((n, g) => n + g.count, 0),
       };
@@ -1546,13 +1546,13 @@ window.V7 = (function () {
   /* ── the library: types, drafts, Where it lands, publish ──────────────────────────────────── */
   const FAMILY = { vessel: 'Tanks and basins', rotating: 'Pumps, blowers and drives', fixed: 'Screens and fixed equipment', membrane: 'Membranes and filters', dosing: 'Dosing', valve: 'Valves', device: 'Devices and instruments' };
   // integrator: a tank with a rotating scraper (Clarifier Tank) is still listed with the tanks; maintenance still treats it as rotating
-  const familyOf = (cat) => cat.family || (cat.archetype === 'rotating' && / Tank$/.test(cat.type) ? FAMILY.vessel : FAMILY[cat.archetype] || 'Other equipment');
+  const familyOf = (cat) => (cat.archetype === 'rotating' && / Tank$/.test(cat.type) ? FAMILY.vessel : FAMILY[cat.archetype] || 'Other equipment');
   const libVersion = (code) => (S && S.lib.versions[code]) || 1;
   function libTypes() {
     return cached('libtypes', () => (window.CATALOGUE || []).map((cat) => {
       const per = ORDER.filter((k) => dOf(k)).map((k) => ({ key: k, name: plantName(k), count: dOf(k).equipment.filter((e) => e.type === cat.type).length })).filter((x) => x.count);
       const t = setOf(cat.type) || { alerts: [], schedules: [] };
-      return { code: cat.code, typeName: cat.type, library: cat.library === 'process' ? 'process' : 'equipment', added: cat.addedBy === 'taxonomy', family: familyOf(cat), archetype: cat.archetype, tier: cat.tier, version: libVersion(cat.code), draft: !!S.lib.drafts[cat.code], plants: per, plantCount: per.length, equipmentCount: per.reduce((n, x) => n + x.count, 0), readings: cat.sensors.length, alerts: t.alerts.length, tasks: t.schedules.length, issues: issueTypes(cat.type).length, generalTasks: C.tasksOf(cat.type).length, nextPhase: ((cat.nextPhase || {}).readings || []).length + ((cat.nextPhase || {}).alerts || []).length, suggestions: S.lib.suggestions.filter((x) => x.code === cat.code).length };
+      return { code: cat.code, typeName: cat.type, family: familyOf(cat), archetype: cat.archetype, tier: cat.tier, version: libVersion(cat.code), draft: !!S.lib.drafts[cat.code], plants: per, plantCount: per.length, equipmentCount: per.reduce((n, x) => n + x.count, 0), readings: cat.sensors.length, alerts: t.alerts.length, tasks: t.schedules.length, issues: issueTypes(cat.type).length, generalTasks: C.tasksOf(cat.type).length, nextPhase: ((cat.nextPhase || {}).readings || []).length + ((cat.nextPhase || {}).alerts || []).length, suggestions: S.lib.suggestions.filter((x) => x.code === cat.code).length };
     }));
   }
   function libType(code) {
@@ -1562,7 +1562,7 @@ window.V7 = (function () {
       alerts: t.alerts.map((a) => ({ name: a.name, reading: a.sensorKind, dir: a.direction, bands: norm4(a.limits), hold: libTiming(cat.type, a.sensorKind, a.direction, 'hold'), clear: libTiming(cat.type, a.sensorKind, a.direction, 'clear'), flowId: a.flow || null, issueTypeId: a.issue || null, nextPhase: C.onConnection(a.sensorKind) })),
       schedules: t.schedules.filter((x) => x.workType !== 'condition').map((x) => ({ name: x.name, workType: x.workType, workLabel: C.WT_LABEL[x.workType] || x.workType, every: libEveryOf(x), everyText: x.workType === 'condition' ? `when ${x.sensorKind} passes ${x.doWhen}` : C.every(x), draftEvery: dr && dr.schedules[x.name] ? dr.schedules[x.name] : null, draftEveryText: dr && dr.schedules[x.name] ? everyWith(x, dr.schedules[x.name]) : null, generalTaskId: x.task || null, flowId: x.flow || null })),
       issues: issueTypes(cat.type), generalTasks: C.tasksOf(cat.type).map((x) => ({ id: x.id, name: x.name, workType: x.workType, frequency: x.frequency, flowId: x.flow })), nextPhase: cat.nextPhase || { readings: [], alerts: [], work: [] },
-      library: cat.library === 'process' ? 'process' : 'equipment', plants: (libTypes().find((x) => x.code === code) || {}).plants || [], changes: S.lib.changes.filter((c) => c.code === code), suggestions: suggestions(code), confirm: cat.confirm || null };
+      plants: (libTypes().find((x) => x.code === code) || {}).plants || [], changes: S.lib.changes.filter((c) => c.code === code), suggestions: suggestions(code), confirm: cat.confirm || null };
   }
   function draftDiffs(dr) {
     const out = []; if (!dr) return out;

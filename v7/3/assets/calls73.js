@@ -36,7 +36,7 @@ window.V7_CALLS_MADE = {
   D29: { opt: 1, by: 'Mihir', atText: 'Thu 5 Nov', note: 'Four handles, and a slot per range for what it triggers.' },
 };
 window.V7_BUILT73 = {
-  D1: ['Built', "Each plant has a Structure tab: stages, unit processes with the equipment that takes part in them, control groups, and equipment not placed yet. A new plant's structure is proposed from the plant graph and confirmed once. The library is two libraries: equipment types and 53 unit-process types, each with its own readings, alerts and tasks. A tank or reactor at the centre of a treatment step gets the unit-process type when other equipment takes part in it, and its own equipment type when it stands alone. The unit-process content is a first draft to confirm. The sample plants keep the equipment types their records were made with."],
+  D1: ['Partly built', "Each plant has a Structure tab: stages, unit processes with the equipment that takes part in them, control groups, and equipment not placed yet. A new plant's structure is proposed from the plant graph and confirmed once. The library lists the 27 unit-process types. Not built yet: a unit process still carries its basin's own readings, alerts and tasks; it has no content of its own type."],
   D2: ['Built', 'Readiness on the plant Home, fed by one checklist.'],
   D3: ['Built', 'On a new plant nothing is sent, Emergencies included: Vedanta\'s pH Emergency on Wed 28 Oct is kept as a trial firing and opens no issue. A plant that was Live keeps its Emergencies real when it is back in Commissioning.'],
   D4: ['Built', 'DigitalPaani for a new plant, Vedanta up to go live, Manesar and Bawal for live running. Prototype only.'],
