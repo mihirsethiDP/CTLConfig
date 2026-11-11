@@ -501,8 +501,9 @@
       ['Name', e.name],
       ['Type in the database', H(`${c ? a(libHref(c), e.typeName) : esc(e.typeName)} ${c ? chip(c, { mono: true }) : ''}`)],
       ['Drawn as', e.typeDiffers ? H(`${esc(e.drawn)} <span class="tx-warn">· stored as ${esc(e.stored)}</span>`) : e.drawn],
+    ].concat(W.V7STRUCT73 && W.V7STRUCT73.offerFacts ? W.V7STRUCT73.offerFacts(e).map(([k, v]) => [k, v && v.html != null ? H(v.html) : v]) : []).concat([
       ['Readings', `${all.filter((s) => !s.nextPhase && s.kind !== 'manual').length} from the plant graph${all.some((s) => s.nextPhase) ? `, ${all.filter((s) => s.nextPhase).length} next phase` : ''}`],
-    ].concat(form.length ? form.map(([k, v]) => [k, v]) : [['Form answers', H('<span class="muted">None in the plant graph</span>')]]);
+    ]).concat(form.length ? form.map(([k, v]) => [k, v]) : [['Form answers', H('<span class="muted">None in the plant graph</span>')]]);
     let out = card({
       title: 'From SCADA', sub: 'The plant graph is the only source of equipment, readings and answers. Fix it in the plant graph, then read again.',
       body: kv(facts) + (e.typeDiffers ? note(`Drawn as ${e.drawn}, stored as ${e.stored}: fix the drawing in the plant graph, then read again.`, 'warn') : '') + (e.notInDb ? note('Its type is not one of the database types: it blocks go live.', 'bad') : ''),
@@ -552,7 +553,8 @@
       chips: [
         chip(`Library · version ${lt.version}`, { tone: 'info' }),
         diffs.length ? chip(`Draft · ${plural(diffs.length, 'change')}`, { tone: 'warn' }) : '',
-        chip(lt.code, { mono: true, title: 'The database code' }),
+        chip(lt.code, { mono: true, title: 'What the database stores for this type' }),
+        lt.library === 'process' ? chip('Unit process', { tone: 'info', href: '#/library-structure', title: 'From the unit-process library: a node gets it when other equipment takes part in it' }) : '',
         chip(`Criticality: ${TIER[lt.tier] || ''}`, { title: 'How much a plant depends on it' }) + ' ' + chipNamed('lib'),
       ],
       sub: `${lt.family}. ${usedText}.`,
@@ -610,6 +612,8 @@
         ['Used at', used.length ? H(used.map((p) => `${a(plantHref(p.key, 'equipment'), p.name)} <span class="muted">(${esc(plural(p.count, 'piece'))})</span>`).join(' · ')) : H('<span class="muted">No plant yet</span>')],
       ]) + confirmNote(lt),
     });
+    /* v7/3: which library this type is in, what draws it, and its sub-types */
+    out += W.V7STRUCT73 && W.V7STRUCT73.typeCard ? W.V7STRUCT73.typeCard(lt.code) : '';
     const ch = arr(lt.changes).slice().sort((x, y) => y.at - x.at);
     out += card({
       title: 'Changes', sub: 'Each published version, newest first.',

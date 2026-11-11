@@ -217,7 +217,7 @@ window.CTL = (function () {
     const d = D(); const det = window.detectDbType(se); const form = se.form ? clone(se.form) : null;
     if (det.kind !== 'equipment') { addElement(se, det.kind); return null; }
     const cat = det.entry;
-    const e = { id: se.id, name: se.label, tag: se.tag, code: se.code, dbType: det.dbType, ...(det.drawnAs ? { drawnAs: det.drawnAs } : {}), type: det.type, ...(det.notInDb ? { notInDb: true } : {}), archetype: cat ? cat.archetype : 'unknown', tier: cat ? cat.tier : 'B', status: 'running', expects: cat ? cat.expects.slice() : [], cycles: !!(cat && cat.cycles), form };
+    const e = { id: se.id, name: se.label, tag: se.tag, code: se.code, dbType: det.dbType, ...(det.drawnAs ? { drawnAs: det.drawnAs } : {}), type: det.type, ...(det.notInDb ? { notInDb: true } : {}), ...(det.offer ? { offer: clone(det.offer) } : {}), ...(det.read ? { subtype: clone(det.read) } : {}), archetype: cat ? cat.archetype : 'unknown', tier: cat ? cat.tier : 'B', status: 'running', expects: cat ? cat.expects.slice() : [], cycles: !!(cat && cat.cycles), form };
     if (cat && cat.sensors.some((s) => s.kind === 'meter') && se.sensors.some((s) => s.tag === 'HRS')) e.meter = `${se.id}_HRS`;
     applyFormRules(e); d.equipment.push(e);
     se.sensors.forEach((ss) => d.sensors.push(widgetSensor(e, cat, ss)));

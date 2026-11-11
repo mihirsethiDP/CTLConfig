@@ -860,7 +860,7 @@
   }
   const STORY = [
     { n: 1, title: 'The library', dec: ['D10', 'D17', 'D1', 'D14'],
-      text: ['Every equipment type is one of the 56 the database stores, under its own name, with its readings, limits, alerts and tasks.', 'A type page is laid out exactly like an equipment page, so limits, issues and tasks read the same way everywhere.'],
+      text: ['Two libraries. Equipment types: a pump, a valve, or a tank on its own. Unit-process types: one treatment step, for a tank or reactor that has other equipment taking part in it. Each type has its readings, limits, alerts and tasks.', 'A type page is laid out exactly like an equipment page, so limits, issues and tasks read the same way everywhere.'],
       go: () => '#/library', also: (c) => [{ label: 'A type page: Blower', href: c.blower }] },
     { n: 2, title: 'A new plant from the plant graph', dec: ['D9', 'D4', 'D20', 'D26'],
       text: ['DigitalPaani was read from its real plant graph this morning and is in Commissioning.', '"What the plant graph has" groups its equipment by database type for you to accept. Its Structure tab then proposes the unit processes (one treatment step each) and the control groups (duty/standby sets) for you to confirm, and lists the equipment no rule could place.'],

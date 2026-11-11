@@ -12,17 +12,47 @@ g.localStorage = { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem
 const el = () => ({ classList: { toggle() {}, add() {}, remove() {} }, setAttribute() {}, removeAttribute() {}, addEventListener() {}, appendChild() {}, remove() {}, querySelector: () => null, querySelectorAll: () => [], style: {}, dataset: {}, innerHTML: '' });
 g.document = { querySelector: () => null, querySelectorAll: () => [], createElement: el, body: el(), onkeydown: null };
 g.location = { hash: '#/plants', href: 'http://localhost/prototype.html#/plants' }; g.scrollTo = () => {}; g.Blob = g.Blob || function Blob() {}; if (!g.URL) g.URL = {};
-for (const f of ['data.js', 'layout-digitalpaani.js', 'catalogue.js', 'flows.js', 'rca.js', 'app.js', 'runtime.js', 'structure73.js', 'core7.js', 'calls73.js', 'decisions7.js']) vm.runInThisContext(fs.readFileSync(path.join(A, f), 'utf8'), { filename: f });
+for (const f of ['data.js', 'layout-digitalpaani.js', 'catalogue.js', 'flows.js', 'rca.js', 'app.js', 'runtime.js', 'structure73.js', 'nodes73.js', 'core7.js', 'calls73.js', 'decisions7.js']) vm.runInThisContext(fs.readFileSync(path.join(A, f), 'utf8'), { filename: f });
 const V = g.V7; V.boot();
 const results = [];
 function check(area, name, ok, detail) { results.push(!!ok); if (VERBOSE || !ok) console.log(`${ok ? '  ok  ' : '  FAIL'} [${area}] ${name}${detail ? ' — ' + detail : ''}`); }
 
 /* D1: structure */
 const dp = V.structure('digitalpaani'); const ma = V.structure('manesar');
-check('D1', 'DigitalPaani: 21 unit processes, 11 control groups and 20 pieces not placed, proposed', dp.ups.length === 21 && dp.cgs.length === 11 && dp.unplaced.length === 20 && dp.state !== 'confirmed', `${dp.ups.length}/${dp.cgs.length}/${dp.unplaced.length} ${dp.state}`);
+check('D1', 'DigitalPaani: 23 unit processes, 11 control groups and 15 pieces not placed, proposed', dp.ups.length === 23 && dp.cgs.length === 11 && dp.unplaced.length === 15 && dp.state !== 'confirmed', `${dp.ups.length}/${dp.cgs.length}/${dp.unplaced.length} ${dp.state}`);
 check('D1', 'Manesar: 7 unit processes, confirmed; AT-1 is Activated sludge with BL-1 and BL-2 taking part', ma.ups.length === 7 && ma.state === 'confirmed' && V.unitProcess('manesar', 'at1').typeName === 'Activated sludge' && V.unitProcess('manesar', 'at1').members.map((m) => m.tag).join() === 'BL-1,BL-2');
 check('D1', 'every unit process and member is a piece of equipment the plant has', ['digitalpaani', 'vedanta', 'manesar', 'bawal'].every((k) => V.structure(k).ups.every((u) => V.eq(k, u.id) && u.members.every((m) => V.eq(k, m.eqId))) && V.structure(k).cgs.every((c) => c.memberIds.every((id) => V.eq(k, id)))));
-check('D1', 'the library has 27 unit-process types', (g.V7_UP_TYPES || []).length === 27);
+check('D1', 'the library has 53 unit-process types, each one used by the structure under its stored value', (g.V7_UP_TYPES || []).length === 53 && ['digitalpaani', 'vedanta', 'manesar', 'bawal'].every((k) => V.structure(k).ups.every((u) => g.V7NODES.upByKey[u.typeId] && u.typeName === g.V7NODES.upByKey[u.typeId].name)));
+
+/* the two libraries: equipment, and unit processes */
+const N = g.V7NODES; const lt = V.libTypes(); const byTag = (t) => V.equipment(DP).find((e) => e.tag === t); const DP = 'digitalpaani';
+check('libraries', '12 kinds of equipment and 53 unit processes are read in; the library has 84 equipment types and 53 unit-process types', N.EQ.length === 12 && N.UP.length === 53 && lt.filter((t) => t.library === 'process').length === 53 && lt.filter((t) => t.library === 'equipment').length === 84, lt.length + ' types');
+check('libraries', 'every unit-process type has a library page with at least one task, and its own equipment type to fall back on', N.UP.every((p) => { const t = V.libType(p.stored); return t && t.library === 'process' && t.typeName === p.name && t.schedules.length >= (p.stored === 'unspecified' ? 0 : 1) && V.libType(p.eq) && V.libType(p.eq).library === 'equipment'; }));
+check('libraries', 'no two types share a name', new Set(lt.map((t) => t.typeName)).size === lt.length);
+check('libraries', 'a treated water tank on its own gets the equipment library; one with equipment taking part gets the unit-process library', (() => {
+  const node = (id, code, label) => ({ id, cell: id, tag: id, label, code, sensors: [] });
+  const alone = N.plan({ equipment: [node('a', 'OS_TANK', 'Treated Water Tank'), node('p', 'PMP', 'Feed pump')], links: [] }, null);
+  const served = N.plan({ equipment: [node('a', 'OS_TANK', 'Treated Water Tank'), node('p', 'PMP', 'Transfer pump'), node('d', 'D_PMP', 'Hypo dosing pump')], links: [['a', 'p'], ['d', 'a']] }, null);
+  return alone.length === 1 && alone[0].library === 'equipment' && alone[0].code === 'TW-TANK' && alone[0].typeName === 'Treated water tank'
+    && served.length === 1 && served[0].library === 'process' && served[0].code === 'treated_water' && served[0].typeName === 'Treated water' && served[0].members.length === 2;
+})());
+check('libraries', 'a pump, a blower or a valve is never a unit process, and two tanks piped together do not take part in each other', (() => {
+  const node = (id, code, label) => ({ id, cell: id, tag: id, label, code, sensors: [] });
+  const r = N.plan({ equipment: [node('p', 'PMP', 'Aeration blower feed pump'), node('b', 'BLW', 'Blower'), node('v', 'VALVE_2', 'Valve'), node('t1', 'OS_TANK', 'Collection tank'), node('t2', 'MBBR', 'MBBR')], links: [['t1', 't2']] }, null);
+  return r.length === 2 && r.every((o) => o.library === 'equipment') && !N.atomic(node('p', 'PMP', 'Aeration pump'));
+})());
+check('libraries', 'DigitalPaani: MBBR-1 and EQTT-1 follow a unit-process type, TWT and TS-1 an equipment type, and none reads as drawn wrongly', byTag('MBBR-1').typeName === 'Moving bed biofilm reactor' && byTag('MBBR-1').offer.library === 'process' && byTag('EQTT-1').typeName === 'Equalization' && byTag('TWT').typeName === 'Treated water tank' && byTag('TWT').offer.library === 'equipment' && byTag('TS-1').typeName === 'Tube settler' && V.equipment(DP).every((e) => !e.offer || !e.typeDiffers) && V.scadaReview(DP).typeDiffers.length === 0, [byTag('MBBR-1').typeName, byTag('EQTT-1').typeName, byTag('TWT').typeName, V.scadaReview(DP).typeDiffers.length].join(' / '));
+check('libraries', 'a unit process carries what its tank carries plus the work of the step, and the flows written for the tank', (() => {
+  const up = V.libType('mbbr'); const eq = V.libType('MBBR'); const flows = ((g.CTL && g.CTL.S && g.CTL.S.lib && g.CTL.S.lib.flows) || g.SEED.flows).filter((f) => (f.forTypes || []).includes('MBBR'));
+  return eq.schedules.every((s) => up.schedules.some((x) => x.name === s.name)) && up.schedules.some((s) => s.name === 'Media movement check') && up.readings.some((r) => r.name === 'Dissolved oxygen') && flows.length > 0 && flows.every((f) => f.forTypes.includes('Moving bed biofilm reactor'));
+})());
+check('libraries', 'a full code is read: the longest known type first, then one part per sub-type, several values joined with a hyphen', (() => {
+  const a = N.readCode('PMP_CENT_SUBM_CUTTER_INFL'); const b = N.readCode('OS_TANK_SC_COARSE_BAR'); const c = N.readCode('TANK_OPEN-SURF_DOSING_NAOCL-SMBS'); const d = N.readCode('TW-TANK_FLUSH-IRRIG'); const e = N.readCode('VALVE_BFLY_AUTO_PNEU_2-WAY_RAS');
+  return a.lib === 'SUB_PMP' && a.values.service.join() === 'INFL' && !a.unknown.length && b.kind === 'process' && b.type.stored === 'screening' && b.values.fineness.join() === 'COARSE' && c.lib === 'DOS_TANK' && c.values.chemical.join() === 'NAOCL,SMBS'
+    && d.type.stored === 'treated_water' && d.values.enduse.join() === 'FLUSH,IRRIG' && e.lib === 'VALVE_2' && e.values.mechanism.join() === 'PNEU' && N.readCode('PMP_CENT').missing.join() === 'Service' && N.readCode('NOPE') === null
+    && g.detectDbType({ code: 'PMP_CENT_SUBM_CUTTER_INFL' }).type === 'Submersible Pump' && g.detectDbType({ code: 'SURF-AER_FLOAT' }).type === 'Surface aerator';
+})());
+check('libraries', 'the sample plants keep the types their records were made with', V.equipment('manesar').every((e) => !e.offer) && V.equipment('manesar').some((e) => e.typeName === 'MBR') && V.equipment('vedanta').every((e) => !e.offer));
 
 /* D7: one changeover task per control group */
 const cg = V.tasks('vedanta').filter((t) => t.cg);

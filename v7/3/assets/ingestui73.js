@@ -36,19 +36,21 @@
 
   function eqResult(r) {
     const unk = r.unknown.reduce((n, t) => n + t.count, 0);
-    const stats = `<div class="in-stats">${stat(r.rows.length, r.rows.length === 1 ? 'piece of equipment' : 'pieces of equipment')}${stat(r.types.length, r.types.length === 1 ? 'equipment type' : 'equipment types')}${stat(unk, 'not in the database', unk ? 'warn' : 'ok')}</div>`;
+    const stats = `<div class="in-stats">${stat(r.rows.length, r.rows.length === 1 ? 'piece of equipment' : 'pieces of equipment')}${stat(r.types.length, r.types.length === 1 ? 'type' : 'types')}${stat(unk, 'not in the database', unk ? 'warn' : 'ok')}</div>`;
     const typeTable = UI.table({
-      cols: [{ label: 'Equipment type', key: 't' }, { label: 'Type code on the node', key: 'c', cls: 'nowrap' }, { label: 'Found', key: 'n', cls: 'nowrap' }, { label: 'Equipment', key: 'e' }],
-      rows: r.types.map((t) => ({ t: t.known ? `<b>${esc(t.name)}</b>` : `${chip('Not in the database', { tone: 'warn' })}`, c: `<span class="mono">${esc(t.code)}</span>`, n: String(t.count), e: tags(t.tags, 8), _cls: t.known ? '' : 'in-row-warn' })),
+      cols: [{ label: 'Type', key: 't' }, { label: 'Stored as', key: 'c', cls: 'nowrap' }, { label: 'Found', key: 'n', cls: 'nowrap' }, { label: 'Equipment', key: 'e' }],
+      rows: r.types.map((t) => ({ t: t.known ? `<b>${esc(t.name)}</b>${t.process ? ' ' + chip('Unit process', { tone: 'info' }) : ''}` : `${chip('Not in the database', { tone: 'warn' })}`, c: `<span class="mono">${esc(t.code)}</span>`, n: String(t.count), e: tags(t.tags, 8), _cls: t.known ? '' : 'in-row-warn' })),
     });
     const all = UI.table({
       cols: [{ label: 'Tag', key: 'g', cls: 'nowrap' }, { label: 'Name on the drawing', key: 'l' }, { label: 'Detected type', key: 't' }, { label: 'How it was detected', key: 'h' }],
-      rows: r.rows.map((x) => ({ g: `<span class="mono">${esc(x.tag)}</span>`, l: esc(x.label), t: x.known ? esc(x.typeName) : chip('Not in the database', { tone: 'warn' }), h: x.drawnAs ? `The type stored on the node (<span class="mono">${esc(x.dbType)}</span>), not the shape it was drawn with (${esc(x.drawnAs)})` : `The node's type code <span class="mono">${esc(x.code)}</span>` })),
+      rows: r.rows.map((x) => ({ g: `<span class="mono">${esc(x.tag)}</span>`, l: esc(x.label), t: x.known ? esc(x.typeName) : chip('Not in the database', { tone: 'warn' }), h: x.offer ? `${esc(x.offer.why)}. ${esc(x.offer.reason)}, so it gets the ${x.offer.library === 'process' ? 'unit-process' : 'equipment'} library` : x.read ? `The code <span class="mono">${esc(x.code)}</span> reads as ${esc(x.read.type)}${x.read.words.length ? ': ' + esc(x.read.words.map((w) => `${w.axis} ${w.values.join(' and ')}`).join(', ')) : ''}${x.read.unknown.length ? `. Not understood: <span class="mono">${esc(x.read.unknown.join(' '))}</span>` : ''}` : x.drawnAs ? `The type stored on the node (<span class="mono">${esc(x.dbType)}</span>), not the shape it was drawn with (${esc(x.drawnAs)})` : `The node's type code <span class="mono">${esc(x.code)}</span>` })),
     });
     const o = r.other; const rest = [o.widgets ? plural(o.widgets, 'sensor widget') : '', o.pipes ? plural(o.pipes, 'pipe') : '', o.links ? plural(o.links, 'sensor link') : '', o.drawing ? plural(o.drawing, 'drawing item') + ' (boundaries, joints, buildings)' : '', o.ignored ? plural(o.ignored, 'label or template') : ''].filter(Boolean);
     const warn = r.unknown.length ? note(`<b>${plural(r.unknown.length, 'type code')} the database does not have: ${r.unknown.map((t) => `<span class="mono">${esc(t.code)}</span>`).join(', ')}.</b> That equipment still comes in, with nothing from the library until its type is added.`, 'warn') : '';
     const notes = r.notes.length ? note(r.notes.map(esc).join('<br>'), 'info') : '';
-    return `${stats}${warn}${notes}${typeTable}<details class="in-more"><summary>Every piece of equipment, and how its type was detected</summary>${all}</details>${rest.length ? `<p class="muted small in-rest">Also on the drawing, and not equipment: ${esc(rest.join(' · '))}.</p>` : ''}`;
+    const offs = arr(r.offers); const nP = offs.filter((o) => o.library === 'process').length;
+    const offNote = offs.length ? note(`<b>${plural(offs.length, 'node')} ${offs.length === 1 ? 'is' : 'are'} the tank or reactor at the centre of a treatment step.</b> ${nP} ${nP === 1 ? 'has' : 'have'} other equipment taking part and ${nP === 1 ? 'gets' : 'get'} the unit-process library; ${offs.length - nP} ${offs.length - nP === 1 ? 'stands' : 'stand'} on ${offs.length - nP === 1 ? 'its' : 'their'} own and ${offs.length - nP === 1 ? 'gets' : 'get'} the equipment library. <a href="#/library-structure">How this is decided</a>`, 'info') : '';
+    return `${stats}${warn}${notes}${offNote}${typeTable}<details class="in-more"><summary>Every piece of equipment, and how its type was detected</summary>${all}</details>${rest.length ? `<p class="muted small in-rest">Also on the drawing, and not equipment: ${esc(rest.join(' · '))}.</p>` : ''}`;
   }
   function snResult(r, eq) {
     const lost = r.unlinked.length + r.stray.length;

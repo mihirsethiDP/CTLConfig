@@ -12,3 +12,18 @@
 .st-cgs li > span:first-of-type { display: inline-flex; gap: 8px; flex-wrap: wrap; }
 .st-left li { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); padding-bottom: 8px; } .st-left li:last-child { border-bottom: 0; }
 .st-left select { width: auto; max-width: 100%; }
+
+/* v7/3: the two libraries */
+.st-code { padding: 1px 5px; border-radius: 4px; background: var(--surface-2); font-size: 12px; white-space: nowrap; }
+.st-vals { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.st-val { white-space: nowrap; font-size: 13px; }
+.st-about .kv { margin-bottom: 12px; }
+.st-rule { display: grid; gap: 8px; margin-top: 12px; }
+.st-rule-c { display: grid; grid-template-columns: minmax(0, 1.4fr) auto minmax(0, 1fr); gap: 12px; align-items: center; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.st-rule-k { font-weight: 500; }
+.st-rule-a { color: var(--ink-2); font-size: 12.5px; }
+.st-rule-l { font-weight: 600; text-decoration: none; }
+.st-rule-l small { display: block; font-weight: 400; color: var(--ink-2); font-size: 12px; }
+@media (max-width: 640px) { .st-rule-c { grid-template-columns: 1fr; gap: 2px; } }
+.lib-two { margin: 0 0 14px; }
+.lib-two-s { margin: 8px 0 0; color: var(--ink-2); font-size: 13.5px; max-width: 78ch; }

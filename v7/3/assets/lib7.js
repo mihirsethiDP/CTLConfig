@@ -127,8 +127,12 @@
     return section('Published lately', list(rows), { sub: 'Each plant it reached has a dated note in its Activity and Coverage.' });
   }
   function libraryPage(params) {
-    const v = V(); const types = arr(safe(() => v.libTypes(), []));
+    const v = V(); const every = arr(safe(() => v.libTypes(), []));
     const q = (params && params._q) || {};
+    /* v7/3: two libraries. Equipment: a pump, a valve or a tank on its own. Unit processes: one treatment step. */
+    const lib = q.lib === 'process' ? 'process' : 'equipment'; const nProc = every.filter((t) => t.library === 'process').length;
+    const types = every.filter((t) => (t.library || 'equipment') === lib);
+    const libTabs = nProc ? `<div class="lib-two">${filters([{ label: 'Equipment', href: '#/library', on: lib === 'equipment', count: every.length - nProc }, { label: 'Unit processes', href: '#/library?lib=process', on: lib === 'process', count: nProc }])}<p class="lib-two-s">${lib === 'process' ? 'One treatment step each. A tank or reactor gets its unit-process type when other equipment takes part in it: pumps, blowers, dosing, valves.' : 'A pump, a blower, a valve, or a tank on its own. A tank that has other equipment taking part in it gets a unit-process type instead.'} <a href="#/library-structure">How it is decided</a></p></div>` : '';
     const show = SHOW_LIB.some((s) => s[0] === q.show) ? q.show : 'all';
     const needle = ST.q.trim().toLowerCase();
     const counts = {}; SHOW_LIB.forEach(([id]) => { counts[id] = types.filter((t) => libShowOk(t, id)).length; });
@@ -137,24 +141,24 @@
     shown.forEach((t) => { let f = fams.find((x) => x.name === t.family); if (!f) fams.push(f = { name: t.family, rows: [] }); f.rows.push(t); });
     fams.forEach((f) => { f.rows = f.rows.filter((t) => t.plantCount).concat(f.rows.filter((t) => !t.plantCount)); });
     const tools = `<div class="lib-tools"><input type="search" id="libSearch" placeholder="Search a type, a code or a reading" aria-label="Search the library" value="${esc(ST.q)}" data-act="lib:search" data-live autocomplete="off">`
-      + filters(SHOW_LIB.map(([id, label]) => ({ label, href: '#/library' + qs({ show: id }), on: id === show, count: counts[id] }))) + '</div>';
+      + filters(SHOW_LIB.map(([id, label]) => ({ label, href: '#/library' + qs({ lib: lib === 'process' ? 'process' : null, show: id }), on: id === show, count: counts[id] }))) + '</div>';
     const famHtml = fams.length
       ? fams.map((f) => section(f.name, libTable(f.rows), { sub: plural(f.rows.length, 'type') })).join('')
-      : empty(needle ? `No type matches “${ST.q.trim()}”.` : 'No type here with this filter.', needle ? btn('Clear the search', { act: 'lib:search-clear' }) : btn('Show every type', { href: '#/library' }));
+      : empty(needle ? `No type matches “${ST.q.trim()}”.` : 'No type here with this filter.', needle ? btn('Clear the search', { act: 'lib:search-clear' }) : btn('Show every type', { href: '#/library' + qs({ lib: lib === 'process' ? 'process' : null }) }));
     const body = [
-      draftsCard(types),
+      libTabs,
+      draftsCard(every),
       suggestionsCard(),
       `<p class="lib-howto">Types used at a plant come first in each family. To change a type, open it and change a limit, a task's interval or an alert's timing. That makes a draft: Where it lands then shows what would change at each plant, before you publish.</p>`,
       tools,
       `<div class="lib-fams">${famHtml}</div>`,
       publishedSection(),
-      note('Grouping equipment into treatment steps, and readings on pipes between equipment — next phase.', 'next'),
+      note('Readings on pipes between equipment — next phase.', 'next'),
     ].filter(Boolean).join('');
-    const structCard = W.V7STRUCT73 ? W.V7STRUCT73.libraryCard() : '';
     return page({
       title: 'Library',
-      sub: `The ${types.length || 56} equipment types the database stores, under their stored names. Each carries its readings and their limits, its alerts and its tasks. Plants follow the library unless they changed a value.`,
-      body: structCard + body, cls: 'pg-lib',
+      sub: nProc ? `Two libraries: ${every.length - nProc} equipment types and ${nProc} unit-process types. Each type carries its readings and their limits, its alerts and its tasks. Plants follow the library unless they changed a value.` : `The ${types.length || 56} equipment types the database stores, under their stored names. Each carries its readings and their limits, its alerts and its tasks. Plants follow the library unless they changed a value.`,
+      body: body, cls: 'pg-lib',
     });
   }
 
