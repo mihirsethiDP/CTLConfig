@@ -405,7 +405,11 @@
       const sub = P.state === 'commissioning'
         ? 'Limits live on the reading; every alert on it follows them. During Commissioning, alerts only record trial firings, Emergencies included.'
         : 'Limits live on the reading; every alert on it follows them.';
-      out += section('Readings from the plant graph', `<div class="o-rds">${order.map(readingCard).join('')}</div>`, { sub, actions: sample ? [sampleTag()] : [] });
+      /* v7/4: while a plant is set up, the readings that need nothing (ON or OFF, counters) fold into one line under the ones that take limits */
+      const quiet = P.state === 'commissioning' ? order.filter((m) => !m.action && !arr(m.alerts).length && !m.tone) : []; const main = order.filter((m) => !quiet.includes(m));
+      const KP = W.V7KEEP || { open: (id, d) => (d ? ' open' : '') }; const kid = `eqrd:${key}:${e.id}`;
+      const fold = quiet.length && main.length ? `<details class="o-rd-fold" data-keep="${esc(kid)}"${KP.open(kid, false)}><summary>${plural(quiet.length, 'more reading')} with nothing to set: ${esc(quiet.map((m) => m.name).join(', '))}</summary><div class="o-rds">${quiet.map(readingCard).join('')}</div></details>` : '';
+      out += section('Readings from the plant graph', `<div class="o-rds">${(fold ? main : order).map(readingCard).join('')}</div>${fold}`, { sub, actions: sample ? [sampleTag()] : [] });
     } else {
       const blocked = props.filter((p) => p.blockedBy);
       const why = blocked.length ? `<span class="o-hint" style="display:block">The library has ${plural(blocked.length, 'item')} for ${/^[AEIOU]/i.test(e.typeName) ? 'an' : 'a'} ${esc(e.typeName)} that ${blocked.length === 1 ? 'waits' : 'wait'} for readings the plant graph doesn't send: ${blocked.map((p) => `${esc(p.name)} (${esc(String(p.blockedBy).replace(/^Needs /, 'needs '))})`).join('; ')}.</span>` : '';

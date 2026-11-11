@@ -37,7 +37,7 @@ const { performance } = require('perf_hooks');
 const ROOT = path.resolve(__dirname, '..');
 const ASSETS = path.join(ROOT, 'assets');
 const DEFAULT_ORDER = ['data.js', 'layout-digitalpaani.js', 'catalogue.js', 'flows.js', 'rca.js', 'app.js', 'runtime.js',
-  'core7.js', 'ui7.js', 'plant7.js', 'object7.js', 'lib7.js', 'work7.js', 'decisions7.js'];
+  'core7.js', 'ui7.js', 'peek74.js', 'plant7.js', 'object7.js', 'lib7.js', 'work7.js', 'decisions7.js'];
 
 /* ── words on screen ───────────────────────────────────────────────────────────────────────── */
 const BANNED = [

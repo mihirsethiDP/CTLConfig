@@ -1,0 +1,55 @@
+/* v7/4 · the side panel and the folded sections */
+.pk-scrim { background: none !important; pointer-events: none; }
+.sheet.pk { top: var(--tb-h, 56px); box-shadow: -8px 0 28px rgba(30, 40, 38, .12); border-left: 1px solid var(--line); }
+.sheet.pk .sheet-b > * + * { margin-top: 16px; }
+@media (min-width: 1100px) { body.has-peek .layout { padding-right: 460px; } body.has-peek .story { display: none !important; } }
+.pk-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.pk-chips a { text-decoration: none; }
+.pk-lead { font-size: 13.5px; color: var(--ink-2); }
+.pk-sec-h { display: flex; align-items: center; gap: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+.pk-sec-h h3 { flex: 1; font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-2); }
+.pk-rows { list-style: none; margin: 0; padding: 0; }
+.pk-row { display: flex; align-items: flex-start; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line); }
+.pk-row:last-child { border-bottom: 0; }
+.pk-row-m { flex: 1; min-width: 0; }
+.pk-row-t { font-size: 14px; font-weight: 500; }
+.pk-row-s { font-size: 12.5px; color: var(--ink-3); margin-top: 2px; }
+.pk-row-r { flex: 0 0 auto; display: flex; gap: 6px; align-items: center; }
+.pk-dim { opacity: .6; }
+.pk-quiet, .pk-tail, .pk-more { font-size: 13px; color: var(--ink-3); margin: 8px 0 0; }
+.pk-place { width: 100%; margin-top: 10px; }
+.pk-fold { margin-top: 4px; }
+.pk-fold > summary { cursor: pointer; font-size: 13px; color: var(--accent-strong); padding: 8px 0; }
+.pk-on { background: var(--info-tint, #eaf0f4); box-shadow: inset 3px 0 0 var(--info, #5b7a90); }
+/* a type on the plant's Library tab: one line, opened on demand */
+details.p7-fold { padding: 0; }
+.p7-fold-s { display: flex; align-items: center; gap: 14px; padding: 14px 20px 14px 16px; cursor: pointer; list-style: none; }
+.p7-fold-s::-webkit-details-marker { display: none; }
+.p7-fold-s::before { content: '\25B8'; color: var(--ink-3); font-size: 12px; transition: transform .12s ease; flex: 0 0 auto; }
+details[open] > .p7-fold-s::before { transform: rotate(90deg); }
+.p7-fold-m { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.p7-fold-t { font-size: 15px; font-weight: 600; }
+.p7-fold-t a { color: var(--ink); }
+.p7-fold-d { font-size: 13px; color: var(--ink-3); }
+.p7-fold-r { flex: 0 0 auto; }
+.p7-fold-b { padding: 0 22px 16px 22px; border-top: 1px solid var(--line); }
+.p7-fold-hint { font-size: 13px; color: var(--ink-3); margin: 0 0 10px; }
+.p7-cards > details.card + details.card, .p7-cards > details.card + .card, .p7-cards > .card + details.card { margin-top: 10px; }
+/* a piece of equipment on the plant's Readings tab, while the plant is set up */
+details.p7-rfold { border-bottom: 1px solid var(--line); }
+details.p7-rfold + details.p7-rfold { margin-top: 0; }
+.p7-rfold-s { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; padding: 11px 0; cursor: pointer; list-style: none; }
+.p7-rfold-s::-webkit-details-marker { display: none; }
+.p7-rfold-s::before { content: '\25B8'; color: var(--ink-3); font-size: 12px; transition: transform .12s ease; }
+details[open] > .p7-rfold-s::before { transform: rotate(90deg); }
+.p7-rfold-s .p7-group-h { border-bottom: 0; padding-bottom: 0; }
+.p7-rfold-d { margin-left: auto; font-size: 13px; color: var(--ink-3); }
+.p7-rfold-d b { color: var(--warn-ink); font-weight: 600; }
+details.p7-rfold[open] { padding-bottom: 14px; }
+/* the readings on an equipment page that need nothing */
+.o-rd-fold { margin-top: 12px; border: 1px solid var(--line); border-radius: 8px; padding: 0 14px; background: var(--surface); }
+.o-rd-fold > summary { cursor: pointer; padding: 11px 0; font-size: 13.5px; color: var(--ink-2); }
+.o-rd-fold[open] { padding-bottom: 14px; }
+.p7-rquiet { margin-top: 14px; border: 1px solid var(--line); border-radius: 8px; padding: 0 14px; }
+.p7-rquiet > summary { cursor: pointer; padding: 12px 0; font-size: 13.5px; color: var(--ink-2); }
+.p7-rquiet details.p7-rfold:last-child { border-bottom: 0; }

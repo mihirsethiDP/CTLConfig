@@ -564,7 +564,7 @@
   function eqBlock(key, r, show, open, alertIds) {
     const ps = visibleProps(r, show); if (!ps.length) return '';
     const und = arr(r.proposals).filter((p) => !p.decided && !p.blockedBy).length;
-    const label = r.eqId === 'plant' ? '<span class="p7-sum-t">The plant itself</span>' : `<span class="p7-sum-t"><span class="mono">${esc(r.tag)}</span> ${esc(r.name || '')}</span>`;
+    const label = r.eqId === 'plant' ? '<span class="p7-sum-t">The plant itself</span>' : `<span class="p7-sum-t"><a class="mono p7-peek" href="${esc(eqHref(key, r.eqId))}" title="Look at ${esc(r.tag)} here, without leaving this page">${esc(r.tag)}</a> ${esc(r.name || '')}</span>`;
     const act = und > 1 && show !== 'blocked' && show !== 'decided' ? btn(`Accept all ${und} for ${r.eqId === 'plant' ? 'the plant' : r.tag}`, { act: 'p7:lib-accept-eq', data: { plant: key, eq: r.eqId }, small: true, title: `Accept everything undecided for ${r.eqId === 'plant' ? 'the plant' : r.tag}, the tasks shared by its type included` }) : '';
     const sum = `<summary><span class="p7-sum-main">${label}<span class="p7-sum-s">${eqStatus(r, show, key)}</span></span><span class="p7-sum-r">${act}</span></summary>`;
     const link = r.eqId !== 'plant' ? `<p class="p7-more"><a href="${esc(eqHref(key, r.eqId))}">Open ${esc(r.tag)} →</a></p>` : '';
@@ -612,7 +612,7 @@
       const visibleEq = lr.filter((r) => visibleProps(r, show).length).length;
       const openAll = !!q.eq ? false : (show === 'undecided' && c.undecided <= 20) || visibleEq <= 3;
       const isOpen = (r) => (q.eq ? r.eqId === q.eq : openAll);
-      const cards = [];
+      const cards = []; const folds = [];
       byType.forEach((rows, typeName) => {
         const shared = sharedGroups(rows).map((g) => sharedBlock(key, g, show, false, alertIds)).filter(Boolean);
         const blocks = rows.map((r) => eqBlock(key, r, show, isOpen(r), alertIds)).filter(Boolean);
@@ -621,12 +621,13 @@
         const undNames = uniq([].concat(...rows.map((r) => arr(r.proposals).filter((x) => !x.decided && !x.blockedBy).map((x) => x.name))));
         const sub = show === 'blocked' ? `${pieces(rows.length)} · ${tc.blocked} can't be used yet, each with what it needs${tc.undecided ? `. <a href="${esc(qs('undecided'))}">${tc.undecided} more are waiting for a decision</a>` : ''}`
           : `${pieces(rows.length)}${tc.undecided ? ` · ${tc.undecided} to decide` : ' · all decided'}${tc.blocked ? ` · ${tc.blocked} can't be used yet` : ''}${undNames.length && show !== 'decided' ? `. To decide: ${shortList(undNames, 3)}` : ''}`;
-        cards.push(card({
-          title: code ? `<a href="${esc(libHref(code))}">${esc(typeName)}</a>` : typeName, sub, body: (shared.length ? `<h4 class="p7-shared-h">Shared by the type · one line each</h4>${shared.join('')}` : '') + (shared.length && blocks.length ? '<h4 class="p7-shared-h">On each piece of equipment</h4>' : '') + blocks.join(''),
-          actions: [show === 'blocked' ? '' : undRows > 1 ? btn(`Accept all for ${countType(rows.length, typeName)}`, { act: 'p7:lib-accept-type', data: { plant: key, type: typeName }, kind: 'primary' }) : tc.undecided ? '' : chip('All decided', { tone: 'ok' })],
-          cls: 'p7-type',
-        }));
+        /* v7/4: a type is one line (what it is, how much is left to decide, one button for all of it); opening it shows its lines */
+        const inner = (shared.length ? `<h4 class="p7-shared-h">Shared by the type · one line each</h4>${shared.join('')}` : '') + (shared.length && blocks.length ? '<h4 class="p7-shared-h">On each piece of equipment</h4>' : '') + blocks.join('');
+        const act = show === 'blocked' ? '' : undRows > 1 ? btn(`Accept all for ${countType(rows.length, typeName)}`, { act: 'p7:lib-accept-type', data: { plant: key, type: typeName }, kind: 'primary', small: true }) : tc.undecided ? '' : chip('All decided', { tone: 'ok' });
+        folds.push({ id: `lib:${key}:${show}:${typeName}`, hasEq: !!q.eq && rows.some((r) => r.eqId === q.eq), title: code ? `<a href="${esc(libHref(code))}" title="Look at this library type here">${esc(typeName)}</a>` : esc(typeName), sub, inner, act });
       });
+      const K = W.V7KEEP || { open: (id, d) => (d ? ' open' : '') };
+      folds.forEach((f) => cards.push(`<details class="card p7-type p7-fold" data-keep="${esc(f.id)}"${K.open(f.id, f.hasEq || folds.length <= 2)}><summary class="p7-fold-s"><span class="p7-fold-m"><span class="p7-fold-t">${f.title}</span><span class="p7-fold-d">${f.sub}</span></span><span class="p7-fold-r">${f.act}</span></summary><div class="p7-fold-b">${f.inner}</div></details>`));
       if (plantRow) {
         const blk = eqBlock(key, plantRow, show, isOpen(plantRow), alertIds);
         if (blk) {
@@ -637,7 +638,7 @@
       if (!cards.length) {
         const msg = { undecided: 'Nothing left to decide.', decided: 'Nothing decided yet.', blocked: 'Every proposal can be used.', all: 'The library proposes nothing for this plant.' }[show];
         parts.push(empty(msg, show !== 'all' ? btn('Show all', { href: qs('all') }) : ''));
-      } else parts.push(`<div class="p7-cards">${cards.join('')}</div>`);
+      } else parts.push(`${folds.length > 2 ? '<p class="p7-fold-hint">One line per type. Open a type to decide line by line, or click a tag to look at that equipment without leaving this page.</p>' : ''}<div class="p7-cards">${cards.join('')}</div>`);
       if (show === 'undecided' && c.blocked) parts.push(note(`${pl(c.blocked, 'more proposal')} can't be used yet: ${c.blocked === 1 ? 'it needs' : 'they need'} a reading the plant graph doesn't send, or a connection between equipment (next phase). They stay listed, greyed, under "Can't be used yet".`, 'quiet'));
       return frame(key, 'library', `<div class="p7-sec-h"><h2>What the library brings</h2><p>${esc(sub)}</p></div>` + parts.join(''));
     });
@@ -734,7 +735,7 @@
       const order = eqs.map((e) => e.id).concat([null]);
       const byEq = new Map(order.map((id) => [id, []]));
       rs.filter(keep[show]).filter((r) => matches(query, r.name, r.tag, r.eqTag, (eqById[r.eqId] || {}).name)).forEach((r) => { const k = byEq.has(r.eqId) ? r.eqId : null; byEq.get(k).push(r); });
-      const blocks = [];
+      const blocks = []; const groups = []; const setup = v.state(key) !== 'live'; const KP = W.V7KEEP || { open: (id, d) => (d ? ' open' : '') };
       byEq.forEach((list, eqId) => {
         if (!list.length) return;
         const e = eqId ? eqById[eqId] : null;
@@ -756,14 +757,28 @@
           };
         });
         const head = e ? `<div class="p7-group-h"><h3><a href="${esc(eqHref(key, e.id))}"><span class="mono">${esc(e.tag)}</span> ${esc(e.name)}</a></h3><span class="muted">${esc(e.typeName)}</span></div>` : '<div class="p7-group-h"><h3>The plant</h3><span class="muted">Manual and lab readings for the plant as a whole</span></div>';
-        blocks.push(`<section class="p7-group">${head}${table({ cols: [{ label: 'Reading', key: 'name' }, { label: 'Kind', key: 'kind' }, { label: 'Now', key: 'now' }, { label: 'Limits', key: 'limits' }, { label: 'Where they come from', key: 'src' }, { label: 'Alert', key: 'alert' }], rows })}</section>`);
+        const tbl = table({ cols: [{ label: 'Reading', key: 'name' }, { label: 'Kind', key: 'kind' }, { label: 'Now', key: 'now' }, { label: 'Limits', key: 'limits' }, { label: 'Where they come from', key: 'src' }, { label: 'Alert', key: 'alert' }], rows });
+        if (!setup) { blocks.push(`<section class="p7-group">${head}${tbl}</section>`); return; }
+        /* v7/4: what needs a decision is said on the line; the table is one click away */
+        const need = list.filter((r) => noLim.has(r.id)); const set = list.filter((r) => !noLim.has(r.id) && !r.nextPhase && r.takesLimits && arr(r.dirs).length && !(r.kind === 'status')).length; const quiet = list.length - need.length - set;
+        const bits = [need.length ? `<b>${need.length} with no limits yet</b>: ${esc(shortList(need.map((r) => r.name), 3))}` : '', set ? `${set} with limits` : '', quiet ? `${quiet} with nothing to set` : ''].filter(Boolean).join(' · ');
+        groups.push({ need: need.length, quietOnly: !need.length && !set, html: (open) => `<details class="p7-group p7-rfold" data-keep="${esc(`rd:${key}:${show}:${eqId || 'plant'}`)}"${KP.open(`rd:${key}:${show}:${eqId || 'plant'}`, open)}><summary class="p7-rfold-s">${head}<span class="p7-rfold-d">${pl(list.length, 'reading')} · ${bits}</span></summary>${tbl}</details>` });
       });
+      if (setup && groups.length) {
+        /* the equipment that still needs limits comes first and opens by itself while there is little of it; a search or a filter opens what it finds */
+        const needing = groups.filter((g) => g.need).length; const narrowed = !!query || show !== 'all';
+        groups.sort((a, b) => (b.need ? 1 : 0) - (a.need ? 1 : 0));
+        const act = narrowed ? groups : groups.filter((g) => !g.quietOnly); const idle = narrowed ? [] : groups.filter((g) => g.quietOnly);
+        act.forEach((g) => blocks.push(g.html(narrowed ? groups.length <= 12 : (g.need > 0 && needing <= 6) || groups.length <= 3)));
+        /* equipment whose readings are only ON or OFF, or counters, asks nothing of anyone: one line for all of it */
+        if (idle.length) { const kid = `rdq:${key}`; blocks.push(act.length || idle.length > 3 ? `<details class="p7-rquiet" data-keep="${esc(kid)}"${KP.open(kid, false)}><summary>${pieces(idle.length)} with nothing to set: ON or OFF readings and counters</summary>${idle.map((g) => g.html(false)).join('')}</details>` : idle.map((g) => g.html(true)).join('')); }
+      }
       const n = (f) => rs.filter(f).length;
       const nScada = n((r) => r.kind !== 'manual' && !r.nextPhase); const nMan = n((r) => r.kind === 'manual'); const nNext = n((r) => r.nextPhase);
       const parts = [];
       parts.push(`<p class="lead">${pl(nScada, 'reading')} from the plant graph${nNext ? `, plus ${nNext} on pipes between equipment (next phase)` : ''}${nMan ? `${nNext ? ',' : ''} and ${nMan} manual or lab ${nMan === 1 ? 'reading' : 'readings'}` : ''}, grouped by equipment. Manual and lab readings take limits the same way and say how often they are expected.</p>`);
       parts.push(`<div class="p7-tools">${filters([{ label: 'All', href: `${b}/readings`, on: show === 'all', count: rs.length }, { label: 'No limits yet', href: `${b}/readings?show=nolimits`, on: show === 'nolimits', count: noLim.size }, { label: 'Manual and lab', href: `${b}/readings?show=manual`, on: show === 'manual', count: nMan }, { label: 'Next phase', href: `${b}/readings?show=next`, on: show === 'next', count: n((r) => r.nextPhase) }].filter((f) => f.on || f.count || f.label === 'All'))}${searchBox('readings', key, 'Find by reading, tag or equipment')}</div>`);
-      parts.push(blocks.length ? card({ body: blocks.join(''), actions: [U.sampleTag()], title: 'Every reading', sub: 'Values under "Now" are sample readings.' }) : empty(query ? H(`Nothing matches "${esc(query)}".`) : show === 'nolimits' ? 'Every reading that takes limits has them.' : 'No readings here.', show !== 'all' ? btn('Show all', { href: `${b}/readings` }) : ''));
+      parts.push(blocks.length ? card({ body: blocks.join(''), actions: [U.sampleTag()], title: 'Every reading', sub: setup ? 'One line per piece of equipment, the ones that still need limits first. Open a line for its readings. Values under "Now" are sample readings.' : 'Values under "Now" are sample readings.' }) : empty(query ? H(`Nothing matches "${esc(query)}".`) : show === 'nolimits' ? 'Every reading that takes limits has them.' : 'No readings here.', show !== 'all' ? btn('Show all', { href: `${b}/readings` }) : ''));
       return frame(key, 'readings', parts.join(''));
     });
   }
