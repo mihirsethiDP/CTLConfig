@@ -82,8 +82,8 @@
 
   /* ── 3. Unit-process types: (group, name, stored value, tank?, code, existing codes, label words,
         the equipment type the node is on its own, axes, its name in the taxonomy when that differs) ── */
-  const GROUPS = [['preliminary', 'Preliminary'], ['primary', 'Primary'], ['secondary', 'Secondary'], ['tertiary', 'Tertiary'], ['zld', 'Zero liquid discharge'], ['utility', 'Utility'],
-    ['flowpath', 'Flow-path tanks'], ['sludge', 'Sludge handling'], ['other', 'Catch-all']].map(([key, label]) => ({ key, label }));
+  const GROUPS = [['preliminary', 'Preliminary'], ['primary', 'Primary'], ['secondary', 'Secondary'], ['tertiary', 'Tertiary'], ['zld', 'ZLD'], ['utility', 'Utility'],
+    ['flowpath', 'Flow-path tank'], ['sludge', 'Sludge handling'], ['other', 'Catch-all']].map(([key, label]) => ({ key, label }));
   const P = (group, name, stored, tank, code, existing, labels, eq, axes, sub) => ({ kind: 'process', group, name, stored, tank: !!tank, code, existing: existing || [], labels: labels || [], eq, axes: axes || [], ...(sub ? { sub } : {}) });
   const UP = [
     P('preliminary', 'Screening (manual)', 'screening', 0, 'OS_TANK_SC', ['OS_TANK_SC'], [], 'OS_TANK_SC', [FINENESS, SURFACE]),
@@ -142,7 +142,10 @@
   ];
   const SUBGROUP = { clarification: 'Thickening', gravity_thickening: 'Thickening', daf_thickening: 'Thickening', gravity_belt_thickening: 'Thickening', rotary_drum_thickening: 'Thickening', centrifuge_thickening: 'Thickening',
     belt_filter_press_dewatering: 'Dewatering', plate_frame_filtration: 'Dewatering', centrifuge_dewatering: 'Dewatering', screw_press_dewatering: 'Dewatering', sludge_digestion: 'Digestion', thermal_drying: 'Drying', solar_drying: 'Drying', sludge_drying_bed: 'Drying' };
-  const upByKey = {}; UP.forEach((p) => { upByKey[p.stored] = p; p.groupLabel = GROUPS.find((g) => g.key === p.group).label; if (SUBGROUP[p.stored]) p.subgroup = SUBGROUP[p.stored]; });
+  /* v7/4: the node code or codes that detect each unit process, as the hand-off doc lists them (the 53 of the unit process library).
+     Where none is given here, the unit process is detected by its own code above. */
+  const DETECT = { flash_mixing: ['FLASH_MIXER'], anoxic_treatment: ['OS_TANK_ANX'], activated_sludge: ['OS_TANK_AER'], sabre: ['BIG_SABRE', 'MINI_SABRE'], chlorination: ['OS_TANK_CCT'], collection: ['OS_TANK_CT'], sludge_holding: ['OS_TANK_SHT'], treated_water: ['OS_TANK_TWT'], equalization: ['OS_TANK_EQT'], filter_feed: ['OS_TANK_FFT'], filtered_water: ['OS_TANK_FWT'], recirculation_holding: ['OS_TANK_RHT'] };
+  const upByKey = {}; UP.forEach((p) => { upByKey[p.stored] = p; p.groupLabel = GROUPS.find((g) => g.key === p.group).label; if (SUBGROUP[p.stored]) p.groupLabel = 'Sludge, ' + SUBGROUP[p.stored].toLowerCase(); p.detect = DETECT[p.stored] || [p.code]; });
   const upByExisting = {}; UP.forEach((p) => p.existing.forEach((c) => { upByExisting[c] = p; }));
 
   /* ── 4. Library content. Readings, alerts and tasks use the library's own vocabulary (window.READINGS). ── */
@@ -366,7 +369,7 @@
 
   /* ── 9. The structure the console already has, moved onto the 53 types ── */
   W.V7_STAGES = GROUPS.map((g) => ({ key: g.key, label: g.label })).concat([{ key: null, label: 'No stage' }]);
-  W.V7_UP_TYPES = UP.map((p) => ({ id: p.stored, name: p.name, stage: p.group, code: p.code, node: p.eq, tank: p.tank, ...(p.subgroup ? { subgroup: p.subgroup } : {}) }));
+  W.V7_UP_TYPES = UP.map((p) => ({ id: p.stored, name: p.name, stage: p.group, code: p.detect.join(', '), node: p.eq, tank: p.tank, ...(p.subgroup ? { subgroup: p.subgroup } : {}) }));
   Object.values(W.V7_STRUCTURE || {}).forEach((st) => arr(st.ups).forEach((u) => { const p = upByKey[OLD_TYPE[u.typeId]] || upByKey[u.typeId]; if (!p) return; u.typeId = p.stored; u.typeName = p.name; u.stage = p.group; u.stageLabel = p.groupLabel; }));
 
   /* ── 10. Detection: an offered library wins; a new-style code is read to the library type it stands for ── */

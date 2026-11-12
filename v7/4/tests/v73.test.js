@@ -56,7 +56,7 @@ check('libraries', 'the sample plants keep the types their records were made wit
 
 /* D7: one changeover task per control group */
 const cg = V.tasks('vedanta').filter((t) => t.cg);
-check('D7', 'Vedanta: the blower changeover is one task for the control group Blowers, not marked "to confirm"', cg.length === 1 && cg[0].line === 'Routine work - Blower duty / standby changeover · Blowers' && cg[0].eqIds.length === 2 && !cg[0].toConfirm, cg.map((t) => t.line).join(' | '));
+check('D7', 'Vedanta: the blower changeover came round every few hours, so it is no longer a task: nothing is done more often than once a day', cg.length === 0 && V.tasks('vedanta').every((t) => t.kind === 'line' || t.intervalH >= 24), cg.map((t) => t.line).join(' | '));
 
 /* D3: nothing sent on a new plant */
 check('D3', 'Vedanta (a new plant): its pH Emergency on Wed 28 Oct opened no issue and is kept as a trial firing', V.issues('vedanta').length === 0 && V.trialStats('vedanta', 'a_3f').recorded.firings.some((f) => f.band === 'emergency' && V.fmt(f.start) === 'Wed 28 Oct, 15:10'));
@@ -96,14 +96,14 @@ check('calls', 'every card has a build state for the hand-off page, or builds as
 /* v7/4: the work level */
 (() => {
   const k = 'vedanta'; const all = V.tasks(k); const w0 = V.workLevel(k);
-  check('work level', 'a plant starts at Everything, with nothing left out', w0.level === 4 && w0.leftOut.length === 0 && w0.options[3].tasks === all.length);
+  check('work level', 'a plant starts at Everything, with nothing left out', w0.level === 3 && w0.leftOut.length === 0 && w0.options[2].tasks === all.length && all.every((t) => t.kind === 'line' || t.intervalH >= 24));
   V.setWorkLevel(k, 1, { keepUnwatched: false }); const w1 = V.workLevel(k); const t1 = V.tasks(k);
   check('work level', 'Essentials keeps every preventive maintenance, calibration, statutory and reading-raised task, and leaves out only routine work', w1.leftOut.length > 0 && all.filter((t) => t.workType === 'pm' || t.workType === 'calibration' || t.statutory || t.kind === 'line').every((t) => t1.some((x) => x.id === t.id)) && w1.leftOut.every((x) => { const t = all.find((y) => y.id === x.id); return t && !['pm', 'calibration'].includes(t.workType) && !t.statutory; }), w1.leftOut.length + ' left out');
   const alertsBefore = V.alerts(k).map((a) => a.id + a.state).join();
   V.setWorkLevel(k, 1, { keepUnwatched: true }); const w2 = V.workLevel(k);
   check('work level', 'with the keep switch on, nothing left out is on equipment that no alert watches', w2.leftOut.every((x) => x.watched) && w2.kept.every((x) => !x.watched) && w2.leftOut.length + w2.kept.length === w1.leftOut.length);
   check('work level', 'the level never changes an alert', V.alerts(k).map((a) => a.id + a.state).join() === alertsBefore);
-  V.setWorkLevel(k, 4); check('work level', 'Everything brings every task back', V.tasks(k).length === all.length && V.workLevel(k).leftOut.length === 0);
+  V.setWorkLevel(k, 3); check('work level', 'Everything brings every task back', V.tasks(k).length === all.length && V.workLevel(k).leftOut.length === 0);
 })();
 
 /* v7/4: the structure changed by hand */
@@ -115,7 +115,7 @@ check('calls', 'every card has a build state for the hand-off page, or builds as
   const rm = V.removeUnitProcess(k, to.id); const st2 = V.structure(k);
   check('structure by hand', 'removing a unit process leaves its tank as equipment, listed as not placed', rm.ok && st2.ups.length === st0.ups.length - 1 && st2.unplaced.includes(to.id) && !!V.eq(k, to.id));
   const ad = V.addUnitProcess(k, { eqId: to.id, typeId: 'equalization' });
-  check('structure by hand', 'a unit process can be added on any equipment that is not one, with a library type', ad.ok && V.unitProcess(k, to.id).byHand === true && !V.structure(k).unplaced.includes(to.id) && !V.addUnitProcess(k, { eqId: to.id, typeId: 'equalization' }).ok);
+  check('structure by hand', 'a unit process can be added on a tank that is not one, with a type from the library of 53; never on a pump, a blower or a valve', !V.addUnitProcess(k, { eqId: V.equipment(k).find((e) => /pump/i.test(e.typeName)).id, typeId: 'equalization' }).ok && !V.addUnitProcess(k, { eqId: to.id, typeId: 'not_a_type' }).ok && ad.ok && V.unitProcess(k, to.id).byHand === true && !V.structure(k).unplaced.includes(to.id) && !V.addUnitProcess(k, { eqId: to.id, typeId: 'equalization' }).ok);
   const cg = V.structure(k).cgs[0];
   check('structure by hand', 'a control group needs a name and two pieces that are in no other set; it can be renamed and removed', !V.saveControlGroup(k, null, { name: 'x', memberIds: cg.memberIds }).ok && !V.saveControlGroup(k, cg.id, { name: '', memberIds: cg.memberIds }).ok && V.saveControlGroup(k, cg.id, { name: 'Renamed', memberIds: cg.memberIds }).ok && V.structure(k).cgs[0].name === 'Renamed' && V.removeControlGroup(k, cg.id).ok && !V.structure(k).cgs.some((c) => c.id === cg.id));
   V.reset(); check('structure by hand', 'after Reset the structure is the proposal again', V.structure(k).ups.length === st0.ups.length && V.unitProcess(k, u.id).members.length === 2);

@@ -98,17 +98,17 @@
   function typeCard(code) {
     const n = N(); const ab = n ? n.about(code) : null; if (!ab) return '';
     if (ab.library === 'process') {
-      const p = ab.p; const drawn = [mono(p.code)].concat(p.existing.filter((c) => c !== p.code).map(mono)).join(' ');
+      const p = ab.p; const drawn = p.detect.map(mono).join(' ');
       const words = p.labels.length ? 'or a tank whose name contains ' + p.labels.map((w) => '\u201c' + esc(w) + '\u201d').join(' or ') : '';
       const rows = [
         ['Library', 'Unit processes \u00b7 ' + ab.group + (ab.subgroup ? ' \u00b7 ' + ab.subgroup : '')],
         ['A node gets it when', { html: 'It is drawn as this step <b>and other equipment takes part in it</b>: pumps, blowers, dosing, valves.' }],
         ['On its own it gets', { html: '<a href="' + esc(libHref(ab.node.code)) + '">' + esc(ab.node.name) + '</a> <span class="muted">from the equipment library</span>' }],
-        ['Drawn with', { html: drawn + (words ? ' <span class="muted">' + words + '</span>' : '') }],
+        ['Detected by', { html: drawn + (words ? ' <span class="muted">' + words + '</span>' : '') }],
         ['Stored as', { html: mono(p.stored) }],
         ['Holds water', p.tank ? 'Yes: it stores a volume, an area and a height' : 'No'],
       ];
-      const ex = p.axes.some((a) => a.values.length) ? '<p class="muted small mt">A full code is the step, then one part per sub-type, joined with an underscore: ' + mono(p.stored === 'sabre' ? 'BIG_SABRE' : p.code + '_' + p.axes.filter((a) => a.values.length).map((a) => a.values[0].code).join('_')) + '.</p>' : '';
+      const ex = p.axes.some((a) => a.values.length) ? '<p class="muted small mt">A full code is the step, then one part per sub-type, joined with an underscore: ' + mono(p.stored === 'sabre' ? 'BIG_SABRE' : p.detect[0] + '_' + p.axes.filter((a) => a.values.length).map((a) => a.values[0].code).join('_')) + '.</p>' : '';
       return card({ title: 'Where this type comes from', sub: 'A unit process is one treatment step. It carries what its tank or reactor carries, plus the routine work of the step.', body: UI.kv(rows) + axesTable(p.axes) + ex, cls: 'st-about' });
     }
     const t = ab.t; const rows = [['Library', 'Equipment' + (ab.added ? ' \u00b7 added with the unit-process types' : '')]];
@@ -131,7 +131,7 @@
     const pname = (k) => { try { return V().plant(k).name; } catch (e) { return k; } };
     const tname = (c) => { const x = (W.CATALOGUE_BY_CODE || {})[c]; return x ? x.type : c; };
     const byStage = arr(W.V7_STAGES).map((sg) => ({ sg, ts: types.filter((t) => (t.stage || null) === sg.key) })).filter((x) => x.ts.length);
-    const upHtml = byStage.map((x) => '<h3 class="st-stage-h">' + esc(x.sg.label) + ' <span class="muted">\u00b7 ' + x.ts.length + '</span></h3>' + UI.table({ cols: [{ label: 'Unit-process type', key: 'n' }, { label: 'Drawn with', key: 'c' }, { label: 'On its own it gets', key: 'e' }, { label: 'Used at', key: 'u' }],
+    const upHtml = byStage.map((x) => '<h3 class="st-stage-h">' + esc(x.sg.label) + ' <span class="muted">\u00b7 ' + x.ts.length + '</span></h3>' + UI.table({ cols: [{ label: 'Unit-process type', key: 'n' }, { label: 'Detected by', key: 'c' }, { label: 'On its own it gets', key: 'e' }, { label: 'Used at', key: 'u' }],
       rows: x.ts.map((t) => { const us = [...new Set(used[t.id] || [])]; const p = n ? n.upByKey[t.id] : null; return { n: '<a href="' + esc(libHref(t.id)) + '"><b>' + esc(t.name) + '</b></a>' + (t.subgroup ? '<div class="muted small">' + esc(t.subgroup) + '</div>' : ''), c: mono(t.code) + (p && p.labels.length ? '<div class="muted small">or a tank named \u201c' + esc(p.labels[0]) + '\u201d</div>' : ''), e: '<a href="' + esc(libHref(t.node)) + '">' + esc(tname(t.node)) + '</a>', u: us.length ? esc(us.map(pname).join(', ')) : '<span class="muted">Not used yet</span>' }; }) })).join('');
     const eqHtml = n ? UI.table({ cols: [{ label: 'Kind of equipment', key: 'n' }, { label: 'Code', key: 'c', cls: 'nowrap' }, { label: 'Sub-types', key: 'a' }, { label: 'Library types it reads to', key: 'l' }],
       rows: n.EQ.map((t) => { const libs = [...new Set(t.existing.concat([t.lib({})]))].filter((c) => (W.CATALOGUE_BY_CODE || {})[c]); return { n: '<b>' + esc(t.name) + '</b><div class="muted small">' + esc(t.group) + '</div>', c: mono(t.code), a: t.axes.length ? esc(t.axes.map((a) => a.label).join(', ')) : '<span class="muted">None</span>', l: libs.map((c) => '<a href="' + esc(libHref(c)) + '">' + esc(tname(c)) + '</a>').join(', ') }; }) }) : '';
@@ -173,9 +173,9 @@
   }
   function openNewUp(key) {
     const st = S(key); const left = unplaced(key); const centres = new Set(st.ups.map((x) => x.id));
-    const eqs = arr(V().equipment(key)).filter((e) => !centres.has(e.id)).sort((a, b) => (left.includes(b.id) ? 1 : 0) - (left.includes(a.id) ? 1 : 0));
-    const body = `<label class="st-f">The tank or reactor at its centre<span class="muted small">A unit process is one treatment step, named after the equipment at its centre.</span><select id="stEq"><option value="">Choose equipment…</option>${eqs.map((e) => `<option value="${esc(e.id)}">${esc(eqLabel(e))}${left.includes(e.id) ? ' · not placed yet' : ''}</option>`).join('')}</select></label>`
-      + `<label class="st-f">Type<select id="stType">${typeOpts('')}</select></label>` + whyField(key);
+    const eqs = arr(V().equipment(key)).filter((e) => !centres.has(e.id) && !/pump|blower|valve/i.test(e.typeName || '')).sort((a, b) => (left.includes(b.id) ? 1 : 0) - (left.includes(a.id) ? 1 : 0));
+    const body = `<label class="st-f">The tank or reactor at its centre<span class="muted small">A unit process is one treatment step, named after the equipment at its centre. A pump, a blower or a valve is never the centre: it takes part in one.</span><select id="stEq"><option value="">Choose equipment…</option>${eqs.map((e) => `<option value="${esc(e.id)}">${esc(eqLabel(e))}${left.includes(e.id) ? ' · not placed yet' : ''}</option>`).join('')}</select></label>`
+      + `<label class="st-f">Type<span class="muted small">One of the 53 unit processes in the library. No other type can exist.</span><select id="stType">${typeOpts('')}</select></label>` + whyField(key);
     UI.modal({ title: 'Add a unit process', sub: 'Once it is added, open it to say which equipment takes part in it.', body, foot: btn('Cancel', { act: 'ui:close', data: { what: 'modal' }, kind: 'ghost' }) + btn('Add it', { act: 'st:up-add', data: { plant: key }, kind: 'primary' }) });
   }
   function openCg(key, id) {

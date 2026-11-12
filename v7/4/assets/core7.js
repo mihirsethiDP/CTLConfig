@@ -149,7 +149,8 @@ window.V7 = (function () {
   const tagOfEq = (key, id) => (eqRaw(key, id) || {}).tag || id;
   function addUnitProcess(key, o) {
     const st = structDraft(key); if (!st) return { ok: false, error: 'No such plant.' }; const x = o || {}; const e = eqRaw(key, x.eqId); const t = upTypeOf(x.typeId);
-    if (!e) return { ok: false, error: 'Choose the tank or reactor at its centre.' }; if (!t) return { ok: false, error: 'Choose its type.' };
+    if (!e) return { ok: false, error: 'Choose the tank or reactor at its centre.' }; if (!t) return { ok: false, error: 'Choose its type from the unit process library.' };
+    if (/pump|blower|valve/i.test(e.type || '')) return { ok: false, error: 'A pump, a blower or a valve is never a unit process: it takes part in one.' };
     if (st.ups.some((u) => u.id === e.id)) return { ok: false, error: `${e.tag} is already a unit process.` };
     const why = structWhy(key, x); if (why) return why;
     st.ups.push({ id: e.id, tag: e.tag, name: e.name, typeId: x.typeId, typeName: t.name, stage: t.group || null, stageLabel: t.groupLabel || '', why: 'Added by hand', members: [], byHand: true });
@@ -718,7 +719,7 @@ window.V7 = (function () {
     const eqId = opts && opts.eqId; const out = sensors(key, eqId).slice();
     /* v7: only a test that records a number is a reading; a visual check (its steps hold no reading, e.g. "Biofilm visual check") is a task only */
     const measured = (sc) => { const gt = sc.task ? C.taskById(sc.task) : sc.flow ? C.taskByFlow(sc.flow) : null; const fid = sc.flow || (gt && gt.flow); const f = fid ? C.flow(fid) || libFlow(fid) : null; return !f || !(f.steps || []).length || f.steps.some((x) => x.type === 'reading'); };
-    dOf(key).schedules.filter((sc) => sc.workType === 'test' && sc.status === 'active' && (!eqId || (sc.subject && sc.subject.id === eqId)) && measured(sc)).forEach((sc) => {
+    dOf(key).schedules.filter((sc) => sc.workType === 'test' && sc.status === 'active' && !subDaily(sc) && (!eqId || (sc.subject && sc.subject.id === eqId)) && measured(sc)).forEach((sc) => {
       const e = sc.subject.kind === 'eq' ? eqRaw(key, sc.subject.id) : null; const name = sc.name.replace(/^Manual testing\s*-\s*/i, '');
       out.push({ id: `m:${sc.id}`, name, tag: null, unit: '', kind: 'manual', eqId: e ? e.id : null, eqTag: e ? e.tag : null, nextPhase: false, dirs: dirsOf(key, `m:${sc.id}`), primaryDir: dirsOf(key, `m:${sc.id}`)[0], takesLimits: true, latest: null, sample: false, source: /\b(BOD|COD|TSS|ammonia|lab|test|sample)\b/i.test(sc.name) ? 'lab' : 'manual', expected: everyText(C.cadenceOf(sc)), scheduleId: sc.id });
     });
@@ -742,7 +743,7 @@ window.V7 = (function () {
   const alert = (key, id) => alerts(key).find((a) => a.id === id) || null;
   function schedules(key, opts) {
     const eqId = opts && opts.eqId; const d = dOf(key); if (!d) return [];
-    return d.schedules.filter((sc) => !eqId || (sc.subject && sc.subject.id === eqId)).map((sc) => { const e = sc.subject.kind === 'eq' ? eqRaw(key, sc.subject.id) : null; const tv = taskIdOfSchedule(key, sc.id); return { id: sc.id, name: sc.name, eqId: e ? e.id : null, eqTag: e ? e.tag : null, workType: sc.workType, workLabel: C.WT_LABEL[sc.workType] || sc.workType, every: C.cadenceOf(sc), everyText: C.every(sc), basis: sc.basis, status: sc.status, source: cadenceInfo(key, sc.id), taskId: tv, generalTaskId: sc.task || null, flowId: sc.flow || null }; });
+    return d.schedules.filter((sc) => !subDaily(sc) && (!eqId || (sc.subject && sc.subject.id === eqId))).map((sc) => { const e = sc.subject.kind === 'eq' ? eqRaw(key, sc.subject.id) : null; const tv = taskIdOfSchedule(key, sc.id); return { id: sc.id, name: sc.name, eqId: e ? e.id : null, eqTag: e ? e.tag : null, workType: sc.workType, workLabel: C.WT_LABEL[sc.workType] || sc.workType, every: C.cadenceOf(sc), everyText: C.every(sc), basis: sc.basis, status: sc.status, source: cadenceInfo(key, sc.id), taskId: tv, generalTaskId: sc.task || null, flowId: sc.flow || null }; });
   }
   const ROLE = C.ROLE_LABEL || { l1: 'Operator', l3: 'Lead', l4: 'Senior Lead', regular: 'Client viewer' };
   const channelOf = (p) => (!p.phone || !p.phone.verified ? 'in the app' : p.phone.channel === 'wa' ? 'WhatsApp' : p.phone.channel === 'sms' ? 'SMS' : 'in the app');
@@ -934,42 +935,46 @@ window.V7 = (function () {
   const spreadFrac = (id) => mix(h32(id), 99);
   /* v7/4: the work level. One choice for the plant says how much routine work it takes on, instead of switching tasks off one by one.
      A task's level comes from what it is and how often it is done, so it needs no setting of its own:
-       1 preventive maintenance, calibration and statutory work · 2 weekly or slower · 3 daily · 4 several times a day.
+       1 preventive maintenance, calibration and statutory work · 2 weekly or slower · 3 daily (everything).
      What a lower level can never do: touch an alert, or work a reading raises, or level-1 work. And while keepUnwatched is on
      (the default), routine work stays wherever an alert does not watch every piece of equipment it is done on. */
+  /* v7/4: no routine task comes round more often than once a day. Work on a calendar interval under 24 hours is left out everywhere:
+     it is not proposed, not listed on a library type, and not built into a task even where a plant had accepted it before. Work a
+     reading raises is not affected (it has no interval), and neither is work counted in run-hours. */
+  const everyH = (ev) => (ev && ev.n ? ev.n * (C.UNIT_HOURS[ev.unit] || 24) : null);
+  const subDaily = (sc) => !!sc && sc.workType !== 'condition' && !sc.meter && !sc.meterHours && everyH(sc.every) != null && everyH(sc.every) < 24;
   const WORK_LEVELS = [
     { level: 1, label: 'Essentials', what: 'Preventive maintenance, calibration and statutory work' },
     { level: 2, label: 'Weekly and slower', what: 'Essentials, plus anything done weekly or less often' },
-    { level: 3, label: 'Daily and slower', what: 'Weekly and slower, plus anything done once a day' },
-    { level: 4, label: 'Everything', what: 'Every task the library has, including work done several times a day' },
+    { level: 3, label: 'Everything', what: 'Every task the library has. Nothing is done more often than once a day' },
   ];
-  const levelOfTask = (v) => (v.kind === 'line' ? 0 : v.workType === 'pm' || v.workType === 'calibration' || v.statutory ? 1 : v.intervalH >= 168 ? 2 : v.intervalH >= 24 ? 3 : 4);
+  const levelOfTask = (v) => (v.kind === 'line' ? 0 : v.workType === 'pm' || v.workType === 'calibration' || v.statutory ? 1 : v.intervalH >= 168 ? 2 : 3);
   function levelCut(key, level, keep) {
     const d = dOf(key); const watched = new Set();
     d.alerts.forEach((a) => { const st = alertState(key, a.id); if ((st === 'trial' || st === 'on') && a.subject && a.subject.kind === 'eq') watched.add(a.subject.id); });
     return buildAllTasks(key).map((v) => { const lv = levelOfTask(v); const w = v.eqIds.length > 0 && v.eqIds.every((id) => watched.has(id)); return { v, lv, watched: w, out: lv > level && !(keep && !w) }; });
   }
   function buildTasks(key) {
-    return cached(`tasks:${key}`, () => { const P = PS(key); const L = (P && P.workLevel) || 4; return L >= 4 ? buildAllTasks(key) : levelCut(key, L, P.keepUnwatched !== false).filter((x) => !x.out).map((x) => x.v); });
+    return cached(`tasks:${key}`, () => { const P = PS(key); const L = Math.min((P && P.workLevel) || 3, 3); return L >= 3 ? buildAllTasks(key) : levelCut(key, L, P.keepUnwatched !== false).filter((x) => !x.out).map((x) => x.v); });
   }
   function workLevel(key) {
-    const P = PS(key); if (!P || !dOf(key)) return null; const level = P.workLevel || 4; const keep = P.keepUnwatched !== false;
+    const P = PS(key); if (!P || !dOf(key)) return null; const level = Math.min(P.workLevel || 3, 3); const keep = P.keepUnwatched !== false;
     const row = (x) => ({ id: x.v.id, line: x.v.line, everyText: x.v.everyText, workLabel: x.v.workLabel, watched: x.watched });
     const options = WORK_LEVELS.map((o) => { const c = levelCut(key, o.level, keep); const inn = c.filter((x) => !x.out); const perDay = inn.reduce((n, x) => n + x.v.perDay, 0); return { ...o, on: o.level === level, tasks: inn.length, leftOut: c.length - inn.length, perDay, perMonth: Math.round(perDay * 30) }; });
     const cut = levelCut(key, level, keep);
     return { level, label: WORK_LEVELS[level - 1].label, keepUnwatched: keep, options, total: cut.length, leftOut: cut.filter((x) => x.out).map(row), kept: cut.filter((x) => x.lv > level && !x.out).map(row), unwatchedIfNotKept: levelCut(key, level, false).filter((x) => x.out && !x.watched).length };
   }
   function setWorkLevel(key, level, opts) {
-    const P = PS(key); const L = Number(level); if (!P || !dOf(key)) return { ok: false, error: 'No such plant.' }; if (![1, 2, 3, 4].includes(L)) return { ok: false, error: 'No such level.' };
+    const P = PS(key); const L = Number(level); if (!P || !dOf(key)) return { ok: false, error: 'No such plant.' }; if (![1, 2, 3].includes(L)) return { ok: false, error: 'No such level.' };
     P.workLevel = L; if (opts && opts.keepUnwatched != null) P.keepUnwatched = !!opts.keepUnwatched; touch(); ensureTaskStates(key);
     const w = workLevel(key); const on = w.options[L - 1];
-    addActivity(now(), key, `Work level set to ${w.label}: ${Math.round(on.perDay)} tasks a day${w.leftOut.length ? `, ${plural(w.leftOut.length, 'task')} left out` : ', nothing left out'}${L < 4 ? (w.keepUnwatched ? '; routine work stays where no alert watches the equipment' : '; routine work is left out even where no alert watches the equipment') : ''}`, 'config');
+    addActivity(now(), key, `Work level set to ${w.label}: ${Math.round(on.perDay)} tasks a day${w.leftOut.length ? `, ${plural(w.leftOut.length, 'task')} left out` : ', nothing left out'}${L < 3 ? (w.keepUnwatched ? '; routine work stays where no alert watches the equipment' : '; routine work is left out even where no alert watches the equipment') : ''}`, 'config');
     touch(); persist(); return { ok: true, level: L, leftOut: w.leftOut.length, kept: w.kept.length };
   }
   function buildAllTasks(key) {
     return cached(`tasksAll:${key}`, () => {
       const d = dOf(key); if (!d) return []; const out = []; const groups = {};
-      d.schedules.filter((sc) => sc.status === 'active').forEach((sc) => {
+      d.schedules.filter((sc) => sc.status === 'active' && !subDaily(sc)).forEach((sc) => {
         const e = sc.subject.kind === 'eq' ? eqRaw(key, sc.subject.id) : null;
         const cg = e && SET_JOB.test(sc.name) ? cgOfEq(key, e.id) : null;
         if (cg) {
@@ -1259,7 +1264,7 @@ window.V7 = (function () {
       withPlant(key, () => {
         if (eqId === 'plant') {
           const prof = C.plantProfile(); row = { eqId: 'plant', tag: d.plant.name, name: d.plant.name, typeName: `${d.plant.type} plant`, plantLevel: true, proposals: [] };
-          (prof.rounds || []).filter((r) => C.cadenceOf(r)).forEach((r) => { const pid = `plant|task|${r.name}`; const sc = d.schedules.find((x) => x.subject.kind === 'plant' && x.name === r.name); row.proposals.push({ pid, kind: 'task', name: r.name, eqId: 'plant', tag: d.plant.name, typeName: row.typeName, every: C.cadenceOf(r), workType: r.workType, detail: `${cap(everyText(C.cadenceOf(r)))} · ${C.WT_LABEL[r.workType] || r.workType}`, decided: sc ? itemDecided(key, { type: 'schedule', obj: sc }) : null, reason: (P.decisions[pid] || {}).reason || null }); });
+          (prof.rounds || []).filter((r) => C.cadenceOf(r) && !subDaily(r)).forEach((r) => { const pid = `plant|task|${r.name}`; const sc = d.schedules.find((x) => x.subject.kind === 'plant' && x.name === r.name); row.proposals.push({ pid, kind: 'task', name: r.name, eqId: 'plant', tag: d.plant.name, typeName: row.typeName, every: C.cadenceOf(r), workType: r.workType, detail: `${cap(everyText(C.cadenceOf(r)))} · ${C.WT_LABEL[r.workType] || r.workType}`, decided: sc ? itemDecided(key, { type: 'schedule', obj: sc }) : null, reason: (P.decisions[pid] || {}).reason || null }); });
           return;
         }
         const e = d.equipment.find((x) => x.id === eqId); if (!e) return;
@@ -1287,6 +1292,7 @@ window.V7 = (function () {
             else { const ts = inh && inh.schedules.find((y) => y.name === x.name); const rd = ts ? C.readingOf(ts.sensorKind) || {} : {}; const dw = ts && ts.doWhen != null && Number.isFinite(+ts.doWhen) ? fmtVal(+ts.doWhen, rd.unit || '', rd.kind) : ts ? ts.doWhen : null; p.detail = ts ? `When ${ts.sensorKind} passes ${dw}` : 'When a reading passes a line'; }
             if (!x.ok) p.blockedBy = `Needs a ${(x.why.match(/needs an? (.+?) reading/) || [])[1] || 'reading'} reading the Visualization doesn't send`;
             else p.decided = itemDecided(key, findItem(key, e.id, kind, x.name));
+            if (kind === 'task' && p.basis === 'calendar' && everyH(p.every) != null && everyH(p.every) < 24) return;   /* v7/4: nothing more often than daily */
             row.proposals.push(p);
           });
           /* v7: a next-phase item set by a form answer ("Discharge pressure limits from the Maximum Head answer") is limits or a setting,
@@ -1377,7 +1383,7 @@ window.V7 = (function () {
       if (noLim.length) gaps.push({ id: 'nolimits', text: `${plural(noLim.length, 'reading')} with no limits`, link: `${base}/readings`, count: noLim.length, items: noLim.map((r) => ({ sensorId: r.id, tag: r.tag, name: r.name, eqId: r.eqId, manual: r.kind === 'manual' })) });
       const noisy = watching.filter((a) => alertState(key, a.id) === 'trial' && isNoisy(key, a.id));
       if (noisy.length) gaps.push({ id: 'noisy', text: noisy.length === 1 ? `${noisy[0].name} is noisy: ${round(trialStats(key, noisy[0].id).perDay, 1)} trial firings a day` : `${noisy.length} alerts are noisy (more than 10 trial firings a day)`, link: noisy.length === 1 ? `${base}/alert/${noisy[0].id}` : `${base}/equipment`, count: noisy.length, items: noisy.map((a) => ({ alertId: a.id, name: a.name, perDay: round(trialStats(key, a.id).perDay, 1) })) });
-      const hasTask = (e) => d.schedules.some((sc) => sc.subject.kind === 'eq' && sc.subject.id === e.id && sc.workType !== 'calibration' && sc.status === 'active') || d.conditionWork.some((w) => w.subject.id === e.id && w.status === 'active');
+      const hasTask = (e) => d.schedules.some((sc) => sc.subject.kind === 'eq' && sc.subject.id === e.id && sc.workType !== 'calibration' && sc.status === 'active' && !subDaily(sc)) || d.conditionWork.some((w) => w.subject.id === e.id && w.status === 'active');
       const noTask = d.equipment.filter((e) => (e.expects || []).length && !hasTask(e));
       if (noTask.length) gaps.push({ id: 'notask', text: `${plural(noTask.length, 'piece', 'pieces')} of equipment with no maintenance task`, link: noTask.length === 1 ? `${base}/eq/${noTask[0].id}/tasks` : `${base}/equipment`, count: noTask.length, items: noTask.map((e) => ({ eqId: e.id, tag: e.tag })) });
       const types = [...new Set(d.equipment.map((e) => e.type))];
@@ -1668,7 +1674,7 @@ window.V7 = (function () {
     return cached('libtypes', () => (window.CATALOGUE || []).map((cat) => {
       const per = ORDER.filter((k) => dOf(k)).map((k) => ({ key: k, name: plantName(k), count: dOf(k).equipment.filter((e) => e.type === cat.type).length })).filter((x) => x.count);
       const t = setOf(cat.type) || { alerts: [], schedules: [] };
-      return { code: cat.code, typeName: cat.type, library: cat.library === 'process' ? 'process' : 'equipment', added: cat.addedBy === 'taxonomy', family: familyOf(cat), archetype: cat.archetype, tier: cat.tier, version: libVersion(cat.code), draft: !!S.lib.drafts[cat.code], plants: per, plantCount: per.length, equipmentCount: per.reduce((n, x) => n + x.count, 0), readings: cat.sensors.length, alerts: t.alerts.length, tasks: t.schedules.length, issues: issueTypes(cat.type).length, generalTasks: C.tasksOf(cat.type).length, nextPhase: ((cat.nextPhase || {}).readings || []).length + ((cat.nextPhase || {}).alerts || []).length, suggestions: S.lib.suggestions.filter((x) => x.code === cat.code).length };
+      return { code: cat.code, typeName: cat.type, library: cat.library === 'process' ? 'process' : 'equipment', added: cat.addedBy === 'taxonomy', family: familyOf(cat), archetype: cat.archetype, tier: cat.tier, version: libVersion(cat.code), draft: !!S.lib.drafts[cat.code], plants: per, plantCount: per.length, equipmentCount: per.reduce((n, x) => n + x.count, 0), readings: cat.sensors.length, alerts: t.alerts.length, tasks: t.schedules.filter((x) => !subDaily(x)).length, issues: issueTypes(cat.type).length, generalTasks: C.tasksOf(cat.type).length, nextPhase: ((cat.nextPhase || {}).readings || []).length + ((cat.nextPhase || {}).alerts || []).length, suggestions: S.lib.suggestions.filter((x) => x.code === cat.code).length };
     }));
   }
   function libType(code) {
@@ -1676,7 +1682,7 @@ window.V7 = (function () {
     const readingsL = cat.sensors.map((s) => { const dirs = [...new Set(t.alerts.filter((a) => a.sensorKind === s.name).map((a) => a.direction))]; if (!dirs.length) dirs.push(s.direction || 'above'); return { name: s.name, tag: s.tag, unit: s.unit, kind: s.kind, valid: s.valid, dirs: dirs.map((dir) => libLimits(cat.type, s.name, dir, { draft: !!dr })) }; });
     return { code, typeName: cat.type, family: familyOf(cat), archetype: cat.archetype, tier: cat.tier, version: libVersion(code), draft: dr ? libDraft(code) : null, readings: readingsL,
       alerts: t.alerts.map((a) => ({ name: a.name, reading: a.sensorKind, dir: a.direction, bands: norm4(a.limits), hold: libTiming(cat.type, a.sensorKind, a.direction, 'hold'), clear: libTiming(cat.type, a.sensorKind, a.direction, 'clear'), flowId: a.flow || null, issueTypeId: a.issue || null, nextPhase: C.onConnection(a.sensorKind) })),
-      schedules: t.schedules.filter((x) => x.workType !== 'condition').map((x) => ({ name: x.name, workType: x.workType, workLabel: C.WT_LABEL[x.workType] || x.workType, every: libEveryOf(x), everyText: x.workType === 'condition' ? `when ${x.sensorKind} passes ${x.doWhen}` : C.every(x), draftEvery: dr && dr.schedules[x.name] ? dr.schedules[x.name] : null, draftEveryText: dr && dr.schedules[x.name] ? everyWith(x, dr.schedules[x.name]) : null, generalTaskId: x.task || null, flowId: x.flow || null })),
+      schedules: t.schedules.filter((x) => x.workType !== 'condition' && !subDaily(x)).map((x) => ({ name: x.name, workType: x.workType, workLabel: C.WT_LABEL[x.workType] || x.workType, every: libEveryOf(x), everyText: x.workType === 'condition' ? `when ${x.sensorKind} passes ${x.doWhen}` : C.every(x), draftEvery: dr && dr.schedules[x.name] ? dr.schedules[x.name] : null, draftEveryText: dr && dr.schedules[x.name] ? everyWith(x, dr.schedules[x.name]) : null, generalTaskId: x.task || null, flowId: x.flow || null })),
       issues: issueTypes(cat.type), generalTasks: C.tasksOf(cat.type).map((x) => ({ id: x.id, name: x.name, workType: x.workType, frequency: x.frequency, flowId: x.flow })), nextPhase: cat.nextPhase || { readings: [], alerts: [], work: [] },
       library: cat.library === 'process' ? 'process' : 'equipment', plants: (libTypes().find((x) => x.code === code) || {}).plants || [], changes: S.lib.changes.filter((c) => c.code === code), suggestions: suggestions(code), confirm: cat.confirm || null };
   }
