@@ -139,9 +139,6 @@
     if (o.href) return `<a class="${cls}" href="${esc(o.href)}"${attr('title', o.title)}>${txt(text)}</a>`;
     return `<span class="${cls}"${attr('title', o.title)}>${txt(text)}</span>`;
   }
-  /* v7/4: a word the product uses, with what it means on hover or focus, instead of a paragraph */
-  const TERMS = { 'unit process': 'One treatment step: a tank or reactor and the equipment that serves it.', 'unit processes': 'One treatment step each: a tank or reactor and the equipment that serves it.', 'control group': 'A duty/standby set that runs as one.', 'control groups': 'Duty/standby sets that each run as one.', deviation: 'A value this plant changed away from the library.', deviations: 'Values a plant changed away from the library.', criticality: 'How much the plant depends on this equipment.', 'On trial': 'The alert runs and its firings are counted, but nobody is told.' };
-  function term(word, shown) { const t = TERMS[word] || TERMS[String(word).toLowerCase()]; return t ? `<abbr class="term" tabindex="0" title="${esc(t)}">${esc(shown || word)}</abbr>` : esc(shown || word); }
   function sampleTag(text) { return chip(text || 'Sample readings', { tone: 'sample', title: 'Readings here are generated samples, not from the Visualization' }); }
 
   const SRC = {
@@ -660,10 +657,6 @@
   on('ui:close', (el) => { const w = el.getAttribute('data-what'); if (w === 'sheet') closeSheet(); else if (w === 'modal') closeModal(); else if (MODAL) closeModal(); else closeSheet(); return false; });
   on('ui:confirm', (el) => { const fn = CONFIRMS[el.getAttribute('data-id')]; delete CONFIRMS[el.getAttribute('data-id')]; closeModal(true); if (fn) return fn(); return undefined; });
   on('ui:story', () => { setStory(!storyOpen()); return false; });
-  /* v7/4: the notes for reviewers (decisions on a screen, the story, version links) are off the working screens unless Review is on */
-  function reviewOn() { try { return W.localStorage.getItem('ctl74.review') === '1'; } catch (e) { return false; } }
-  function setReview(on) { if (!hasDom()) return; document.body.classList.toggle('rv-on', !!on); const b = q('.tb-review'); if (b) b.setAttribute('aria-pressed', String(!!on)); try { W.localStorage.setItem('ctl74.review', on ? '1' : '0'); } catch (e) { /* ignore */ } if (!on) setStory(false, true); }
-  on('ui:review', () => { setReview(!document.body.classList.contains('rv-on')); return false; });
   on('ui:clock', (el) => { const box = el.closest('.tb-clock'); if (box) { const open = !box.classList.contains('open'); box.classList.toggle('open', open); el.setAttribute('aria-expanded', String(open)); } return false; });
   on('ui:advance', (el) => { closeMenus(); advance(+el.getAttribute('data-min') || 60); });
   on('ui:reset', () => {
@@ -769,7 +762,6 @@
   function renderPath(full) {
     const m = match(full);
     if (!m) return plantsPage({ _q: {}, _path: 'plants' });
-    try { const v0 = V(); if (v0 && v0.autoSetup) arr(v0.plants()).forEach((p) => { if (p.state === 'commissioning') v0.autoSetup(p.key); }); } catch (e) { /* the page still renders */ }
     try { const out = m.route.fn(m.params); return out == null ? '' : String(out); } catch (e) { return errorPage(e, splitPath(full).path); }
   }
   function hashNow() { return W.location ? String(W.location.hash || '') : ''; }
@@ -818,7 +810,7 @@
   function topbarHtml(path) {
     return `<header class="tb"><a class="tb-brand" href="#/plants">CloseTheLoop<span> · Configuration</span></a>${versionBadge()}${samePlaceHtml(path)}`
       + `<nav class="tb-nav" id="tbNav" aria-label="Main">${navHtml(path)}</nav>`
-      + `<div class="tb-right"><button type="button" class="tb-btn tb-review" data-act="ui:review" aria-pressed="false" title="Show or hide the notes for reviewers: decisions on each screen, the story, and the version links">Review</button>`
+      + `<div class="tb-right">`
       + `<button type="button" class="tb-btn tb-story" data-act="ui:story" aria-pressed="false" aria-controls="story">Story</button>`
       + `<button type="button" class="tb-btn tb-reset" data-act="ui:reset">Reset the story</button></div></header>`;
   }
@@ -1157,7 +1149,6 @@
     const wide = (W.innerWidth || 1280) >= 900;                     // on a phone the drawer starts closed
     try { const s = W.localStorage.getItem('ctl74.story'); if (wide && (s === '1' || s === '0')) open = s === '1'; } catch (e) { /* ignore */ }
     if (open == null) open = (W.innerWidth || 1280) >= 1100;
-    const rv = reviewOn(); document.body.classList.toggle('rv-on', rv); const rb = q('.tb-review'); if (rb) rb.setAttribute('aria-pressed', String(rv)); if (!rv) open = false;
     document.body.classList.toggle('story-open', open);
     const sb = q('.tb-story'); if (sb) sb.setAttribute('aria-pressed', String(open));
     document.addEventListener('click', onClick);
@@ -1177,7 +1168,7 @@
     esc, txt, plain, h, page, chip, sourceChip, stateChip, sampleTag, sev, bandName, BANDS, bandOf, bandBar, tbHtml, tbSync, tbBind, tbRange, tbClampLine, table, card, section, kv, list, empty,
     note, banner, stats, filters, progress, field, radios, btn, link, phone, num, numEnd, rate, dur, formAnswers, plural, fmt, fmtDay, plantName, isNum,
     // dom
-    term, openSheet, refreshSheet, closeSheet, sheetEl, modal, closeModal, confirm, toast, copy, addCss,
+    openSheet, refreshSheet, closeSheet, sheetEl, modal, closeModal, confirm, toast, copy, addCss,
     // events + router + shell
     on, route, go, render, current, match, routes, renderPath, afterRender, start, advance,
     chapters, chapterOf, chromeHtml, storyHtml,

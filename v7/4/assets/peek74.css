@@ -150,18 +150,3 @@ button.chip:hover { border-color: var(--ink-3); }
 .su-also { margin: 18px 0 0; font-size: 13px; color: var(--ink-3); }
 a.tl-h-t { color: inherit; text-decoration: none; }
 a.tl-h-t:hover { text-decoration: underline; }
-/* notes for reviewers stay off the working screens unless Review is on */
-body:not(.rv-on) .dec-mark, body:not(.rv-on) .tb-ver, body:not(.rv-on) .tb-story, body:not(.rv-on) .tb-reset, body:not(.rv-on) #story, body:not(.rv-on) #tbNav a[href="#/decisions"] { display: none !important; }
-.tb-review[aria-pressed="true"] { background: var(--accent-tint); color: var(--accent-strong); border-color: transparent; }
-/* a word with its meaning on hover or focus */
-abbr.term { text-decoration: underline dotted; text-underline-offset: 3px; cursor: help; }
-/* one measure of progress: done or not, and how much is left on the step you are on */
-.tl-p { font-family: inherit; font-size: 12px; color: var(--ink-3); min-height: 16px; }
-.tl-step.is-next .tl-p { color: var(--accent-strong, var(--ink)); font-weight: 600; }
-.tl-step:not(.is-done):not(.is-next) .tl-ring { opacity: .7; }
-.su-row.is-next .su-p { color: var(--accent-strong, var(--ink)); font-weight: 600; }
-/* the work level, one line a choice */
-.lvl-card .lvl-o { gap: 2px; }
-.lvl-n { font-weight: 400; color: var(--ink-2); margin-top: 0; }
-.lvl-keep { margin: 14px 0 0; font-size: 13.5px; }
-.lvl-out .lvl-safe { margin-top: 8px; }

@@ -1240,17 +1240,6 @@ window.V7 = (function () {
     touch(); if (!(opts && opts.noSave)) persist(); return { ok: true };
   }
   function acceptAllScada(key) { const gs = scadaReview(key).groups.filter((g) => !g.accepted); gs.forEach((g) => acceptScadaGroup(key, g.typeName, { quiet: true, noSave: true })); if (gs.length) addActivity(now(), key, `Accepted what the Visualization found: ${plural(gs.length, 'equipment type')}`, 'scada'); touch(); persist(); return { ok: true, count: gs.length }; }
-  /* v7/4: review the exceptions, not everything. The first time a plant being set up is opened, what was read cleanly is taken as it
-     is: every equipment type the database knows, every alert and task the library proposes that can be used, and the proposed
-     structure. Nothing is sent before go live, so this is safe; a person then only turns off what does not fit. */
-  function autoSetup(key) {
-    const P = PS(key); if (!P || !dOf(key) || P.state !== 'commissioning' || P.auto) return { ok: true, already: true };
-    P.auto = now(); const a = acceptAllScada(key); if (a.count && S.activity.length) S.activity[S.activity.length - 1].who = 'Automatic';
-    const b = acceptAllFor(key, {}, { quiet: true }); const st = structOf(key);
-    if (st.ups.length && !P.structureOk) P.structureOk = now();
-    addActivity(now(), key, `Set up by default from what was read: ${plural(b.alerts || 0, 'alert')} On trial and ${plural(b.tasks || 0, 'task')} accepted${st.ups.length ? `, the structure taken as proposed (${plural(st.ups.length, 'unit process', 'unit processes')})` : ''}. Only what needs a person is left to look at`, 'config', null);
-    touch(); persist(); return { ok: true, types: a.count, alerts: b.alerts || 0, tasks: b.tasks || 0 };
-  }
   function findItem(key, eqId, kind, name) {
     const d = dOf(key);
     if (eqId === 'plant') { const sc = d.schedules.find((x) => x.subject.kind === 'plant' && x.name === name); return sc ? { type: 'schedule', obj: sc } : null; }
@@ -1429,7 +1418,7 @@ window.V7 = (function () {
     /* v7: alerts On trial for under a day (e.g. a proposal accepted moments before) turn On without a trial: name them */
     const untried = d.alerts.filter((x) => alertState(key, x.id) === 'trial').map((x) => { const st = PS(key).alerts[x.id]; return { alertId: x.id, name: x.name, minutes: st && st.trialSince != null ? Math.max(0, Math.round((now() - st.trialSince) / MIN)) : 0 }; }).filter((x) => x.minutes < 24 * 60);
     const untriedText = !untried.length ? null : untried.length === 1 ? `${untried[0].name} has been On trial for ${fmtDur(untried[0].minutes)}; it turns On without a trial` : `${plural(untried.length, 'alert')} have been On trial for under a day (${untried.length <= 3 ? untried.map((x) => `${x.name}: ${fmtDur(x.minutes)}`).join(', ') : `the longest for ${fmtDur(Math.max(...untried.map((x) => x.minutes)))}`}); they turn On without a trial`;
-    const changes = [`Alerts reach people: ${plural(trial, 'alert')} go from On trial to On`, 'Calls and the hooter start now', `Tasks start: ${a} a day${b !== a ? ` (${b} ${ea.phrase})` : ''}`, 'First due dates are spread across each task\'s interval; run-hours work falls due by its hour meter', 'Counts and metrics start today', 'Changes to structure need a reason from now on'];
+    const changes = [`Alerts reach people: ${plural(trial, 'alert')} go from On trial to On`, 'Calls and the hooter start now', `Tasks start: ${a} a day${b !== a ? ` (${b} ${ea.phrase} — to confirm)` : ''}`, 'First due dates are spread across each task\'s interval; run-hours work falls due by its hour meter', 'Counts and metrics start today', 'Changes to structure need a reason from now on'];
     const wl = workLevel(key); if (wl && wl.leftOut.length) changes.splice(3, 0, `Work level ${wl.label}: ${plural(wl.leftOut.length, 'routine task')} left out. Alerts, preventive maintenance, calibration and statutory work are not affected`);
     if (untriedText) changes.splice(1, 0, untriedText);
     return { alertsOn: trial, tasksPerDay: a, tasksPerDayIfEach: b, eachNoun: ea.noun, eachPhrase: ea.phrase, untried, untriedText, firstDueSpread: true, changes, checklist: checklist(key) };
@@ -2024,7 +2013,7 @@ window.V7 = (function () {
     alertState, setAlertState,
     limitsOf, dirs: dirsOf, libLimits, sourceOf, setLimits, setAlertTiming, setCadence, setTier,
     overrides, revert, revertAll, revertPreview, keep, suggest, suggestions,
-    scadaReview, acceptScadaGroup, acceptAllScada, autoSetup, libraryReview, decide, acceptAllFor, acceptAllPreview,
+    scadaReview, acceptScadaGroup, acceptAllScada, libraryReview, decide, acceptAllFor, acceptAllPreview,
     checklist, noLimitsYet, eachOf, goLivePreview, goLive, returnToCommissioning,
     issues, issue, tasks, task, report, answer, chooseCause, diagStep, startFix, fixStep, verify, close, startTask, doTaskStep, doneTask, setLastDone,
     flowOf, diagFor, causeOf, fixFlowFor, linkedTask, taskForGeneral, issueTypes, issueTerms, reportSensorFault, causesFor,

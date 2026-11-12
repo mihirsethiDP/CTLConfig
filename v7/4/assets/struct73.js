@@ -59,7 +59,7 @@
   function structurePage(params) {
     const key = params.plant; const P = W.V7PLANT; const st = S(key); const ok = confirmed(key); const left = unplaced(key);
     const stages = arr(W.V7_STAGES).map((sg) => ({ sg, ups: st.ups.filter((u) => (u.stage || null) === sg.key) })).filter((x) => x.ups.length);
-    const lead = `<p class="lead">How the equipment is grouped into ${UI.term ? UI.term('unit processes') : 'unit processes'} and ${UI.term ? UI.term('control groups') : 'control groups'}, as read from the Visualization.</p>`;
+    const lead = `<p class="lead">A <b>unit process</b> is one treatment step: a basin or reactor and the equipment that serves it. A <b>control group</b> is a duty/standby set that runs as one. Both come from the Visualization.</p>`;
     const ban = !st.ups.length ? '' : ok ? note(`Structure confirmed${left.length ? `, with ${plural(left.length, 'piece')} of equipment still to place` : ''}.`, 'ok')
       : `<div class="banner tone-warn"><div class="banner-t">Proposed from the Visualization: <b>${plural(st.ups.length, 'unit process', 'unit processes')}</b>, <b>${plural(st.cgs.length, 'control group')}</b>${left.length ? `, and ${plural(left.length, 'piece')} of equipment no rule placed` : ''}. Confirm it to carry on; you can still place equipment afterwards.</div><div class="banner-a">${btn('Confirm the structure', { act: 'st:confirm', data: { plant: key }, kind: 'primary' })}</div></div>`;
     const seen = {}; const tot = {}; st.ups.forEach((u) => { tot[u.typeName] = (tot[u.typeName] || 0) + 1; });

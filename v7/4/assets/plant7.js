@@ -90,9 +90,9 @@
   }
   function stateLine(p) {
     const cap = p.capacity ? `${p.capacity} · ` : '';
-    if (p.state === 'live') return `${cap}Live since ${fmtDay(p.since)}. Alerts reach the plant's people.`;
+    if (p.state === 'live') return `${cap}Live since ${fmtDay(p.since)}. Alerts reach the plant's people; an Emergency calls everyone and sounds the hooter.`;
     const ts = trialStart(p.key); const day = ts != null ? Math.floor((now() - ts) / DAY) + 1 : null;
-    return `${cap}Being set up since ${fmt(p.since)}${day ? `, day ${day} of the trial` : ''}. Nothing is sent to anyone until go live.`;
+    return `${cap}Commissioning since ${fmt(p.since)}${day ? ` · day ${day} of the trial` : ''}. Nothing is sent to anyone yet, Emergencies included; every firing is kept as a trial firing.`;
   }
   function notFound(key) {
     return U.page({ crumbs: [{ label: 'All Plants', href: '#/plants' }, { label: 'Not found' }], title: 'No such plant', sub: key ? `There is no plant "${key}" in the prototype.` : '', body: empty('This plant is not in the prototype.', btn('All Plants', { href: '#/plants', kind: 'primary' })) });
@@ -102,68 +102,70 @@
      carries the next thing to do, so none is a dead end. A live plant keeps its tabs. */
   function setupSteps(key, active) {
     const v = V(); const b = base(key); const cl = call(() => v.checklist(key), null); if (!cl || cl.state === 'live') return null;
-    const tr = cl.tracks || {};
-    const sr = call(() => v.scadaReview(key), { groups: [], notInDb: [] }); const typesLeft = arr(sr.groups).filter((g) => !g.accepted).length; const bad = arr(sr.notInDb).length;
+    const tr = cl.tracks || {}; const frac = (t) => (t && t.total ? Math.round(100 * t.done / t.total) : 100);
+    const sr = call(() => v.scadaReview(key), { groups: [], notInDb: [] }); const left = arr(sr.groups).filter((g) => !g.accepted).length;
     const ST = W.V7STRUCT73; const st = call(() => v.structure(key), { ups: [] }); const hasSt = arr(st.ups).length > 0; const stOk = !hasSt || !ST || call(() => ST.confirmed(key), true);
-    const loose = ST && ST.unplaced ? arr(call(() => ST.unplaced(key), [])).length : 0;
     const has = (id) => arr(cl.blockers).some((x) => x.id === id); const lib = arr(cl.blockers).find((x) => x.id === 'library');
-    const lb = tr.library || { done: 0, total: 0, items: [] }; const pe = tr.people || { done: 0, total: 2 };
-    let blocked = 0; arr(lb.items).forEach((r) => arr(r.proposals).forEach((p) => { if (p.blockedBy) blocked++; }));
-    const checkDone = !has('scada') && !has('notindb') && stOk; const checkLeft = bad + typesLeft + (stOk ? 0 : 1);
-    const libDone = !has('library') && !has('alerts'); const libLeft = lib ? (lib.count || 1) : libDone ? 0 : 1;
     const noPeople = has('operator') || has('lead');
+    const rds = arr(call(() => v.readings(key), [])); const noLim = (arr(cl.gaps).find((g) => g.id === 'nolimits') || {}).count || 0;
+    const sc = tr.scada || { done: 0, total: 0 }; const lb = tr.library || { done: 0, total: 0 }; const pe = tr.people || { done: 0, total: 2 };
+    const limOpen = !!rds.length && (noLim > 0 || (!has('library') && !has('alerts')));
     const steps = [
-      { id: 'check', tabs: ['equipment', 'structure'], label: 'Check what was read', href: bad || typesLeft ? b + '/scada' : !stOk || loose ? b + '/structure' : b + '/equipment', done: checkDone, left: checkLeft,
-        count: checkDone ? (loose ? `Read cleanly. ${pl(loose, 'piece')} of equipment not placed in a unit process, which does not block` : 'Everything was read cleanly') : `${checkLeft} to look at`,
-        tip: 'The equipment read from the Visualization and how it is grouped. What was read cleanly is accepted already; only what needs a person is listed.',
-        what: bad ? `${pl(bad, 'piece')} of equipment ${bad === 1 ? 'has' : 'have'} a type the database does not have. Fix it in the Visualization, then read again.` : typesLeft ? `${pl(typesLeft, 'equipment type')} not accepted yet.` : 'Confirm the structure read from the Visualization.',
-        cta: bad ? btn('See what is wrong', { href: b + '/scada', kind: 'primary', small: true }) : typesLeft ? btn(typesLeft > 1 ? `Accept all ${typesLeft} types` : 'Accept it', { act: 'p7:scada-accept-all', data: { plant: key }, kind: 'primary', small: true }) : active === 'structure' ? btn('Confirm the structure', { act: 'st:confirm', data: { plant: key }, kind: 'primary', small: true }) : btn('Review the structure', { href: b + '/structure', kind: 'primary', small: true }) },
-      { id: 'library', tabs: ['library'], label: 'Alerts & Tasks', href: b + '/library', done: libDone, left: libLeft,
-        count: libDone ? `${lb.done} on${blocked ? ` · ${blocked} can't be used yet: a reading is missing` : ''}` : `${libLeft} to decide`,
-        tip: 'The alerts and tasks each type of equipment comes with. They are on already. Turn off what does not fit this plant, and choose how much routine work the site takes on.',
-        what: lib ? `${lib.count || 'Some'} alerts and tasks are waiting for a decision.` : 'Accept at least one alert, so that it goes On trial.', cta: active === 'library' ? btn('Accept all of them', { act: 'p7:lib-accept-all', data: { plant: key }, kind: 'primary', small: true, title: 'You see what it does before anything is accepted' }) : btn('Decide them', { href: b + '/library', kind: 'primary', small: true }) },
-      { id: 'people', tabs: [], label: 'People', href: b, done: !noPeople, left: Math.max(0, 2 - (pe.done || 0)), count: `${pe.done} of 2: an Operator and a Lead`,
-        tip: 'Who is told when an alert fires. Go live needs one Operator and one Lead, each with a verified phone.',
-        what: 'Go live needs an Operator and a Lead with a verified phone. They come from the User Center, which this prototype does not have.', cta: btn('Add sample people', { act: 'p7:people-sample', data: { plant: key }, kind: 'primary', small: true, title: 'Stands in for the User Center: one Operator and one Lead with verified phones' }) },
-    ];
-    const doneN = steps.filter((x) => x.done).length; const ready = doneN === steps.length;
-    steps.push({ id: 'golive', tabs: [], label: 'Go live', act: 'p7:golive', done: false, locked: !ready, left: 0, count: ready ? 'Ready when you are' : `${steps.length - doneN} of ${steps.length} steps before it still open`,
-      tip: 'Turns sending on. Until then nothing reaches anyone. You see exactly what changes before you confirm.',
-      what: 'Everything before it is done. You see exactly what changes before anything does.', cta: btn('Go live', { act: 'p7:golive', data: { plant: key }, kind: 'primary', small: true }) });
-    const next = steps.find((x) => !x.done) || steps[steps.length - 1];
-    return { steps, next, doneN, total: steps.length, overall: Math.round(100 * doneN / steps.length), gaps: arr(cl.gaps) };
+      { id: 'scada', tab: 'equipment', label: 'Equipment', href: b + '/equipment', done: !has('scada') && !has('notindb'), pct: has('notindb') ? Math.min(frac(sc), 90) : frac(sc), count: `${sc.done} of ${pl(sc.total, 'type')} accepted`,
+        tip: 'The equipment found in the Visualization, grouped by type, with the readings on it. Accepting a type adds its equipment to the plant. Everything after this builds on it.',
+        what: has('notindb') ? 'Some equipment has a type the database does not have. Fix it in the Visualization, then read again.' : `Accept what the Visualization found: ${pl(left, 'equipment type')} to go.`,
+        cta: has('notindb') ? btn('See what is wrong', { href: b + '/scada', kind: 'primary', small: true }) : btn(left > 1 ? `Accept all ${left} types` : 'Accept it', { act: 'p7:scada-accept-all', data: { plant: key }, kind: 'primary', small: true }) + btn('Review first', { href: b + '/scada', kind: 'ghost', small: true }) },
+      hasSt ? { id: 'structure', tab: 'structure', label: 'Structure', href: b + '/structure', done: stOk, pct: stOk ? 100 : 0, count: stOk ? 'Confirmed' : 'Proposed, not confirmed yet',
+        tip: 'How the equipment is grouped into unit processes and control groups. It is proposed from the Visualization. You look it over, move what is in the wrong place, and confirm it once.',
+        what: `Confirm the structure proposed from the Visualization: ${pl(arr(st.ups).length, 'unit process', 'unit processes')}.`, cta: active === 'structure' ? btn('Confirm the structure', { act: 'st:confirm', data: { plant: key }, kind: 'primary', small: true }) : btn('Review the structure', { href: b + '/structure', kind: 'primary', small: true }) } : null,
+      { id: 'library', tab: 'library', label: 'Alerts & Tasks', href: b + '/library', done: !has('library') && !has('alerts'), pct: has('alerts') && !has('library') ? Math.min(frac(lb), 90) : frac(lb), count: `${lb.done} of ${lb.total} decided`,
+        tip: 'The readings, alerts and tasks that each type of equipment normally comes with. They are proposed for this plant; you accept the ones that fit and leave out the rest. An accepted alert goes On trial.',
+        what: lib ? `Decide the alerts and tasks proposed for this plant: ${lib.count || 'some'} to accept or leave out.` : 'Accept at least one alert, so that it goes On trial.', cta: active === 'library' ? btn('Accept all of them', { act: 'p7:lib-accept-all', data: { plant: key }, kind: 'primary', small: true, title: 'You see what it does before anything is accepted' }) : btn('Decide them', { href: b + '/library', kind: 'primary', small: true }) },
+      { id: 'readings', tab: 'readings', label: 'Limits', href: b + '/readings', optional: true, done: limOpen && !noLim, pct: limOpen ? Math.round(100 * (rds.length - noLim) / rds.length) : 0, count: !limOpen ? 'Starts once the alerts and tasks are decided' : noLim ? `${noLim} of ${pl(rds.length, 'reading')} with no limits yet` : 'Every reading that needs limits has them',
+        tip: 'The limits on each reading: where normal ends and where an alert should fire. This step can be left for later. A reading with no limits does not block go live, but it cannot raise an alert.',
+        what: `${pl(noLim, 'reading')} with no limits yet. This does not block go live.`, cta: btn('Set limits', { href: b + '/readings', kind: 'primary', small: true }) },
+      { id: 'people', tab: null, label: 'People', href: b, done: !noPeople, pct: frac(pe), count: `${pe.done} of 2: an Operator and a Lead`,
+        tip: 'Who is told when an alert fires. Go live needs one Operator and one Lead, each with a verified phone. People are kept in the User Center.',
+        what: 'Nobody can be told yet: go live needs an Operator and a Lead with a verified phone. They come from the User Center, which this prototype does not have.', cta: btn('Add sample people', { act: 'p7:people-sample', data: { plant: key }, kind: 'primary', small: true, title: 'Stands in for the User Center: one Operator and one Lead with verified phones' }) },
+    ].filter(Boolean);
+    const must = steps.filter((x) => !x.optional); const overall = Math.round(must.reduce((n, x) => n + x.pct, 0) / (must.length || 1)); const ready = must.every((x) => x.done);
+    steps.push({ id: 'golive', tab: null, label: 'Go live', act: 'p7:golive', done: false, locked: !ready, pct: ready ? 100 : overall, count: ready ? 'Ready when you are' : `${must.filter((x) => !x.done).length} of ${must.length} steps before it still open`,
+      tip: 'Turns sending on. Until then nothing reaches anyone, Emergencies included. It opens when the steps before it are complete, and shows exactly what changes before you confirm.',
+      what: 'Everything that blocks go live is done. You see exactly what changes before anything does.', cta: btn('Go live', { act: 'p7:golive', data: { plant: key }, kind: 'primary', small: true }) });
+    const next = steps.find((x) => !x.done && !x.optional) || steps[steps.length - 1];
+    return { steps, next, overall, gaps: arr(cl.gaps) };
   }
-  const MORE = [['home', 'Overview', ''], ['equipment', 'Equipment', '/equipment'], ['structure', 'Structure', '/structure'], ['readings', 'Limits', '/readings'], ['issues', 'Issues', '/issues'], ['tasks', 'Tasks', '/tasks'], ['differences', 'Deviations', '/differences'], ['activity', 'Activity', '/activity']];
+  const MORE = [['home', 'Overview', ''], ['issues', 'Issues', '/issues'], ['tasks', 'Tasks', '/tasks'], ['differences', 'Deviations', '/differences'], ['activity', 'Activity', '/activity']];
   function setupGuide(key, active) {
     const g = setupSteps(key, active); if (!g) return '';
-    const i = g.steps.indexOf(g.next);
+    const p = plantOf(key) || {}; const i = g.steps.indexOf(g.next);
     const li = g.steps.map((x, k) => {
-      const on = arr(x.tabs).includes(active); const isNext = x === g.next; const cls = `tl-step${x.done ? ' is-done' : ''}${isNext ? ' is-next' : ''}${on ? ' is-on' : ''}${x.locked ? ' is-locked' : ''}`;
-      const tid = `tl-tip-${esc(key)}-${x.id}`; const state = x.done ? 'Done' : isNext ? (x.left ? `${x.left} left` : 'Next') : '';
-      const inner = `<span class="tl-ring" style="--p:${x.done ? 100 : 0}" aria-hidden="true"><span class="tl-ring-in">${x.done ? '\u2713' : k + 1}</span></span><span class="tl-txt"><span class="tl-l">${esc(x.label)}</span><span class="tl-p">${esc(state)}</span></span>`;
+      const on = x.tab && x.tab === active; const cls = `tl-step${x.done ? ' is-done' : ''}${x === g.next ? ' is-next' : ''}${on ? ' is-on' : ''}${x.locked ? ' is-locked' : ''}`;
+      const tid = `tl-tip-${esc(key)}-${x.id}`;
+      const inner = `<span class="tl-ring" style="--p:${x.pct}" aria-hidden="true"><span class="tl-ring-in">${x.done ? '\u2713' : k + 1}</span></span><span class="tl-txt"><span class="tl-l">${esc(x.label)}${x.optional ? ' <span class="tl-opt">optional</span>' : ''}</span><span class="tl-p">${x.pct}%</span></span>`;
       const a = x.act && !x.locked ? `<button type="button" class="tl-a" data-act="${esc(x.act)}" data-plant="${esc(key)}" aria-describedby="${tid}">${inner}</button>` : x.href ? `<a class="tl-a" href="${esc(x.href)}" aria-describedby="${tid}"${on ? ' aria-current="step"' : ''}>${inner}</a>` : `<span class="tl-a" tabindex="0" aria-describedby="${tid}">${inner}</span>`;
-      return `<li class="${cls}">${a}<span class="tl-tip" role="tooltip" id="${tid}"><b>${esc(x.label)}</b><span>${esc(x.tip)}</span><span class="tl-tip-n">${esc(x.count)}</span></span></li>`;
+      return `<li class="${cls}">${a}<span class="tl-tip" role="tooltip" id="${tid}"><b>${esc(x.label)} \u00b7 ${x.pct}%</b><span>${esc(x.tip)}</span><span class="tl-tip-n">${esc(x.count)}</span></span></li>`;
     }).join('');
-    return `<div class="tl" data-setup="${g.overall}"><div class="tl-h"><a class="tl-h-t" href="${esc(base(key))}" title="The set-up, step by step">Setting up this plant</a><span class="tl-h-p">${g.doneN} of ${g.total} steps done</span></div><ol class="tl-steps" aria-label="Set-up steps, in order">${li}</ol>${active === 'home' ? '' : `<div class="sg-now"><div class="sg-now-t"><b>Step ${i + 1} of ${g.steps.length}: ${esc(g.next.label)}.</b> ${esc(g.next.what)}</div><div class="sg-now-a">${g.next.cta}</div></div>`}</div>`;
+    const more = MORE.map(([id, label, suf]) => { const n = id === 'issues' && p.openIssues ? p.openIssues : id === 'differences' && p.differences ? p.differences : null; return `<a class="tl-m${id === active ? ' on' : ''}" href="${esc(base(key) + suf)}">${esc(label)}${n != null ? `<span class="tab-n">${esc(n)}</span>` : ''}</a>`; }).join('');
+    return `<div class="tl" data-setup="${g.overall}"><div class="tl-h"><a class="tl-h-t" href="${esc(base(key))}" title="The set-up, step by step">Setting up this plant</a><span class="tl-h-p">${g.overall}% of the way to go live</span></div><ol class="tl-steps" aria-label="Set-up steps, in order">${li}</ol>${active === 'home' ? '' : `<div class="sg-now"><div class="sg-now-t"><b>Step ${i + 1} of ${g.steps.length}: ${esc(g.next.label)}.</b> ${esc(g.next.what)}</div><div class="sg-now-a">${g.next.cta}</div></div>`}</div>`;
   }
   /* v7/4: how much routine work the site takes on: one choice, with what it costs said beside it */
   function workLevelCard(key) {
     const w = call(() => V().workLevel(key), null); if (!w || !w.total) return '';
-    const opts = w.options.map((o) => `<button type="button" class="lvl-o${o.on ? ' is-on' : ''}" role="radio" aria-checked="${o.on ? 'true' : 'false'}" data-act="p7:worklevel" data-plant="${esc(key)}" data-level="${o.level}" title="${esc(o.what)}"><b>${esc(o.label)}</b><span class="lvl-n">about ${esc(Math.round(o.perMonth).toLocaleString('en-US'))} tasks a month${o.leftOut ? ` · ${o.leftOut} left out` : ''}</span></button>`).join('');
-    const K = W.V7KEEP || { open: () => '' };
-    const never = `<details class="lvl-out" data-keep="lvl:never:${esc(key)}"${K.open(`lvl:never:${key}`, false)}><summary>What is never left out</summary><ul class="lvl-safe"><li><b>Alerts.</b> Every alert still reaches people at once, and work that a reading raises still arrives.</li><li><b>Preventive maintenance, calibration and statutory work.</b></li><li><b>Nothing is deleted.</b> Choose Everything to bring it all back.</li></ul></details>`;
-    let extra = '';
-    if (w.level < 3) {
-      /* the switch is offered only when the level would leave something unwatched */
-      if (w.kept.length || w.unwatchedIfNotKept) {
-        const swText = w.keepUnwatched ? `Keeps ${pl(w.kept.length, 'task')} the level would leave out, because nothing else would notice a problem there.` : `<b class="lvl-warn">${pl(w.unwatchedIfNotKept, 'task')} left out ${w.unwatchedIfNotKept === 1 ? 'is' : 'are'} on equipment no alert watches.</b>`;
-        extra += `<p class="lvl-keep"><button type="button" class="lvl-sw${w.keepUnwatched ? ' is-on' : ''}" role="switch" aria-checked="${w.keepUnwatched ? 'true' : 'false'}" data-act="p7:worklevel-keep" data-plant="${esc(key)}" data-keep="${w.keepUnwatched ? '0' : '1'}"><span class="lvl-sw-k" aria-hidden="true"></span>Keep routine work where no alert watches the equipment</button><span class="lvl-sw-t">${swText}</span></p>`;
-      }
+    const num = (x) => `about ${Math.round(x.perMonth).toLocaleString('en-US')} a month${x.perDay >= 1 ? ` · ${Math.round(x.perDay)} a day` : ''}`;
+    const opts = w.options.map((o) => `<button type="button" class="lvl-o${o.on ? ' is-on' : ''}" role="radio" aria-checked="${o.on ? 'true' : 'false'}" data-act="p7:worklevel" data-plant="${esc(key)}" data-level="${o.level}"><b>${esc(o.label)}</b><span class="lvl-w">${esc(o.what)}</span><span class="lvl-n">${esc(num(o))}</span><span class="lvl-l">${o.leftOut ? `${pl(o.leftOut, 'task')} left out` : 'Nothing left out'}</span></button>`).join('');
+    const cur = w.options[w.level - 1]; let safe;
+    if (w.level >= 3) safe = '<p class="lvl-note">A lower level never touches an alert, and never leaves out preventive maintenance, calibration or statutory work. Nothing is deleted: you can come back to Everything at any time.</p>';
+    else {
+      const sw = `<button type="button" class="lvl-sw${w.keepUnwatched ? ' is-on' : ''}" role="switch" aria-checked="${w.keepUnwatched ? 'true' : 'false'}" data-act="p7:worklevel-keep" data-plant="${esc(key)}" data-keep="${w.keepUnwatched ? '0' : '1'}"><span class="lvl-sw-k" aria-hidden="true"></span>Keep routine work where no alert watches the equipment</button>`;
+      const swText = w.keepUnwatched ? (w.kept.length ? `This keeps ${pl(w.kept.length, 'task')} that the level would leave out, because nothing else would notice a problem there.` : 'Every task the level leaves out is on equipment an alert watches.') : (w.unwatchedIfNotKept ? `<b class="lvl-warn">${pl(w.unwatchedIfNotKept, 'task')} left out ${w.unwatchedIfNotKept === 1 ? 'is' : 'are'} on equipment no alert watches.</b> A problem there is seen only when someone walks past.` : 'Every task left out is on equipment an alert watches.');
       const li = (x, kept) => `<li><span>${esc(x.line)}</span><span class="muted">${esc(x.everyText || '')}</span>${kept ? chip('Kept: no alert watches it', { tone: 'ok' }) : x.watched ? chip('An alert watches it', { tone: 'muted' }) : chip('No alert watches it', { tone: 'warn' })}</li>`;
-      if (w.leftOut.length) extra += `<details class="lvl-out" data-keep="lvl:out:${esc(key)}"${K.open(`lvl:out:${key}`, false)}><summary>${pl(w.leftOut.length, 'task')} left out</summary><ul>${w.leftOut.map((x) => li(x, false)).join('')}</ul></details>`;
-      if (w.kept.length) extra += `<details class="lvl-out" data-keep="lvl:kept:${esc(key)}"${K.open(`lvl:kept:${key}`, false)}><summary>${pl(w.kept.length, 'task')} kept although the level would leave ${w.kept.length === 1 ? 'it' : 'them'} out</summary><ul>${w.kept.map((x) => li(x, true)).join('')}</ul></details>`;
+      const K = W.V7KEEP || { open: () => '' };
+      const outL = w.leftOut.length ? `<details class="lvl-out" data-keep="lvl:out:${esc(key)}"${K.open(`lvl:out:${key}`, false)}><summary>${pl(w.leftOut.length, 'task')} left out at this level</summary><ul>${w.leftOut.map((x) => li(x, false)).join('')}</ul></details>` : '';
+      const keptL = w.kept.length ? `<details class="lvl-out" data-keep="lvl:kept:${esc(key)}"${K.open(`lvl:kept:${key}`, false)}><summary>${pl(w.kept.length, 'task')} kept although the level would leave ${w.kept.length === 1 ? 'it' : 'them'} out</summary><ul>${w.kept.map((x) => li(x, true)).join('')}</ul></details>` : '';
+      safe = `<ul class="lvl-safe"><li><b>Alerts are not affected.</b> Every alert still reaches people at once, and work that a reading raises still arrives.</li><li><b>Never left out:</b> preventive maintenance, calibration and statutory work.</li><li>${sw}<span class="lvl-sw-t">${swText}</span></li><li><b>Nothing is deleted.</b> Choose Everything to bring it all back.</li></ul>${outL}${keptL}`;
     }
-    return card({ title: 'How much routine work can this site take on?', body: `<div class="lvl" role="radiogroup" aria-label="Work level">${opts}</div>${extra}${never}`, cls: 'p7-compact lvl-card' });
+    return card({ title: 'How much routine work can this site take on?', sub: `Now: ${cur.label}, ${num(cur)}. One choice for the whole plant, instead of switching tasks off one by one.`, body: `<div class="lvl" role="radiogroup" aria-label="Work level">${opts}</div>${safe}`, cls: 'p7-compact lvl-card' });
   }
   function frame(key, active, body, opts) {
     const o = opts || {};
@@ -342,19 +344,17 @@
      so there is one place for progress. What blocks go live is listed inside the Go live row; gaps sit below. */
   function setupRows(key, cl) {
     const g = setupSteps(key, 'home'); if (!g) return '';
-    const pe = (cl.tracks || {}).people || {}; const b = base(key);
+    const pe = (cl.tracks || {}).people || {};
     const rows = g.steps.map((x, k) => {
       const isNext = x === g.next; let extra = '';
-      if (x.id === 'people' && arr(pe.items).length) extra = `<ul class="p7-lines">${peopleLines(pe.items).map((l) => `<li>${l}</li>`).join('')}<li class="muted">Managed in the User Center.</li></ul>`;
+      if (x.id === 'people') extra = `<ul class="p7-lines">${peopleLines(pe.items).map((l) => `<li>${l}</li>`).join('')}<li class="muted">Managed in the User Center. This page reads them and never edits them.</li></ul>`;
       if (x.id === 'golive' && x.locked && arr(cl.blockers).length) extra = `<div class="su-bl">${checkRows(key, cl.blockers, 'bad')}</div>`;
       const act = x.id === 'golive' ? (x.locked ? btn('Go live', { kind: 'primary', small: true, disabled: true, title: cl.whyNot }) : x.cta)
-        : isNext ? x.cta : x.id === 'people' ? btn('See the User Center', { href: '#/users', kind: 'ghost', small: true })
-          : x.id === 'check' ? btn('Equipment', { href: b + '/equipment', kind: 'ghost', small: true }) + btn('Structure', { href: b + '/structure', kind: 'ghost', small: true }) : btn('Open', { href: x.href, kind: 'ghost', small: true });
-      const state = x.done ? 'Done' : isNext && x.left ? `${x.left} left` : '';
-      return `<li class="su-row${x.done ? ' is-done' : ''}${isNext ? ' is-next' : ''}${x.locked ? ' is-locked' : ''}"><span class="tl-ring" style="--p:${x.done ? 100 : 0}" aria-hidden="true"><span class="tl-ring-in">${x.done ? '\u2713' : k + 1}</span></span><div class="su-m"><h3>${esc(x.label)}${state ? ` <span class="su-p">${esc(state)}</span>` : ''}</h3><p class="su-c">${esc(x.count)}</p>${isNext ? `<p class="su-t">${esc(x.what)}</p>` : ''}${extra}</div><div class="su-a">${act}</div></li>`;
+        : isNext ? x.cta : x.id === 'people' ? btn('See the User Center', { href: '#/users', kind: 'ghost', small: true }) : btn(x.done ? 'Open' : 'Continue', { href: x.href, kind: 'ghost', small: true });
+      return `<li class="su-row${x.done ? ' is-done' : ''}${isNext ? ' is-next' : ''}${x.locked ? ' is-locked' : ''}"><span class="tl-ring" style="--p:${x.pct}" aria-hidden="true"><span class="tl-ring-in">${x.done ? '\u2713' : k + 1}</span></span><div class="su-m"><h3>${esc(x.label)}${x.optional ? ' <span class="tl-opt">optional</span>' : ''} <span class="su-p">${x.pct}%</span></h3><p class="su-c">${esc(x.count)}</p><p class="su-t">${esc(isNext ? x.what : x.tip)}</p>${extra}</div><div class="su-a">${act}</div></li>`;
     }).join('');
     const gp = arr(cl.gaps);
-    return card({ title: 'Set-up, step by step', sub: 'What was read cleanly is already on. Only what needs you is listed.', body: `<ol class="su">${rows}</ol>`, cls: 'su-card' })
+    return card({ title: 'Set-up, step by step', sub: `${g.overall}% of the way to go live. The steps are done in this order, and each one opens where it is done.`, body: `<ol class="su">${rows}</ol>`, cls: 'su-card' })
       + (gp.length ? card({ title: 'Worth fixing, but never blocks go live', body: checkRows(key, gp, 'warn'), cls: 'p7-before' }) : '');
   }
   function readiness(key) {
@@ -520,7 +520,7 @@
       const nEq = groups.reduce((n, g) => n + (g.count || 0), 0); const nRead = groups.reduce((n, g) => n + arr(g.equipment).reduce((m, e) => m + (e.readings || 0), 0), 0);
       const nNext = arr(sr.nextPhase).length;
       const parts = [];
-      const sub = `Read from the Visualization ${fmt(sr.readAt)}: ${pieces(nEq)} of ${pl(groups.length, 'database type')}, with ${pl(nRead, 'reading')}${nNext ? `, plus ${nNext} on pipes between equipment (next phase)` : ''}. To change anything here, fix it in the Visualization and read again.`;
+      const sub = `Read from the Visualization ${fmt(sr.readAt)}: ${pieces(nEq)} of ${pl(groups.length, 'database type')}, with ${pl(nRead, 'reading')}${nNext ? `, plus ${nNext} on pipes between equipment (next phase)` : ''}. The Visualization is the only source of equipment, readings and answers: when something is wrong, fix it in the Visualization, then read again.`;
       if (arr(sr.notInDb).length) {
         const items = sr.notInDb.map((e) => ({ title: `<span class="mono">${esc(e.tag)}</span> ${esc(e.name)}`, sub: `Stored as "${e.stored || e.code || 'nothing'}", which the database doesn't have`, tone: 'bad' }));
         parts.push(card({ title: `${pieces(sr.notInDb.length)} with a type the database doesn't have`, sub: 'This blocks go live. Give each one a database type in the Visualization, then read again.', body: list(items), actions: [btn('Fix it in the Visualization', { act: 'p7:scada-fix', kind: 'primary' })], tone: 'bad' }));
@@ -531,7 +531,7 @@
       }
       if (!left.length && groups.length && !live) {
         const lr = call(() => v.checklist(key), null); const lb = lr && lr.tracks && lr.tracks.library;
-        parts.push(banner(`<b>Everything the Visualization found is accepted.</b>${lb && lb.done < lb.total ? ' Next: decide what the library brings for each piece of equipment.' : ''}`, { tone: 'ok', action: lb && lb.done < lb.total ? btn('Alerts & Tasks', { href: `${b}/library`, kind: 'primary' }) : btn('Back to the set-up', { href: b }) }));
+        parts.push(banner(`<b>Everything the Visualization found is accepted.</b>${lb && lb.done < lb.total ? ' Next: decide what the library brings for each piece of equipment.' : ''}`, { tone: 'ok', action: lb && lb.done < lb.total ? btn('Alerts & Tasks', { href: `${b}/library`, kind: 'primary' }) : btn('Back to Readiness', { href: b }) }));
       }
       const few = groups.length <= 4;
       parts.push(card({
@@ -668,8 +668,8 @@
       const trial = arr(call(() => v.alerts(key, { state: 'trial' }), [])).length;
       const parts = [];
       const sub = live
-        ? `Alerts you accept now run On trial for 7 days before they reach people.`
-        : 'Everything the library proposes for this plant is on. Turn off what does not fit.';
+        ? `${p.name} is Live. For each piece of equipment the library proposes alerts and tasks; alerts you accept now run On trial for 7 days before they reach people.`
+        : 'For each piece of equipment the library proposes alerts and tasks, each limit with a chip saying where it comes from. Accepted alerts go On trial: trial firings are recorded, nothing is sent until go live.';
       parts.push(inheritCard(key, lr, c, qs));
       const undEq = lr.filter((r) => arr(r.proposals).some((x) => !x.decided && !x.blockedBy)).length;
       const summary = stats([
@@ -682,7 +682,7 @@
         title: c.undecided ? `${pl(lc.undecided, 'line')} to decide (${pl(lc.tasks, 'task')}, ${pl(lc.alerts, 'alert')})` : 'Every proposal is decided',
         sub: c.undecided ? `${undEq > 1 ? 'Accept a whole type at once, or open a piece of equipment to decide one by one.' : 'Decide it below.'} A routine check, routine work or manual test shared by a type is one line, as on the Tasks tab${c.undecided !== lc.undecided ? `: ${c.undecided} proposals in all` : ''}.` : `${trial ? `${pl(trial, 'alert')} ${trial === 1 ? 'is' : 'are'} On trial. ` : ''}You can still change any decision below.`,
         body: summary,
-        actions: [c.undecided && undEq > 1 ? btn(`Accept all ${lc.undecided}`, { act: 'p7:lib-accept-all', data: { plant: key }, kind: 'primary' }) : !c.undecided && !live ? btn('Back to the set-up', { href: b, kind: call(() => v.checklist(key).canGoLive, false) ? 'primary' : 'secondary' }) : ''],
+        actions: [c.undecided && undEq > 1 ? btn(`Accept all ${lc.undecided}`, { act: 'p7:lib-accept-all', data: { plant: key }, kind: 'primary' }) : !c.undecided && !live ? btn('Back to Readiness', { href: b, kind: call(() => v.checklist(key).canGoLive, false) ? 'primary' : 'secondary' }) : ''],
         tone: c.undecided ? null : 'ok',
       }));
       parts.push(filters([
@@ -727,7 +727,7 @@
         parts.push(empty(msg, show !== 'all' ? btn('Show all', { href: qs('all') }) : ''));
       } else parts.push(`${folds.length > 2 ? '<p class="p7-fold-hint">One line per type. Open a type to decide line by line, or click a tag to look at that equipment without leaving this page.</p>' : ''}<div class="p7-cards">${cards.join('')}</div>`);
       if (show === 'undecided' && c.blocked) parts.push(note(`${pl(c.blocked, 'more proposal')} can't be used yet: ${c.blocked === 1 ? 'it needs' : 'they need'} a reading the Visualization doesn't send, or a connection between equipment (next phase). They stay listed, greyed, under "Can't be used yet".`, 'quiet'));
-      return frame(key, 'library', `<div class="p7-sec-h"><h2>Alerts &amp; Tasks for this plant</h2><p>${esc(sub)} ${U.term ? U.term('On trial', 'What On trial means') : ''}</p></div>` + workLevelCard(key) + parts.join(''));
+      return frame(key, 'library', `<div class="p7-sec-h"><h2>Alerts &amp; Tasks for this plant</h2><p>${esc(sub)}</p></div>` + workLevelCard(key) + parts.join(''));
     });
   }
 
@@ -774,7 +774,7 @@
       }).filter(Boolean);
       const n = (f) => eqs.filter(f).length;
       const parts = [];
-      parts.push(`<p class="lead">${esc(pieces(eqs.length))} of ${pl(groups.length, 'database type')}, as read from the Visualization.</p>`);
+      parts.push(`<p class="lead">${esc(pieces(eqs.length))} of ${pl(groups.length, 'database type')}, as the Visualization sent them. Open one to see its readings, issues, tasks and details.</p>`);
       parts.push(`<div class="p7-tools">${filters([{ label: 'All', href: `${b}/equipment`, on: show === 'all', count: eqs.length }, { label: 'With open issues', href: `${b}/equipment?show=issues`, on: show === 'issues', count: n((e) => issuesBy[e.id]) }, { label: 'With deviations', href: `${b}/equipment?show=diffs`, on: show === 'diffs', count: n((e) => diffsBy[e.id]) }, { label: 'Drawn as another type', href: `${b}/equipment?show=drawn`, on: show === 'drawn', count: n((e) => e.typeDiffers || e.notInDb) }].filter((f) => f.on || f.count || f.label === 'All'))}${searchBox('equipment', key, 'Find by tag, name or type')}</div>`);
       parts.push(blocks.length ? card({ body: blocks.join('') }) : empty(query ? H(`Nothing matches "${esc(query)}".`) : 'No equipment here.', show !== 'all' ? btn('Show all', { href: `${b}/equipment` }) : ''));
       return frame(key, 'equipment', parts.join(''));
@@ -863,7 +863,7 @@
       const n = (f) => rs.filter(f).length;
       const nScada = n((r) => r.kind !== 'manual' && !r.nextPhase); const nMan = n((r) => r.kind === 'manual'); const nNext = n((r) => r.nextPhase);
       const parts = [];
-      parts.push(`<p class="lead">${pl(nScada, 'reading')} from the Visualization${nNext ? `, plus ${nNext} on pipes between equipment (next phase)` : ''}${nMan ? `${nNext ? ',' : ''} and ${nMan} manual or lab ${nMan === 1 ? 'reading' : 'readings'}` : ''}, grouped by equipment.</p>`);
+      parts.push(`<p class="lead">${pl(nScada, 'reading')} from the Visualization${nNext ? `, plus ${nNext} on pipes between equipment (next phase)` : ''}${nMan ? `${nNext ? ',' : ''} and ${nMan} manual or lab ${nMan === 1 ? 'reading' : 'readings'}` : ''}, grouped by equipment. Manual and lab readings take limits the same way and say how often they are expected.</p>`);
       parts.push(`<div class="p7-tools">${filters([{ label: 'All', href: `${b}/readings`, on: show === 'all', count: rs.length }, { label: 'No limits yet', href: `${b}/readings?show=nolimits`, on: show === 'nolimits', count: noLim.size }, { label: 'Manual and lab', href: `${b}/readings?show=manual`, on: show === 'manual', count: nMan }, { label: 'Next phase', href: `${b}/readings?show=next`, on: show === 'next', count: n((r) => r.nextPhase) }].filter((f) => f.on || f.count || f.label === 'All'))}${searchBox('readings', key, 'Find by reading, tag or equipment')}</div>`);
       parts.push(blocks.length ? card({ body: blocks.join(''), actions: [U.sampleTag()], title: 'Every reading', sub: setup ? 'One line per piece of equipment, the ones that still need limits first. Open a line for its readings. Values under "Now" are sample readings.' : 'Values under "Now" are sample readings.' }) : empty(query ? H(`Nothing matches "${esc(query)}".`) : show === 'nolimits' ? 'Every reading that takes limits has them.' : 'No readings here.', show !== 'all' ? btn('Show all', { href: `${b}/readings` }) : ''));
       return frame(key, 'readings', parts.join(''));
@@ -908,13 +908,13 @@
       }
       const a = Math.round(call(() => v.tasksPerDay(key, { each: false }), 0)); const e = Math.round(call(() => v.tasksPerDay(key, { each: true }), 0));
       const each = call(() => v.eachOf(key).phrase, 'if each piece of equipment gets its own');   /* v7: one wording on every plant */
-      const both = `${a} ${a === 1 ? 'task' : 'tasks'} a day${e !== a ? ` (${e} ${each})` : ''}`;
+      const both = `${a} ${a === 1 ? 'task' : 'tasks'} a day${e !== a ? ` (${e} ${each} — to confirm)` : ''}`;
       const show = ['all', 'shared', 'each'].includes(q.show) ? q.show : 'all';
       const due = live ? ts.filter((t) => t.status === 'due' || t.status === 'doing' || t.overdue) : [];
       const groups = ts.filter((t) => t.kind === 'group'); const singles = ts.filter((t) => t.kind !== 'group' && !t.plantLevel); const plantL = ts.filter((t) => t.kind !== 'group' && t.kind !== 'line' && t.plantLevel); const lineL = ts.filter((t) => t.kind === 'line');
       const parts = [];
       const wl = call(() => v.workLevel(key), null); if (wl && wl.level < 3) parts.push(note(H(`Work level: <b>${esc(wl.label)}</b>. ${wl.leftOut.length ? `${pl(wl.leftOut.length, 'task')} left out` : 'Nothing left out'}${wl.kept.length ? `, ${wl.kept.length} kept because no alert watches the equipment` : ''}. Alerts are not affected. <a href="${esc(b)}/library">Change the level</a>`), 'info'));
-      parts.push(`<p class="lead">${live ? `<b>${esc(both)}.</b> ` : `<b>When the plant goes live: ${esc(both)}.</b>`}</p>`);
+      parts.push(`<p class="lead">${live ? `<b>${esc(both)}.</b> ` : `<b>When the plant goes live: ${esc(both)}.</b> First due dates are spread across each task's own interval, so day one is not a pile-up. `}Routine checks, routine work and manual tests are one task per type at this plant, with a line for each piece of equipment; maintenance and calibration stay on each piece of equipment.</p>`);
       parts.push(filters([{ label: 'All', href: `${b}/tasks`, on: show === 'all', count: ts.length }, { label: 'One per type', href: `${b}/tasks?show=shared`, on: show === 'shared', count: groups.length }, { label: 'On each piece of equipment', href: `${b}/tasks?show=each`, on: show === 'each', count: singles.length + plantL.length }]));
       if (due.length && show === 'all') parts.push(card({ title: due.length === 1 ? 'One task due now' : `${due.length} tasks due now`, body: taskTable(key, due, live), tone: due.some((t) => t.overdue) ? 'bad' : 'warn' }));
       if (false) parts.push(card({ title: 'Condition-based work', sub: 'Raised when a reading on equipment crosses a range that triggers a task. Filed at a unit process or the plant, never on the equipment; that range opens no issue.', body: lineTable(key, lineL, live) }));
@@ -952,7 +952,7 @@
       <li>Alerts go back On trial: firings are recorded, nothing reaches the operators.</li>
       <li class="p7-loud">On a new plant an Emergency is kept as a trial firing too.</li>
       <li>Tasks stop until the plant goes live again.</li>
-      <li>Home shows the set-up steps again.</li>${block.length ? `
+      <li>Home shows Readiness again, with its checklist.</li>${block.length ? `
       <li class="p7-loud">Go live is then blocked until these are done: ${esc(block.join(', and '))} (<a href="${esc(base(key))}/${und ? 'library' : 'scada'}">${und ? 'Alerts &amp; Tasks' : 'What the Visualization has'}</a>).</li>` : ''}</ul>`
       + U.field({ label: 'Why it goes back', hint: 'Required. It is kept in Activity.', html: '<textarea id="p7-reason" placeholder="For example: aeration grid rebuild, two weeks"></textarea>' });
     U.modal({ title: `Return ${p.name} to Commissioning?`, body, foot: btn('Cancel', { act: 'ui:close', data: { what: 'modal' }, kind: 'ghost' }) + btn('Return to Commissioning', { act: 'p7:return-confirm', data: { plant: key }, kind: 'danger' }) });
@@ -991,7 +991,7 @@
   U.on('p7:worklevel', (el) => { const key = dget(el, 'plant'); const r = call(() => V().setWorkLevel(key, Number(dget(el, 'level'))), { ok: false }); say(r.ok ? (r.level >= 3 ? 'Every task is back.' : `Work level set. ${pl(r.leftOut, 'task')} left out${r.kept ? `, ${r.kept} kept because no alert watches the equipment` : ''}. Alerts are not affected.`) : esc(r.error || 'That did not work.')); });
   U.on('p7:worklevel-keep', (el) => { const key = dget(el, 'plant'); const w = call(() => V().workLevel(key), null); if (!w) return; const keep = dget(el, 'keep') === '1'; const r = call(() => V().setWorkLevel(key, w.level, { keepUnwatched: keep }), { ok: false }); say(r.ok ? (keep ? 'Routine work stays wherever no alert watches the equipment.' : `Routine work is now left out there too: ${pl(r.leftOut, 'task')} left out in all.`) : 'That did not work.'); });
   U.on('p7:people-sample', (el) => { const key = dget(el, 'plant'); const r = call(() => V().addSamplePeople(key), { ok: false }); say(r.ok ? 'Added a sample Operator and a sample Lead, each with a verified phone. In the product they come from the User Center.' : 'That did not work.'); });
-  U.on('p7:usercenter', () => { U.toast('People are kept in the User Center, outside this prototype. The set-up reads them from there; they are not edited here.'); return false; });
+  U.on('p7:usercenter', () => { U.toast('People are kept in the User Center, outside this prototype. Readiness reads them from there; they are not edited here.'); return false; });
   U.on('p7:scada-fix', () => { U.toast('Fix it in the Visualization, then read again: the console never edits what the Visualization sends.'); return false; });
   U.on('p7:scada-accept', (el) => {
     const key = dget(el, 'plant'); const type = dget(el, 'type');
@@ -1030,7 +1030,7 @@
     /* v7: the consequence before the click, by plant state: on a Live plant alerts reach people after 7 days On trial and tasks start
        now, so the tasks a day before and after are shown (worked out by core's dry run of the same Accept all) */
     const pv = call(() => V().acceptAllPreview(key, {}), null); const live = pv ? pv.live : V().state(key) === 'live';
-    const perDay = (x) => `${x.perDay} ${x.perDay === 1 ? 'task' : 'tasks'} a day${x.perDayEach !== x.perDay ? ` (${x.perDayEach} ${esc(pv.eachPhrase || 'if each piece of equipment gets its own')})` : ''}`;
+    const perDay = (x) => `${x.perDay} ${x.perDay === 1 ? 'task' : 'tasks'} a day${x.perDayEach !== x.perDay ? ` (${x.perDayEach} ${esc(pv.eachPhrase || 'if each piece of equipment gets its own')} — to confirm)` : ''}`;
     const alertsLine = pv && !pv.alerts ? 'No alert is among them.' : live ? `${pv ? `${pl(pv.alerts, 'alert')} run` : 'Alerts run'} On trial for 7 days, then reach people.` : `${pv ? `${pl(pv.alerts, 'alert')} run` : 'Alerts run'} On trial: trial firings are recorded, nothing is sent.`;
     const tasksLine = !pv ? (live ? 'Tasks start now.' : 'Tasks start at go live.') : !pv.newTasks ? 'No new tasks.' : live ? `<b>Tasks start now: ${perDay(pv.after)}, up from ${pv.before.perDay} a day.</b>` : `Tasks start at go live: ${perDay(pv.after)}.`;
     U.confirm({

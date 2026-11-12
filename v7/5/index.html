@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CloseTheLoop Configuration v7/5</title>
+<meta name="description" content="v7/5: v7/3, the decided build, with equipment and unit-process libraries. v7/1 with the calls made on the v7 decision cards recorded as decided.">
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/decisions7.css?v=4">
+<style>
+  :root {
+    --bg: #f7f8f6; --surface: #ffffff; --surface-2: #f3f5f3; --surface-3: #eceeec;
+    --line: #e6e9e6; --line-2: #d5dbd7;
+    --ink: #25302e; --ink-2: #4e5a57; --ink-3: #7b8784;
+    --accent: #3f7d74; --accent-strong: #2e5e57; --accent-tint: #eaf3f0;
+    --ok-ink: #2f6a40; --ok-tint: #e8f2ea;
+    --warn: #c99a3e; --warn-ink: #81611d; --warn-tint: #faf3e2;
+    --bad: #b8564f; --bad-ink: #8f3f38; --bad-tint: #f8ebe9;
+    --info: #5b7a90; --info-ink: #3e5566; --info-tint: #eaf0f4;
+    --font: "Figtree", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+    --r: 10px; --r-lg: 14px;
+    --shadow-sm: 0 1px 2px rgba(37, 48, 46, .05);
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; scroll-padding-top: 20px; }
+  body { margin: 0; font: 400 16px/1.65 var(--font); color: var(--ink); background: var(--bg); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; text-underline-offset: 2px; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+  code, .mono { font-family: var(--mono); font-size: .86em; }
+  code { background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
+  .wrap { max-width: 1160px; margin: 0 auto; padding: 0 28px; }
+
+  /* top */
+  .top { background: var(--surface); border-bottom: 1px solid var(--line); padding: 46px 0 40px; }
+  .eyebrow { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent-strong); font-weight: 700; }
+  .top h1 { font-size: 38px; line-height: 1.15; margin: 10px 0 12px; letter-spacing: -.02em; max-width: 22ch; font-weight: 700; }
+  .top .sub { font-size: 18px; color: var(--ink-2); max-width: 68ch; margin: 0; }
+  .top .ver { font-size: 15px; color: var(--ink-2); max-width: 68ch; margin: 14px 0 0; padding: 10px 14px; border-left: 3px solid var(--accent); background: var(--accent-tint); border-radius: 0 var(--r) var(--r) 0; }
+  .top .ver a { font-weight: 600; }
+  .meta { margin-top: 18px; font-size: 13px; color: var(--ink-3); display: flex; gap: 8px 20px; flex-wrap: wrap; }
+  .cta { margin-top: 24px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .cta a { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 9px; font-weight: 600; font-size: 14.5px; text-decoration: none; }
+  .cta a.p { background: #33504c; color: #fff; }
+  .cta a.p:hover { background: #283f3c; }
+  .cta a.s { border: 1px solid var(--line-2); color: var(--ink-2); background: var(--surface); }
+  .cta a.s:hover { border-color: var(--accent); color: var(--accent-strong); }
+
+  /* layout */
+  .layout { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 48px; padding-top: 36px; }
+  .toc { position: sticky; top: 20px; align-self: start; font-size: 13.5px; max-height: calc(100vh - 40px); overflow-y: auto; padding-bottom: 20px; }
+  .toc .eyebrow { font-size: 10.5px; color: var(--ink-3); padding: 0 0 8px 12px; }
+  .toc a { display: block; padding: 5px 0 5px 12px; color: var(--ink-2); border-left: 2px solid var(--line); }
+  .toc a:hover { color: var(--accent-strong); text-decoration: none; border-color: var(--accent); }
+  .toc a.sub { padding-left: 24px; font-size: 12.5px; color: var(--ink-3); }
+  article { min-width: 0; max-width: 860px; padding-bottom: 96px; }
+  article > p, article > ul, article > ol, article > .callout { max-width: 74ch; }
+  h2 { font-size: 27px; line-height: 1.25; margin: 64px 0 14px; letter-spacing: -.02em; font-weight: 700; }
+  h2:first-child { margin-top: 0; }
+  h2 .n { font: 600 14px var(--mono); color: var(--accent); margin-right: 10px; vertical-align: 3px; }
+  h3 { font-size: 18px; line-height: 1.35; margin: 34px 0 10px; letter-spacing: -.01em; font-weight: 650; }
+  p { margin: 0 0 14px; }
+  ul, ol { margin: 0 0 16px; padding-left: 22px; }
+  li { margin-bottom: 6px; }
+  .lead { font-size: 17.5px; color: var(--ink-2); }
+  .muted { color: var(--ink-3); }
+  .small { font-size: 13.5px; }
+
+  /* tables */
+  .tw { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 12px 0 22px; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; line-height: 1.5; }
+  th { text-align: left; background: var(--surface-2); padding: 9px 12px; font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); white-space: nowrap; }
+  td { padding: 10px 12px; border-top: 1px solid var(--line); vertical-align: top; }
+  td:first-child { font-weight: 600; }
+  table.ac td:first-child { font: 600 12.5px var(--mono); color: var(--accent-strong); white-space: nowrap; width: 72px; }
+  table.ac td { font-weight: 400; }
+  table.ac td:first-child { font-weight: 600; }
+  table.wide { min-width: 720px; }
+  a.dref { font: 600 12.5px var(--mono); white-space: nowrap; }
+
+  /* blocks */
+  .callout { border-left: 3px solid var(--accent); background: var(--accent-tint); padding: 12px 18px; border-radius: 0 var(--r) var(--r) 0; margin: 16px 0 22px; font-size: 15px; }
+  .callout.warn { border-color: var(--warn); background: var(--warn-tint); }
+  .nums { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 18px 0 26px; }
+  .nums div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 14px 16px; font-size: 13.5px; color: var(--ink-2); line-height: 1.4; }
+  .nums b { display: block; font-size: 28px; line-height: 1.1; letter-spacing: -.02em; color: var(--accent-strong); margin-bottom: 4px; font-weight: 700; }
+  .go { display: inline-block; max-width: 100%; font-size: 13px; font-weight: 600; line-height: 1.4; padding: 3px 10px; border-radius: 14px; border: 1px solid var(--line-2); background: var(--surface); color: var(--accent-strong); }
+  h3 .go { margin-left: 8px; vertical-align: 2px; }
+  .go:hover { border-color: var(--accent); background: var(--accent-tint); text-decoration: none; }
+
+  /* the 12 chapters */
+  ol.chs { list-style: none; padding: 0; margin: 16px 0 24px; counter-reset: ch; }
+  ol.chs > li { counter-increment: ch; display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 4px 14px; padding: 16px 0; border-top: 1px solid var(--line); margin: 0; }
+  ol.chs > li::before { content: counter(ch); grid-row: 1 / span 3; width: 30px; height: 30px; border-radius: 50%; background: var(--accent-tint); color: var(--accent-strong); font: 600 13px/30px var(--mono); text-align: center; }
+  ol.chs h4 { margin: 2px 0 2px; font-size: 16px; font-weight: 650; }
+  ol.chs p { margin: 0 0 6px; color: var(--ink-2); font-size: 15px; }
+  .ch-a { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; font-size: 13px; }
+  .ch-a .k { color: var(--ink-3); font-size: 12px; }
+
+  /* section 4: the shared document view (decisions7.css) inside this page */
+  .dec-chal { margin: 4px 0 18px; }
+  .dec-chal .small { margin-left: 6px; }
+  #dec-table, #dec-list { margin-top: 26px; }
+  .dd h3, .dd h4 { letter-spacing: -.01em; }
+  .dd .dd-gh { font-size: 20px; margin-top: 40px; }
+  .dd .dd-glance .dd-gh { margin-top: 0; }
+  .dd .dd-table th { background: var(--surface-2); text-transform: none; white-space: normal; }
+  .dd .dd-table td { border-top: 0; }
+  .dd .dd-table td:first-child { font-weight: 400; }
+  .dd li { margin-bottom: 0; }
+  .dd ul, .dd ol { margin-bottom: 0; }
+
+  /* decisions */
+  .dsum td:first-child { white-space: nowrap; }
+  .dsum td { font-weight: 400; }
+  .prose p { margin: 0 0 8px; }
+  .prose p:last-child, .prose ul:last-child { margin-bottom: 0; }
+  .prose ul { margin: 4px 0 8px; padding-left: 20px; }
+  .prose li { margin: 2px 0; }
+
+  @media (max-width: 960px) {
+    .layout { grid-template-columns: 1fr; gap: 0; }
+    .toc { display: none; }
+    .nums { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 640px) {
+    .wrap { padding: 0 16px; }
+    .top { padding: 34px 0 30px; }
+    .top h1 { font-size: 29px; }
+    .top .sub { font-size: 16.5px; }
+    h2 { font-size: 23px; margin-top: 52px; }
+    body { font-size: 15.5px; }
+  }
+  @media print {
+    .toc, .cta { display: none; }
+    .layout { grid-template-columns: 1fr; }
+    .dd-card, .dd-reading { break-inside: avoid-page; }
+    .dd-picks, .dd-go { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="top"><div class="wrap">
+  <div class="eyebrow">CloseTheLoop · Configuration · v7/5</div>
+  <h1>The decided build.</h1>
+  <p class="sub">v7/5 builds the calls made on the v7 decision cards. It starts from v7/1 and adds what the calls ask for: unit processes and control groups from the Visualization, nothing sent on a new plant, one reason prompt for a plant's own value, the threshold bar with what each range triggers, and a Flows page for diagnostic flows and the steps of every job.</p>
+  <p class="ver">This is v7/5: v7/3, the decided build, with the two libraries (equipment and unit processes) added. It is v7/4 with the set-up simplified: what was read cleanly is on by default, four steps, and one screen for what was read. <a href="../4/index.html">v7/4 stays as it was</a> · <a href="../3/index.html">v7/3 stays as it was</a> · <a href="../index.html">The v7 overview</a> · <a href="../1/index.html">v7/1, the recommended approach</a> · <a href="../2/index.html">v7/2, Alex's model</a> · <a href="../challenges.html">Challenges doc</a></p>
+  <div class="meta"><span>6 November 2026 · updated 10 November 2026</span><span>Owner: Mihir Sethi, with Claude</span><span>v7/1 and v7/2 are unchanged by it</span></div>
+  <div class="cta" id="cta">
+    <a class="p" href="prototype.html#/plants">Open the v7/5 prototype →</a>
+    <a class="s" href="prototype.html#/flows">Flows</a>
+    <a class="s" href="prototype.html#/decisions">Its Decisions page</a>
+    <a class="s" href="#decided">What is decided</a>
+    <a class="s" href="#open">What is still to build</a>
+  </div>
+</div></header>
+
+<div class="wrap"><div class="layout">
+<nav class="toc" aria-label="Contents">
+  <div class="eyebrow">Contents</div>
+  <a href="#decided">1 · What is decided</a>
+  <a href="#open">2 · What is still to build</a>
+  <a href="#new">3 · New in v7/5</a>
+  <a href="#cards">4 · Every card</a>
+  <a href="#run">5 · How to run and reset</a>
+</nav>
+
+<article>
+
+<h2 id="decided"><span class="n">1</span>What is decided, and what v7/5 builds</h2>
+<p><b id="dec-nmade">28</b> of the 29 cards have a call. Alexander made 15 on the shared decision board on Tue 3 Nov. Mihir made 13: two from the team's feedback on Thu 5 Nov and eleven on Tue 10 Nov. One card, D10, is parked. The last column says how far v7/5 builds each call.</p>
+<div id="dec-made"><p class="muted">Loading from the decisions file…</p></div>
+
+<h2 id="open"><span class="n">2</span>What is still to build</h2>
+<p>These calls are made, and v7/5 builds them only in part. Each line says what is there and what is not.</p>
+<div id="dec-open"><p class="muted">Loading from the decisions file…</p></div>
+
+<h2 id="new"><span class="n">3</span>New in v7/5</h2>
+<ul>
+  <li><b>Flows.</b> The top bar has a Flows page with the diagnostic flows, the fix flows and the task flows. Open one to read it, try it by answering as an operator would, or edit it: add, reorder and remove steps, send each answer to another question or to a root cause, and give a root cause its fix flow. The page lists what is left to finish before you save. <a href="prototype.html#/flows">Open Flows</a>.</li>
+  <li><b>Structure.</b> Each plant has a Structure tab: its unit processes by stage, the equipment that takes part in each, its control groups, and the equipment not placed yet. <a href="prototype.html#/p/digitalpaani/structure">DigitalPaani's proposed structure</a>.</li>
+  <li><b>What each range triggers.</b> On a reading's limits, the bar has four handles and each range has a Triggers slot: an issue with its diagnostic flow, or a task with its steps. Either one sits on that reading's equipment. <a href="prototype.html#/p/manesar/eq/bl1">Open BL-1 and choose Change limits</a>.</li>
+  <li><b>Two libraries.</b> The library holds equipment types and unit-process types. The 12 kinds of equipment and 53 unit processes of the node lists are read in from <code>assets/nodes73.js</code>, with their codes, sub-types and a first draft of readings, alerts and tasks. A tank or reactor at the centre of a treatment step gets the unit-process type when other equipment takes part in it, and its own equipment type when it stands alone; a pump, a blower or a valve always gets an equipment type. <a href="prototype.html#/library-structure">The rule and both lists</a> · <a href="prototype.html#/library?lib=process">the unit-process library</a>.</li>
+  <li><b>Less leaving the page.</b> Clicking a piece of equipment or a library type in any list opens it in a panel on the right: its readings and limits, what the library proposes for it (accepted or left out there), its alerts and tasks. Click another row and the panel swaps; the full page is one button away. The plant's Library tab is one line per type, opened on demand, and a line stays open while you decide inside it. While a plant is set up, its Readings tab is one line per piece of equipment, the ones that still need limits first, and readings that need nothing fold into one line. <a href="prototype.html#/p/digitalpaani/library">DigitalPaani's Library tab</a>. Code: <code>assets/peek74.js</code>.</li>
+  <li><b>Test a Visualization.</b> Two readers for any plant-graph JSON. The first finds every piece of equipment and its database equipment type, and lists type codes the database does not have. The second finds the sensors on that equipment, from the equipment collection (each record lists its sensors) or from the widgets on the drawing, and says what each one measures from its abbreviation, using the purpose tags in <code>assets/purposetags73.js</code>. Load the result and it becomes the plant being set up, so the whole flow can be walked on it. <a href="prototype.html#/ingest">Open Test a Visualization</a>.</li>
+</ul>
+
+<h2 id="cards"><span class="n">4</span>Every card</h2>
+<div id="dec-table"><p class="muted">Loading from the decisions file…</p></div>
+<div id="dec-list"><noscript><p class="callout warn">The decision cards are rendered from <code>assets/decisions7.js</code> and need JavaScript.</p></noscript></div>
+
+<h2 id="run"><span class="n">5</span>How to run and reset</h2>
+<p>Open <a href="prototype.html#/plants">prototype.html</a>. v7/5 keeps its story in its own browser storage (<code>ctl74.estate.v1</code>, <code>ctl74.overlay.v1</code>), so playing it never changes v7/1. "Reset the story" in the top bar starts it again, and puts every flow back as the library shipped it. Your own calls in v7/5 are kept under <code>ctl74.decisions</code>, and a Visualization you loaded under <code>ctl74.ingest</code>. The calls made live in <code>assets/calls73.js</code>. Checks: <code>node tests/smoke.js</code>, <code>node tests/v73.test.js</code> and <code>node tests/ingest73.test.js</code> from this folder.</p>
+
+</article>
+</div></div>
+
+<script src="assets/calls73.js?v=3"></script>
+<script src="assets/decisions7.js?v=11"></script>
+<script>
+/* Fills the decided and to-build tables from assets/calls73.js and assets/decisions7.js, then every card through V7DEC.renderDoc. */
+window.V7_PAGE = 'doc'; window.V7_VARIANT = '1';
+(function () {
+  'use strict';
+  var D = window.V7DEC, cards = window.V7_DECISIONS, made = window.V7_CALLS_MADE || {}, built = window.V7_BUILT73 || {};
+  var $ = function (id) { return document.getElementById(id); };
+  var fill = function (id, html) { var el = $(id); if (el) el.innerHTML = html; };
+  if (!D || !Array.isArray(cards) || typeof D.renderDoc !== 'function') { ['dec-made', 'dec-open', 'dec-list'].forEach(function (id) { fill(id, '<p class="callout warn">The decisions file did not load.</p>'); }); return; }
+  var esc = D.esc;
+  var rec = function (d) { return D.recommendedIndex(d); };
+  var CARD = 'prototype.html#' + '/decisions/';
+  var link = function (d) { return '<a href="' + CARD + esc(d.id) + '">' + esc(d.id) + '</a>'; };
+  var state = function (d) { return (built[d.id] || ['Built', 'As v7/1 builds it.']); };
+  var rows = cards.map(function (d) {
+    var m = made[d.id]; var b = state(d);
+    var call = !m ? '<span class="muted">Parked</span>' : m.opt === 'other' ? 'Something else' : 'Option ' + (m.opt + 1) + ': ' + esc(d.options[m.opt].label);
+    var vs = !m ? '' : m.opt === rec(d) ? 'As recommended' : m.opt === 'other' ? 'Its own call' : 'Differs: recommended was option ' + (rec(d) + 1);
+    return '<tr><td>' + link(d) + '</td><td>' + esc(d.short) + '</td><td>' + call + (m && m.note ? '<br><span class="muted">“' + esc(m.note) + '”</span>' : '') + (vs ? '<br><span class="muted">' + vs + '</span>' : '') + '</td><td>' + (m ? esc(m.by) + ', ' + esc(m.atText) : '') + '</td><td><b>' + esc(b[0]) + '</b></td></tr>';
+  });
+  fill('dec-nmade', String(cards.filter(function (d) { return made[d.id]; }).length));
+  fill('dec-made', '<div class="tw"><table><thead><tr><th>Card</th><th>Question</th><th>Decided</th><th>Who, when</th><th>In v7/5</th></tr></thead><tbody>' + rows.join('') + '</tbody></table></div>');
+  var open = cards.filter(function (d) { return state(d)[0] !== 'Built'; }).map(function (d) { var b = state(d); return '<tr><td>' + link(d) + '</td><td>' + esc(d.short) + '</td><td><b>' + esc(b[0]) + '</b></td><td>' + esc(b[1]) + '</td></tr>'; });
+  fill('dec-open', '<div class="tw"><table><thead><tr><th>Card</th><th>Question</th><th>State</th><th>What is there, and what is not</th></tr></thead><tbody>' + open.join('') + '</tbody></table></div>');
+  D.renderDoc({ glance: 'dec-table', cards: 'dec-list', mode: 'doc', level: 3 });
+}());
+</script>
+</body>
+</html>
