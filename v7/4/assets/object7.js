@@ -531,7 +531,7 @@
     const ti = e.tierSource || {};
     const was = ti.chip && ti.chip !== 'lib' && ti.libValue && ti.libValue !== e.tier ? ` <span class="o-was">library ${esc(TIER[ti.libValue] || ti.libValue)}</span>` : '';
     out += card({
-      title: 'Criticality', sub: 'How much the plant depends on it. A change here needs a note.',
+      title: 'Criticality', sub: 'How much the plant depends on it.',
       body: `<p><b>${esc(e.tierLabel || TIER[e.tier] || '')}</b> <span class="muted">${esc(tierWhy(e))}</span> ${sourceChip(ti)}${was}</p>${tierHint(key, e)}`,
       actions: [btn('Change', { act: 'obj:tier', data: { plant: key, eq: e.id }, small: true })],
     });

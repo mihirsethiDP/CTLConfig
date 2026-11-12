@@ -134,7 +134,7 @@
     /* v7/3: two libraries. Equipment: a pump, a valve or a tank on its own. Unit processes: one treatment step. */
     const lib = q.lib === 'process' ? 'process' : 'equipment'; const nProc = every.filter((t) => t.library === 'process').length;
     const types = every.filter((t) => (t.library || 'equipment') === lib);
-    const libTabs = nProc ? `<div class="lib-two">${filters([{ label: 'Equipment types', href: '#/library', on: lib === 'equipment', count: every.length - nProc }, { label: 'Unit processes', href: '#/library?lib=process', on: lib === 'process', count: nProc }])}<p class="lib-two-s">${lib === 'process' ? 'One treatment step each. A tank or reactor gets its unit-process type when other equipment takes part in it: pumps, blowers, dosing, valves. Control groups (duty/standby sets) belong to a unit process and are set at each plant, so they have no library of their own.' : 'A pump, a blower, a valve, or a tank on its own. A tank that has other equipment taking part in it gets a unit-process type instead.'} <a href="#/library-structure">How it is decided</a></p></div>` : '';
+    const libTabs = nProc ? `<div class="lib-two">${filters([{ label: 'Equipment types', href: '#/library', on: lib === 'equipment', count: every.length - nProc }, { label: 'Unit processes', href: '#/library?lib=process', on: lib === 'process', count: nProc }])}<p class="lib-two-s">${lib === 'process' ? 'One treatment step each. Control groups are set at each plant.' : 'A pump, a blower, a valve, or a tank on its own.'} <a href="#/library-structure">How it is decided</a></p></div>` : '';
     const show = SHOW_LIB.some((s) => s[0] === q.show) ? q.show : 'all';
     const needle = ST.q.trim().toLowerCase();
     const counts = {}; SHOW_LIB.forEach(([id]) => { counts[id] = types.filter((t) => libShowOk(t, id)).length; });
@@ -151,7 +151,7 @@
       libTabs,
       draftsCard(every),
       suggestionsCard(),
-      `<p class="lib-howto">Types used at a plant come first in each family. To change a type, open it and change a limit, a task's interval or an alert's timing. That makes a draft: Where it lands then shows what would change at each plant, before you publish. The Deviations column shows where plants changed a value away from a type; <a href="#/differences">see them all</a>.</p>`,
+      `<p class="lib-howto">Open a type to change it. Nothing reaches a plant until you publish. Where plants changed a value: <a href="#/differences">${UI.term ? UI.term('deviations') : 'deviations'}</a>.</p>`,
       tools,
       `<div class="lib-fams">${famHtml}</div>`,
       publishedSection(),
@@ -159,7 +159,7 @@
     ].filter(Boolean).join('');
     return page({
       title: 'Library',
-      sub: nProc ? `Two libraries: ${every.length - nProc} equipment types and ${nProc} unit-process types. Each type carries its readings and their limits, its alerts and its tasks. Plants follow the library unless they changed a value.` : `The ${types.length || 56} equipment types the database stores, under their stored names. Each carries its readings and their limits, its alerts and its tasks. Plants follow the library unless they changed a value.`,
+      sub: nProc ? `Two libraries: ${every.length - nProc} equipment types and ${nProc} unit-process types. Plants follow them unless they changed a value.` : `The ${types.length || 56} equipment types the database stores, under their stored names. Each carries its readings and their limits, its alerts and its tasks. Plants follow the library unless they changed a value.`,
       body: body, cls: 'pg-lib',
     });
   }
