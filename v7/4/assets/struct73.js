@@ -54,7 +54,7 @@
   function upCard(key, u, dup) {
     const ms = membersOf(key, u); const tasks = (() => { try { return V().tasks(key, { eqId: u.id }).length; } catch (e) { return 0; } })();
     const mem = ms.length ? `<ul class="st-mem">${ms.map((m) => `<li><a class="mono" href="${esc(eqHref(key, m.eqId))}">${esc(m.tag)}</a><span class="muted">${esc(m.role || '')}</span></li>`).join('')}</ul>` : '<p class="muted small">No other equipment takes part in it.</p>';
-    return `<article class="st-up"><header><a class="st-up-t" href="${esc(eqHref(key, u.id))}"><span class="mono">${esc(u.tag)}</span> ${esc(u.name || '')}</a><span class="st-up-k">${esc(u.typeName)}${dup ? ` · ${dup.i} of ${dup.n}` : ''}</span></header><p class="st-why">${esc(u.why || '')}</p>${mem}<footer class="muted small"><span>${plural(tasks, 'task')} filed here</span>${btn('See it in the Visualization', { act: 'st:viz', data: { tag: u.tag }, kind: 'ghost', small: true })}</footer></article>`;
+    return `<article class="st-up"><header><a class="st-up-t" href="${esc(eqHref(key, u.id))}"><span class="mono">${esc(u.tag)}</span> ${esc(u.name || '')}</a><span class="st-up-k">${esc(u.typeName)}${dup ? ` · ${dup.i} of ${dup.n}` : ''}</span></header><p class="st-why">${esc(u.why || '')}</p>${mem}<footer class="muted small"><span>${plural(tasks, 'task')} filed here</span><span class="st-up-a">${btn('See it in the Visualization', { act: 'st:viz', data: { tag: u.tag }, kind: 'ghost', small: true })}${btn('Edit', { act: 'st:up-edit', data: { plant: key, id: u.id }, small: true, title: 'Change its type, move its equipment to another unit process, add equipment, or remove it' })}</span></footer></article>`;
   }
   function structurePage(params) {
     const key = params.plant; const P = W.V7PLANT; const st = S(key); const ok = confirmed(key); const left = unplaced(key);
@@ -65,10 +65,11 @@
     const seen = {}; const tot = {}; st.ups.forEach((u) => { tot[u.typeName] = (tot[u.typeName] || 0) + 1; });
     const dupOf = (u) => (tot[u.typeName] > 1 ? { i: (seen[u.typeName] = (seen[u.typeName] || 0) + 1), n: tot[u.typeName] } : null);
     const twice = Object.keys(tot).filter((k) => tot[k] > 1);
-    const body = [lead, ban];
+    const body = [lead, ban, `<div class="st-tools"><span class="muted small">Open Edit on a unit process to change its type, move its equipment to another unit process, or remove it.</span>${btn('Add a unit process', { act: 'st:up-new', data: { plant: key } })}</div>`];
     if (twice.length) body.push(note(`${twice.length === 1 ? 'One type appears' : `${twice.length} types appear`} more than once: ${twice.map((k) => `${k} (${tot[k]})`).join(', ')}. Each is its own tank or reactor, so each stays its own unit process, numbered and named by its tag.`, 'quiet'));
     stages.forEach((x) => body.push(`<section class="st-stage"><h3 class="st-stage-h">${esc(x.sg.label)} <span class="muted">· ${x.ups.length}</span></h3><div class="st-ups">${x.ups.map((u) => upCard(key, u, dupOf(u))).join('')}</div></section>`));
-    if (st.cgs.length) body.push(card({ title: 'Control groups', sub: 'A duty/standby set runs as one, so its changeover is one task for the set, not one per piece of equipment.', body: `<ul class="st-cgs">${st.cgs.map((c) => `<li><b>${esc(c.name)}</b><span>${c.memberIds.map((id) => `<a class="mono" href="${esc(eqHref(key, id))}">${esc(tagOf(key, id))}</a>`).join(' ')}</span>${arr(c.feeds).length ? `<span class="muted small">serves ${esc(c.feeds.map((id) => tagOf(key, id)).join(', '))}</span>` : ''}</li>`).join('')}</ul>` }));
+    if (!st.cgs.length && st.ups.length) body.push(card({ title: 'Control groups', sub: 'No duty/standby sets yet.', actions: [btn('Add a control group', { act: 'st:cg-new', data: { plant: key }, small: true })] }));
+    if (st.cgs.length) body.push(card({ actions: [btn('Add a control group', { act: 'st:cg-new', data: { plant: key }, small: true })], title: 'Control groups', sub: 'A duty/standby set runs as one, so its changeover is one task for the set, not one per piece of equipment.', body: `<ul class="st-cgs">${st.cgs.map((c) => `<li><b>${esc(c.name)}</b><span>${c.memberIds.map((id) => `<a class="mono" href="${esc(eqHref(key, id))}">${esc(tagOf(key, id))}</a>`).join(' ')}</span>${arr(c.feeds).length ? `<span class="muted small">serves ${esc(c.feeds.map((id) => tagOf(key, id)).join(', '))}</span>` : ''}${btn('Edit', { act: 'st:cg-edit', data: { plant: key, id: c.id }, small: true, kind: 'ghost' })}</li>`).join('')}</ul>` }));
     if (left.length) {
       const opts = st.ups.map((u) => `<option value="${esc(u.id)}">${esc(u.tag)} · ${esc(u.typeName)}</option>`).join('');
       body.push(card({ title: `${plural(left.length, 'piece')} of equipment not placed yet`, sub: 'No rule could tell which unit process these serve. Place each one, or leave it on the plant.', tone: 'warn', body: `<ul class="st-left">${left.map((id) => { const e = eqOf(key, id) || {}; return `<li><span><a class="mono" href="${esc(eqHref(key, id))}">${esc(e.tag || id)}</a> ${esc(e.name || '')} <span class="muted">· ${esc(e.typeName || '')}</span></span><select data-act="st:place" data-plant="${esc(key)}" data-eq="${esc(id)}" aria-label="Place ${esc(e.tag || id)}"><option value="">Place in…</option>${opts}<option value="__plant">Leave on the plant</option></select></li>`; }).join('')}</ul>` }));
@@ -149,9 +150,59 @@
     });
   }
 
+  /* v7/4: changing the structure by hand. Every change goes through one small dialog; a live plant asks why. */
+  const isLive = (key) => { const p = PS(key); return !!(p && p.state === 'live'); };
+  const whyField = (key) => (isLive(key) ? '<label class="st-f">Why<span class="muted small">The plant is live, so a change to its structure needs a reason.</span><textarea id="stWhy" rows="2"></textarea></label>' : '');
+  const val = (id) => { const el = document.getElementById(id); return el ? el.value : ''; };
+  function typeOpts(cur) {
+    const groups = []; arr(N() && N().UP).forEach((p) => { let g = groups.find((x) => x.label === p.groupLabel); if (!g) groups.push(g = { label: p.groupLabel, ps: [] }); g.ps.push(p); });
+    return '<option value="">Choose a type…</option>' + groups.map((g) => `<optgroup label="${esc(g.label)}">${g.ps.map((p) => `<option value="${esc(p.stored)}"${p.stored === cur ? ' selected' : ''}>${esc(p.name)}</option>`).join('')}</optgroup>`).join('');
+  }
+  const eqLabel = (e) => `${e.tag} · ${e.name || ''} (${e.typeName || ''})`;
+  function openUp(key, id) {
+    const st = S(key); const u = st.ups.find((x) => x.id === id); if (!u) { UI.toast('That unit process is no longer there.'); return; }
+    const ms = membersOf(key, u); const others = st.ups.filter((x) => x.id !== id); const left = unplaced(key);
+    const here = new Set(ms.map((m) => m.eqId).concat([id])); const centres = new Set(st.ups.map((x) => x.id));
+    const addable = arr(V().equipment(key)).filter((e) => !here.has(e.id) && !centres.has(e.id)).sort((a, b) => (left.includes(b.id) ? 1 : 0) - (left.includes(a.id) ? 1 : 0));
+    const rows = ms.length ? `<ul class="st-ed">${ms.map((m) => `<li><span><b class="mono">${esc(m.tag)}</b> <span class="muted">${esc(m.role || '')}</span></span><select data-st-move="${esc(m.eqId)}" aria-label="Where ${esc(m.tag)} goes"><option value="">Stays here</option>${others.map((o) => `<option value="${esc(o.id)}">Move to ${esc(o.tag)} · ${esc(o.typeName)}</option>`).join('')}<option value="__out">Take out of this unit process</option></select></li>`).join('')}</ul>` : '<p class="muted small">No other equipment takes part in it yet.</p>';
+    const body = `<label class="st-f">Type<select id="stType">${typeOpts(u.typeId)}</select></label>`
+      + `<div class="st-f">Equipment that takes part in it<span class="muted small">To move a piece to another unit process, choose where it goes.</span>${rows}</div>`
+      + `<label class="st-f">Add equipment<span class="muted small">A piece can take part in more than one unit process, like a blower that serves two tanks.</span><select id="stAdd"><option value="">Choose equipment…</option>${addable.map((e) => `<option value="${esc(e.id)}">${esc(eqLabel(e))}${left.includes(e.id) ? ' · not placed yet' : ''}</option>`).join('')}</select></label>` + whyField(key);
+    UI.modal({ title: `${u.tag} ${u.name || ''}`, sub: 'Change its type, move the equipment that takes part in it, or add equipment.', body,
+      foot: btn('Remove this unit process', { act: 'st:up-remove', data: { plant: key, id }, kind: 'ghost' }) + btn('Cancel', { act: 'ui:close', data: { what: 'modal' }, kind: 'ghost' }) + btn('Save', { act: 'st:up-save', data: { plant: key, id }, kind: 'primary' }) });
+  }
+  function openNewUp(key) {
+    const st = S(key); const left = unplaced(key); const centres = new Set(st.ups.map((x) => x.id));
+    const eqs = arr(V().equipment(key)).filter((e) => !centres.has(e.id)).sort((a, b) => (left.includes(b.id) ? 1 : 0) - (left.includes(a.id) ? 1 : 0));
+    const body = `<label class="st-f">The tank or reactor at its centre<span class="muted small">A unit process is one treatment step, named after the equipment at its centre.</span><select id="stEq"><option value="">Choose equipment…</option>${eqs.map((e) => `<option value="${esc(e.id)}">${esc(eqLabel(e))}${left.includes(e.id) ? ' · not placed yet' : ''}</option>`).join('')}</select></label>`
+      + `<label class="st-f">Type<select id="stType">${typeOpts('')}</select></label>` + whyField(key);
+    UI.modal({ title: 'Add a unit process', sub: 'Once it is added, open it to say which equipment takes part in it.', body, foot: btn('Cancel', { act: 'ui:close', data: { what: 'modal' }, kind: 'ghost' }) + btn('Add it', { act: 'st:up-add', data: { plant: key }, kind: 'primary' }) });
+  }
+  function openCg(key, id) {
+    const st = S(key); const c = id ? st.cgs.find((x) => x.id === id) : null; if (id && !c) { UI.toast('That control group is no longer there.'); return; }
+    const mine = new Set(c ? c.memberIds : []); const taken = new Set(); st.cgs.forEach((x) => { if (!c || x.id !== c.id) x.memberIds.forEach((m) => taken.add(m)); });
+    const eqs = arr(V().equipment(key)).filter((e) => !taken.has(e.id)).sort((a, b) => (mine.has(b.id) ? 1 : 0) - (mine.has(a.id) ? 1 : 0) || String(a.typeName).localeCompare(String(b.typeName)));
+    const body = `<label class="st-f">Name<input type="text" id="stName" value="${esc(c ? c.name : '')}" placeholder="For example: Feed pumps"></label>`
+      + `<div class="st-f">Equipment in the set<span class="muted small">A duty/standby set that runs as one. Its changeover is one task for the set. Equipment already in another control group is not listed.</span><div class="st-checks">${eqs.map((e) => `<label><input type="checkbox" data-st-mem value="${esc(e.id)}"${mine.has(e.id) ? ' checked' : ''}> <b class="mono">${esc(e.tag)}</b> ${esc(e.name || '')} <span class="muted">· ${esc(e.typeName || '')}</span></label>`).join('')}</div></div>` + whyField(key);
+    UI.modal({ title: c ? c.name : 'Add a control group', sub: c ? 'Rename it, or change which equipment is in the set.' : 'Choose the equipment that runs as one duty/standby set.', body,
+      foot: (c ? btn('Remove this control group', { act: 'st:cg-remove', data: { plant: key, id }, kind: 'ghost' }) : '') + btn('Cancel', { act: 'ui:close', data: { what: 'modal' }, kind: 'ghost' }) + btn(c ? 'Save' : 'Add it', { act: 'st:cg-save', data: { plant: key, id: id || '' }, kind: 'primary' }) });
+  }
+  const finish = (r, okText) => { if (!r || !r.ok) { UI.toast((r && r.error) || 'That did not work.'); return false; } UI.closeModal(true); UI.toast(r.nothing ? 'Nothing changed.' : okText); UI.render(); return false; };
+  UI.on('st:up-new', (el) => { openNewUp(ga(el, 'plant')); return false; });
+  UI.on('st:up-edit', (el) => { openUp(ga(el, 'plant'), ga(el, 'id')); return false; });
+  UI.on('st:up-add', (el) => finish(V().addUnitProcess(ga(el, 'plant'), { eqId: val('stEq'), typeId: val('stType'), reason: val('stWhy') }), 'Unit process added. Open it to say which equipment takes part in it.'));
+  UI.on('st:up-save', (el) => { const moves = Array.from(document.querySelectorAll('[data-st-move]')).map((s) => ({ eqId: s.getAttribute('data-st-move'), to: s.value })); return finish(V().setUnitProcess(ga(el, 'plant'), ga(el, 'id'), { typeId: val('stType'), moves, add: [val('stAdd')], reason: val('stWhy') }), 'Saved.'); });
+  UI.on('st:up-remove', (el) => { const key = ga(el, 'plant'); const id = ga(el, 'id'); const why = val('stWhy'); const u = S(key).ups.find((x) => x.id === id); if (!u) return false; if (isLive(key) && !why.trim()) { UI.toast('Say why first: the plant is live.'); return false; }
+    UI.confirm({ title: `Remove the unit process ${u.tag}?`, body: `${u.tag} goes back to being equipment. Equipment that took part only in it is listed as not placed, so you can place it again. Nothing is deleted from the plant.`, ok: 'Remove it', kind: 'primary', onOk: () => finish(V().removeUnitProcess(key, id, { reason: why }), 'Unit process removed.') }); return false; });
+  UI.on('st:cg-new', (el) => { openCg(ga(el, 'plant'), null); return false; });
+  UI.on('st:cg-edit', (el) => { openCg(ga(el, 'plant'), ga(el, 'id')); return false; });
+  UI.on('st:cg-save', (el) => finish(V().saveControlGroup(ga(el, 'plant'), ga(el, 'id') || null, { name: val('stName'), memberIds: Array.from(document.querySelectorAll('[data-st-mem]')).filter((c) => c.checked).map((c) => c.value), reason: val('stWhy') }), 'Saved.'));
+  UI.on('st:cg-remove', (el) => { const key = ga(el, 'plant'); const id = ga(el, 'id'); const why = val('stWhy'); const c = S(key).cgs.find((x) => x.id === id); if (!c) return false; if (isLive(key) && !why.trim()) { UI.toast('Say why first: the plant is live.'); return false; }
+    UI.confirm({ title: `Remove the control group ${c.name}?`, body: 'Its equipment stays where it is. Its changeover stops being one task for the set.', ok: 'Remove it', kind: 'primary', onOk: () => finish(V().removeControlGroup(key, id, { reason: why }), 'Control group removed.') }); return false; });
+
   UI.on('st:viz', (el) => { const t = ga(el, 'tag'); UI.toast(`In the product this opens the Visualization${t ? ` at ${t}` : ''} beside this page, so the drawing is there while you check the structure. The prototype does not hold the drawing.`); return false; });
   UI.on('st:confirm', (el) => { const key = ga(el, 'plant'); const p = PS(key); if (!p) return false; p.structureOk = V().now(); try { V().log(key, `Structure confirmed: ${plural(S(key).ups.length, 'unit process', 'unit processes')} and ${plural(S(key).cgs.length, 'control group')}, as proposed from the Visualization`, 'config'); } catch (e) { /* ignore */ } UI.toast('Structure confirmed.'); return undefined; });
-  UI.on('st:place', (el) => { const key = ga(el, 'plant'); const p = PS(key); const v = el.value; if (!p || !v) return false; p.placed = p.placed || {}; p.placed[ga(el, 'eq')] = v === '__plant' ? '' : v; const u = S(key).ups.find((x) => x.id === v); try { V().log(key, `${tagOf(key, ga(el, 'eq'))} ${u ? `placed in ${u.tag}` : 'left on the plant'}`, 'config'); } catch (e) { /* ignore */ } return undefined; });
+  UI.on('st:place', (el) => { const key = ga(el, 'plant'); const v = el.value; if (!v) return false; if (isLive(key)) { UI.toast('The plant is live: open Edit on the unit process and add it there, with a reason.'); el.value = ''; return false; } const r = V().placeEquipment(key, ga(el, 'eq'), v === '__plant' ? '' : v); if (!r.ok) { UI.toast(r.error); return false; } return undefined; });
 
   UI.route('p/:plant/structure', structurePage);
   UI.route('library-structure', libStructurePage);

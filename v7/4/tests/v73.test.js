@@ -106,6 +106,21 @@ check('calls', 'every card has a build state for the hand-off page, or builds as
   V.setWorkLevel(k, 4); check('work level', 'Everything brings every task back', V.tasks(k).length === all.length && V.workLevel(k).leftOut.length === 0);
 })();
 
+/* v7/4: the structure changed by hand */
+(() => {
+  const k = 'digitalpaani'; V.reset(); const st0 = V.structure(k); const u = st0.ups.find((y) => y.members.length === 2); const to = st0.ups.find((y) => y.id !== u.id && !y.members.length); const m = u.members[0].eqId;
+  const r = V.setUnitProcess(k, u.id, { typeId: 'screening', moves: [{ eqId: m, to: to.id }] }); const st1 = V.structure(k);
+  check('structure by hand', 'a unit process takes a new type, and a piece of equipment moves to another unit process', r.ok && V.unitProcess(k, u.id).typeName === g.V7NODES.upByKey.screening.name && !V.unitProcess(k, u.id).members.some((y) => y.eqId === m) && V.unitProcess(k, to.id).members.some((y) => y.eqId === m));
+  check('structure by hand', 'the proposal itself is not touched: Reset brings it back', g.V7_STRUCTURE[k].ups.find((y) => y.id === u.id).members.length === 2 && st1 !== g.V7_STRUCTURE[k]);
+  const rm = V.removeUnitProcess(k, to.id); const st2 = V.structure(k);
+  check('structure by hand', 'removing a unit process leaves its tank as equipment, listed as not placed', rm.ok && st2.ups.length === st0.ups.length - 1 && st2.unplaced.includes(to.id) && !!V.eq(k, to.id));
+  const ad = V.addUnitProcess(k, { eqId: to.id, typeId: 'equalization' });
+  check('structure by hand', 'a unit process can be added on any equipment that is not one, with a library type', ad.ok && V.unitProcess(k, to.id).byHand === true && !V.structure(k).unplaced.includes(to.id) && !V.addUnitProcess(k, { eqId: to.id, typeId: 'equalization' }).ok);
+  const cg = V.structure(k).cgs[0];
+  check('structure by hand', 'a control group needs a name and two pieces that are in no other set; it can be renamed and removed', !V.saveControlGroup(k, null, { name: 'x', memberIds: cg.memberIds }).ok && !V.saveControlGroup(k, cg.id, { name: '', memberIds: cg.memberIds }).ok && V.saveControlGroup(k, cg.id, { name: 'Renamed', memberIds: cg.memberIds }).ok && V.structure(k).cgs[0].name === 'Renamed' && V.removeControlGroup(k, cg.id).ok && !V.structure(k).cgs.some((c) => c.id === cg.id));
+  V.reset(); check('structure by hand', 'after Reset the structure is the proposal again', V.structure(k).ups.length === st0.ups.length && V.unitProcess(k, u.id).members.length === 2);
+})();
+
 const fails = results.filter((x) => !x).length;
 console.log(`v73.test · ${results.length - fails}/${results.length} checks pass · RESULT: ${fails ? 'FAIL' : 'PASS'}`);
 process.exitCode = fails ? 1 : 0;

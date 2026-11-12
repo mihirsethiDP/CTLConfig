@@ -121,7 +121,78 @@ window.V7 = (function () {
     ],
   };
   /* v7/3 (card D1): the plant's structure — unit processes above equipment, control groups beside them — from structure73.js */
-  const structOf = (key) => (window.V7_STRUCTURE && window.V7_STRUCTURE[key]) || { state: 'none', ups: [], cgs: [], unplaced: [] };
+  /* v7/4: a plant's structure starts as the proposal read from the Visualization and can then be changed by hand. The first change
+     copies the proposal into the plant's own state (so it is kept, and Reset the story brings the proposal back); every reader goes
+     through structOf, so tasks, filing and chips follow the change. A live plant's structure changes only with a reason. */
+  const structOf = (key) => { const P = S && S.plants && S.plants[key]; return (P && P.struct) || (window.V7_STRUCTURE && window.V7_STRUCTURE[key]) || { state: 'none', ups: [], cgs: [], unplaced: [] }; };
+  const upTypeOf = (typeId) => (window.V7NODES && window.V7NODES.upByKey && window.V7NODES.upByKey[typeId]) || null;
+  function structDraft(key) {
+    const P = PS(key); if (!P || !dOf(key)) return null;
+    if (!P.struct) {
+      const st = JSON.parse(JSON.stringify(structOf(key))); st.ups = st.ups || []; st.cgs = st.cgs || []; st.unplaced = st.unplaced || []; st.left = [];
+      Object.entries(P.placed || {}).forEach(([eqId, up]) => { const u = st.ups.find((x) => x.id === up); if (u && !u.members.some((m) => m.eqId === eqId)) u.members.push({ eqId, tag: (eqRaw(key, eqId) || {}).tag || eqId, role: 'Placed by hand' }); else if (!u) st.left.push(eqId); st.unplaced = st.unplaced.filter((x) => x !== eqId); });
+      P.placed = {}; P.struct = st;
+    }
+    return P.struct;
+  }
+  const structWhy = (key, o) => (PS(key).state === 'live' && !String((o && o.reason) || '').trim() ? { ok: false, error: 'Say why: a live plant\'s structure changes only with a reason.' } : null);
+  const structDone = (key, text, o) => { const r = String((o && o.reason) || '').trim(); addActivity(now(), key, text + (r ? ` — “${r}”` : ''), 'config'); touch(); persist(); return { ok: true, text }; };
+  const inAnyUp = (st, eqId) => st.ups.some((u) => u.id === eqId || u.members.some((m) => m.eqId === eqId));
+  const settle = (st, eqId) => { st.unplaced = st.unplaced.filter((x) => x !== eqId); if (!inAnyUp(st, eqId) && !(st.left || []).includes(eqId)) st.unplaced.push(eqId); };
+  function structMove(key, st, eqId, fromId, toId) {
+    const from = st.ups.find((u) => u.id === fromId); let role = 'Placed by hand';
+    if (from) { const m = from.members.find((x) => x.eqId === eqId); if (m && m.role) role = m.role; from.members = from.members.filter((x) => x.eqId !== eqId); }
+    const to = st.ups.find((u) => u.id === toId); st.left = (st.left || []).filter((x) => x !== eqId);
+    if (to && to.id !== eqId && !to.members.some((m) => m.eqId === eqId)) to.members.push({ eqId, tag: (eqRaw(key, eqId) || {}).tag || eqId, role });
+    settle(st, eqId); return to || null;
+  }
+  const tagOfEq = (key, id) => (eqRaw(key, id) || {}).tag || id;
+  function addUnitProcess(key, o) {
+    const st = structDraft(key); if (!st) return { ok: false, error: 'No such plant.' }; const x = o || {}; const e = eqRaw(key, x.eqId); const t = upTypeOf(x.typeId);
+    if (!e) return { ok: false, error: 'Choose the tank or reactor at its centre.' }; if (!t) return { ok: false, error: 'Choose its type.' };
+    if (st.ups.some((u) => u.id === e.id)) return { ok: false, error: `${e.tag} is already a unit process.` };
+    const why = structWhy(key, x); if (why) return why;
+    st.ups.push({ id: e.id, tag: e.tag, name: e.name, typeId: x.typeId, typeName: t.name, stage: t.group || null, stageLabel: t.groupLabel || '', why: 'Added by hand', members: [], byHand: true });
+    st.left = (st.left || []).filter((id) => id !== e.id); settle(st, e.id); if (st.state === 'none') st.state = 'open';
+    return structDone(key, `Unit process added by hand: ${e.tag}, ${t.name}`, x);
+  }
+  function setUnitProcess(key, id, o) {
+    const st = structDraft(key); if (!st) return { ok: false, error: 'No such plant.' }; const x = o || {}; const u = st.ups.find((y) => y.id === id); if (!u) return { ok: false, error: 'No such unit process.' };
+    const t = x.typeId ? upTypeOf(x.typeId) : null; if (x.typeId && !t) return { ok: false, error: 'No such type.' };
+    const moves = (x.moves || []).filter((m) => m && m.eqId && m.to != null && m.to !== ''); const add = (x.add || []).filter(Boolean); const bits = [];
+    if (!(t && x.typeId !== u.typeId) && !moves.length && !add.length) return { ok: true, text: '', nothing: true };
+    const why = structWhy(key, x); if (why) return why;
+    if (t && x.typeId !== u.typeId) { u.typeId = x.typeId; u.typeName = t.name; u.stage = t.group || null; u.stageLabel = t.groupLabel || ''; u.why = 'Type set by hand'; bits.push(`type set to ${t.name}`); }
+    moves.forEach((m) => { const to = structMove(key, st, m.eqId, u.id, m.to === '__out' ? null : m.to); bits.push(to ? `${tagOfEq(key, m.eqId)} moved to ${to.tag}` : `${tagOfEq(key, m.eqId)} taken out`); });
+    add.forEach((eqId) => { if (eqRaw(key, eqId) && eqId !== u.id && !u.members.some((m) => m.eqId === eqId)) { structMove(key, st, eqId, null, u.id); bits.push(`${tagOfEq(key, eqId)} added`); } });
+    return structDone(key, `Unit process ${u.tag}: ${bits.join('; ')}`, x);
+  }
+  function removeUnitProcess(key, id, o) {
+    const st = structDraft(key); if (!st) return { ok: false, error: 'No such plant.' }; const u = st.ups.find((y) => y.id === id); if (!u) return { ok: false, error: 'No such unit process.' };
+    const why = structWhy(key, o); if (why) return why;
+    st.ups = st.ups.filter((y) => y.id !== id); u.members.forEach((m) => settle(st, m.eqId)); settle(st, id);
+    return structDone(key, `Unit process removed: ${u.tag}, ${u.typeName}. ${u.tag} is equipment again${u.members.length ? '. Equipment that took part only in it is listed as not placed' : ''}`, o);
+  }
+  function placeEquipment(key, eqId, toId, o) {
+    const st = structDraft(key); if (!st) return { ok: false, error: 'No such plant.' }; if (!eqRaw(key, eqId)) return { ok: false, error: 'No such equipment.' };
+    const why = structWhy(key, o); if (why) return why;
+    if (!toId) { st.left = (st.left || []).filter((x) => x !== eqId).concat([eqId]); st.unplaced = st.unplaced.filter((x) => x !== eqId); return structDone(key, `${tagOfEq(key, eqId)} left on the plant`, o); }
+    const to = structMove(key, st, eqId, null, toId); return to ? structDone(key, `${tagOfEq(key, eqId)} placed in ${to.tag}`, o) : { ok: false, error: 'No such unit process.' };
+  }
+  function saveControlGroup(key, id, o) {
+    const st = structDraft(key); if (!st) return { ok: false, error: 'No such plant.' }; const x = o || {}; const name = String(x.name || '').trim(); const ids = [...new Set((x.memberIds || []).filter((m) => eqRaw(key, m)))];
+    if (!name) return { ok: false, error: 'Give the control group a name.' }; if (ids.length < 2) return { ok: false, error: 'A control group is a set: choose at least two pieces of equipment.' };
+    const taken = ids.find((m) => st.cgs.some((c) => c.id !== id && c.memberIds.includes(m))); if (taken) return { ok: false, error: `${tagOfEq(key, taken)} is already in another control group.` };
+    const why = structWhy(key, x); if (why) return why;
+    let c = id ? st.cgs.find((y) => y.id === id) : null; if (id && !c) return { ok: false, error: 'No such control group.' };
+    if (!c) { c = { id: nextId('cg'), name, kind: 'set', memberIds: ids, feeds: [], byHand: true }; st.cgs.push(c); return structDone(key, `Control group added by hand: ${name} (${ids.map((m) => tagOfEq(key, m)).join(', ')})`, x); }
+    c.name = name; c.memberIds = ids; return structDone(key, `Control group changed: ${name} (${ids.map((m) => tagOfEq(key, m)).join(', ')})`, x);
+  }
+  function removeControlGroup(key, id, o) {
+    const st = structDraft(key); if (!st) return { ok: false, error: 'No such plant.' }; const c = st.cgs.find((y) => y.id === id); if (!c) return { ok: false, error: 'No such control group.' };
+    const why = structWhy(key, o); if (why) return why;
+    st.cgs = st.cgs.filter((y) => y.id !== id); return structDone(key, `Control group removed: ${c.name}. Its changeover is no longer one task for the set`, o);
+  }
   const upOf = (key, id) => structOf(key).ups.find((u) => u.id === id) || null;
   const cgOfEq = (key, eqId) => structOf(key).cgs.find((c) => c.memberIds.includes(eqId)) || null;
   const SET_JOB = /changeover/i;   /* (card D7) work done once for a duty/standby set: one task per control group */
@@ -1940,7 +2011,7 @@ window.V7 = (function () {
     checklist, noLimitsYet, eachOf, goLivePreview, goLive, returnToCommissioning,
     issues, issue, tasks, task, report, answer, chooseCause, diagStep, startFix, fixStep, verify, close, startTask, doTaskStep, doneTask, setLastDone,
     flowOf, diagFor, causeOf, fixFlowFor, linkedTask, taskForGeneral, issueTypes, issueTerms, reportSensorFault, causesFor,
-    taskGroups, tasksPerDay, workLevel, setWorkLevel, coverage, lineWork, setLineWork, setAlertFlow, structure: (key) => structOf(key), unitProcess: upOf, controlGroupOf: cgOfEq,
+    taskGroups, tasksPerDay, workLevel, setWorkLevel, coverage, lineWork, setLineWork, setAlertFlow, structure: (key) => structOf(key), addUnitProcess, setUnitProcess, removeUnitProcess, placeEquipment, saveControlGroup, removeControlGroup, unitProcess: upOf, controlGroupOf: cgOfEq,
     libTypes, libType, libVersion, libDraft, editLib, discardDraft, whereItLands, publish,
     activity, log,
     LABELS, BANDS, fmtVal, limitsText, sevClock, bandLabel: (b) => BAND_LABEL[b] || '', everyText, plantName,

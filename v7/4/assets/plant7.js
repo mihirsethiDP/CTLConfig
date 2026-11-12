@@ -147,7 +147,7 @@
       return `<li class="${cls}">${a}<span class="tl-tip" role="tooltip" id="${tid}"><b>${esc(x.label)} \u00b7 ${x.pct}%</b><span>${esc(x.tip)}</span><span class="tl-tip-n">${esc(x.count)}</span></span></li>`;
     }).join('');
     const more = MORE.map(([id, label, suf]) => { const n = id === 'issues' && p.openIssues ? p.openIssues : id === 'differences' && p.differences ? p.differences : null; return `<a class="tl-m${id === active ? ' on' : ''}" href="${esc(base(key) + suf)}">${esc(label)}${n != null ? `<span class="tab-n">${esc(n)}</span>` : ''}</a>`; }).join('');
-    return `<div class="tl" data-setup="${g.overall}"><div class="tl-h"><span class="tl-h-t">Setting up this plant</span><span class="tl-h-p">${g.overall}% of the way to go live</span></div><ol class="tl-steps" aria-label="Set-up steps, in order">${li}</ol>${active === 'home' ? '' : `<div class="sg-now"><div class="sg-now-t"><b>Step ${i + 1} of ${g.steps.length}: ${esc(g.next.label)}.</b> ${esc(g.next.what)}</div><div class="sg-now-a">${g.next.cta}</div></div>`}<nav class="tl-more" aria-label="Other pages of this plant"><span class="tl-more-l">Also</span>${more}</nav></div>`;
+    return `<div class="tl" data-setup="${g.overall}"><div class="tl-h"><a class="tl-h-t" href="${esc(base(key))}" title="The set-up, step by step">Setting up this plant</a><span class="tl-h-p">${g.overall}% of the way to go live</span></div><ol class="tl-steps" aria-label="Set-up steps, in order">${li}</ol>${active === 'home' ? '' : `<div class="sg-now"><div class="sg-now-t"><b>Step ${i + 1} of ${g.steps.length}: ${esc(g.next.label)}.</b> ${esc(g.next.what)}</div><div class="sg-now-a">${g.next.cta}</div></div>`}</div>`;
   }
   /* v7/4: how much routine work the site takes on: one choice, with what it costs said beside it */
   function workLevelCard(key) {
@@ -366,6 +366,7 @@
       part('Set-up', () => setupRows(key, cl)),
       part('The trial so far', () => trialCard(key)),
       howCommissioning(),
+      `<p class="su-also">This plant's other pages: ${MORE.filter((m) => m[0] !== 'home').map(([, label, suf]) => `<a href="${esc(base(key) + suf)}">${esc(label)}</a>`).join(' · ')}</p>`,
     ].join('');
     return frame(key, 'home', body, { cls: 'p7-home' });
   }

@@ -230,7 +230,7 @@
 
     let body;
     if (!all.length) {
-      const none = eqF ? `No issues on ${tagOf(key, eqF)}.` : p.state === 'commissioning' ? 'No issues yet.' : 'No issues yet. Move the story clock on to see alerts open them.';
+      const none = eqF ? `No issues on ${tagOf(key, eqF)}.` : p.state === 'commissioning' ? 'No issues yet.' : 'No issues yet.';
       return frame(key, 'issues', `<div class="wk">${U.section('Issues', '', { sub: p.state === 'commissioning' ? 'An issue is what opens once the plant is Live. During Commissioning no alert opens one; a person can report a problem at any time.' : 'An issue is what opens when an alert fires, or when a person reports a problem.', actions: [reportButton(key, eqF, { kind: 'primary' })] })}${eqF ? filtersHtml : ''}${p.state === 'commissioning' ? issueSetup(key, eqF) + `<p class="p7-quietline">No issue has opened or been reported at this plant.</p>` : `<div class="wk-list">${U.empty(none)}</div>` + issueSetup(key, eqF)}</div>`);
     }
     const listOf = (list, empty, limit) => {
@@ -240,7 +240,7 @@
     };
     if (show === 'all') {
       body = (open.length ? U.section(`Open · ${open.length}`, listOf(open, ''), { sub: open.length > 1 ? 'The most serious first.' : '' }) : '')
-        + (closed.length || !open.length ? U.section(`Closed · ${closed.length}`, listOf(closed, p.state === 'commissioning' ? 'No issues yet.' : 'No issues yet. Move the story clock on to see alerts open them.', 25), { sub: closed.length ? 'Newest first. A false alarm counts in Coverage.' : '' }) : '');
+        + (closed.length || !open.length ? U.section(`Closed · ${closed.length}`, listOf(closed, p.state === 'commissioning' ? 'No issues yet.' : 'No issues yet.', 25), { sub: closed.length ? 'Newest first. A false alarm counts in Coverage.' : '' }) : '');
     } else {
       const EMPTY = { open: 'Nothing is open.', closed: 'Nothing has closed yet.', false: 'No false alarms.', commissioning: 'No issues opened during Commissioning.', reported: 'Nothing has been reported by a person.' };
       body = listOf(groups[show], EMPTY[show], show === 'closed' || show === 'false' ? 25 : 0);
