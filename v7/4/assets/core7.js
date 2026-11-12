@@ -640,7 +640,7 @@ window.V7 = (function () {
   const eq = (key, id) => { const e = eqRaw(key, id); return e ? eqView(key, e) : null; };
   function sensorView(key, s) {
     const e = homeOf(key, s); let dirs = s.kind === 'meter' ? [] : dirsOf(key, s.id); if (s.kind === 'status' && !dirs.some((dr) => hasAny(bandsInfo(key, s.id, dr).bands))) dirs = []; const np = s.nextPhase ? withPlant(key, () => (C.nextPhaseOf(e) || []).find((x) => x.sensor === s.id)) : null;
-    return { id: s.id, name: s.name, tag: s.tag, unit: s.unit, kind: s.kind, valid: s.valid.slice(), eqId: e ? e.id : null, eqTag: e ? e.tag : null, nextPhase: !!s.nextPhase, nextPhaseNote: s.nextPhase ? ((np && np.note) || 'on a connection: next phase') : null, dirs, primaryDir: s.nextPhase || !dirs.length ? null : primaryDir(key, s.id), takesLimits: !s.nextPhase && s.kind !== 'meter', alertIds: dOf(key).alerts.filter((a) => a.sensor === s.id).map((a) => a.id), source: 'SCADA', latest: latest(key, s.id), sample: true };
+    return { id: s.id, name: s.name, tag: s.tag, unit: s.unit, kind: s.kind, valid: s.valid.slice(), eqId: e ? e.id : null, eqTag: e ? e.tag : null, nextPhase: !!s.nextPhase, nextPhaseNote: s.nextPhase ? ((np && np.note) || 'on a connection: next phase') : null, dirs, primaryDir: s.nextPhase || !dirs.length ? null : primaryDir(key, s.id), takesLimits: !s.nextPhase && s.kind !== 'meter', alertIds: dOf(key).alerts.filter((a) => a.sensor === s.id).map((a) => a.id), source: 'Visualization', latest: latest(key, s.id), sample: true };
   }
   const sensors = (key, eqId) => cached(`sens:${key}:${eqId || ''}`, () => (dOf(key) ? dOf(key).sensors.filter((s) => !eqId || s.on === 'eq:' + eqId).map((s) => sensorView(key, s)) : []));
   function readings(key, opts) {

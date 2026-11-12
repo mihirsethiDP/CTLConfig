@@ -355,21 +355,36 @@
     else if (tab === 'tasks') body = instTasksTab(key, P, e, tasks, props);
     else body = instDetailsTab(key, P, e, all, lt);
     return UI.page({
-      crumbs: crumbs0.concat([{ label: P.name, href: plantHref(key) }, { label: 'Equipment', href: plantHref(key, 'equipment') }, { label: e.tag }]),
+      crumbs: crumbs0.concat([{ label: P.name, href: plantHref(key) }]).concat(structCrumb(key, e)).concat([{ label: e.tag }]),
       title: H(`<span class="o-tag">${esc(e.tag)}</span> ${esc(e.name)}`),
       chips: headChips(key, P, e),
-      sub: `${e.typeName} at ${P.name} · ${plantStateLine(P)}`,
+      sub: `${e.typeName} at ${P.name}${(() => { const pl = placeOf(key, e); return pl && pl.cg && pl.cgWith.length ? ` · duty/standby with ${pl.cgWith.join(', ')}` : ''; })()} · ${plantStateLine(P)}`,
       actions: [btn('Phone view', { href: phoneHref(key, e.id), kind: 'ghost', title: 'The same page as operators see it on a phone' }), btn('Report a problem', { act: 'obj:report', data: { plant: key, eq: e.id } })],
       banner: instBanners(key, P, e, openRecs, props, all),
       tabs: tabsFor((id) => eqHref(key, e.id, id), counts), active: tab,
       body, aside, cls: 'pg-obj',
     });
   }
+  /* v7/4: where the equipment sits is said once, in the breadcrumb: plant, then its unit process, then the equipment */
+  function placeOf(key, e) { const ST = W.V7STRUCT73; return ST && ST.place ? safe(() => ST.place(key, e.id), null) : null; }
+  function structCrumb(key, e) {
+    const pl = placeOf(key, e);
+    if (pl && pl.ups.length === 1) return [{ label: `${pl.ups[0].tag} · ${pl.ups[0].typeName}`, href: eqHref(key, pl.ups[0].id) }];
+    if (pl && pl.own) return [{ label: 'Structure', href: plantHref(key, 'structure') }];
+    return [{ label: 'Equipment', href: plantHref(key, 'equipment') }];
+  }
+  /* why the criticality is what it is, in words */
+  function tierWhy(e) { const ti = e.tierSource || {}; return !ti.chip || ti.chip === 'lib' ? `from its type, ${e.typeName}` : ti.chip === 'form' ? 'from the Visualization' : 'set at this plant'; }
+  function tierHint(key, e) {
+    const ti = e.tierSource || {}; const pl = placeOf(key, e);
+    if (!pl || !pl.cg || !pl.cgWith.length || e.tier !== 'A' || (ti.chip && ti.chip !== 'lib')) return '';
+    return note(`Suggested: ${TIER.B}. ${e.tag} is one of ${pl.cgWith.length + 1} in the control group ${pl.cg.name}, so the plant does not depend on it alone. Check it against the site's own list before changing it.`, 'info');
+  }
   function headChips(key, P, e) {
     const c = codeOf(e);
     return [
       c ? chip(e.typeName, { href: libHref(c), title: 'Its library type' }) : chip(e.typeName),
-      chip(`Criticality: ${e.tierLabel || TIER[e.tier] || ''}`, { title: 'How much the plant depends on it' }) + ' ' + sourceChip(e.tierSource),
+      `<button type="button" class="chip chip-btn" data-act="obj:tier" data-plant="${esc(key)}" data-eq="${esc(e.id)}" title="How much the plant depends on it. Click to change it.">Criticality: ${esc(e.tierLabel || TIER[e.tier] || '')} <span class="chip-why">${esc(tierWhy(e))}</span></button>`,
       /* v7: only when a Run status reading says so (its latest sample) */
       e.runState ? chip(e.runState === 'running' ? 'Running' : 'Stopped', { tone: e.runState === 'running' ? 'ok' : 'muted', title: 'From its Run status reading (sample)' }) : '',
     ].concat(W.V7STRUCT73 ? W.V7STRUCT73.chips(key, e.id) : []).concat(W.V7FLAG73 ? [W.V7FLAG73.chip(W.V7FLAG73.equipment(key, e.id).filter((x) => !/^Not placed/.test(x)))] : []);
@@ -433,14 +448,14 @@
     if (eqId && i.causedBy === eqId && i.eqId !== eqId) chips.push(chip(`Opened on ${tagOf(key, i.eqId)}, caused here`, { tone: 'info' }));
     else if (i.causedBy && i.causedBy !== i.eqId) chips.push(chip(`Caused by ${tagOf(key, i.causedBy)}`, { tone: 'info' }));
     if (i.reported) chips.push(chip('Reported', { tone: 'muted' }));
-    if (i.homeToConfirm) chips.push(chip('Where it belongs: to confirm', { tone: 'muted', title: 'Found by a report or lab test; which equipment it belongs to is still to confirm' }));
+    if (i.homeToConfirm) chips.push(chip('Where it belongs: assumed', { tone: 'muted', title: 'Found by a report or lab test; which equipment it belongs to is still to confirm' }));
     return { title: i.title, href: issueHref(key, i.id), sub: `${bandName(i.band)} · opened ${fmt(i.opened)} · ${st}`, chips, tone: i.status === 'closed' ? '' : RANK[i.band] >= 3 ? 'bad' : 'warn' };
   }
   function issueTypesCard(typeName, types, opts) {
     const items = arr(types).map((t) => {
       const f = t.flowId ? safe(() => V().flowOf(t.flowId), null) : null;
       const bits = [foundByText(t.foundBy), f ? `starts ${f.name}` : 'no diagnostic yet', plural(t.causes || 0, 'root cause')];
-      return { title: t.name, sub: bits.join(' · '), chips: t.homeToConfirm ? [chip('Where it belongs: to confirm', { tone: 'muted', title: 'Found by a report or lab test; which equipment it belongs to is still to confirm' })] : [] };
+      return { title: t.name, sub: bits.join(' · '), chips: t.homeToConfirm ? [chip('Where it belongs: assumed', { tone: 'muted', title: 'Found by a report or lab test; which equipment it belongs to is still to confirm' })] : [] };
     });
     return card({
       title: `Problems the library knows for ${typeName}`,
@@ -472,8 +487,8 @@
   }
   function instTasksTab(key, P, e, tasks, props) {
     const rows = tasks.slice().sort((x, y) => (y.overdue ? 2 : y.status === 'due' ? 1 : 0) - (x.overdue ? 2 : x.status === 'due' ? 1 : 0) || (x.due == null ? 1e15 : x.due) - (y.due == null ? 1e15 : y.due)).map((t) => {
-      const shared = t.eqIds && t.eqIds.length > 1 ? `Shared task for ${esc(String(t.line || '').split(' · ').pop() || plural(t.eqIds.length, 'piece'))}: ${esc(arr(t.tags).join(', '))}` : '';
-      const conf = t.toConfirm ? ' ' + chip('to confirm', { tone: 'muted', title: 'One task per type at the plant, with a line per equipment: still to confirm' }) : '';
+      const shared = t.eqIds && t.eqIds.length > 1 ? `Part of one task for ${esc(String(t.line || '').split(' · ').pop() || plural(t.eqIds.length, 'piece'))} (${esc(arr(t.tags).join(', '))}): done once for all of them and counted once` : '';
+      const conf = t.toConfirm ? ' ' + chip('Assumed', { tone: 'muted', title: 'One task per type at the plant, with a line per equipment. Assumed for now and agreed with the plant team later: there is nothing to do here.' }) : '';
       return {
         task: H(`${a(taskHref(key, t.id), t.name)}${conf} ${W.V7FLAG73 ? W.V7FLAG73.chip(W.V7FLAG73.task(key, t), { small: true }) : ''}<div class="muted small">${esc(t.workLabel || '')}${shared ? ' · ' + shared : ''}</div>`),
         every: H(`${esc(cap(t.everyText || everyText(t.every)))} ${t.source ? sourceChip(t.source) : ''}`),
@@ -509,7 +524,7 @@
       ['Readings', `${all.filter((s) => !s.nextPhase && s.kind !== 'manual').length} from the Visualization${all.some((s) => s.nextPhase) ? `, ${all.filter((s) => s.nextPhase).length} next phase` : ''}`],
     ]).concat(form.length ? form.map(([k, v]) => [k, v]) : [['Form answers', H('<span class="muted">None in the Visualization</span>')]]);
     let out = card({
-      title: 'From SCADA', sub: 'The Visualization is the only source of equipment, readings and answers. Fix it in the Visualization, then read again.',
+      title: 'From the Visualization', sub: 'The Visualization is the only source of equipment, readings and answers. Fix it in the Visualization, then read again.',
       body: kv(facts) + (e.typeDiffers ? note(`Drawn as ${e.drawn}, stored as ${e.stored}: fix the drawing in the Visualization, then read again.`, 'warn') : '') + (e.notInDb ? note('Its type is not one of the database types: it blocks go live.', 'bad') : ''),
       actions: [btn('Fix it in the Visualization', { act: 'obj:scada', small: true, kind: 'ghost' })],
     });
@@ -517,7 +532,7 @@
     const was = ti.chip && ti.chip !== 'lib' && ti.libValue && ti.libValue !== e.tier ? ` <span class="o-was">library ${esc(TIER[ti.libValue] || ti.libValue)}</span>` : '';
     out += card({
       title: 'Criticality', sub: 'How much the plant depends on it. A change here needs a note.',
-      body: `<p><b>${esc(e.tierLabel || TIER[e.tier] || '')}</b> ${sourceChip(ti)}${was}</p>`,
+      body: `<p><b>${esc(e.tierLabel || TIER[e.tier] || '')}</b> <span class="muted">${esc(tierWhy(e))}</span> ${sourceChip(ti)}${was}</p>${tierHint(key, e)}`,
       actions: [btn('Change', { act: 'obj:tier', data: { plant: key, eq: e.id }, small: true })],
     });
     const diffs = arr(safe(() => V().overrides({ plant: key }), [])).filter((o) => o.eqId === e.id);

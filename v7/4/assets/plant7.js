@@ -147,7 +147,7 @@
       return `<li class="${cls}">${a}<span class="tl-tip" role="tooltip" id="${tid}"><b>${esc(x.label)} \u00b7 ${x.pct}%</b><span>${esc(x.tip)}</span><span class="tl-tip-n">${esc(x.count)}</span></span></li>`;
     }).join('');
     const more = MORE.map(([id, label, suf]) => { const n = id === 'issues' && p.openIssues ? p.openIssues : id === 'differences' && p.differences ? p.differences : null; return `<a class="tl-m${id === active ? ' on' : ''}" href="${esc(base(key) + suf)}">${esc(label)}${n != null ? `<span class="tab-n">${esc(n)}</span>` : ''}</a>`; }).join('');
-    return `<div class="tl" data-setup="${g.overall}"><div class="tl-h"><span class="tl-h-t">Setting up this plant</span><span class="tl-h-p">${g.overall}% of the way to go live</span></div><ol class="tl-steps" aria-label="Set-up steps, in order">${li}</ol><div class="sg-now"><div class="sg-now-t"><b>Step ${i + 1} of ${g.steps.length}: ${esc(g.next.label)}.</b> ${esc(g.next.what)}</div><div class="sg-now-a">${g.next.cta}</div></div><nav class="tl-more" aria-label="Other pages of this plant"><span class="tl-more-l">Also</span>${more}</nav></div>`;
+    return `<div class="tl" data-setup="${g.overall}"><div class="tl-h"><span class="tl-h-t">Setting up this plant</span><span class="tl-h-p">${g.overall}% of the way to go live</span></div><ol class="tl-steps" aria-label="Set-up steps, in order">${li}</ol>${active === 'home' ? '' : `<div class="sg-now"><div class="sg-now-t"><b>Step ${i + 1} of ${g.steps.length}: ${esc(g.next.label)}.</b> ${esc(g.next.what)}</div><div class="sg-now-a">${g.next.cta}</div></div>`}<nav class="tl-more" aria-label="Other pages of this plant"><span class="tl-more-l">Also</span>${more}</nav></div>`;
   }
   /* v7/4: how much routine work the site takes on: one choice, with what it costs said beside it */
   function workLevelCard(key) {
@@ -340,15 +340,30 @@
   function howCommissioning() {
     return note('During Commissioning, Caution, Minor and Major only record trial firings: nothing is sent and nothing reaches the operator app. On a new plant an Emergency is kept as a trial firing too. A plant that was Live keeps its Emergencies real. Calls, the hooter and tasks start at go live.', 'quiet');
   }
+  /* v7/4: Home while a plant is set up is the timeline opened out: one row per step, the same numbers as the timeline above it,
+     so there is one place for progress. What blocks go live is listed inside the Go live row; gaps sit below. */
+  function setupRows(key, cl) {
+    const g = setupSteps(key, 'home'); if (!g) return '';
+    const pe = (cl.tracks || {}).people || {};
+    const rows = g.steps.map((x, k) => {
+      const isNext = x === g.next; let extra = '';
+      if (x.id === 'people') extra = `<ul class="p7-lines">${peopleLines(pe.items).map((l) => `<li>${l}</li>`).join('')}<li class="muted">Managed in the User Center. This page reads them and never edits them.</li></ul>`;
+      if (x.id === 'golive' && x.locked && arr(cl.blockers).length) extra = `<div class="su-bl">${checkRows(key, cl.blockers, 'bad')}</div>`;
+      const act = x.id === 'golive' ? (x.locked ? btn('Go live', { kind: 'primary', small: true, disabled: true, title: cl.whyNot }) : x.cta)
+        : isNext ? x.cta : x.id === 'people' ? btn('See the User Center', { href: '#/users', kind: 'ghost', small: true }) : btn(x.done ? 'Open' : 'Continue', { href: x.href, kind: 'ghost', small: true });
+      return `<li class="su-row${x.done ? ' is-done' : ''}${isNext ? ' is-next' : ''}${x.locked ? ' is-locked' : ''}"><span class="tl-ring" style="--p:${x.pct}" aria-hidden="true"><span class="tl-ring-in">${x.done ? '\u2713' : k + 1}</span></span><div class="su-m"><h3>${esc(x.label)}${x.optional ? ' <span class="tl-opt">optional</span>' : ''} <span class="su-p">${x.pct}%</span></h3><p class="su-c">${esc(x.count)}</p><p class="su-t">${esc(isNext ? x.what : x.tip)}</p>${extra}</div><div class="su-a">${act}</div></li>`;
+    }).join('');
+    const gp = arr(cl.gaps);
+    return card({ title: 'Set-up, step by step', sub: `${g.overall}% of the way to go live. The steps are done in this order, and each one opens where it is done.`, body: `<ol class="su">${rows}</ol>`, cls: 'su-card' })
+      + (gp.length ? card({ title: 'Worth fixing, but never blocks go live', body: checkRows(key, gp, 'warn'), cls: 'p7-before' }) : '');
+  }
   function readiness(key) {
     const v = V(); const p = plantOf(key);
     const cl = call(() => v.checklist(key), null);
     if (!cl) return frame(key, 'home', note('The checklist could not be worked out for this plant.', 'bad'));
     const body = [
       part('Open issues', () => commIssues(key)),
-      part('Readiness', () => verdict(p, cl)),
-      part('The three tracks', () => tracks(key, cl)),
-      part('Before go live', () => beforeGoLive(key, cl)),
+      part('Set-up', () => setupRows(key, cl)),
       part('The trial so far', () => trialCard(key)),
       howCommissioning(),
     ].join('');
@@ -411,7 +426,7 @@
       const right = x.hasTask && x.taskId ? `<a class="p7-fix p7-wrap" href="${esc(taskHref(key, x.taskId))}">${esc(x.taskName || 'The task')} →</a>`
         : x.taskName ? `<a class="p7-fix" href="${esc(proposalHref(key, on, x.taskName))}">Add the task →</a>` : chip('No task looks for it', { tone: 'warn' });
       const sub = `${how.length ? `Found by ${how.join(' or ')}` : 'Found by a person'}${on.length ? ` · on ${on.join(', ')}` : ''}${!x.hasTask ? (x.taskName ? ` · no task looks for it yet; the library has "${x.taskName}"` : ' · no task in the library looks for it') : ''}`;
-      return { title: x.name, chips: [x.homeToConfirm ? chip('Where it belongs: to confirm', { tone: 'muted', title: 'Found by a report or a lab test; which equipment it belongs to is still to confirm' }) : ''], sub, right, tone: x.hasTask ? null : 'warn' };
+      return { title: x.name, chips: [x.homeToConfirm ? chip('Where it belongs: assumed', { tone: 'muted', title: 'Found by a report or a lab test; which equipment it belongs to is still to confirm' }) : ''], sub, right, tone: x.hasTask ? null : 'warn' };
     });
     const without = bs.filter((x) => !x.hasTask).length;
     /* v7: attention first: the top 3, the rest folded */
@@ -499,7 +514,7 @@
     return guard(params, (key, q) => {
       const v = V(); const b = base(key); const live = v.state(key) === 'live';
       const sr = call(() => v.scadaReview(key), null);
-      if (!sr) return frame(key, 'home', note('What the Visualization has could not be read.', 'bad'), { crumbs: [{ label: 'What the Visualization has' }] });
+      if (!sr) return frame(key, 'equipment', note('What the Visualization has could not be read.', 'bad'), { crumbs: [{ label: 'Equipment', href: `${base(key)}/equipment` }, { label: 'What the Visualization has' }] });
       const groups = arr(sr.groups); const left = groups.filter((g) => !g.accepted);
       const nEq = groups.reduce((n, g) => n + (g.count || 0), 0); const nRead = groups.reduce((n, g) => n + arr(g.equipment).reduce((m, e) => m + (e.readings || 0), 0), 0);
       const nNext = arr(sr.nextPhase).length;
@@ -527,7 +542,7 @@
       if (arr(sr.nextPhase).length) {
         parts.push(note(`<b>Next phase:</b> readings on pipes between equipment are not used yet. The Visualization sends ${pl(sr.nextPhase.length, 'of them', 'of them')}: ${esc(shortList(sr.nextPhase.map((s) => `${s.name}${s.tag ? ` (${s.tag})` : ''}${s.eqTag ? ` near ${s.eqTag}` : ''}`), 5))}.`, 'next'));
       }
-      return frame(key, 'home', parts.join(''), { crumbs: [{ label: 'What the Visualization has' }], title: 'What the Visualization has', sub });
+      return frame(key, 'equipment', parts.join(''), { crumbs: [{ label: 'Equipment', href: `${base(key)}/equipment` }, { label: 'What the Visualization has' }], title: 'What the Visualization has', sub });
     });
   }
 
@@ -812,7 +827,7 @@
         const e = eqId ? eqById[eqId] : null;
         const rows = list.map((r) => {
           const lim = readingLimits(key, r);
-          const kind = r.kind === 'manual' ? `${r.source === 'lab' ? 'Lab' : 'Manual'}<div class="p7-sub">${esc(r.expected || '')}</div>` : 'SCADA';
+          const kind = r.kind === 'manual' ? `${r.source === 'lab' ? 'Lab' : 'Manual'}<div class="p7-sub">${esc(r.expected || '')}</div>` : 'Visualization';
           const nowV = r.latest ? `<span class="mono">${esc(fmtVal(r.latest.v, r.unit, r.kind))}</span>` : r.kind === 'manual' ? '<span class="muted">Entered by hand</span>' : '<span class="muted">—</span>';
           const al = arr(alertsBy[r.id]);
           const alertHtml = al.length ? al.map((a) => `<a class="p7-al" href="${esc(alertHref(key, a.id))}">${U.stateChip(a.state, { title: a.name })}</a>`).join(' ') : '<span class="muted">No alert</span>';
@@ -858,7 +873,7 @@
   function taskRows(key, list, live) {
     return list.map((t) => {
       const where = t.kind === 'group'
-        ? `${esc(arr(t.eqIds).length > 1 ? `Shared task for ${countType(t.eqIds.length, t.typeName)}: ${shortList(arr(t.tags), 6)}` : `On ${shortList(arr(t.tags), 6)}`)} ${chip('to confirm', { tone: 'muted', title: 'One task for the type at this plant, with a line per piece of equipment: to confirm with the plant team' })}`
+        ? `${esc(arr(t.eqIds).length > 1 ? `Shared task for ${countType(t.eqIds.length, t.typeName)}: ${shortList(arr(t.tags), 6)}` : `On ${shortList(arr(t.tags), 6)}`)} ${chip('Assumed', { tone: 'muted', title: 'One task for the type at this plant, with a line per piece of equipment. Assumed for now and agreed with the plant team later: there is nothing to do here.' })}`
         : t.plantLevel ? 'The plant' : arr(t.eqIds).length ? `<a class="mono" href="${esc(eqHref(key, t.eqIds[0], 'tasks'))}">${esc(arr(t.tags)[0] || '')}</a>` : '';
       const due = !live ? '<span class="muted">At go live</span>' : t.due == null ? '<span class="muted">—</span>' : `<span class="${t.overdue ? 'tx-bad' : t.status === 'due' ? 'tx-warn' : ''}">${esc(fmt(t.due))}</span>${t.overdue ? '<div class="p7-sub tx-bad">Overdue</div>' : ''}`;
       const stTone = { due: 'warn', doing: 'info', upcoming: 'muted', waiting: 'muted' }[t.status] || 'muted';
@@ -902,7 +917,7 @@
       parts.push(filters([{ label: 'All', href: `${b}/tasks`, on: show === 'all', count: ts.length }, { label: 'One per type', href: `${b}/tasks?show=shared`, on: show === 'shared', count: groups.length }, { label: 'On each piece of equipment', href: `${b}/tasks?show=each`, on: show === 'each', count: singles.length + plantL.length }]));
       if (due.length && show === 'all') parts.push(card({ title: due.length === 1 ? 'One task due now' : `${due.length} tasks due now`, body: taskTable(key, due, live), tone: due.some((t) => t.overdue) ? 'bad' : 'warn' }));
       if (false) parts.push(card({ title: 'Condition-based work', sub: 'Raised when a reading on equipment crosses a range that triggers a task. Filed at a unit process or the plant, never on the equipment; that range opens no issue.', body: lineTable(key, lineL, live) }));
-      if (show !== 'each' && groups.length) parts.push(card({ title: 'One task per type', sub: 'Routine checks, routine work and manual tests: one task for the type at this plant, with a line per piece of equipment. To confirm with the plant team.', body: taskTable(key, groups, live) }));
+      if (show !== 'each' && groups.length) parts.push(card({ title: 'One task per type', sub: 'Routine checks, routine work and manual tests: one task for the type at this plant, with a line per piece of equipment. Assumed for now; the plant team agrees it later.', body: taskTable(key, groups, live) }));
       if (show !== 'shared' && singles.length) parts.push(card({ title: 'On each piece of equipment', sub: 'Preventive maintenance and calibration stay with the equipment they are done on. So does a task one of its readings triggers.', body: taskTable(key, singles, live) }));
       if (show !== 'shared' && plantL.length) parts.push(card({ title: 'The plant', sub: 'Rounds and checks for the plant as a whole.', body: taskTable(key, plantL, live) }));
       if (!live) parts.push(note('Tasks start when the plant goes live. A task can carry the date it was last done (on its page); its first due date then counts from that date.', 'quiet'));
@@ -1090,6 +1105,23 @@
   U.on('p7:search', (el) => { SEARCH[`${dget(el, 'page')}:${dget(el, 'plant')}`] = el.value || ''; U.render(); return false; });
 
   /* ── routes ───────────────────────────────────────────────────────────────────────────────────────────── */
+  /* v7/4: the two parts of the configuration panel this prototype does not hold, shown so the whole panel can be seen */
+  function usersPage() {
+    const v = V(); const cards = arr(call(() => v.plants(), [])).map((p) => {
+      const ppl = arr(call(() => v.people(p.key), []));
+      return card({ title: p.name, sub: ppl.length ? pl(ppl.length, 'person', 'people') : 'Nobody is assigned yet', body: ppl.length ? `<ul class="p7-lines">${ppl.map((x) => `<li><b>${esc(x.name)}</b> · ${esc(x.roleLabel || x.role)} <span class="muted">(${x.reachable ? esc(x.channel) : 'no verified phone: in the app only'})</span></li>`).join('')}</ul>` : '', actions: [btn('Open the plant', { href: base(p.key), kind: 'ghost', small: true })], cls: 'p7-compact' });
+    });
+    return U.page({ title: 'User Center', sub: 'Who is assigned to each plant and how each person is reached. People are managed in the User Center of the product. The configuration reads them and never edits them.', body: note('Shown here so the whole configuration panel can be seen in one place. Nothing on this page can be changed.', 'quiet') + `<div class="p7-cards">${cards.join('')}</div>` });
+  }
+  function vizPage() {
+    const v = V(); const cards = arr(call(() => v.plants(), [])).map((p) => {
+      const sr = call(() => v.scadaReview(p.key), { groups: [] }); const n = arr(sr.groups).reduce((k, g) => k + (g.count || 0), 0);
+      return card({ title: p.name, sub: `${pieces(n)} of ${pl(arr(sr.groups).length, 'type')}${sr.readAt ? ` · read ${fmt(sr.readAt)}` : ''}`, actions: [btn('What it has', { href: `${base(p.key)}/scada`, kind: 'ghost', small: true }), btn('Structure', { href: `${base(p.key)}/structure`, kind: 'ghost', small: true })], cls: 'p7-compact' });
+    });
+    return U.page({ title: 'Visualization', sub: 'The drawing of each plant: its equipment, how it is piped, and the sensors on it. It is drawn in the Visualization of the product. The configuration reads it and never changes it.', actions: [btn('Test a Visualization', { href: '#/ingest', kind: 'primary' })], body: note('The drawing itself is not in this prototype. What was read from it is listed for each plant.', 'quiet') + `<div class="p7-cards">${cards.join('')}</div>` });
+  }
+  U.route('users', usersPage);
+  U.route('visualization', vizPage);
   U.route('p/:plant', home);
   U.route('p/:plant/scada', scada);
   U.route('p/:plant/library', library);

@@ -39,10 +39,11 @@
     const st = S(key); const out = []; const own = st.ups.find((u) => u.id === eqId);
     const me = eqOf(key, eqId); const off = me && me.offer;
     if (own) out.push(off && off.library === 'equipment' ? chip(`${own.typeName}, on its own`, { tone: 'muted', href: `#/p/${enc(key)}/structure`, title: `${own.why}. ${off.reason}, so it follows the equipment library.` }) : chip(`Unit process · ${own.typeName}`, { tone: 'info', href: `#/p/${enc(key)}/structure`, title: `${own.stageLabel}. ${own.why}${off ? `. ${off.reason}, so it follows the unit-process library.` : ''}` }));
-    else { const ups = upsOfEq(key, eqId); if (ups.length) out.push(chip(`Takes part in ${ups.map((u) => u.tag).join(', ')}`, { tone: 'muted', href: `#/p/${enc(key)}/structure`, title: 'The unit processes this equipment serves' })); else if (arr(st.unplaced).includes(eqId)) out.push(chip('Not placed in a unit process yet', { tone: 'warn', href: `#/p/${enc(key)}/structure` })); }
-    const cg = st.cgs.find((c) => c.memberIds.includes(eqId)); if (cg) out.push(chip(`Control group · ${cg.name}`, { tone: 'muted', href: `#/p/${enc(key)}/structure`, title: 'Runs as a duty/standby set with ' + cg.memberIds.filter((x) => x !== eqId).map((x) => tagOf(key, x)).join(', ') }));
+    else { const ups = upsOfEq(key, eqId); if (ups.length > 1) out.push(chip(`Takes part in ${ups.map((u) => u.tag).join(', ')}`, { tone: 'muted', href: `#/p/${enc(key)}/structure`, title: 'The unit processes this equipment serves' })); else if (arr(st.unplaced).includes(eqId)) out.push(chip('Not placed in a unit process yet', { tone: 'warn', href: `#/p/${enc(key)}/structure` })); }
     return out;
   }
+  /* v7/4: where a piece of equipment sits, for its breadcrumb and its one line under the title */
+  function place(key, eqId) { const st = S(key); const own = st.ups.find((u) => u.id === eqId) || null; const ups = own ? [] : upsOfEq(key, eqId); const cg = st.cgs.find((c) => c.memberIds.includes(eqId)) || null; return { own, ups, cg, cgWith: cg ? cg.memberIds.filter((x) => x !== eqId).map((x) => tagOf(key, x)) : [] }; }
   /* one line for the plant's Home: the structure and whether it is confirmed */
   function homeLine(key) {
     const st = S(key); if (!st.ups.length) return '';
@@ -50,10 +51,10 @@
     return card({ title: 'Structure', sub: `${plural(st.ups.length, 'unit process', 'unit processes')} · ${plural(st.cgs.length, 'control group')}${left ? ` · ${left} not placed yet` : ''}`, body: ok ? '<p class="muted">Confirmed. Work that belongs to a treatment step is filed on its unit process.</p>' : '<p>Proposed from the Visualization. Look it over and confirm it.</p>', actions: [btn(ok ? 'Open the structure' : 'Review the structure', { href: `#/p/${enc(key)}/structure`, kind: ok ? 'secondary' : 'primary', small: true })], tone: ok ? null : 'warn' });
   }
 
-  function upCard(key, u) {
+  function upCard(key, u, dup) {
     const ms = membersOf(key, u); const tasks = (() => { try { return V().tasks(key, { eqId: u.id }).length; } catch (e) { return 0; } })();
     const mem = ms.length ? `<ul class="st-mem">${ms.map((m) => `<li><a class="mono" href="${esc(eqHref(key, m.eqId))}">${esc(m.tag)}</a><span class="muted">${esc(m.role || '')}</span></li>`).join('')}</ul>` : '<p class="muted small">No other equipment takes part in it.</p>';
-    return `<article class="st-up"><header><a class="st-up-t" href="${esc(eqHref(key, u.id))}"><span class="mono">${esc(u.tag)}</span> ${esc(u.name || '')}</a><span class="st-up-k">${esc(u.typeName)}</span></header><p class="st-why">${esc(u.why || '')}</p>${mem}<footer class="muted small">${plural(tasks, 'task')} filed here</footer></article>`;
+    return `<article class="st-up"><header><a class="st-up-t" href="${esc(eqHref(key, u.id))}"><span class="mono">${esc(u.tag)}</span> ${esc(u.name || '')}</a><span class="st-up-k">${esc(u.typeName)}${dup ? ` · ${dup.i} of ${dup.n}` : ''}</span></header><p class="st-why">${esc(u.why || '')}</p>${mem}<footer class="muted small"><span>${plural(tasks, 'task')} filed here</span>${btn('See it in the Visualization', { act: 'st:viz', data: { tag: u.tag }, kind: 'ghost', small: true })}</footer></article>`;
   }
   function structurePage(params) {
     const key = params.plant; const P = W.V7PLANT; const st = S(key); const ok = confirmed(key); const left = unplaced(key);
@@ -61,8 +62,12 @@
     const lead = `<p class="lead">A <b>unit process</b> is one treatment step: a basin or reactor and the equipment that serves it. A <b>control group</b> is a duty/standby set that runs as one. Both come from the Visualization.</p>`;
     const ban = !st.ups.length ? '' : ok ? note(`Structure confirmed${left.length ? `, with ${plural(left.length, 'piece')} of equipment still to place` : ''}.`, 'ok')
       : `<div class="banner tone-warn"><div class="banner-t">Proposed from the Visualization: <b>${plural(st.ups.length, 'unit process', 'unit processes')}</b>, <b>${plural(st.cgs.length, 'control group')}</b>${left.length ? `, and ${plural(left.length, 'piece')} of equipment no rule placed` : ''}. Confirm it to carry on; you can still place equipment afterwards.</div><div class="banner-a">${btn('Confirm the structure', { act: 'st:confirm', data: { plant: key }, kind: 'primary' })}</div></div>`;
+    const seen = {}; const tot = {}; st.ups.forEach((u) => { tot[u.typeName] = (tot[u.typeName] || 0) + 1; });
+    const dupOf = (u) => (tot[u.typeName] > 1 ? { i: (seen[u.typeName] = (seen[u.typeName] || 0) + 1), n: tot[u.typeName] } : null);
+    const twice = Object.keys(tot).filter((k) => tot[k] > 1);
     const body = [lead, ban];
-    stages.forEach((x) => body.push(`<section class="st-stage"><h3 class="st-stage-h">${esc(x.sg.label)} <span class="muted">· ${x.ups.length}</span></h3><div class="st-ups">${x.ups.map((u) => upCard(key, u)).join('')}</div></section>`));
+    if (twice.length) body.push(note(`${twice.length === 1 ? 'One type appears' : `${twice.length} types appear`} more than once: ${twice.map((k) => `${k} (${tot[k]})`).join(', ')}. Each is its own tank or reactor, so each stays its own unit process, numbered and named by its tag.`, 'quiet'));
+    stages.forEach((x) => body.push(`<section class="st-stage"><h3 class="st-stage-h">${esc(x.sg.label)} <span class="muted">· ${x.ups.length}</span></h3><div class="st-ups">${x.ups.map((u) => upCard(key, u, dupOf(u))).join('')}</div></section>`));
     if (st.cgs.length) body.push(card({ title: 'Control groups', sub: 'A duty/standby set runs as one, so its changeover is one task for the set, not one per piece of equipment.', body: `<ul class="st-cgs">${st.cgs.map((c) => `<li><b>${esc(c.name)}</b><span>${c.memberIds.map((id) => `<a class="mono" href="${esc(eqHref(key, id))}">${esc(tagOf(key, id))}</a>`).join(' ')}</span>${arr(c.feeds).length ? `<span class="muted small">serves ${esc(c.feeds.map((id) => tagOf(key, id)).join(', '))}</span>` : ''}</li>`).join('')}</ul>` }));
     if (left.length) {
       const opts = st.ups.map((u) => `<option value="${esc(u.id)}">${esc(u.tag)} · ${esc(u.typeName)}</option>`).join('');
@@ -144,10 +149,11 @@
     });
   }
 
+  UI.on('st:viz', (el) => { const t = ga(el, 'tag'); UI.toast(`In the product this opens the Visualization${t ? ` at ${t}` : ''} beside this page, so the drawing is there while you check the structure. The prototype does not hold the drawing.`); return false; });
   UI.on('st:confirm', (el) => { const key = ga(el, 'plant'); const p = PS(key); if (!p) return false; p.structureOk = V().now(); try { V().log(key, `Structure confirmed: ${plural(S(key).ups.length, 'unit process', 'unit processes')} and ${plural(S(key).cgs.length, 'control group')}, as proposed from the Visualization`, 'config'); } catch (e) { /* ignore */ } UI.toast('Structure confirmed.'); return undefined; });
   UI.on('st:place', (el) => { const key = ga(el, 'plant'); const p = PS(key); const v = el.value; if (!p || !v) return false; p.placed = p.placed || {}; p.placed[ga(el, 'eq')] = v === '__plant' ? '' : v; const u = S(key).ups.find((x) => x.id === v); try { V().log(key, `${tagOf(key, ga(el, 'eq'))} ${u ? `placed in ${u.tag}` : 'left on the plant'}`, 'config'); } catch (e) { /* ignore */ } return undefined; });
 
   UI.route('p/:plant/structure', structurePage);
   UI.route('library-structure', libStructurePage);
-  W.V7STRUCT73 = { chips, filedOptions, libraryCard, homeLine, confirmed, unplaced, upsOfEq, typeCard, offerFacts };
+  W.V7STRUCT73 = { chips, place, filedOptions, libraryCard, homeLine, confirmed, unplaced, upsOfEq, typeCard, offerFacts };
 }());

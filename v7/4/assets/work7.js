@@ -78,7 +78,7 @@
   /* how a problem is found, in plain words */
   const FOUND = { sensor: 'a reading', visual: 'a visual check', manual: 'a lab or manual test' };
   const foundText = (kinds) => { const k = arr(kinds).map((x) => FOUND[x]).filter(Boolean); return k.length ? `Found by ${joinWords([...new Set(k)]).replace(/ and /, ' or ')}` : ''; };
-  const homeChip = () => U.chip('Where it belongs: to confirm', { tone: 'warn', title: 'Which equipment this problem belongs to is still to be confirmed. It stays where the workbook put it for now.' });
+  const homeChip = () => U.chip('Where it belongs: assumed', { tone: 'warn', title: 'Which equipment this problem belongs to is still to be confirmed. It stays where the workbook put it for now.' });
 
   /* the plant page frame (plant7), or a plain one with the same tabs */
   const TABS = [['home', 'Home', ''], ['equipment', 'Equipment', '/equipment'], ['readings', 'Readings', '/readings'], ['issues', 'Issues', '/issues'], ['tasks', 'Tasks', '/tasks'], ['differences', 'Deviations', '/differences'], ['activity', 'Activity', '/activity']];
@@ -504,7 +504,7 @@
     if (!e) return html + `<p class="muted small">Pick the equipment first: the problems come from its type in the library.</p>`;
     const its = arr(call(() => V().issueTypes(e.type), []));
     const sens = arr(call(() => V().sensors(key, e.id), [])).filter((s) => !s.nextPhase);
-    const options = its.map((it) => ({ value: it.id, label: it.name, sub: [foundText(it.foundBy), it.causes ? `${plural(it.causes, 'root cause')} to check, one question each` : '', it.homeToConfirm ? 'where it belongs: to confirm' : ''].filter(Boolean).join(' · ') }));
+    const options = its.map((it) => ({ value: it.id, label: it.name, sub: [foundText(it.foundBy), it.causes ? `${plural(it.causes, 'root cause')} to check, one question each` : '', it.homeToConfirm ? 'where it belongs: assumed' : ''].filter(Boolean).join(' · ') }));
     if (sens.length) options.push({ value: '__sensor', label: 'A reading looks wrong', sub: 'A sensor fault: the fix is the probe\'s calibration' });
     if (!options.length) return html + U.note(`The library has no problems written for ${e.type} yet, and ${e.tag} has no readings from the Visualization. Tell the Lead directly.`, 'quiet');
     html += its.length ? '' : U.note(`The library has no problems written for ${e.type} yet. A reading that looks wrong can still be reported.`, 'quiet');
@@ -580,7 +580,7 @@
   function whereHtml(key, t) {
     if (t.plantLevel || !t.eqIds.length) return 'The plant';
     const links = t.eqIds.map((id) => { const e = eqOf(key, id); return e ? U.link(e.tag, hrefEq(key, id, 'tasks')) : esc(id); }).join(', ');
-    if (t.kind === 'group') return H(`${t.shared ? esc(cap(t.shared)) + ': ' : ''}${links}${t.toConfirm ? ` ${U.chip('to confirm', { tone: 'warn', title: 'One task per type at the plant, with a line per equipment: still to be confirmed' })}` : ''}`);
+    if (t.kind === 'group') return H(`${t.shared ? esc(cap(t.shared)) + ': ' : ''}${links}${t.toConfirm ? ` ${U.chip('Assumed', { tone: 'warn', title: 'One task per type at the plant, with a line per equipment: still to be confirmed' })}` : ''}`);
     const e = eqOf(key, t.eqIds[0]);
     return H(`${links}${e ? ` <span class="muted">· ${esc(e.type)}</span>` : ''}`);
   }

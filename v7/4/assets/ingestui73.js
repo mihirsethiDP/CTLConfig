@@ -105,11 +105,11 @@
     });
     const ready = !!(ING.eq && ING.sn);
     const s3 = card({
-      title: 'Step 3 · Load it and walk the flow',
-      sub: `Loads this Visualization as ${esc(name)}, the plant being set up, and starts the story again. The other plants and the library stay as they are.`,
+      title: `Step 3 · Replace ${name} with this Visualization`,
+      sub: `This does not add a plant and does not merge. It replaces ${esc(name)}, the one plant being set up: its equipment, readings and everything accepted or decided there so far are cleared, and set-up starts again. The other plants and the library stay as they are.`,
       body: ready
-        ? `<div class="in-load"><label class="field-l" for="inName">Plant name</label><input type="text" id="inName" class="in-name" data-act="in:keep" value="${esc(ING.name || name)}">${btn(`Load ${plural(ING.eq.rows.length, 'piece')} of equipment and ${plural(ING.sn.rows.length, 'sensor')}`, { act: 'in:load', kind: 'primary' })}</div>`
-          + `<ol class="in-next"><li><b>Visualization</b>: review what was read, type by type.</li><li><b>Structure</b>: confirm the unit processes and place what is left.</li><li><b>Library</b>: accept what each equipment type brings.</li><li><b>Equipment</b>: set limits on a reading and choose what each range triggers.</li><li><b>Go live</b> from the plant's home.</li></ol>`
+        ? `<div class="in-load"><label class="field-l" for="inName">Plant name</label><input type="text" id="inName" class="in-name" data-act="in:keep" value="${esc(ING.name || name)}">${btn(`Replace ${name} with ${plural(ING.eq.rows.length, 'piece')} of equipment and ${plural(ING.sn.rows.length, 'sensor')}`, { act: 'in:load', kind: 'primary' })}</div>`
+          + `<ol class="in-next"><li><b>Visualization</b>: review what was read, type by type.</li><li><b>Structure</b>: confirm the unit processes and place what is left.</li><li><b>Alerts &amp; Tasks</b>: accept what each equipment type brings.</li><li><b>Limits</b>: set limits on a reading and choose what each range triggers.</li><li><b>Go live</b> from the plant's home.</li></ol>`
         : '<p class="muted">Read the equipment and the sensors first.</p>',
       cls: ready ? '' : 'in-off',
     });
@@ -136,9 +136,9 @@
   UI.on('in:load', () => {
     pull(); if (!ING.eq || !ING.sn) return false;
     UI.confirm({
-      title: 'Load this Visualization?',
-      body: `It becomes the plant being set up (${plural(ING.eq.rows.length, 'piece')} of equipment, ${plural(ING.sn.rows.length, 'sensor')}), and the story starts again: everything you changed in the console is cleared. Your calls on the Decisions page are kept.`,
-      ok: 'Load and start again', kind: 'primary',
+      title: 'Replace the plant being set up?',
+      body: `This replaces the plant being set up; nothing is merged. It becomes the plant being set up (${plural(ING.eq.rows.length, 'piece')} of equipment, ${plural(ING.sn.rows.length, 'sensor')}), and the story starts again: everything you changed in the console is cleared. Your calls on the Decisions page are kept.`,
+      ok: 'Replace and start again', kind: 'primary',
       onOk: () => {
         const r = IN.use(ING.eqText, ING.own ? ING.snText : '', { name: ING.name });
         if (!r.ok) { if (r.step === 2) ING.err2 = r.error; else ING.err1 = r.error; UI.toast(r.error); UI.render(); return false; }

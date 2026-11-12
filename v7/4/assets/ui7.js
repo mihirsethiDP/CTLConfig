@@ -777,7 +777,7 @@
   function routes() { return ROUTES.slice(); }
 
   /* ── shell ─────────────────────────────────────────────────────────────────────────────────────────────── */
-  const NAV = [['All Plants', '#/plants', /^(plants|p)$/], ['Library', '#/library', /^library$/], ['Flows', '#/flows', /^flows$/], ['Test a Visualization', '#/ingest', /^ingest$/], ['Deviations', '#/differences', /^differences$/], ['Activity', '#/activity', /^activity$/], ['Decisions', '#/decisions', /^decisions$/]];
+  const NAV = [['All Plants', '#/plants', /^(plants|p)$/], ['Library', '#/library', /^library$/], ['Flows', '#/flows', /^flows$/], ['Visualization', '#/visualization', /^(visualization|ingest)$/], ['User Center', '#/users', /^users$/], ['Activity', '#/activity', /^activity$/], ['Decisions', '#/decisions', /^decisions$/]];
   function navHtml(path) {
     const first = String(path || '').split('/')[0] || 'plants';
     const diffs = /^p\/[^/]+\/differences/.test(path || '');
@@ -807,12 +807,16 @@
     if (!v72Ready()) return '';
     return `<a class="tb-ver tb-same" id="tbSame" href="${esc(samePlace72(path))}" target="v7-2" title="Opens the same moment in v7/2, Alex's model as drafted"><span>Same place in </span><b>v7/2</b> →</a>`;
   }
-  function topbarHtml(path) {
+  /* v7/4: the clock is a demo tool, so it sits in the story, not in the product's top bar */
+  function clockHtml() {
     const advances = [[60, '+1 hour'], [360, '+6 hours'], [1440, '+1 day'], [10080, '+1 week']];
+    return `<div class="tb-clock"><button type="button" class="clock" data-act="ui:clock" aria-haspopup="true" aria-expanded="false" title="For the demo only: one clock for every plant"><span class="clock-k">Demo time</span><b id="clockNow">${esc(fmt(now()))}</b><span class="caret" aria-hidden="true">▾</span></button>`
+      + `<div class="menu" role="menu"><p class="menu-h">Move time on</p>${advances.map(([m, l]) => `<button type="button" role="menuitem" data-act="ui:advance" data-min="${m}">${esc(l)}</button>`).join('')}<p class="menu-n">Readings, trial firings, issues and tasks move with the clock.</p><hr><button type="button" role="menuitem" data-act="ui:reset">Reset the story</button></div></div>`;
+  }
+  function topbarHtml(path) {
     return `<header class="tb"><a class="tb-brand" href="#/plants">CloseTheLoop<span> · Configuration</span></a>${versionBadge()}${samePlaceHtml(path)}`
       + `<nav class="tb-nav" id="tbNav" aria-label="Main">${navHtml(path)}</nav>`
-      + `<div class="tb-right"><div class="tb-clock"><button type="button" class="clock" data-act="ui:clock" aria-haspopup="true" aria-expanded="false" title="The story clock: one clock for every plant"><span class="clock-k">Story clock</span><b id="clockNow">${esc(fmt(now()))}</b><span class="caret" aria-hidden="true">▾</span></button>`
-      + `<div class="menu" role="menu"><p class="menu-h">Move time on</p>${advances.map(([m, l]) => `<button type="button" role="menuitem" data-act="ui:advance" data-min="${m}">${esc(l)}</button>`).join('')}<p class="menu-n">Readings, trial firings, issues and tasks move with the clock.</p><hr><button type="button" role="menuitem" data-act="ui:reset">Reset the story</button></div></div>`
+      + `<div class="tb-right">`
       + `<button type="button" class="tb-btn tb-story" data-act="ui:story" aria-pressed="false" aria-controls="story">Story</button>`
       + `<button type="button" class="tb-btn tb-reset" data-act="ui:reset">Reset the story</button></div></header>`;
   }
@@ -931,7 +935,7 @@
   function storyHtml(path) {
     const cur = chapterOf(path || '');
     const chs = chapters();
-    return `<div class="story-h"><div><h2>The story</h2><p>Twelve chapters, start to finish. The clock starts at Thu 29 Oct, 09:00.</p></div><button type="button" class="x" data-act="ui:story" aria-label="Close the story">×</button></div>`
+    return `<div class="story-h"><div><h2>The story</h2><p>Twelve chapters, start to finish. The clock starts at Thu 29 Oct, 09:00.</p></div><button type="button" class="x" data-act="ui:story" aria-label="Close the story">×</button></div><div class="story-clock">${clockHtml()}</div>`
       + `<ol class="chs">${chs.map((c) => `<li class="ch${c.n === cur ? ' on' : ''}" data-ch="${c.n}"><span class="ch-n">${c.n}</span><div class="ch-b"><h3>${esc(c.title)}</h3>${c.text.map((t) => `<p>${esc(t)}</p>`).join('')}`
         + `<p class="ch-go"><a class="ch-link" href="${esc(c.href)}">Take me there →</a>${c.also.map((a) => `<a class="ch-also" href="${esc(a.href)}">${esc(a.label)}</a>`).join('')}`
         + `${c.compare72 ? `<a class="ch-also ch-cmp" href="${esc(c.compare72.href)}" target="${esc(c.compare72.target)}" title="${esc(c.compare72.title)}">${esc(c.compare72.label)} →</a>` : ''}</p>`

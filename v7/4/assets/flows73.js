@@ -20,7 +20,7 @@
   const causeById = (id) => (DRAFT && DRAFT.causes[id]) || causes().find((c) => c.id === id) || null;
   const ga = (el, k) => (el && el.getAttribute ? el.getAttribute('data-' + k) : null);
   const clone = (x) => JSON.parse(JSON.stringify(x));
-  const USE = { diagnostic: 'Diagnostic', fix: 'Fix', pm: 'Preventive maintenance', round: 'Routine round', calibration: 'Calibration', test: 'Manual test' };
+  const USE = { diagnostic: 'Diagnostic', fix: 'Fix', pm: 'Preventive maintenance', round: 'Routine check', calibration: 'Calibration', test: 'Manual testing' };
   const STEP = { instruction: 'Do this', question: 'Ask yes or no', reading: 'Record a reading', wait: 'Wait' };
   const isDiag = (f) => f && f.kind === 'diagnostic';
 
@@ -56,7 +56,7 @@
     ]);
     const what = kind === 'diagnostic' ? 'A diagnostic flow asks questions until it lands on a root cause. The root cause names the fix flow that puts it right.'
       : kind === 'fix' ? 'A fix flow is the steps that put one root cause right. A diagnostic flow sends people here.'
-        : 'A task flow is the steps of a routine round, preventive maintenance, a calibration or a manual test.';
+        : 'A task flow is the steps of one task. Its kind of work is one of four: preventive maintenance, routine check, calibration or manual testing.';
     const how = `<ol class="fl-how"><li><b>An issue opens</b><span>from an alert, or someone reports a problem</span></li><li><b>Diagnostic flow</b><span>questions, one at a time</span></li><li><b>Root cause</b><span>where the questions land</span></li><li><b>Fix flow</b><span>the steps that put it right</span></li></ol>`;
     const nInc = W.V7FLAG73 ? all.filter((f) => inKind(f, kind) && W.V7FLAG73.flow(f).length).length : 0;
     const incBtn = nInc ? btn(SEARCH.inc ? 'Show all' : `Show the ${nInc} incomplete`, { act: 'fl:search', data: { inc: SEARCH.inc ? '0' : '1' }, small: true, kind: SEARCH.inc ? 'secondary' : 'ghost' }) : '';
@@ -158,7 +158,7 @@
   }
   function editHtml(f) {
     const steps = arr(f.steps); const n = steps.length;
-    const meta = card({ title: 'About this flow', body: `<div class="fl-meta-e"><label>Name<input type="text" data-act="fl:set" data-f="name" value="${esc(f.name || '')}" placeholder="${isDiag(f) ? 'For example: Low DO diagnostic' : 'For example: Clean the intake filter'}"></label><label>For which equipment types <span class="muted">(comma separated)</span><input type="text" data-act="fl:set" data-f="forTypes" value="${esc(arr(f.forTypes).join(', '))}" placeholder="Blower, Mini Blower"></label>${isDiag(f) ? '' : `<label>What it is${sel('data-act="fl:set" data-f="use"', Object.entries(USE).filter(([k]) => k !== 'diagnostic'), f.use || 'fix')}</label>`}</div>` });
+    const meta = card({ title: 'About this flow', body: `<div class="fl-meta-e"><label>Name<input type="text" data-act="fl:set" data-f="name" value="${esc(f.name || '')}" placeholder="${isDiag(f) ? 'For example: Low DO diagnostic' : 'For example: Clean the intake filter'}"></label><label>For which equipment types <span class="muted">(comma separated)</span><input type="text" data-act="fl:set" data-f="forTypes" value="${esc(arr(f.forTypes).join(', '))}" placeholder="Blower, Mini Blower"></label>${isDiag(f) || f.use === 'fix' ? '' : `<label>What kind of work is it?${sel('data-act="fl:set" data-f="use"', Object.entries(USE).filter(([k]) => k !== 'diagnostic' && k !== 'fix'), f.use || 'round')}</label>`}</div>` });
     let rows;
     if (isDiag(f)) {
       rows = steps.map((s, i) => { const ks = Object.keys(s.answers || {}); const yn = ks.includes('Above') ? 'ab' : 'yn';

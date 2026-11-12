@@ -81,10 +81,12 @@
   /* "3 readings, 1 task": only what the type has */
   function counted(parts) { const p = parts.filter((x) => +x[0] > 0).map((x) => plural(x[0], x[1])); return p.length ? p.join(', ') : '<span class="muted">—</span>'; }
   function libTable(rows) {
+    const dev = {}; arr(safe(() => V().overrides({}), [])).filter((o) => o.state !== 'ended' && o.typeCode).forEach((o) => { const d = dev[o.typeCode] || (dev[o.typeCode] = { n: 0, p: new Set() }); d.n++; d.p.add(o.plant); });
     return table({
       cols: [
         { label: 'Type', render: typeCell },
         { label: 'Used at', render: usedCell },
+        { label: 'Deviations', render: (t) => { const d = dev[t.code]; return d ? `<a href="#/differences?type=${esc(enc(t.code))}" title="Values plants changed away from this type">${esc(plural(d.n, 'value'))} at ${esc(plural(d.p.size, 'plant'))}</a>` : '<span class="muted">None</span>'; } },
         { label: 'Carries', render: (t) => counted([[t.readings, 'reading'], [t.alerts, 'alert'], [t.tasks, 'task']]) },
         { label: 'From the workbook', render: (t) => counted([[t.issues, 'issue'], [t.generalTasks, 'task']]) },
         { label: 'Version', cls: 'r', render: (t) => `<span class="mono">v${esc(t.version)}</span>` },
@@ -132,7 +134,7 @@
     /* v7/3: two libraries. Equipment: a pump, a valve or a tank on its own. Unit processes: one treatment step. */
     const lib = q.lib === 'process' ? 'process' : 'equipment'; const nProc = every.filter((t) => t.library === 'process').length;
     const types = every.filter((t) => (t.library || 'equipment') === lib);
-    const libTabs = nProc ? `<div class="lib-two">${filters([{ label: 'Equipment', href: '#/library', on: lib === 'equipment', count: every.length - nProc }, { label: 'Unit processes', href: '#/library?lib=process', on: lib === 'process', count: nProc }])}<p class="lib-two-s">${lib === 'process' ? 'One treatment step each. A tank or reactor gets its unit-process type when other equipment takes part in it: pumps, blowers, dosing, valves.' : 'A pump, a blower, a valve, or a tank on its own. A tank that has other equipment taking part in it gets a unit-process type instead.'} <a href="#/library-structure">How it is decided</a></p></div>` : '';
+    const libTabs = nProc ? `<div class="lib-two">${filters([{ label: 'Equipment types', href: '#/library', on: lib === 'equipment', count: every.length - nProc }, { label: 'Unit processes', href: '#/library?lib=process', on: lib === 'process', count: nProc }])}<p class="lib-two-s">${lib === 'process' ? 'One treatment step each. A tank or reactor gets its unit-process type when other equipment takes part in it: pumps, blowers, dosing, valves. Control groups (duty/standby sets) belong to a unit process and are set at each plant, so they have no library of their own.' : 'A pump, a blower, a valve, or a tank on its own. A tank that has other equipment taking part in it gets a unit-process type instead.'} <a href="#/library-structure">How it is decided</a></p></div>` : '';
     const show = SHOW_LIB.some((s) => s[0] === q.show) ? q.show : 'all';
     const needle = ST.q.trim().toLowerCase();
     const counts = {}; SHOW_LIB.forEach(([id]) => { counts[id] = types.filter((t) => libShowOk(t, id)).length; });
@@ -149,7 +151,7 @@
       libTabs,
       draftsCard(every),
       suggestionsCard(),
-      `<p class="lib-howto">Types used at a plant come first in each family. To change a type, open it and change a limit, a task's interval or an alert's timing. That makes a draft: Where it lands then shows what would change at each plant, before you publish.</p>`,
+      `<p class="lib-howto">Types used at a plant come first in each family. To change a type, open it and change a limit, a task's interval or an alert's timing. That makes a draft: Where it lands then shows what would change at each plant, before you publish. The Deviations column shows where plants changed a value away from a type; <a href="#/differences">see them all</a>.</p>`,
       tools,
       `<div class="lib-fams">${famHtml}</div>`,
       publishedSection(),

@@ -112,3 +112,27 @@ a.tl-a:hover, button.tl-a:hover { text-decoration: none; background: var(--surfa
 .lvl-out summary { cursor: pointer; font-weight: 600; }
 .lvl-out ul { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
 .lvl-out li { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; }
+/* Home while a plant is set up: the timeline opened out */
+.su { list-style: none; margin: 0; padding: 0; display: grid; }
+.su-row { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 14px; align-items: start; padding: 14px 0; border-top: 1px solid var(--line); }
+.su-row:first-child { border-top: 0; padding-top: 4px; }
+.su-row .tl-ring { margin-top: 2px; }
+.su-m h3 { font-size: 15px; margin: 0; }
+.su-p { font-weight: 500; color: var(--ink-3); font-size: 13px; margin-left: 6px; }
+.su-c { margin: 2px 0 0; font-size: 13px; color: var(--ink-2); }
+.su-t { margin: 4px 0 0; font-size: 13.5px; color: var(--ink-3); max-width: 70ch; }
+.su-row.is-next .su-t { color: var(--ink); }
+.su-row.is-locked .su-m h3 { color: var(--ink-3); }
+.su-a { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.su-bl { margin-top: 8px; }
+.su-m .p7-lines { margin-top: 6px; }
+@media (max-width: 760px) { .su-row { grid-template-columns: 40px minmax(0, 1fr); } .su-a { grid-column: 2; justify-content: flex-start; } }
+/* a chip that opens something */
+button.chip { font: inherit; font-size: 12px; cursor: pointer; }
+button.chip:hover { border-color: var(--ink-3); }
+.chip-why { color: var(--ink-3); font-weight: 400; }
+/* the demo clock, inside the story */
+.story-clock { padding: 10px 20px; border-bottom: 1px solid var(--line); background: var(--story-bg); }
+.story-clock .menu { right: auto; left: 0; }
+.st-up footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.su-m h3 .tl-opt { display: inline; margin: 0 0 0 6px; }
