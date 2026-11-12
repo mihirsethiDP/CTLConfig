@@ -81,8 +81,8 @@
   const homeChip = () => U.chip('Where it belongs: to confirm', { tone: 'warn', title: 'Which equipment this problem belongs to is still to be confirmed. It stays where the workbook put it for now.' });
 
   /* the plant page frame (plant7), or a plain one with the same tabs */
-  const TABS = [['home', 'Home', ''], ['equipment', 'Equipment', '/equipment'], ['readings', 'Readings', '/readings'], ['issues', 'Issues', '/issues'], ['tasks', 'Tasks', '/tasks'], ['differences', 'Differences', '/differences'], ['activity', 'Activity', '/activity']];
-  function plantChips(p) { return [U.chip(p.type || '', { mono: true }), U.stateChip(p.state), p.sample === false ? U.chip('Real plant graph', { tone: 'info' }) : U.chip('Sample plant', { tone: 'muted' })]; }
+  const TABS = [['home', 'Home', ''], ['equipment', 'Equipment', '/equipment'], ['readings', 'Readings', '/readings'], ['issues', 'Issues', '/issues'], ['tasks', 'Tasks', '/tasks'], ['differences', 'Deviations', '/differences'], ['activity', 'Activity', '/activity']];
+  function plantChips(p) { return [U.chip(p.type || '', { mono: true }), U.stateChip(p.state), p.sample === false ? U.chip('Real Visualization', { tone: 'info' }) : U.chip('Sample plant', { tone: 'muted' })]; }
   function frame(key, active, body) {
     const F = W.V7PLANT && W.V7PLANT.frame;
     if (typeof F === 'function') { const out = call(() => F(key, active, body), null); if (out) return out; }
@@ -167,7 +167,7 @@
     return U.btn(o.label || 'Report a problem', { act: 'work:report', data: { plant: key, eq: eqId || null }, kind: o.kind || 'secondary', small: !!o.small, title: 'Open an issue for something a person saw, with its diagnostic' });
   }
   /* v7/3: what can open an issue at this plant, as it is set up — every alert on the equipment with its state, the alerts the
-     library proposes that nobody has decided, and the ones that cannot be used because the plant graph sends no such reading.
+     library proposes that nobody has decided, and the ones that cannot be used because the Visualization sends no such reading.
      One row per alert and equipment type. This is what the Issues tab shows while a plant is being set up. */
   function issueSetup(key, eqF) {
     const v = V(); const live = call(() => v.state(key), '') === 'live';
@@ -196,10 +196,10 @@
         s: SEQ.filter((s) => g.items.some((i) => i.state === s)).map((s) => { const c = g.items.filter((i) => i.state === s).length; return U.chip(`${LABEL[s]}${g.items.length > 1 ? ' \u00b7 ' + c : ''}`, { tone: TONE[s] || '' }); }).join(' '),
         w: whens.length === 1 ? esc(whens[0]) : whens.length ? '<span class="muted">Set on each piece of equipment</span>' : '<span class="muted">No limits yet</span>', t: thens.length === 1 ? esc(thens[0]) : '<span class="muted">Set on each alert</span>' };
     });
-    const table = rows.length ? U.table({ cols: [{ label: 'Issue', key: 'n' }, { label: 'Equipment', key: 'e' }, { label: 'State', key: 's' }, { label: 'Opens when', key: 'w' }, { label: 'Then', key: 't' }], rows, cls: 'wk-setup-t' }) : U.empty('No alert here can be used yet: the plant graph sends none of the readings they need.');
+    const table = rows.length ? U.table({ cols: [{ label: 'Issue', key: 'n' }, { label: 'Equipment', key: 'e' }, { label: 'State', key: 's' }, { label: 'Opens when', key: 'w' }, { label: 'Then', key: 't' }], rows, cls: 'wk-setup-t' }) : U.empty('No alert here can be used yet: the Visualization sends none of the readings they need.');
     const nSet = alerts.length; const bits = [nSet ? `${plural(nSet, 'alert')} set up` : '', waiting.length ? `${waiting.length} proposed, waiting for a decision` : '', blocked.length ? `${blocked.length} can\u2019t be used yet` : ''].filter(Boolean);
     const why = {}; blocked.forEach((p) => { (why[p.blockedBy] = why[p.blockedBy] || []).push(p); });
-    const deadHtml = blocked.length ? `<details class="wk-setup-more"><summary>${blocked.length} can\u2019t be used yet, and why</summary>${Object.keys(why).map((k) => { const names = uniq(why[k].map((p) => p.name)); return `<p><b>${esc(k)}</b> \u00b7 ${plural(why[k].length, 'alert')} on ${plural(uniq(why[k].map((p) => p.eqId)).length, 'piece')} of equipment<br><span class="muted">${esc(names.slice(0, 8).join(', '))}${names.length > 8 ? ` and ${names.length - 8} more` : ''}</span></p>`; }).join('')}<p class="muted small">Add the sensor in the plant graph and read it again, and these arrive as proposed.</p></details>` : '';
+    const deadHtml = blocked.length ? `<details class="wk-setup-more"><summary>${blocked.length} can\u2019t be used yet, and why</summary>${Object.keys(why).map((k) => { const names = uniq(why[k].map((p) => p.name)); return `<p><b>${esc(k)}</b> \u00b7 ${plural(why[k].length, 'alert')} on ${plural(uniq(why[k].map((p) => p.eqId)).length, 'piece')} of equipment<br><span class="muted">${esc(names.slice(0, 8).join(', '))}${names.length > 8 ? ` and ${names.length - 8} more` : ''}</span></p>`; }).join('')}<p class="muted small">Add the sensor in the Visualization and read it again, and these arrive as proposed.</p></details>` : '';
     return U.section('Issues this plant can raise', `<p class="wk-setup-sum">${esc(bits.join(' \u00b7 '))}</p>${table}${deadHtml}`, { sub, actions: [libBtn], cls: 'wk-setup' });
   }
   function issuesPage(params) {
@@ -506,7 +506,7 @@
     const sens = arr(call(() => V().sensors(key, e.id), [])).filter((s) => !s.nextPhase);
     const options = its.map((it) => ({ value: it.id, label: it.name, sub: [foundText(it.foundBy), it.causes ? `${plural(it.causes, 'root cause')} to check, one question each` : '', it.homeToConfirm ? 'where it belongs: to confirm' : ''].filter(Boolean).join(' · ') }));
     if (sens.length) options.push({ value: '__sensor', label: 'A reading looks wrong', sub: 'A sensor fault: the fix is the probe\'s calibration' });
-    if (!options.length) return html + U.note(`The library has no problems written for ${e.type} yet, and ${e.tag} has no readings from the plant graph. Tell the Lead directly.`, 'quiet');
+    if (!options.length) return html + U.note(`The library has no problems written for ${e.type} yet, and ${e.tag} has no readings from the Visualization. Tell the Lead directly.`, 'quiet');
     html += its.length ? '' : U.note(`The library has no problems written for ${e.type} yet. A reading that looks wrong can still be reported.`, 'quiet');
     const onlySensor = !its.length;
     html += U.field({ label: `What is wrong with ${e.tag}?`, html: U.radios({ name: 'wk-it', options, value: onlySensor ? '__sensor' : '', act: 'work:report-pick' }) });

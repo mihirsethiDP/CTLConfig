@@ -2,13 +2,13 @@
    READER 1, equipment(doc): finds every piece of equipment drawn and says which database equipment type it is. The rule is the
      console's own (window.detectDbType): the type stored on the node wins over the shape it was drawn with; a code the database
      does not have is still equipment, shown as "not in the database". Tags come from labels, as scadaFromLayout() makes them.
-   READER 2, sensors(doc, eq): finds the sensors on that equipment. From a plant graph it follows each dashed link from a widget
+   READER 2, sensors(doc, eq): finds the sensors on that equipment. From a Visualization it follows each dashed link from a widget
      to the equipment it reads; from a plain list ([{ equipmentId | equipmentTag | equipmentLabel, widget, code, reading }]) it
      matches each row to a piece of equipment reader 1 found. It says what each sensor reads (window.READINGS) and lists what it
      could not place.
    build(eq, sn, meta) joins the two into the model the console reads; use(text, text, meta) keeps it in localStorage
-   ('ctl74.ingest') and makes it the plant graph of the plant being set up (DigitalPaani); clear() goes back to the built-in one.
-   This file runs before the core boots, so a kept plant graph is already in place when the story is seeded or restored.
+   ('ctl74.ingest') and makes it the Visualization of the plant being set up (DigitalPaani); clear() goes back to the built-in one.
+   This file runs before the core boots, so a kept Visualization is already in place when the story is seeded or restored.
    window.V7INGEST = { parse, equipment, sensors, build, read, use, clear, kept, sampleText, applyKept, PLANT } */
 (function () {
   'use strict';
@@ -28,7 +28,7 @@
   }
   /* the export as the API returns it wraps the drawing: { results: { layout: { cells } } } (also data / result / an array of one) */
   const unwrap = (doc) => { let d = doc; for (let i = 0; i < 4 && d && typeof d === 'object' && !Array.isArray(d) && !d.layout && !d.cells; i++) { const k = ['results', 'result', 'data', 'payload', 'doc'].find((x) => d[x] && typeof d[x] === 'object'); if (!k) break; d = Array.isArray(d[k]) && d[k].length === 1 ? d[k][0] : d[k]; } return d; };
-  /* what the console needs from a cell, without how it is drawn (SVG markup, ports, anchors): keeps a kept plant graph small */
+  /* what the console needs from a cell, without how it is drawn (SVG markup, ports, anchors): keeps a kept Visualization small */
   const slimCell = (c) => { const o = { type: c.type, id: c.id }; ['equipmentId', 'equipmentType', 'level', 'value', 'code', 'sensorCode', 'sensorTag', 'measures'].forEach((k) => { if (c[k] != null) o[k] = c[k]; }); const t = c.attrs && c.attrs.label && c.attrs.label.text; if (t != null) o.attrs = { label: { text: t } }; if (c.source && c.source.id) o.source = { id: c.source.id }; if (c.target && c.target.id) o.target = { id: c.target.id }; return o; };
   const slim = (doc0) => { const doc = unwrap(doc0); if (isRecords(doc)) return slimRecords(doc); const cells = cellsOf(doc); if (!cells) return doc0; const d = Array.isArray(doc) ? {} : doc; return { ...(d.version != null ? { version: d.version } : {}), ...(d.updatedAt ? { updatedAt: d.updatedAt } : {}), layout: { cells: cells.map(slimCell) } }; };
   /* the equipment collection: one record per node, [{ _id, nodeType, itemDetails: { answer: [...], sensors: [...], source, target } }] */
@@ -44,7 +44,7 @@
   /* READER 1 */
   function equipment(doc0) {
     const raw = unwrap(doc0); const records = isRecords(raw) ? raw : null; const doc = records ? fromRecords(records) : raw; const cells0 = cellsOf(doc);
-    if (!cells0) return { ok: false, error: 'No plant graph found in this JSON. It should carry the cells of the drawing: { "layout": { "cells": [ … ] } }.' };
+    if (!cells0) return { ok: false, error: 'No Visualization found in this JSON. It should carry the cells of the drawing: { "layout": { "cells": [ … ] } }.' };
     const notes = []; const seenId = new Set(); let noId = 0, dup = 0;
     /* a node with no equipment id is read under its cell id; a repeated equipment id gets a suffix, so nothing is merged */
     const cells = cells0.map((c) => {
@@ -56,7 +56,7 @@
     if (noId) notes.push(`${plural(noId, 'node')} had no equipment id, so ${noId === 1 ? 'it is' : 'they are'} read under ${noId === 1 ? 'its' : 'their'} drawing id.`);
     if (dup) notes.push(`${plural(dup, 'node')} repeated an equipment id already used; each is kept as its own piece of equipment.`);
     const src = Array.isArray(doc) ? { layout: { cells } } : { ...doc, ...(doc.layout ? { layout: { ...doc.layout, cells } } : { cells }) };
-    let model; try { model = W.scadaFromLayout(src, { name: 'Plant', type: 'STP' }); } catch (e) { return { ok: false, error: `The plant graph could not be read: ${String(e.message || e).slice(0, 140)}` }; }
+    let model; try { model = W.scadaFromLayout(src, { name: 'Plant', type: 'STP' }); } catch (e) { return { ok: false, error: `The Visualization could not be read: ${String(e.message || e).slice(0, 140)}` }; }
     /* a name that is only a number (a valve labelled "3456") has no letters to make a tag from: its tag is its name */
     const tagsUsed = new Set(model.equipment.map((e) => e.tag));
     model.equipment.forEach((e) => { if (/^[A-Za-z]/.test(e.tag || '')) return; let t = (e.label || '').trim() || String(e.id).slice(-6); const b = t; for (let k = 2; tagsUsed.has(t); k++) t = `${b}.${k}`; tagsUsed.add(t); e.tag = t; });
@@ -67,7 +67,7 @@
       const o = offerOf[e.id] || null; const det = W.detectDbType(o ? { ...e, offer: o } : e); const known = !det.notInDb;
       return { id: e.id, cell: e.cell, label: e.label || '(no name)', tag: e.tag, code: e.code, dbType: det.dbType, typeName: known ? det.type : null, known, drawnAs: o ? null : det.drawnAs || null, noName: !e.label, offer: o, read: det.read || null, process: !!(o && o.library === 'process') };
     });
-    if (!rows.length) return { ok: false, error: 'This plant graph has no equipment on it.' };
+    if (!rows.length) return { ok: false, error: 'This Visualization has no equipment on it.' };
     const by = {}; const types = [];
     rows.forEach((r) => { let g = by[r.dbType]; if (!g) { g = by[r.dbType] = { code: r.dbType, name: r.typeName, known: r.known, process: r.process, count: 0, tags: [] }; types.push(g); } g.count++; g.tags.push(r.tag); });
     types.sort((a, b) => (a.known === b.known ? b.count - a.count || String(a.name || a.code).localeCompare(String(b.name || b.code)) : a.known ? 1 : -1));
@@ -166,7 +166,7 @@
       cells.filter((c) => !isLine(c) && kind(c) === 'widget' && !linked.has(c.id)).forEach((w) => unlinked.push({ widget: widgetName(w.type), label: text(w) }));
     } else {
       const list = Array.isArray(doc) ? doc : doc && Array.isArray(doc.sensors) ? doc.sensors : null;
-      if (!list) return { ok: false, error: 'No sensors found in this JSON. It should be a plant graph (with cells), or a list of sensors: [ { "equipmentTag": "RFP-1", "widget": "NUMBER_SENSOR", "code": "AMP" } ].' };
+      if (!list) return { ok: false, error: 'No sensors found in this JSON. It should be a Visualization (with cells), or a list of sensors: [ { "equipmentTag": "RFP-1", "widget": "NUMBER_SENSOR", "code": "AMP" } ].' };
       const low = (s) => String(s == null ? '' : s).trim().toLowerCase();
       const find = (s) => { const id = s.equipmentId ?? s.eqId ?? s.equipment; const tag = s.equipmentTag ?? s.equipment; const label = s.equipmentLabel ?? s.equipmentName ?? s.equipment; return eq.rows.find((r) => id != null && String(r.id) === String(id)) || eq.rows.find((r) => tag != null && low(r.tag) === low(tag)) || eq.rows.find((r) => label != null && low(r.label) === low(label)) || null; };
       list.forEach((s, i) => {
@@ -215,14 +215,14 @@
     const sn = sensors(sdoc, eq); if (!sn.ok) return { ok: false, step: 2, eq, error: sn.error };
     return { ok: true, eq, sn, model: build(eq, sn, meta) };
   }
-  let SESSION = null;   /* a plant graph loaded when the browser had no room to keep it: it lasts until the page is reloaded */
+  let SESSION = null;   /* a Visualization loaded when the browser had no room to keep it: it lasts until the page is reloaded */
   const kept = () => { try { const o = JSON.parse(W.localStorage.getItem(KEY) || 'null'); return o && (o.model || o.eq) ? o : SESSION; } catch (e) { return SESSION; } };
   const namesOf = (sn) => { const o = {}; arr(sn && sn.rows).forEach((s) => { if (s.reads) o[s.tag] = s.reads; }); return o; };
   const putNames = (names) => { if (W.SCADA_SENSOR_MAP) Object.keys(names || {}).forEach((t) => { if (!W.SCADA_SENSOR_MAP[t]) W.SCADA_SENSOR_MAP[t] = names[t]; }); };
   function use(eqText, snText, meta) {
     const r = read(eqText, snText, meta); if (!r.ok) return r;
     /* what is kept is the small model the console reads (equipment, sensors, pipes), never the files themselves. If the
-       browser still has no room, the plant graph is loaded for this session only. */
+       browser still has no room, the Visualization is loaded for this session only. */
     const save = { model: r.model, names: namesOf(r.sn), at: Date.now() }; SESSION = null;
     try { W.localStorage.removeItem(KEY); W.localStorage.setItem(KEY, JSON.stringify(save)); } catch (e) { SESSION = { ...save, session: true }; r.session = true; }
     put(r.model); return r;

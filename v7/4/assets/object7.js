@@ -108,7 +108,7 @@
     return `${dirWord(dir)} ${fv(v, s && s.unit, s && s.kind)}`;
   }
   function chipNamed(kind, text) {
-    const map = { lib: ['Follows the library', 'lib'], form: ['From the plant graph', 'form'], changed: ['Plant’s own value', 'changed'], libchanged: ['Library changed since', 'libchanged'], none: ['No limits yet', 'none'], next: ['Next phase', 'next'] };
+    const map = { lib: ['Follows the library', 'lib'], form: ['From the Visualization', 'form'], changed: ['Plant’s own value', 'changed'], libchanged: ['Library changed since', 'libchanged'], none: ['No limits yet', 'none'], next: ['Next phase', 'next'] };
     const m = map[kind] || map.lib;
     return chip(text || m[0], { tone: m[1] });
   }
@@ -148,9 +148,9 @@
     if (p.chip === 'changed' || p.chip === 'libchanged') {
       const base = num(p.baseValue != null ? p.baseValue : p.base);                 // what the value would be without the change
       const fromForm = num(p.formValue) != null && same(base, p.formValue) && !same(base, p.libValue);
-      const label = fromForm ? 'plant graph' : p.chip === 'libchanged' ? 'library now' : 'library';
+      const label = fromForm ? 'Visualization' : p.chip === 'libchanged' ? 'library now' : 'library';
       /* v7: the library moved to this plant's own value (a publish): say it plainly, not only "Library changed since" */
-      if (base != null && r.v != null && same(base, r.v)) return `<span class="o-was">now the same as the ${fromForm ? 'plant graph' : 'library'}</span>`;
+      if (base != null && r.v != null && same(base, r.v)) return `<span class="o-was">now the same as the ${fromForm ? 'Visualization' : 'library'}</span>`;
       if (base != null && !same(base, r.v)) return `<span class="o-was">${label} ${esc(fv(base, s.unit, s.kind))}</span>`;
       if (base == null && num(p.libValue) != null && !same(p.libValue, r.v)) return `<span class="o-was">library ${esc(fv(p.libValue, s.unit, s.kind))}</span>`;
     }
@@ -196,7 +196,7 @@
       else follow++;
     });
     const bits = [`${plural(follow, 'reading')} ${follow === 1 ? 'follows' : 'follow'} the library`];
-    if (form) bits.push(`${form} set by the plant graph`);
+    if (form) bits.push(`${form} set by the Visualization`);
     /* v7: a library page has no "here": count the changed readings per plant ("1 changed at Manesar STP") */
     changed.forEach((n, plant) => bits.push(`${n} changed at ${plant}`));
     return `At the plants: ${bits.join(' · ')}.`;
@@ -268,7 +268,7 @@
     else if (isStatus && !lims.length) extra = '<p class="o-hint">Reads ON or OFF and shows whether the equipment is running. It has no limits.</p>';
     const alertRows = alerts.map((al) => alertLine(key, al));
     arr(props).filter((p) => p.kind === 'alert' && !p.decided && (p.sensorId === s.id || p.reading === s.name) && !alerts.some((al) => al.name.split(' — ')[0] === p.name))
-      .forEach((p) => alertRows.push(`<div class="o-al-r"><span>${esc(p.name)}</span> ${stateChip('draft')} <span class="muted">Proposed by the library, not decided yet</span> ${a(plantHref(key, 'library'), 'Decide in What the library brings')}</div>`));
+      .forEach((p) => alertRows.push(`<div class="o-al-r"><span>${esc(p.name)}</span> ${stateChip('draft')} <span class="muted">Proposed by the library, not decided yet</span> ${a(plantHref(key, 'library'), 'Decide in Alerts & Tasks')}</div>`));
     const editable = s.kind === 'manual' || (s.takesLimits && !isMeter && !(isStatus && !lims.length));
     const dir0 = s.primaryDir || dirs[0] || null;
     if (editable) dirsOut.forEach((d) => { const L = lims.find((x) => x.dir === d.dir); d.act = btn(L && hasLimits(L.lim) ? 'Change limits' : 'Set limits', { act: 'obj:limits', data: { plant: key, sensor: s.id, dir: d.dir }, small: true, kind: 'ghost', title: `Change the limits for ${s.name} ${dirWord(d.dir)}` }); });
@@ -340,7 +340,7 @@
     const crumbs0 = [{ label: 'All Plants', href: '#/plants' }];
     if (!P) return notFound(crumbs0.concat([{ label: 'Not found' }]), 'This plant is not in the prototype.', { label: 'All Plants', href: '#/plants' });
     const e = eqOf(key, eqId);
-    if (!e) return notFound(crumbs0.concat([{ label: P.name, href: plantHref(key) }, { label: 'Not found' }]), 'This equipment is not at this plant. The plant graph is the only source of equipment.', { label: 'Equipment at ' + P.name, href: plantHref(key, 'equipment') });
+    if (!e) return notFound(crumbs0.concat([{ label: P.name, href: plantHref(key) }, { label: 'Not found' }]), 'This equipment is not at this plant. The Visualization is the only source of equipment.', { label: 'Equipment at ' + P.name, href: plantHref(key, 'equipment') });
     tab = TABS.some((t) => t[0] === tab) ? tab : 'readings';
     const lt = libTypeOf(e);
     const props = pendingProposals(key, e.id);
@@ -382,8 +382,8 @@
       const where = top.eqId !== e.id ? ` on ${tagOf(key, top.eqId)}, caused here` : '';
       out.push(banner(H(`<b>${esc(top.title)}</b> is open${esc(where)}: ${esc(bandName(top.band))}, opened ${esc(fmt(top.opened))}${top.commissioning ? ' · Commissioning' : ''}${esc(more)}.`), { tone: RANK[top.band] >= 3 ? 'bad' : 'warn', action: btn('Open the issue', { href: issueHref(key, top.id), small: true }) }));
     }
-    if (e.notInDb) out.push(banner('Its type is not one of the database types, so it blocks go live. Fix it in the plant graph, then read again.', { tone: 'bad' }));
-    else if (e.typeDiffers) out.push(banner(`Drawn as ${e.drawn}, stored as ${e.stored}. The stored type is what counts; fix the drawing in the plant graph, then read again.`, { tone: 'warn' }));
+    if (e.notInDb) out.push(banner('Its type is not one of the database types, so it blocks go live. Fix it in the Visualization, then read again.', { tone: 'bad' }));
+    else if (e.typeDiffers) out.push(banner(`Drawn as ${e.drawn}, stored as ${e.stored}. The stored type is what counts; fix the drawing in the Visualization, then read again.`, { tone: 'warn' }));
     const undecided = props.filter((p) => !p.decided && !p.blockedBy);
     if (undecided.length) out.push(banner(`${plural(undecided.length, 'library proposal')} for ${e.tag} ${undecided.length === 1 ? 'is' : 'are'} not decided yet. Go live waits for ${undecided.length === 1 ? 'it' : 'them'}.`, { tone: 'info', action: btn(undecided.length === 1 ? 'Decide it' : 'Decide them', { href: `${plantHref(key, 'library')}?eq=${encodeURIComponent(e.id)}`, small: true }) }));
     if (out.length < 2) {
@@ -409,11 +409,11 @@
       const quiet = P.state === 'commissioning' ? order.filter((m) => !m.action && !arr(m.alerts).length && !m.tone) : []; const main = order.filter((m) => !quiet.includes(m));
       const KP = W.V7KEEP || { open: (id, d) => (d ? ' open' : '') }; const kid = `eqrd:${key}:${e.id}`;
       const fold = quiet.length && main.length ? `<details class="o-rd-fold" data-keep="${esc(kid)}"${KP.open(kid, false)}><summary>${plural(quiet.length, 'more reading')} with nothing to set: ${esc(quiet.map((m) => m.name).join(', '))}</summary><div class="o-rds">${quiet.map(readingCard).join('')}</div></details>` : '';
-      out += section('Readings from the plant graph', `<div class="o-rds">${(fold ? main : order).map(readingCard).join('')}</div>${fold}`, { sub, actions: sample ? [sampleTag()] : [] });
+      out += section('Readings from the Visualization', `<div class="o-rds">${(fold ? main : order).map(readingCard).join('')}</div>${fold}`, { sub, actions: sample ? [sampleTag()] : [] });
     } else {
       const blocked = props.filter((p) => p.blockedBy);
-      const why = blocked.length ? `<span class="o-hint" style="display:block">The library has ${plural(blocked.length, 'item')} for ${/^[AEIOU]/i.test(e.typeName) ? 'an' : 'a'} ${esc(e.typeName)} that ${blocked.length === 1 ? 'waits' : 'wait'} for readings the plant graph doesn't send: ${blocked.map((p) => `${esc(p.name)} (${esc(String(p.blockedBy).replace(/^Needs /, 'needs '))})`).join('; ')}.</span>` : '';
-      out += section('Readings from the plant graph', empty(H(`The plant graph sends no readings for ${esc(e.tag)}.${why}`), btn('Fix it in the plant graph', { act: 'obj:scada', kind: 'ghost', small: true })));
+      const why = blocked.length ? `<span class="o-hint" style="display:block">The library has ${plural(blocked.length, 'item')} for ${/^[AEIOU]/i.test(e.typeName) ? 'an' : 'a'} ${esc(e.typeName)} that ${blocked.length === 1 ? 'waits' : 'wait'} for readings the Visualization doesn't send: ${blocked.map((p) => `${esc(p.name)} (${esc(String(p.blockedBy).replace(/^Needs /, 'needs '))})`).join('; ')}.</span>` : '';
+      out += section('Readings from the Visualization', empty(H(`The Visualization sends no readings for ${esc(e.tag)}.${why}`), btn('Fix it in the Visualization', { act: 'obj:scada', kind: 'ghost', small: true })));
     }
     if (manual.length) {
       const ms = manual.map((s) => instReadingModel(key, P, e, s, props));
@@ -488,7 +488,7 @@
       title: tasks.length ? plural(tasks.length, 'task') : 'No tasks yet', sub,
       body: tasks.length ? UI.table({ cols: [{ label: 'Task', key: 'task' }, { label: 'How often', key: 'every' }, { label: 'Next due', key: 'due', cls: 'nowrap' }, { label: 'Last done', key: 'last', cls: 'nowrap' }, { label: '', key: 'act', cls: 'r' }], rows }) : '',
     });
-    if (undecided.length) out += note(H(`The library proposes ${plural(undecided.length, 'more task')} for ${esc(e.tag)}: ${undecided.map((p) => esc(p.name)).join(', ')}. ${a(plantHref(key, 'library'), 'Decide in What the library brings')}`), 'info');
+    if (undecided.length) out += note(H(`The library proposes ${plural(undecided.length, 'more task')} for ${esc(e.tag)}: ${undecided.map((p) => esc(p.name)).join(', ')}. ${a(plantHref(key, 'library'), 'Decide in Alerts & Tasks')}`), 'info');
     /* v7: condition-based work is the plant's, never this equipment's: say which of its readings raise some */
     const lw = arr(safe(() => V().lineWork(key, { eqId: e.id }), []));
 
@@ -498,7 +498,7 @@
 
   function instDetailsTab(key, P, e, all, lt) {
     const c = codeOf(e);
-    /* v7: the plant graph's answers with plain labels and units ("Motor rating 22 kW"), the same words as What the plant graph has */
+    /* v7: the Visualization's answers with plain labels and units ("Motor rating 22 kW"), the same words as What the Visualization has */
     const form = e.form && typeof e.form === 'object' ? (UI.formAnswers ? UI.formAnswers(e.form).map((x) => { const m = /^(.+?) (\S.*)$/.exec(x); return m ? [m[1], m[2]] : [x, '']; }) : Object.keys(e.form).map((k) => [k, String(e.form[k])])) : [];
     const facts = [
       ['Tag', H(`<span class="mono">${esc(e.tag)}</span>`)],
@@ -506,12 +506,12 @@
       ['Type in the database', H(`${c ? a(libHref(c), e.typeName) : esc(e.typeName)} ${c ? chip(c, { mono: true }) : ''}`)],
       ['Drawn as', e.typeDiffers ? H(`${esc(e.drawn)} <span class="tx-warn">· stored as ${esc(e.stored)}</span>`) : e.drawn],
     ].concat(W.V7STRUCT73 && W.V7STRUCT73.offerFacts ? W.V7STRUCT73.offerFacts(e).map(([k, v]) => [k, v && v.html != null ? H(v.html) : v]) : []).concat([
-      ['Readings', `${all.filter((s) => !s.nextPhase && s.kind !== 'manual').length} from the plant graph${all.some((s) => s.nextPhase) ? `, ${all.filter((s) => s.nextPhase).length} next phase` : ''}`],
-    ]).concat(form.length ? form.map(([k, v]) => [k, v]) : [['Form answers', H('<span class="muted">None in the plant graph</span>')]]);
+      ['Readings', `${all.filter((s) => !s.nextPhase && s.kind !== 'manual').length} from the Visualization${all.some((s) => s.nextPhase) ? `, ${all.filter((s) => s.nextPhase).length} next phase` : ''}`],
+    ]).concat(form.length ? form.map(([k, v]) => [k, v]) : [['Form answers', H('<span class="muted">None in the Visualization</span>')]]);
     let out = card({
-      title: 'From SCADA', sub: 'The plant graph is the only source of equipment, readings and answers. Fix it in the plant graph, then read again.',
-      body: kv(facts) + (e.typeDiffers ? note(`Drawn as ${e.drawn}, stored as ${e.stored}: fix the drawing in the plant graph, then read again.`, 'warn') : '') + (e.notInDb ? note('Its type is not one of the database types: it blocks go live.', 'bad') : ''),
-      actions: [btn('Fix it in the plant graph', { act: 'obj:scada', small: true, kind: 'ghost' })],
+      title: 'From SCADA', sub: 'The Visualization is the only source of equipment, readings and answers. Fix it in the Visualization, then read again.',
+      body: kv(facts) + (e.typeDiffers ? note(`Drawn as ${e.drawn}, stored as ${e.stored}: fix the drawing in the Visualization, then read again.`, 'warn') : '') + (e.notInDb ? note('Its type is not one of the database types: it blocks go live.', 'bad') : ''),
+      actions: [btn('Fix it in the Visualization', { act: 'obj:scada', small: true, kind: 'ghost' })],
     });
     const ti = e.tierSource || {};
     const was = ti.chip && ti.chip !== 'lib' && ti.libValue && ti.libValue !== e.tier ? ` <span class="o-was">library ${esc(TIER[ti.libValue] || ti.libValue)}</span>` : '';
@@ -525,12 +525,12 @@
       what: o.what, here: o.plantValue,
       lib: H(`${esc(o.libValue)}${o.baseDiffers && o.baseValue ? `<div class="muted small">was ${esc(o.baseValue)} when changed</div>` : ''}`),
       why: H(`${esc(o.reasonLabel || '')}${o.note ? `<div class="muted small">${esc(o.note)}</div>` : ''}`),
-      state: H(o.state === 'ok' && o.reason === 'unrecorded' ? chip('Reason not recorded', { tone: 'warn' }) : o.state === 'ok' && o.reason === 'notinlib' ? chip('Not in the library', { tone: 'info' }) : chip(o.state === 'same' && o.baseFrom === 'form' ? 'Now the same as the plant graph' : o.stateLabel || 'OK', { tone: o.state === 'libchanged' ? 'libchanged' : o.state === 'review' ? 'warn' : o.state === 'ended' ? 'muted' : 'ok' })),   /* v7: the same chip as Differences */
+      state: H(o.state === 'ok' && o.reason === 'unrecorded' ? chip('Reason not recorded', { tone: 'warn' }) : o.state === 'ok' && o.reason === 'notinlib' ? chip('Not in the library', { tone: 'info' }) : chip(o.state === 'same' && o.baseFrom === 'form' ? 'Now the same as the Visualization' : o.stateLabel || 'OK', { tone: o.state === 'libchanged' ? 'libchanged' : o.state === 'review' ? 'warn' : o.state === 'ended' ? 'muted' : 'ok' })),   /* v7: the same chip as Differences */
     }));
     out += card({
-      title: 'Differences from the library', sub: diffs.length ? `Values on ${e.tag} that differ from the library, with why.` : '',
-      body: diffs.length ? UI.table({ cols: [{ label: 'What', key: 'what' }, { label: 'Here', key: 'here' }, { label: 'Library', key: 'lib' }, { label: 'Why', key: 'why' }, { label: 'State', key: 'state' }], rows }) : empty(`None: everything on ${e.tag} follows the library or the plant graph.`),
-      actions: [btn('All differences', { href: plantHref(key, 'differences'), small: true, kind: 'ghost' })],
+      title: 'Deviations from the library', sub: diffs.length ? `Values on ${e.tag} that differ from the library, with why.` : '',
+      body: diffs.length ? UI.table({ cols: [{ label: 'What', key: 'what' }, { label: 'Here', key: 'here' }, { label: 'Library', key: 'lib' }, { label: 'Why', key: 'why' }, { label: 'State', key: 'state' }], rows }) : empty(`None: everything on ${e.tag} follows the library or the Visualization.`),
+      actions: [btn('All deviations', { href: plantHref(key, 'differences'), small: true, kind: 'ghost' })],
     });
     out += nextPhaseBox(all.filter((s) => s.nextPhase).map((s) => ({ name: s.name, tag: s.tag, note: s.nextPhaseNote })), lt && lt.nextPhase ? lt.nextPhase.alerts : []);
     return out;
@@ -689,7 +689,7 @@
     const taskRows = next.map((t) => `<li><a href="${esc(taskHref(key, t.id))}"><span>${esc(t.name)}</span><span class="o-v${t.overdue ? ' tx-bad' : ''}">${esc(t.overdue ? 'Overdue' : fmtDay(t.due))}</span><span class="o-go" aria-hidden="true">›</span></a></li>`).join('');
     return `<div class="o-ph-top"><span class="mono">${esc(e.tag)}</span><h2>${esc(e.name)}</h2><p>${esc(e.typeName)} · ${esc(e.tierLabel || TIER[e.tier] || '')}${e.runState ? ` · ${e.runState === 'running' ? 'Running' : 'Stopped'}` : ''}</p></div>`
       + phoneCta(key, P, e, recs, tasks, models)
-      + `<h3 class="o-ph-h">Readings ${sampleTag()}</h3>${rows ? `<ul class="o-ph-list">${rows}</ul>` : '<p class="muted">The plant graph sends no readings for this equipment.</p>'}`
+      + `<h3 class="o-ph-h">Readings ${sampleTag()}</h3>${rows ? `<ul class="o-ph-list">${rows}</ul>` : '<p class="muted">The Visualization sends no readings for this equipment.</p>'}`
       + (taskRows ? `<h3 class="o-ph-h">Next tasks</h3><ul class="o-ph-list">${taskRows}</ul>` : '')
       + `<div class="o-ph-btns">${btn('Report a problem', { act: 'obj:report', data: { plant: key, eq: e.id } })}</div>`;
   }
@@ -930,7 +930,7 @@
   function reviewDay() { return fmtDay(now() + 182 * DAY); }
   function whyHtml(st, redirects) {
     const until = st.until || isoDay(now() + 30 * DAY);
-    const base = st.baseFrom === 'form' ? 'plant graph' : 'library';   /* v7: what this plant's value differs from */
+    const base = st.baseFrom === 'form' ? 'Visualization' : 'library';   /* v7: what this plant's value differs from */
     if (true) return `<div class="o-why"${st.showWhy ? '' : ' hidden'}><h3>This becomes the plant's own value</h3><p class="o-hint">It stops following the ${base} until someone sends it back.</p>` + UI.field({ label: 'Why', hint: 'What makes this plant different. Required.', html: `<textarea class="o-note" rows="3" aria-label="Why" placeholder="For example: the probe sits near the diffuser and reads high">${esc(st.note || '')}</textarea>` }) + '</div>';
     const radios = UI.radios({
       name: 'oReason', value: st.reason || '', label: `Why does this plant differ from the ${base}?`,
@@ -941,7 +941,7 @@
     });
     const items = [];
     if (redirects && redirects.fault) items.push(['fault', 'The sensor reads wrong', 'report a sensor fault']);
-    if (redirects && redirects.scada) items.push(['scada', 'It is built differently', 'fix it in the plant graph']);
+    if (redirects && redirects.scada) items.push(['scada', 'It is built differently', 'fix it in the Visualization']);
     if (redirects && redirects.lib) items.push(['lib', 'The library is wrong', 'suggest a library change']);
     const red = items.length ? `<div class="o-redir"><p>Or is it one of these? They are not kept as changes here.</p><ul>${items.map(([w, x, y]) => `<li><button type="button" data-act="obj:redirect" data-what="${w}">${esc(x)} → ${esc(y)}</button></li>`).join('')}</ul></div>` : '';
     return `<div class="o-why"${st.showWhy ? '' : ' hidden'}><h3>Why does this plant differ from the ${base}?</h3>${radios}`
@@ -1137,7 +1137,7 @@
     const B = st.base[b];
     if (st.mode === 'type') return same(t, B) ? '' : `Library now ${B == null ? 'none' : fv(B, st.unit, st.kind)}`;
     if (st.free || same(t, B)) return '';
-    return `${baseIsForm(st, b) ? 'plant graph' : 'Library'} ${B == null ? 'none' : fv(B, st.unit, st.kind)}`;
+    return `${baseIsForm(st, b) ? 'Visualization' : 'Library'} ${B == null ? 'none' : fv(B, st.unit, st.kind)}`;
   }
   function lsInput(st, b) {
     const label = `${bandName(b)} limit`;
@@ -1253,7 +1253,7 @@
       const does = q1(row, '.o-band-d'); if (does) { setHidden(does, st.vals[b] === ''); setHidden(q1(row, '.o-trig-t'), st.does[b] !== 'task'); setHidden(q1(row, '.o-trig-i'), st.does[b] === 'task'); }
       setHidden(q1(row, '.o-band-e'), st.vals[b] !== '');
       if (st.mode === 'instance') { const ds = q1(row, 'select[data-dflow]'); if (ds && ds.value !== String(st.flowSel || '')) ds.value = st.flowSel || ''; setHtml(q1(row, '.o-trig-how'), howHtml(st.flowSel)); setHtml(q1(row, '.o-trig-tl'), taskFlowLinks((st.taskFlow || {})[b])); }
-      const back = q1(row, '.o-back'); if (back) { setHidden(back, !v.view[b].back); if (st.mode === 'instance') back.textContent = baseIsForm(st, b) ? 'Back to the plant graph value' : 'Back to the library value'; }
+      const back = q1(row, '.o-back'); if (back) { setHidden(back, !v.view[b].back); if (st.mode === 'instance') back.textContent = baseIsForm(st, b) ? 'Back to the Visualization value' : 'Back to the library value'; }
     });
     st.showWhy = st.showWhy || v.needsWhy;
     setHidden(q1(el, '.o-why'), !v.needsWhy && !st.forceWhy);
@@ -1324,7 +1324,7 @@
     else if (f.type === 'every') input = `<div class="o-row2"><span>Every</span><input type="number" min="1" step="1" data-f="n" value="${esc(st.vals.n)}" aria-label="How many"><select data-f="unit" aria-label="Unit">${UNITS.map((u) => `<option value="${u}"${st.vals.unit === u ? ' selected' : ''}>${u}s</option>`).join('')}</select></div>`;
     else if (f.type === 'tier') input = `<select data-f="tier" aria-label="Criticality">${['A', 'B', 'C'].map((t) => `<option value="${t}"${st.vals.tier === t ? ' selected' : ''}>${TIER[t]}</option>`).join('')}</select>`;
     else if (f.type === 'runhours') input = `<div class="o-row2"><span>${esc(f.prefix || 'Every')}</span><input type="number" min="1" step="1" data-f="runhours" value="${esc(st.vals.runhours)}" aria-label="Run-hours"><span class="o-unit">run-hours</span></div>`;
-    return `<div class="o-vrow" data-row="${f.id}"><div class="o-vrow-l">${esc(f.label)}</div><div>${input}</div><div class="o-vrow-m"><span class="o-band-chip"></span><span class="o-band-ref"></span><button type="button" class="o-back" data-act="obj:vback" data-f="${f.id}" hidden>${esc(st.mode === 'type' ? 'Back to the published value' : vsFromForm(st, f.id) ? 'Back to the plant graph value' : 'Back to the library value')}</button></div>${f.hint ? `<p class="o-band-h">${esc(f.hint)}</p>` : ''}</div>`;
+    return `<div class="o-vrow" data-row="${f.id}"><div class="o-vrow-l">${esc(f.label)}</div><div>${input}</div><div class="o-vrow-m"><span class="o-band-chip"></span><span class="o-band-ref"></span><button type="button" class="o-back" data-act="obj:vback" data-f="${f.id}" hidden>${esc(st.mode === 'type' ? 'Back to the published value' : vsFromForm(st, f.id) ? 'Back to the Visualization value' : 'Back to the library value')}</button></div>${f.hint ? `<p class="o-band-h">${esc(f.hint)}</p>` : ''}</div>`;
   }
   function vsBody(st) {
     const why = st.mode === 'instance' ? (st.kind === 'tier'
@@ -1338,7 +1338,7 @@
     if (st.kind === 'tier') return st.vals.tier;
     const raw = st.vals[id]; return raw === '' || raw == null || !isFinite(+raw) ? null : Math.round(+raw);
   }
-  /* v7: the cadence of a task the plant graph proposes is measured against the form (its run-hours part against the library) */
+  /* v7: the cadence of a task the Visualization proposes is measured against the form (its run-hours part against the library) */
   function vsFromForm(st, id) { return st.mode === 'instance' && st.kind === 'cadence' && st.baseFrom === 'form' && id !== 'runhours'; }
   function vsSame(st, x, y, id) { return id === 'runhours' ? same(x, y) : st.kind === 'cadence' ? sameEvery(x, y) : st.kind === 'tier' ? x === y : same(x, y); }
   function vsFmt(st, x, id) { return id === 'runhours' ? (x == null ? 'none' : `every ${x} run-hours`) : st.kind === 'cadence' ? everyText(x) : st.kind === 'tier' ? (x ? (TIER[x] || x) : 'none') : (x == null ? 'none' : `${x} min`); }
@@ -1362,7 +1362,7 @@
       if (st.mode === 'instance' && changed && !toLib && !st.free && !(f.id === 'runhours' && lib == null)) out.needsWhy = true;
       const fromForm = vsFromForm(st, f.id);
       const chipH = st.mode === 'type' ? (toLib ? chipNamed('lib') : draftChip()) : (!changed ? (st.chips[f.id] ? sourceChip(st.chips[f.id]) : '') : toLib ? chipNamed(fromForm ? 'form' : 'lib') : chipNamed('changed'));
-      const ref = toLib || lib == null ? '' : `${st.mode === 'type' ? 'Library now' : fromForm ? 'plant graph' : 'Library'} ${vsFmt(st, lib, f.id)}`;
+      const ref = toLib || lib == null ? '' : `${st.mode === 'type' ? 'Library now' : fromForm ? 'Visualization' : 'Library'} ${vsFmt(st, lib, f.id)}`;
       out.rows[f.id] = { chip: chipH, ref, back: lib != null && !toLib };
     });
     return out;
@@ -1474,7 +1474,7 @@
       kind: 'cadence', mode: 'instance', key, taskId: t.id, name: t.name, typeName: t.typeName || '', plantName: P ? P.name : key,
       title: `How often · ${t.name}`, sub: `${t.line || ''}${P ? ' · ' + P.name : ''}`,
       intro: [shared, rh ? 'Run-hours are counted by the hour meter, from the last service or from go live.' : ''].filter(Boolean).join(' '),
-      /* v7: baseFrom 'form' (a task the plant graph proposes): the sheet calls its base the plant graph, never the library */
+      /* v7: baseFrom 'form' (a task the Visualization proposes): the sheet calls its base the Visualization, never the library */
       baseFrom: src.baseFrom === 'form' ? 'form' : 'lib',
       fields, cur: { every: t.every, runhours: rh ? rh.value : null }, lib: { every: src.libValue || null, runhours: rhLib }, chips: { every: src, runhours: meterOnly ? src : rh },
       vals: { n: String(t.every.n), unit: t.every.unit, runhours: rh ? String(rh.value) : '' }, free: src.libValue == null && !(rh && rh.libValue != null), reason: null, note: '', until: null, saveLabel: 'Save', saveAct: 'obj:csave',
@@ -1592,7 +1592,7 @@
   UI.on('obj:redirect', (el) => {
     const w = ga(el, 'what'); const st = LS || VS; if (!st) return false;
     const s = UI.sheetEl(); if (s) readWhy(s, st);
-    if (w === 'scada') { UI.toast('The plant graph is the only source of equipment and answers. Fix it in the plant graph, then read again.'); return false; }
+    if (w === 'scada') { UI.toast('The Visualization is the only source of equipment and answers. Fix it in the Visualization, then read again.'); return false; }
     if (w === 'fault') {
       if (!LS || LS.mode !== 'instance' || LS.manual) return false;
       const r = safe(() => V().reportSensorFault(LS.key, LS.sensorId, { note: LS.note || '' }), null);
@@ -1626,7 +1626,7 @@
     UI.closeModal(true); MOD = null; UI.toast(`Reported: ${r.issue ? r.issue.title : 'a problem'}. Its diagnostic is ready.`);
     UI.go(issueHref(key, r.id)); return false;
   });
-  UI.on('obj:scada', () => { UI.toast('The plant graph is the only source of equipment, readings and answers. Fix it in the plant graph, then read again.'); return false; });
+  UI.on('obj:scada', () => { UI.toast('The Visualization is the only source of equipment, readings and answers. Fix it in the Visualization, then read again.'); return false; });
   UI.on('obj:suggest', (el) => { openSuggest({ code: ga(el, 'code'), typeName: ga(el, 'type'), plant: ga(el, 'plant') }); return false; });
   UI.on('obj:sgsave', (el) => {
     const t = q1(MOD, '.o-sg'); const text = t ? String(t.value || '').trim() : '';

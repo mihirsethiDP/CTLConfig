@@ -90,3 +90,25 @@ a.tl-a:hover, button.tl-a:hover { text-decoration: none; background: var(--surfa
 .tl-m:hover { text-decoration: none; background: var(--surface-2); color: var(--ink); }
 .tl-m.on { font-weight: 600; color: var(--ink); background: var(--surface-2); }
 @media (max-width: 760px) { .tl-steps { overflow-x: auto; padding-bottom: 4px; } .tl-step { flex: 0 0 96px; } .tl-tip { display: none !important; } }
+/* the work level: one choice for how much routine work a site takes on */
+.lvl { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
+.lvl-o { display: grid; gap: 4px; text-align: left; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); font: inherit; cursor: pointer; align-content: start; }
+.lvl-o:hover { border-color: var(--ink-3); }
+.lvl-o.is-on { border-color: var(--accent, #2f6f62); box-shadow: inset 0 0 0 1px var(--accent, #2f6f62); background: var(--surface-2); }
+.lvl-o b { font-size: 14.5px; }
+.lvl-w { font-size: 12.5px; color: var(--ink-3); }
+.lvl-n { font-size: 13.5px; font-weight: 600; margin-top: 4px; }
+.lvl-l { font-size: 12.5px; color: var(--ink-3); }
+.lvl-note { margin: 12px 0 0; font-size: 13px; color: var(--ink-3); }
+.lvl-safe { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 8px; font-size: 13.5px; }
+.lvl-sw { display: inline-flex; align-items: center; gap: 8px; border: 0; background: none; padding: 0; font: inherit; font-weight: 600; color: var(--ink); cursor: pointer; text-align: left; }
+.lvl-sw-k { flex: 0 0 auto; width: 30px; height: 18px; border-radius: 9px; background: var(--line); position: relative; }
+.lvl-sw-k::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: var(--surface); transition: left .12s; }
+.lvl-sw.is-on .lvl-sw-k { background: var(--accent, #2f6f62); }
+.lvl-sw.is-on .lvl-sw-k::after { left: 14px; }
+.lvl-sw-t { display: block; margin: 2px 0 0 38px; color: var(--ink-2); }
+.lvl-warn { color: var(--warn-ink, #8a5a00); }
+.lvl-out { margin-top: 10px; font-size: 13.5px; }
+.lvl-out summary { cursor: pointer; font-weight: 600; }
+.lvl-out ul { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
+.lvl-out li { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; }

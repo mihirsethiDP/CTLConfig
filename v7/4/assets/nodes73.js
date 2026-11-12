@@ -327,7 +327,7 @@
     const rule = tank ? LABEL_RULES.find(([, words]) => words.some((w) => label.includes(w))) : null;
     if (rule) { const p = upByKey[rule[0]]; const w = rule[1].find((x) => label.includes(x)); return { p, eq: p.eq, via: 'label', why: `A tank whose name says “${w}”` }; }
     if (drawn !== stored && !GENERIC_TANK.includes(drawn)) { const d = byCode(drawn); if (d) return { p: d.p, eq: own(d.p, drawn), via: 'drawn', why: `Drawn as ${dbName(own(d.p, drawn))}, the centre of this step`, read: d.read }; }
-    if (up && upByKey[up.typeId]) { const p = upByKey[up.typeId]; return { p, eq: tank ? p.eq : own(p, stored), via: 'position', why: up.why || 'Its place in the plant graph' }; }
+    if (up && upByKey[up.typeId]) { const p = upByKey[up.typeId]; return { p, eq: tank ? p.eq : own(p, stored), via: 'position', why: up.why || 'Its place in the Visualization' }; }
     return null;
   }
 

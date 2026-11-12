@@ -93,7 +93,7 @@
     if (!p) return ''; const P = safe(() => V().plant(key), {}); const live = P.state === 'live'; const on = p.eqId === 'plant' ? 'the plant' : p.tag;
     if (p.blockedBy) {
       const why = p.nextPhase ? 'It reads a connection between two pieces of equipment, which arrives in the next phase.' : `${esc(p.blockedBy)}.`;
-      return wrap('What this would do, and why it can\'t be used yet', part('Why it is not inherited', `<p>${why}</p>`) + part('What that means', `<p>Nothing watches this on ${esc(on)}, and nobody is told. ${p.nextPhase ? '' : 'Add the sensor in the plant graph, read the plant graph again, and it can be accepted here.'}</p>`));
+      return wrap('What this would do, and why it can\'t be used yet', part('Why it is not inherited', `<p>${why}</p>`) + part('What that means', `<p>Nothing watches this on ${esc(on)}, and nobody is told. ${p.nextPhase ? '' : 'Add the sensor in the Visualization, read the Visualization again, and it can be accepted here.'}</p>`));
     }
     const acc = p.decided === 'accepted'; const rej = p.decided === 'rejected'; const lead = rej ? `<p><b>Left out at this plant</b>${p.reason ? `: “${esc(p.reason)}”` : ''}. If it were accepted:</p>` : acc ? '' : '<p>If you accept it:</p>';
     if (p.kind === 'alert') {

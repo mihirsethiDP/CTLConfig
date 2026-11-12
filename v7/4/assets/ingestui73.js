@@ -1,8 +1,8 @@
 /* v7/3 · ingestui73.js — the screen for the two readers in ingest73.js. Route #/ingest.
    Step 1 reads the equipment and its types from a plant-graph JSON. Step 2 reads the sensors on that equipment, from the same
    file or from a separate one. Step 3 loads the result as the plant being set up (DigitalPaani) and starts the story again, so
-   the whole flow can be walked on it: plant graph, structure, library, limits and what they trigger, go live.
-   The pasted text is kept in memory only; a loaded plant graph is kept by ingest73.js.
+   the whole flow can be walked on it: Visualization, structure, library, limits and what they trigger, go live.
+   The pasted text is kept in memory only; a loaded Visualization is kept by ingest73.js.
    ACTIONS (V7UI.on): in:sample in:file in:keep in:read-eq in:read-sn in:same in:load in:clear */
 (function () {
   'use strict';
@@ -76,7 +76,7 @@
     const k = IN.kept(); const name = V() && V().plantName ? V().plantName(IN.PLANT) : 'DigitalPaani';
     const nEq = V() ? arr(V().equipment(IN.PLANT)).length : 0;
     const keptCard = k
-      ? note(`<b>${esc(name)} is running on the plant graph you loaded on ${esc(UI.fmt ? new Date(k.at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '')}</b>: ${plural(nEq, 'piece')} of equipment. ${k.session ? 'It is held for this session only: the browser has no room to keep it, so reloading the page goes back to the built-in one.' : 'Resetting the story keeps it.'} ${btn('Open the plant', { href: `#/p/${IN.PLANT}`, small: true, kind: 'primary' })} ${btn('Use the built-in plant graph again', { act: 'in:clear', small: true, kind: 'ghost' })}`, 'ok')
+      ? note(`<b>${esc(name)} is running on the Visualization you loaded on ${esc(UI.fmt ? new Date(k.at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '')}</b>: ${plural(nEq, 'piece')} of equipment. ${k.session ? 'It is held for this session only: the browser has no room to keep it, so reloading the page goes back to the built-in one.' : 'Resetting the story keeps it.'} ${btn('Open the plant', { href: `#/p/${IN.PLANT}`, small: true, kind: 'primary' })} ${btn('Use the built-in Visualization again', { act: 'in:clear', small: true, kind: 'ghost' })}`, 'ok')
       : '';
     const how = '<ol class="fl-how in-how"><li><b>1 · Equipment</b><span>every node, and its equipment type</span></li><li><b>2 · Sensors</b><span>what is linked to each piece</span></li><li><b>3 · Load</b><span>as the plant being set up</span></li><li><b>Walk the flow</b><span>structure, library, limits, go live</span></li></ol>';
 
@@ -84,7 +84,7 @@
       title: 'Step 1 · Read the equipment',
       sub: 'Paste a plant-graph export or the equipment collection, or choose the file. Each node is matched to the database equipment type stored on it.',
       actions: [btn('Use the DigitalPaani export', { act: 'in:sample', small: true, kind: 'ghost', title: 'Fills the box with the real export, so you can change it and read it again' }), pick('inEqFile', 'eq')],
-      body: `<textarea class="in-ta" id="inEq" data-act="in:keep" spellcheck="false" aria-label="Plant graph JSON" placeholder='{ "layout": { "cells": [ { "id": "…", "type": "PMP", "equipmentId": "…", "attrs": { "label": { "text": "Feed Pump - 1" } } }, … ] } }'>${big() ? '' : esc(ING.eqText)}</textarea>`
+      body: `<textarea class="in-ta" id="inEq" data-act="in:keep" spellcheck="false" aria-label="Visualization JSON" placeholder='{ "layout": { "cells": [ { "id": "…", "type": "PMP", "equipmentId": "…", "attrs": { "label": { "text": "Feed Pump - 1" } } }, … ] } }'>${big() ? '' : esc(ING.eqText)}</textarea>`
         + (big() ? `<p class="muted small">Holding the ${(ING.eqText.length / 1e6).toFixed(1)} MB you gave. It is not shown in the box, to keep the page quick. Paste again to replace it.</p>` : '')
         + `<div class="in-bar">${btn('Read the equipment', { act: 'in:read-eq', kind: 'primary' })}${ING.file1 ? `<span class="muted small">From ${esc(ING.file1)}</span>` : ''}</div>`
         + (ING.err1 ? errNote(ING.err1) : '') + (ING.eq ? eqResult(ING.eq) : ''),
@@ -94,7 +94,7 @@
       + `<label class="radio${ING.own ? ' on' : ''}"><input type="radio" name="inSrc" value="own" data-act="in:same"${ING.own ? ' checked' : ''}><span>In a separate file <span class="muted">(the equipment collection)</span></span></label></div>`;
     const own = ING.own
       ? `<textarea class="in-ta in-ta-s" id="inSn" data-act="in:keep" spellcheck="false" aria-label="Sensors JSON" placeholder='[ { "_id": { "$oid": "…" }, "nodeType": "OS_TANK", "itemDetails": { "answer": [ … ], "sensors": [ { "sensorTag": "LV_OS_TANK_CCT_1:UPT", "sensorTypeAbr": "LV_", "category": "Level Transmitters" } ] } }, … ]'>${esc(ING.snText)}</textarea>`
-        + `<p class="muted small">Paste the equipment collection: one record per node, with its sensors under <span class="mono">itemDetails.sensors</span>. Each record is matched to the equipment in step 1 by its id. A second plant graph, or a plain list of sensors, is read too.</p>`
+        + `<p class="muted small">Paste the equipment collection: one record per node, with its sensors under <span class="mono">itemDetails.sensors</span>. Each record is matched to the equipment in step 1 by its id. A second Visualization, or a plain list of sensors, is read too.</p>`
         + `<div class="in-bar">${btn('Read the sensors', { act: 'in:read-sn', kind: 'primary', disabled: !ING.eq })}${pick('inSnFile', 'sn')}${ING.file2 ? `<span class="muted small">From ${esc(ING.file2)}</span>` : ''}</div>`
       : '';
     const s2 = card({
@@ -106,15 +106,15 @@
     const ready = !!(ING.eq && ING.sn);
     const s3 = card({
       title: 'Step 3 · Load it and walk the flow',
-      sub: `Loads this plant graph as ${esc(name)}, the plant being set up, and starts the story again. The other plants and the library stay as they are.`,
+      sub: `Loads this Visualization as ${esc(name)}, the plant being set up, and starts the story again. The other plants and the library stay as they are.`,
       body: ready
         ? `<div class="in-load"><label class="field-l" for="inName">Plant name</label><input type="text" id="inName" class="in-name" data-act="in:keep" value="${esc(ING.name || name)}">${btn(`Load ${plural(ING.eq.rows.length, 'piece')} of equipment and ${plural(ING.sn.rows.length, 'sensor')}`, { act: 'in:load', kind: 'primary' })}</div>`
-          + `<ol class="in-next"><li><b>Plant graph</b>: review what was read, type by type.</li><li><b>Structure</b>: confirm the unit processes and place what is left.</li><li><b>Library</b>: accept what each equipment type brings.</li><li><b>Equipment</b>: set limits on a reading and choose what each range triggers.</li><li><b>Go live</b> from the plant's home.</li></ol>`
+          + `<ol class="in-next"><li><b>Visualization</b>: review what was read, type by type.</li><li><b>Structure</b>: confirm the unit processes and place what is left.</li><li><b>Library</b>: accept what each equipment type brings.</li><li><b>Equipment</b>: set limits on a reading and choose what each range triggers.</li><li><b>Go live</b> from the plant's home.</li></ol>`
         : '<p class="muted">Read the equipment and the sensors first.</p>',
       cls: ready ? '' : 'in-off',
     });
     return UI.page({
-      title: 'Test a plant graph',
+      title: 'Test a Visualization',
       sub: 'Read any plant-graph JSON in two steps, equipment first and then its sensors, and load it to test the whole flow end to end.',
       body: keptCard + how + s1 + s2 + s3,
     });
@@ -136,13 +136,13 @@
   UI.on('in:load', () => {
     pull(); if (!ING.eq || !ING.sn) return false;
     UI.confirm({
-      title: 'Load this plant graph?',
+      title: 'Load this Visualization?',
       body: `It becomes the plant being set up (${plural(ING.eq.rows.length, 'piece')} of equipment, ${plural(ING.sn.rows.length, 'sensor')}), and the story starts again: everything you changed in the console is cleared. Your calls on the Decisions page are kept.`,
       ok: 'Load and start again', kind: 'primary',
       onOk: () => {
         const r = IN.use(ING.eqText, ING.own ? ING.snText : '', { name: ING.name });
         if (!r.ok) { if (r.step === 2) ING.err2 = r.error; else ING.err1 = r.error; UI.toast(r.error); UI.render(); return false; }
-        restart(r.session ? `Loaded for this session: ${plural(r.eq.rows.length, 'piece')} of equipment and ${plural(r.sn.rows.length, 'sensor')}. The browser has no room to keep it, so reloading the page goes back to the built-in plant graph.` : `Loaded: ${plural(r.eq.rows.length, 'piece')} of equipment and ${plural(r.sn.rows.length, 'sensor')}. The plant is ready to set up.`);
+        restart(r.session ? `Loaded for this session: ${plural(r.eq.rows.length, 'piece')} of equipment and ${plural(r.sn.rows.length, 'sensor')}. The browser has no room to keep it, so reloading the page goes back to the built-in Visualization.` : `Loaded: ${plural(r.eq.rows.length, 'piece')} of equipment and ${plural(r.sn.rows.length, 'sensor')}. The plant is ready to set up.`);
         UI.go(`#/p/${IN.PLANT}`); return false;
       },
     });
@@ -150,8 +150,8 @@
   });
   UI.on('in:clear', () => {
     UI.confirm({
-      title: 'Use the built-in plant graph again?', body: 'The plant goes back to the DigitalPaani export that ships with the console, and the story starts again.', ok: 'Use the built-in one', kind: 'danger',
-      onOk: () => { IN.clear(); restart('Back on the built-in DigitalPaani plant graph.'); UI.render(); return false; },
+      title: 'Use the built-in Visualization again?', body: 'The plant goes back to the DigitalPaani export that ships with the console, and the story starts again.', ok: 'Use the built-in one', kind: 'danger',
+      onOk: () => { IN.clear(); restart('Back on the built-in DigitalPaani Visualization.'); UI.render(); return false; },
     });
     return false;
   });

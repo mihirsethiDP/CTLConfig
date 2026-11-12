@@ -93,6 +93,19 @@ check('calls', '28 of the 29 cards carry a call that names one of their options;
 check('calls', 'the decisions file shows them as decided', g.V7DEC.answerOf('D1').made === true && g.V7DEC.answerOf('D1').opt === 2 && g.V7DEC.answerOf('D10') === null);
 check('calls', 'every card has a build state for the hand-off page, or builds as v7/1 does', Object.keys(g.V7_BUILT73).every((id) => cards.some((c) => c.id === id) && ['Built', 'Partly built', 'Not built yet', 'Parked'].includes(g.V7_BUILT73[id][0])));
 
+/* v7/4: the work level */
+(() => {
+  const k = 'vedanta'; const all = V.tasks(k); const w0 = V.workLevel(k);
+  check('work level', 'a plant starts at Everything, with nothing left out', w0.level === 4 && w0.leftOut.length === 0 && w0.options[3].tasks === all.length);
+  V.setWorkLevel(k, 1, { keepUnwatched: false }); const w1 = V.workLevel(k); const t1 = V.tasks(k);
+  check('work level', 'Essentials keeps every preventive maintenance, calibration, statutory and reading-raised task, and leaves out only routine work', w1.leftOut.length > 0 && all.filter((t) => t.workType === 'pm' || t.workType === 'calibration' || t.statutory || t.kind === 'line').every((t) => t1.some((x) => x.id === t.id)) && w1.leftOut.every((x) => { const t = all.find((y) => y.id === x.id); return t && !['pm', 'calibration'].includes(t.workType) && !t.statutory; }), w1.leftOut.length + ' left out');
+  const alertsBefore = V.alerts(k).map((a) => a.id + a.state).join();
+  V.setWorkLevel(k, 1, { keepUnwatched: true }); const w2 = V.workLevel(k);
+  check('work level', 'with the keep switch on, nothing left out is on equipment that no alert watches', w2.leftOut.every((x) => x.watched) && w2.kept.every((x) => !x.watched) && w2.leftOut.length + w2.kept.length === w1.leftOut.length);
+  check('work level', 'the level never changes an alert', V.alerts(k).map((a) => a.id + a.state).join() === alertsBefore);
+  V.setWorkLevel(k, 4); check('work level', 'Everything brings every task back', V.tasks(k).length === all.length && V.workLevel(k).leftOut.length === 0);
+})();
+
 const fails = results.filter((x) => !x).length;
 console.log(`v73.test · ${results.length - fails}/${results.length} checks pass · RESULT: ${fails ? 'FAIL' : 'PASS'}`);
 process.exitCode = fails ? 1 : 0;

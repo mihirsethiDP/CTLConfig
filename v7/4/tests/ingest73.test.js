@@ -91,7 +91,7 @@ const usedR = IN.use(text, JSON.stringify(recs), {}); V.reset();
 const names = (id) => V.sensors(DP).filter((s) => String(s.id).startsWith(id + '_')).map((s) => s.name).sort().join();
 check('records', 'loaded: the blower has Auto / manual, Run status, Trip contact and Under Maintenance; the screen chamber its bar-screen levels', usedR.ok && names(blwRow.id) === 'Auto / manual,Run status,Trip contact,Under Maintenance' && names(scRow.id) === 'Bar Screen 100%,Bar Screen 25%' && V.sensors(DP).length === 9, names(blwRow.id) + ' | ' + names(scRow.id) + ' | ' + V.sensors(DP).length);
 check('records', 'what is kept is the small model, not the files, and it reads back the same', IN.applyKept() === true && !IN.kept().eq && JSON.stringify(IN.kept()).length < 60000 && g.SCADA_SAMPLES[DP].equipment.reduce((n, e) => n + e.sensors.length, 0) === 9 && g.SCADA_SENSOR_MAP.BS25 === 'Bar Screen 25%', String(JSON.stringify(IN.kept()).length));
-/* a browser with no room left: the plant graph still loads, for this session */
+/* a browser with no room left: the Visualization still loads, for this session */
 IN.clear(); V.reset(); const set0 = g.localStorage.setItem; g.localStorage.setItem = (k, v) => { if (k === 'ctl74.ingest') throw new Error('QuotaExceededError'); return set0(k, v); };
 const usedQ = IN.use(text, JSON.stringify(recs), {}); let threwQ = null; try { V.reset(); } catch (e) { threwQ = e; }
 check('records', 'with no room in the browser it loads for this session and says so', usedQ.ok && usedQ.session === true && !threwQ && V.sensors(DP).length === 9 && IN.kept() && IN.kept().session === true && g.localStorage.getItem('ctl74.ingest') == null);
@@ -117,7 +117,7 @@ const tiny = { layout: { cells: [{ type: 'PMP', id: 'a', equipmentId: 'pa', attr
 const u2 = IN.use(JSON.stringify(tiny), JSON.stringify([{ equipmentTag: 'FP-1', widget: 'NUMBER_SENSOR', code: 'AMP' }]), {}); let threw = null; try { V.reset(); } catch (e) { threw = e; }
 check('load', 'a three-node plant with a separate sensor list loads and runs', u2.ok && !threw && V.equipment(DP).length === 3 && V.sensors(DP).length === 1 && V.structure(DP).ups.length === 0 && V.structure(DP).unplaced.length === 3 && !!V.checklist(DP), threw ? String(threw.stack || threw).slice(0, 300) : `${V.equipment(DP).length}/${V.sensors(DP).length}`);
 IN.clear(); V.reset();
-check('load', 'clearing goes back to the built-in plant graph', !IN.kept() && V.equipment(DP).length === before.eq && V.sensors(DP).length === before.sn && V.structure(DP).ups.length === before.ups && V.plantName(DP) === 'DigitalPaani');
+check('load', 'clearing goes back to the built-in Visualization', !IN.kept() && V.equipment(DP).length === before.eq && V.sensors(DP).length === before.sn && V.structure(DP).ups.length === before.ups && V.plantName(DP) === 'DigitalPaani');
 
 const bad = results.filter((x) => !x).length;
 console.log(`ingest73: ${results.length - bad}/${results.length} checks passed`);

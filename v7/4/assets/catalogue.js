@@ -1,5 +1,5 @@
 /* The v5 library: the database's equipment types and nothing else. Loaded after data.js and layout-*.js.
-   the plant graph owns the plant: the nodes drawn from the database palette, the sensor widgets, the pipes, and the form filled in
+   the Visualization owns the plant: the nodes drawn from the database palette, the sensor widgets, the pipes, and the form filled in
    for each node (SCADA_FORM). The library owns what each database equipment type and each plant type inherits, and what it
    reads from the form (FORM_RULES). Detection is one rule: a node's type is node.equipmentType || node.code, looked up in
    CATALOGUE by code. Nothing is guessed from labels, nothing asks, and the form never changes a type.
@@ -121,14 +121,14 @@ window.READINGS = (function () {
     'Cooling water temperature': C('CWT', '°C', 'process', [0, 80], 'above', 'in the water leaving the tower'),
   };
 })();
-/* the plant graph widget tags → readings (v1's map, extended). The widget says how it is drawn; the tag says what it measures. */
+/* the Visualization widget tags → readings (v1's map, extended). The widget says how it is drawn; the tag says what it measures. */
 window.SCADA_SENSOR_MAP = {}; Object.entries(window.READINGS).forEach(([name, r]) => { window.SCADA_SENSOR_MAP[r.tag] = name; });
 window.SCADA_WIDGETS = { LEVEL_SENSOR: 'Level Sensor', NUMBER_SENSOR: 'Number Widget', 'chart.knob': 'Gauge', SWITCH_SENSOR: 'Switch', TABLE_WIDGET: 'Table Widget' };
 
 /* ── 3. Equipment types: one per database equipment type, under the database's own name ─────────────────────
    archetype, tier (A critical · B essential · C standard: what failing it costs a sewage or water plant), expects (the
    programme it should have), prefix (tag prefix), sensors (ON THE EQUIPMENT ONLY: what such equipment usually carries in
-   the plant graph), nextPhase (what the type will have once connections are in the library: readings, alerts and work, each with
+   the Visualization), nextPhase (what the type will have once connections are in the library: readings, alerts and work, each with
    where it is read). Optional: tagMap (a widget tag this type reads as another reading: a Cooling Tower's TEMP is the water
    leaving it), confirm (the guess the owner must confirm). */
 window.CATALOGUE = (function () {
@@ -149,8 +149,8 @@ window.CATALOGUE = (function () {
   const NEW = 'New type, content guessed: ';
   const MLSS_CF = CF('MLSS limits to confirm: high at 4500 mg/L (Minor, from v1), low at 2000 mg/L (Minor, new).');
   const AMPS_CF = (amps) => CF(`The current limit (Minor at ${amps} A) is a guess: the form has no motor rating to work it out from.`);
-  /* v7: "the plant graph readings" instead of "widgets" (a word kept off screen) */
-  const DEVICE_CF = CF(NEW + 'a sensing device, wiped and checked every month; what it reads arrives as the plant graph readings.');
+  /* v7: "the Visualization readings" instead of "widgets" (a word kept off screen) */
+  const DEVICE_CF = CF(NEW + 'a sensing device, wiped and checked every month; what it reads arrives as the Visualization readings.');
   const VALVE_CF = CF(NEW + 'the valve position is an open or closed contact, and the valve is stroked every 3 months.');
   return [
     /* tanks and basins */
@@ -160,7 +160,7 @@ window.CATALOGUE = (function () {
     T('CP_TANK', 'vessel', 'C', ['cleaning'], 'T', [S('Level', { reading: 58 })]),
     /* the scraper bridge turns, so it is a rotating machine for maintenance */
     T('CLARIFIER', 'rotating', 'B', ['mechanical PM'], 'SC', [S('Sludge blanket', { reading: 0.7 }), S('Run status')], NP([NR('Outlet turbidity', 'in the water leaving over the weir')])),
-    /* the flood switch and the pH probe are not on every open tank: their alerts apply where the plant graph draws them */
+    /* the flood switch and the pH probe are not on every open tank: their alerts apply where the Visualization draws them */
     T('OS_TANK', 'vessel', 'C', ['cleaning'], 'EQ', [S('Level', { reading: 58 }), S('Sump flood switch'), S('pH', { reading: 7.3 })], null, CF('pH limits to confirm: high at 8.5 (Minor) and 9.5 (Major) from v1, low at 6.0 (Minor) and 5.5 (Major), new.')),
     T('OS_TANK_SP', 'vessel', 'C', ['cleaning'], 'ST', [S('Level', { reading: 50 }), S('Sump flood switch')]),
     T('OS_TANK_SC', 'fixed', 'B', ['inspection'], 'SCR', [], SCREEN_NP()),
@@ -248,7 +248,7 @@ window.detectDbType = function (node) {
   return { code, dbType, kind: 'equipment', entry, type: entry ? entry.type : 'not in the database', ...(entry ? {} : { notInDb: true }), ...(dbType !== code ? { drawnAs: drawn ? drawn.name : code } : {}) };
 };
 
-/* ── 4. The plant graph equipment form, as data: what the plant graph asks when a thing is drawn ───────────
+/* ── 4. The Visualization equipment form, as data: what the Visualization asks when a thing is drawn ───────────
    "Equipment questions by node type": 350 questions over 81 node types. One list per node type that asks more than a
    Name; the 37 name-only types are listed below. Question text is SCADA's own, typos included ('Breath' on the Oil & Grease
    Tank, MBBR and Tube settler forms); one change: the second 'MOC' on OS_TANK / CS_TANK is 'MOC (diffuser material)'. */
@@ -334,7 +334,7 @@ window.FORM_RULES = (function () {
   return {
     TANK, TANK_2: TANK, OP_TANK: TANK, CP_TANK: TANK, CLARIFIER: [R_VOL],
     OS_TANK_SC: OS, OS_TANK_SP: OS,
-    /* a Diffuser Tank's form has no diffuser questions today; the rule reads them when the plant graph adds them (the Manesar sample carries them) */
+    /* a Diffuser Tank's form has no diffuser questions today; the rule reads them when the Visualization adds them (the Manesar sample carries them) */
     OS_TANK_DF: [...OS, R_DIFF('MOC (diffuser material)')], OS_TANK: [...OS, R_DIFF('MOC (diffuser material)')],
     OS_TANK_AG: [R_REMOTE],
     SH_TANK: [{ ...R_VOL, q: 'Length' }],
@@ -374,7 +374,7 @@ window.PLANT_PROFILES = {
 /* ── 7. Standard sets: what each equipment type inherits (alerts on its own readings, schedules by calendar or run hours,
    jobs on its own readings). Every v1 item that read a connection is in the type's nextPhase instead. Limits are v1's where the
    reading carried over; flows, causes, hours and parts are bound by name in flows.js. These replace data.js's list.
-   ifDrawn: the alert is part of a machine only when the plant graph drew its reading (not a gap when it did not). gate: the alert watches
+   ifDrawn: the alert is part of a machine only when the Visualization drew its reading (not a gap when it did not). gate: the alert watches
    only while that status reading is on (a stopped machine reads 0). */
 window.SEED.standardSets = (function () {
   const name = (code) => window.DB_BY_CODE[code].name;
@@ -446,10 +446,10 @@ window.SEED.standardSets = (function () {
   ];
 })();
 
-/* ── 8. Sample the plant graph models: what the plant graph view hands over, in its own vocabulary ──────────
+/* ── 8. Sample the Visualization models: what the Visualization view hands over, in its own vocabulary ──────────
    equipment: the nodes drawn from the database's equipment types (valves and devices included). code is the palette code it
    was drawn with; equipmentType, when present, is the type stored on the node (it wins). sensors are the widgets bound to it,
-   form is what was typed into its plant graph (question → answer; only the answered questions). elements: drawn things that
+   form is what was typed into its Visualization (question → answer; only the answered questions). elements: drawn things that
    are not equipment (the plant label, inlet and outlet points, joints). links are the pipes, machine to machine. */
 window.SCADA_SAMPLES = {
   bawal: { name: 'Bawal WTP', type: 'WTP', capacity: '1.2 MLD', drawn: '2026-10-03', site: 'Bawal',
@@ -467,7 +467,7 @@ window.SCADA_SAMPLES = {
       { id: 'sc_cav', tag: 'CV-1', label: 'Cavitator', code: 'CAVITATOR', sensors: [{ tag: 'TRIP', widget: 'SWITCH_SENSOR', reading: 0 }] } ],
     elements: [],
     links: [['sc_bs1', 'sc_p1'], ['sc_bs1', 'sc_p2'], ['sc_p1', 'sc_v1'], ['sc_p2', 'sc_v1'], ['sc_v1', 'sc_mgf1'], ['sc_mgf1', 'sc_sf1'], ['sc_sf1', 'sc_uf1'], ['sc_uf1', 'sc_cav'], ['sc_cav', 'sc_dt1'], ['sc_dp1', 'sc_dt1']] },
-  /* Manesar is the sample plant in data.js; its the plant graph model uses the same ids so the two agree. Its forms reach the
+  /* Manesar is the sample plant in data.js; its the Visualization model uses the same ids so the two agree. Its forms reach the
      plant's machines when the library first looks at them (a plant seeded without forms reads the model's). */
   manesar: { name: 'Manesar STP', type: 'STP', capacity: '2.5 MLD', drawn: '2026-09-12', site: 'Manesar',
     equipment: [
@@ -505,7 +505,7 @@ window.SCADA_SAMPLES.vedanta = { name: 'Vedanta ETP', type: 'ETP', capacity: '20
     { id: 'v_v1', tag: 'V-7', label: 'Three way Valve', code: 'VALVE_3', sensors: [], form: { 'Type': 'Manual' } } ],
   elements: [],
   links: [['v_p1', 'v_eq1'], ['v_p2', 'v_eq1'], ['v_dt1', 'v_v1'], ['v_v1', 'v_eq1'], ['v_eq1', 'v_an1'], ['v_an1', 'v_sbr'], ['v_bl1', 'v_sbr'], ['v_bl2', 'v_sbr'], ['v_sbr', 'v_ts1'], ['v_ts1', 'v_sp1'], ['v_sp1', 'v_fp1']] };
-/* What the plant graph hands over later, when an engineer draws something new: a third blower on the
+/* What the Visualization hands over later, when an engineer draws something new: a third blower on the
    Manesar aeration header, a third raw-water pump at Bawal, a second filter press at Vedanta. */
 window.SCADA_DELTAS = {
   vedanta: { what: 'FP-2, a second filter press', equipment: [{ id: 'v_fp2', tag: 'FP-2', label: 'Filter press 2', code: 'F_PRESS', sensors: [{ tag: 'HRS', widget: 'NUMBER_SENSOR', reading: 0 }], form: { 'Number of plates': '24', 'Poly dosing': 'Yes' } }], links: [['v_sp1', 'v_fp2']] },
@@ -513,7 +513,7 @@ window.SCADA_DELTAS = {
   bawal: { what: 'RW-3, a third raw-water pump', equipment: [{ id: 'sc_p3', tag: 'RW-3', label: 'Raw water pump 3', code: 'SUB_PMP', sensors: [{ tag: 'AMP', widget: 'chart.knob', reading: 0 }, { tag: 'HRS', widget: 'NUMBER_SENSOR', reading: 0 }], form: { 'Type': 'Non-Cutter Type', 'VFD': 'Yes', 'Motor Rating': '5.5' } }], links: [['sc_bs1', 'sc_p3'], ['sc_p3', 'sc_v1']] },
 };
 
-/* ── 9. A real plant graph → the model above ───────────────────────────────────────────────
+/* ── 9. A real Visualization → the model above ───────────────────────────────────────────────
    A layout is the drawing itself (assets/layout-*.js): cells for equipment, joints, inlet and outlet points and sensor
    widgets, and two kinds of link. A Pipe carries flow from its source to its target; a dashed standard.Link binds a sensor
    widget to the equipment it reads. Every cell drawn from a database equipment type is an equipment node (valves too), with

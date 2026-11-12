@@ -89,7 +89,7 @@
      a rate keeps 1 decimal at 1 a day or more and 2 below ("0.33", "6.1", "13"); a duration is "1 h 49 min" (core's fmtDur) */
   function rate(x) { if (!isNum(x) || +x === 0) return '0'; x = +x; return x >= 1 ? String(Math.round(x * 10) / 10) : String(Math.round(x * 100) / 100); }
   function dur(min) { if (!isNum(min)) return '—'; const v = W.V7; return v && v.fmtDur ? v.fmtDur(+min) : `${Math.round(+min)} min`; }
-  /* v7: plant graph answer in plain words with units ("Motor rating 3.7 kW", "Length 9 m"), the same on every page */
+  /* v7: Visualization answer in plain words with units ("Motor rating 3.7 kW", "Length 9 m"), the same on every page */
   const FORM_Q = {
     'is over flow process': ['Overflow process'], 'shape': ['Shape'], 'length': ['Length', 'm'], 'width': ['Width', 'm'], 'depth / height': ['Depth', 'm'],
     'diffusers type': ['Diffusers'], 'type of diffusers': ['Diffusers'], 'moc (diffuser material)': ['Diffuser material'], 'installation & layout': ['Installation'],
@@ -139,12 +139,12 @@
     if (o.href) return `<a class="${cls}" href="${esc(o.href)}"${attr('title', o.title)}>${txt(text)}</a>`;
     return `<span class="${cls}"${attr('title', o.title)}>${txt(text)}</span>`;
   }
-  function sampleTag(text) { return chip(text || 'Sample readings', { tone: 'sample', title: 'Readings here are generated samples, not from the plant graph' }); }
+  function sampleTag(text) { return chip(text || 'Sample readings', { tone: 'sample', title: 'Readings here are generated samples, not from the Visualization' }); }
 
   const SRC = {
-    lib: ['Follows the library', 'lib'], form: ['From the plant graph', 'form'], changed: ['Plant’s own value', 'changed'],
+    lib: ['Follows the library', 'lib'], form: ['From the Visualization', 'form'], changed: ['Plant’s own value', 'changed'],
     libchanged: ['Library changed since', 'libchanged'], none: ['No limits yet', 'none'], next: ['Next phase', 'next'],
-    notinlib: ['Not in the library', 'changed'],   /* v7: a task neither the library nor the plant graph has, with no difference recorded */
+    notinlib: ['Not in the library', 'changed'],   /* v7: a task neither the library nor the Visualization has, with no difference recorded */
   };
   const SRC_ALIAS = { library: 'lib', fromlibrary: 'lib', scada: 'form', override: 'changed', here: 'changed', moved: 'libchanged', gap: 'none', nolimits: 'none', nextphase: 'next' };
   function srcKind(x) {
@@ -663,7 +663,7 @@
     closeMenus();
     confirm({
       title: 'Reset the story?',
-      body: 'Every plant goes back to Thu 29 Oct, 09:00: DigitalPaani just read from the plant graph, Vedanta ETP on day 6 of its trial, Manesar STP and Bawal WTP Live. Everything you changed is cleared. Your calls on the Decisions page are kept.',
+      body: 'Every plant goes back to Thu 29 Oct, 09:00: DigitalPaani just read from the Visualization, Vedanta ETP on day 6 of its trial, Manesar STP and Bawal WTP Live. Everything you changed is cleared. Your calls on the Decisions page are kept.',
       ok: 'Reset the story', kind: 'danger',
       onOk: () => {
         const v = V(); safe(() => v && (v.reset ? v.reset() : v.boot && v.boot()), null);
@@ -777,7 +777,7 @@
   function routes() { return ROUTES.slice(); }
 
   /* ── shell ─────────────────────────────────────────────────────────────────────────────────────────────── */
-  const NAV = [['All Plants', '#/plants', /^(plants|p)$/], ['Library', '#/library', /^library$/], ['Flows', '#/flows', /^flows$/], ['Test a plant graph', '#/ingest', /^ingest$/], ['Differences', '#/differences', /^differences$/], ['Activity', '#/activity', /^activity$/], ['Decisions', '#/decisions', /^decisions$/]];
+  const NAV = [['All Plants', '#/plants', /^(plants|p)$/], ['Library', '#/library', /^library$/], ['Flows', '#/flows', /^flows$/], ['Test a Visualization', '#/ingest', /^ingest$/], ['Deviations', '#/differences', /^differences$/], ['Activity', '#/activity', /^activity$/], ['Decisions', '#/decisions', /^decisions$/]];
   function navHtml(path) {
     const first = String(path || '').split('/')[0] || 'plants';
     const diffs = /^p\/[^/]+\/differences/.test(path || '');
@@ -821,7 +821,7 @@
   const DEC_LABEL = {
     D1: 'Tanks hold their own readings', D2: 'Readiness and one checklist', D3: 'What is sent during commissioning', D4: 'Which plant tells which part',
     D5: 'Sample readings and replay', D6: 'How a plant keeps a change', D7: 'One task per type', D8: 'A trial for each alert',
-    D9: 'The plant graph is the only source', D10: 'One editor, phone and console', D11: 'Who a library change reaches', D12: 'Manual and lab readings',
+    D9: 'The Visualization is the only source', D10: 'One editor, phone and console', D11: 'Who a library change reaches', D12: 'Manual and lab readings',
     D13: 'Who is told, and how fast', D14: 'Words on screen', D15: 'Open issues keep their terms', D16: 'What an issue is about',
     D17: 'Library versions', D18: 'Where limits come from', D19: 'First due dates', D20: 'Sludge pumps and the pipes', D21: 'When an alert is noisy',
     D22: 'Shared tasks on the review', D23: 'Safety changes and open issues', D24: 'Trial firings kept or recounted', D25: 'Old library numbers at a plant',
@@ -862,11 +862,11 @@
     { n: 1, title: 'The library', dec: ['D10', 'D17', 'D1', 'D14'],
       text: ['Two libraries. Equipment types: a pump, a valve, or a tank on its own. Unit-process types: one treatment step, for a tank or reactor that has other equipment taking part in it. Each type has its readings, limits, alerts and tasks.', 'A type page is laid out exactly like an equipment page, so limits, issues and tasks read the same way everywhere.'],
       go: () => '#/library', also: (c) => [{ label: 'A type page: Blower', href: c.blower }] },
-    { n: 2, title: 'A new plant from the plant graph', dec: ['D9', 'D4', 'D20', 'D26'],
-      text: ['DigitalPaani was read from its real plant graph this morning and is in Commissioning.', '"What the plant graph has" groups its equipment by database type for you to accept. Its Structure tab then proposes the unit processes (one treatment step each) and the control groups (duty/standby sets) for you to confirm, and lists the equipment no rule could place.'],
+    { n: 2, title: 'A new plant from the Visualization', dec: ['D9', 'D4', 'D20', 'D26'],
+      text: ['DigitalPaani was read from its real Visualization this morning and is in Commissioning.', '"What the Visualization has" groups its equipment by database type for you to accept. Its Structure tab then proposes the unit processes (one treatment step each) and the control groups (duty/standby sets) for you to confirm, and lists the equipment no rule could place.'],
       go: () => '#/p/digitalpaani/scada', also: () => [{ label: 'The proposed structure', href: '#/p/digitalpaani/structure' }] },
     { n: 3, title: 'What the library brings', dec: ['D8', 'D18', 'D22'],
-      text: ['For each piece of equipment the library proposes alerts and tasks, each limit with a chip saying where it comes from.', 'Accept a whole type at once. Accepted alerts go On trial, so nothing reaches anyone yet. Proposals that need a reading the plant graph does not send stay visible, greyed.'],
+      text: ['For each piece of equipment the library proposes alerts and tasks, each limit with a chip saying where it comes from.', 'Accept a whole type at once. Accepted alerts go On trial, so nothing reaches anyone yet. Proposals that need a reading the Visualization does not send stay visible, greyed.'],
       go: () => '#/p/digitalpaani/library' },
     { n: 4, title: 'Readiness', dec: ['D2', 'D13', 'D9'],
       text: ['One checklist decides what blocks going live and what is only a gap. Blockers come first, gaps after, each linked to where it is fixed.', 'Go live stays disabled and says why. People are read from the User Center; they are not edited here.'],
@@ -889,7 +889,7 @@
     { n: 10, title: 'A library change', dec: ['D11', 'D17', 'D19', 'D23'],
       text: ['Edit a limit on a type and the draft shows where it lands, counted over the four plants: values that change, plants that keep their own, open issues that keep their terms, tasks that would fall due.', 'Try MLSS low on Diffuser Tank: on MLSS, use Change limits under "Falls below" and change Minor from 2000 to 2200 mg/L. Manesar\'s AT-2 follows the library; AT-1 keeps its own 2500 mg/L. Publishing writes a dated note to each plant it reaches (here Manesar), and AT-1 then shows "Library changed since".'],
       go: (c) => c.diffuser, also: (c) => [{ label: `Open Skeleton Tank${c.tankPlants ? ': used at ' + plural(c.tankPlants, 'plant') : ''}`, href: c.tank }] },
-    { n: 11, title: 'Differences from the library', dec: ['D6', 'D11', 'D25'],
+    { n: 11, title: 'Deviations from the library', dec: ['D6', 'D11', 'D25'],
       text: ['Every value a plant changed is listed with its reason, who changed it, the library value it started from and when to review it.', 'Send it back to the library, keep it, or suggest it for the library. Manesar\'s older changes say their reason was not recorded.'],
       go: () => '#/differences', also: () => [{ label: 'Manesar STP only', href: '#/p/manesar/differences' }] },
     { n: 12, title: 'Decisions', dec: ['D1', 'D2', 'D5'],
@@ -1015,17 +1015,17 @@
       : 'Nothing needs attention right now.';
     const rows = sums.map((s) => {
       const p = s.p; const href = `#/p/${encodeURIComponent(p.key)}`;
-      const tag = p.sample === false ? chip('Real plant graph', { tone: 'info' }) : chip('Sample plant', { tone: 'muted' });
+      const tag = p.sample === false ? chip('Real Visualization', { tone: 'info' }) : chip('Sample plant', { tone: 'muted' });
       return `<li class="prow is-link" data-href="${esc(href)}">`
         + `<div class="prow-name"><a href="${esc(href)}">${esc(p.name)}</a><div class="prow-tags">${chip(p.type || '—', { mono: true })} ${tag}</div></div>`
         + `<div class="prow-state">${stateChip(p.state)}<span class="muted small">${esc(sinceText(p))}</span></div>`
         + `<div class="prow-status">${statusHtml(s)}</div>`
-        + `<div class="prow-diff"><a href="#/p/${esc(encodeURIComponent(p.key))}/differences">${s.diffs ? plural(s.diffs, 'difference') : 'No differences'}</a><span class="muted small">from the library</span></div>`
+        + `<div class="prow-diff"><a href="#/p/${esc(encodeURIComponent(p.key))}/differences">${s.diffs ? plural(s.diffs, 'deviation') : 'No deviations'}</a><span class="muted small">from the library</span></div>`
         + `<span class="prow-go" aria-hidden="true">›</span></li>`;
     }).join('');
     const body = `<p class="lead${attention.length ? ' has-att' : ''}">${lead}</p>`
-      + `<div class="plist"><div class="prow prow-head" aria-hidden="true"><span>Plant</span><span>State</span><span>Readiness or Coverage</span><span>Differences</span><span></span></div><ul>${rows}</ul></div>`
-      + `<p class="foot-note">Manesar STP, Bawal WTP and Vedanta ETP are sample plants. DigitalPaani's layout is its real plant graph; its readings are samples too. Counts of firings come from sample readings.</p>`;
+      + `<div class="plist"><div class="prow prow-head" aria-hidden="true"><span>Plant</span><span>State</span><span>Readiness or Coverage</span><span>Deviations</span><span></span></div><ul>${rows}</ul></div>`
+      + `<p class="foot-note">Manesar STP, Bawal WTP and Vedanta ETP are sample plants. DigitalPaani's layout is its real Visualization; its readings are samples too. Counts of firings come from sample readings.</p>`;
     return page({ title: 'All Plants', sub: `${plural(ps.length, 'plant')} · ${comm} in Commissioning · ${live} Live. The ones that need attention come first.`, chips: [sampleTag()], body, cls: 'pg-plants' });
   }
 
@@ -1035,7 +1035,7 @@
     ['trial', 'Trial', 'Trial', /trial/],
     ['issue', 'Issues', 'Issue', /issue|fir(e|ing)|emergenc|close|diagnos|fix|verify|report/],
     ['task', 'Tasks', 'Task', /task|schedul|due|cadence/],
-    ['library', 'Library', 'Library', /lib|publish|suggest|draft/],
+    ['library', 'Alerts & Tasks', 'Library', /lib|publish|suggest|draft/],
     ['state', 'Plant state', 'Plant state', /live|commission|state|go.?live/],
     ['review', 'Reviews', 'Review', /scada|review|accept|decide|propos|reject/],
     ['change', 'Changes', 'Change', /config|change|limit|override|revert|keep|tier|hold|clear|alert|setting/],
@@ -1084,7 +1084,7 @@
   }
   function plantTabs(key) {
     const b = `#/p/${encodeURIComponent(key)}`;
-    return [['home', 'Home', b], ['equipment', 'Equipment', b + '/equipment'], ['readings', 'Readings', b + '/readings'], ['issues', 'Issues', b + '/issues'], ['tasks', 'Tasks', b + '/tasks'], ['differences', 'Differences', b + '/differences'], ['activity', 'Activity', b + '/activity']].map(([id, label, href]) => ({ id, label, href }));
+    return [['home', 'Home', b], ['equipment', 'Equipment', b + '/equipment'], ['readings', 'Readings', b + '/readings'], ['issues', 'Issues', b + '/issues'], ['tasks', 'Tasks', b + '/tasks'], ['differences', 'Deviations', b + '/differences'], ['activity', 'Activity', b + '/activity']].map(([id, label, href]) => ({ id, label, href }));
   }
   function plantActivityPage(params) {
     const key = params.plant; const p = plantOf(key);
@@ -1096,7 +1096,7 @@
     if (P && typeof P.frame === 'function') { const out = safe(() => P.frame(key, 'activity', body), null); if (out) return out; }
     return page({
       crumbs: [{ label: 'All Plants', href: '#/plants' }, { label: p.name }], title: p.name,
-      chips: [chip(p.type || '', { mono: true }), stateChip(p.state), p.sample === false ? chip('Real plant graph', { tone: 'info' }) : chip('Sample plant', { tone: 'muted' })],
+      chips: [chip(p.type || '', { mono: true }), stateChip(p.state), p.sample === false ? chip('Real Visualization', { tone: 'info' }) : chip('Sample plant', { tone: 'muted' })],
       tabs: plantTabs(key), active: 'activity', body,
     });
   }

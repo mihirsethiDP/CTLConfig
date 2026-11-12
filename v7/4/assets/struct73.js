@@ -1,5 +1,5 @@
 /* v7/3 · struct73.js — the plant's structure on screen (card D1): stages, unit processes with the equipment that takes part in
-   them, control groups (duty/standby sets), and equipment not placed yet. A new plant's structure is proposed from the plant graph
+   them, control groups (duty/standby sets), and equipment not placed yet. A new plant's structure is proposed from the Visualization
    and confirmed once. The library gains unit-process types and control-group types (card D7: a control group's type houses the
    changeover work, one task for the set).
    Routes: #/p/:plant/structure · #/library-structure. Exposes window.V7STRUCT73 {chips, filedOptions, libraryCard, homeLine}.
@@ -47,7 +47,7 @@
   function homeLine(key) {
     const st = S(key); if (!st.ups.length) return '';
     const left = unplaced(key).length; const ok = confirmed(key);
-    return card({ title: 'Structure', sub: `${plural(st.ups.length, 'unit process', 'unit processes')} · ${plural(st.cgs.length, 'control group')}${left ? ` · ${left} not placed yet` : ''}`, body: ok ? '<p class="muted">Confirmed. Work that belongs to a treatment step is filed on its unit process.</p>' : '<p>Proposed from the plant graph. Look it over and confirm it.</p>', actions: [btn(ok ? 'Open the structure' : 'Review the structure', { href: `#/p/${enc(key)}/structure`, kind: ok ? 'secondary' : 'primary', small: true })], tone: ok ? null : 'warn' });
+    return card({ title: 'Structure', sub: `${plural(st.ups.length, 'unit process', 'unit processes')} · ${plural(st.cgs.length, 'control group')}${left ? ` · ${left} not placed yet` : ''}`, body: ok ? '<p class="muted">Confirmed. Work that belongs to a treatment step is filed on its unit process.</p>' : '<p>Proposed from the Visualization. Look it over and confirm it.</p>', actions: [btn(ok ? 'Open the structure' : 'Review the structure', { href: `#/p/${enc(key)}/structure`, kind: ok ? 'secondary' : 'primary', small: true })], tone: ok ? null : 'warn' });
   }
 
   function upCard(key, u) {
@@ -58,9 +58,9 @@
   function structurePage(params) {
     const key = params.plant; const P = W.V7PLANT; const st = S(key); const ok = confirmed(key); const left = unplaced(key);
     const stages = arr(W.V7_STAGES).map((sg) => ({ sg, ups: st.ups.filter((u) => (u.stage || null) === sg.key) })).filter((x) => x.ups.length);
-    const lead = `<p class="lead">A <b>unit process</b> is one treatment step: a basin or reactor and the equipment that serves it. A <b>control group</b> is a duty/standby set that runs as one. Both come from the plant graph.</p>`;
+    const lead = `<p class="lead">A <b>unit process</b> is one treatment step: a basin or reactor and the equipment that serves it. A <b>control group</b> is a duty/standby set that runs as one. Both come from the Visualization.</p>`;
     const ban = !st.ups.length ? '' : ok ? note(`Structure confirmed${left.length ? `, with ${plural(left.length, 'piece')} of equipment still to place` : ''}.`, 'ok')
-      : `<div class="banner tone-warn"><div class="banner-t">Proposed from the plant graph: <b>${plural(st.ups.length, 'unit process', 'unit processes')}</b>, <b>${plural(st.cgs.length, 'control group')}</b>${left.length ? `, and ${plural(left.length, 'piece')} of equipment no rule placed` : ''}. Confirm it to carry on; you can still place equipment afterwards.</div><div class="banner-a">${btn('Confirm the structure', { act: 'st:confirm', data: { plant: key }, kind: 'primary' })}</div></div>`;
+      : `<div class="banner tone-warn"><div class="banner-t">Proposed from the Visualization: <b>${plural(st.ups.length, 'unit process', 'unit processes')}</b>, <b>${plural(st.cgs.length, 'control group')}</b>${left.length ? `, and ${plural(left.length, 'piece')} of equipment no rule placed` : ''}. Confirm it to carry on; you can still place equipment afterwards.</div><div class="banner-a">${btn('Confirm the structure', { act: 'st:confirm', data: { plant: key }, kind: 'primary' })}</div></div>`;
     const body = [lead, ban];
     stages.forEach((x) => body.push(`<section class="st-stage"><h3 class="st-stage-h">${esc(x.sg.label)} <span class="muted">· ${x.ups.length}</span></h3><div class="st-ups">${x.ups.map((u) => upCard(key, u)).join('')}</div></section>`));
     if (st.cgs.length) body.push(card({ title: 'Control groups', sub: 'A duty/standby set runs as one, so its changeover is one task for the set, not one per piece of equipment.', body: `<ul class="st-cgs">${st.cgs.map((c) => `<li><b>${esc(c.name)}</b><span>${c.memberIds.map((id) => `<a class="mono" href="${esc(eqHref(key, id))}">${esc(tagOf(key, id))}</a>`).join(' ')}</span>${arr(c.feeds).length ? `<span class="muted small">serves ${esc(c.feeds.map((id) => tagOf(key, id)).join(', '))}</span>` : ''}</li>`).join('')}</ul>` }));
@@ -68,7 +68,7 @@
       const opts = st.ups.map((u) => `<option value="${esc(u.id)}">${esc(u.tag)} · ${esc(u.typeName)}</option>`).join('');
       body.push(card({ title: `${plural(left.length, 'piece')} of equipment not placed yet`, sub: 'No rule could tell which unit process these serve. Place each one, or leave it on the plant.', tone: 'warn', body: `<ul class="st-left">${left.map((id) => { const e = eqOf(key, id) || {}; return `<li><span><a class="mono" href="${esc(eqHref(key, id))}">${esc(e.tag || id)}</a> ${esc(e.name || '')} <span class="muted">· ${esc(e.typeName || '')}</span></span><select data-act="st:place" data-plant="${esc(key)}" data-eq="${esc(id)}" aria-label="Place ${esc(e.tag || id)}"><option value="">Place in…</option>${opts}<option value="__plant">Leave on the plant</option></select></li>`; }).join('')}</ul>` }));
     }
-    if (!st.ups.length) body.push(empty('No structure yet: the plant graph has no basins or reactors to build it from.'));
+    if (!st.ups.length) body.push(empty('No structure yet: the Visualization has no basins or reactors to build it from.'));
     const html = body.join('');
     if (P && typeof P.frame === 'function') return P.frame(key, 'structure', html);
     return UI.page({ title: 'Structure', body: html });
@@ -135,7 +135,7 @@
     const pic = '<div class="st-rule"><div class="st-rule-c"><span class="st-rule-k">A treated water tank, with pumps and dosing taking part in it</span><span class="st-rule-a">gets</span><a class="st-rule-l" href="' + esc(libHref('treated_water')) + '">Treated water <small>unit-process library</small></a></div><div class="st-rule-c"><span class="st-rule-k">A treated water tank on its own</span><span class="st-rule-a">gets</span><a class="st-rule-l" href="' + esc(libHref('TW-TANK')) + '">Treated water tank <small>equipment library</small></a></div><div class="st-rule-c"><span class="st-rule-k">A pump, a blower or a valve</span><span class="st-rule-a">always gets</span><a class="st-rule-l" href="#/library">Its own type <small>equipment library</small></a></div></div>';
     return UI.page({
       crumbs: [{ label: 'Library', href: '#/library' }, { label: 'Which library a node gets' }], title: 'Which library a node gets',
-      sub: 'Two libraries: equipment, and unit processes. The plant graph decides which one each node gets; nothing is drawn twice.',
+      sub: 'Two libraries: equipment, and unit processes. The Visualization decides which one each node gets; nothing is drawn twice.',
       body: card({ title: 'The rule', body: '<p>' + RULE + '</p>' + pic })
         + card({ title: 'Unit-process types \u00b7 ' + types.length, sub: 'One treatment step each. Open one for its readings, alerts and tasks, and for the codes and sub-types that draw it.', body: upHtml, actions: [btn('Open the unit-process library', { href: '#/library?lib=process', small: true })] })
         + (eqHtml ? card({ title: 'Kinds of equipment \u00b7 ' + n.EQ.length, sub: 'A pump, a valve or a tank is one kind with sub-types. Each code, old or new, is read to a type in the equipment library.', body: eqHtml, actions: [btn('Open the equipment library', { href: '#/library', small: true })] }) : '')
@@ -144,7 +144,7 @@
     });
   }
 
-  UI.on('st:confirm', (el) => { const key = ga(el, 'plant'); const p = PS(key); if (!p) return false; p.structureOk = V().now(); try { V().log(key, `Structure confirmed: ${plural(S(key).ups.length, 'unit process', 'unit processes')} and ${plural(S(key).cgs.length, 'control group')}, as proposed from the plant graph`, 'config'); } catch (e) { /* ignore */ } UI.toast('Structure confirmed.'); return undefined; });
+  UI.on('st:confirm', (el) => { const key = ga(el, 'plant'); const p = PS(key); if (!p) return false; p.structureOk = V().now(); try { V().log(key, `Structure confirmed: ${plural(S(key).ups.length, 'unit process', 'unit processes')} and ${plural(S(key).cgs.length, 'control group')}, as proposed from the Visualization`, 'config'); } catch (e) { /* ignore */ } UI.toast('Structure confirmed.'); return undefined; });
   UI.on('st:place', (el) => { const key = ga(el, 'plant'); const p = PS(key); const v = el.value; if (!p || !v) return false; p.placed = p.placed || {}; p.placed[ga(el, 'eq')] = v === '__plant' ? '' : v; const u = S(key).ups.find((x) => x.id === v); try { V().log(key, `${tagOf(key, ga(el, 'eq'))} ${u ? `placed in ${u.tag}` : 'left on the plant'}`, 'config'); } catch (e) { /* ignore */ } return undefined; });
 
   UI.route('p/:plant/structure', structurePage);

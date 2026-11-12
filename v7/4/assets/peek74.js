@@ -55,7 +55,7 @@
       const d = (p) => ({ plant: key, pid: p.pid });
       const list = own.slice(0, 8).map((p) => ({ title: `${p.kind === 'alert' ? chip('Alert', { tone: 'info' }) : chip('Task', { tone: 'muted' })} ${esc(p.name)}`, sub: esc(p.detail || ''),
         right: btn('Accept', { act: 'p7:lib-accept', data: d(p), small: true, title: p.kind === 'alert' ? 'It goes On trial: trial firings are recorded, nothing is sent' : 'It starts at go live' }) + btn('Not here', { act: 'p7:lib-reject', data: d(p), small: true, kind: 'ghost', title: 'Not for this plant: asks for a reason' }) }));
-      const tail = [acc ? `${acc} accepted` : '', rej ? `${rej} not for this plant` : '', sh.length ? `${sh.length} more shared by every ${esc(e.typeName)}, decided once on the Library tab` : '', blocked.length ? `${blocked.length} can’t be used yet: the plant graph sends no such reading` : ''].filter(Boolean);
+      const tail = [acc ? `${acc} accepted` : '', rej ? `${rej} not for this plant` : '', sh.length ? `${sh.length} more shared by every ${esc(e.typeName)}, decided once on the Library tab` : '', blocked.length ? `${blocked.length} can’t be used yet: the Visualization sends no such reading` : ''].filter(Boolean);
       const body = (list.length ? rows(list) + more(own.length - 8, 'proposal', `#/p/${enc(key)}/library?show=undecided&eq=${enc(id)}`) : `<p class="pk-quiet">${und.length ? 'Nothing to decide on this piece of equipment alone.' : 'Everything is decided.'}</p>`) + (tail.length ? `<p class="pk-tail">${tail.join(' · ')}</p>` : '');
       parts.push(sec(own.length ? `From the library · ${own.length} to decide` : 'From the library', body, und.length > 1 ? btn(`Accept all ${und.length}`, { act: 'p7:lib-accept-eq', data: { plant: key, eq: id }, small: true, kind: 'primary', title: 'Everything undecided for it, the tasks shared by its type included' }) : ''));
     }
@@ -73,7 +73,7 @@
       const need = items.filter((x) => x.need); const rest = items.filter((x) => !x.need);
       const fold = need.length && rest.length ? `<details class="pk-fold"><summary>${plural(rest.length, 'more reading')} with nothing to set</summary>${rows(rest)}</details>` : rows(rest);
       parts.push(sec(`Readings · ${rs.length}${need.length ? ` · ${need.length} with no limits yet` : ''}`, (need.length ? rows(need) : '') + fold, need.length ? `<a class="btn btn-ghost btn-sm pk-full" href="${esc(eqHref(key, id, 'readings'))}">Set limits</a>` : ''));
-    } else parts.push(sec('Readings', '<p class="pk-quiet">The plant graph sends no readings for it.</p>'));
+    } else parts.push(sec('Readings', '<p class="pk-quiet">The Visualization sends no readings for it.</p>'));
 
     /* alerts and tasks already on it */
     const als = arr(safe(() => v.alerts(key, { eqId: id }), [])).filter((a) => !a.nextPhase);

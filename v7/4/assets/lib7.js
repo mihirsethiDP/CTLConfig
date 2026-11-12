@@ -254,17 +254,17 @@
     }
     if (chgSame.length) {
       parts.push(`<p class="wl-k">Changed here, and now the same as the library</p>`);
-      parts.push(capList(chgSame, (x) => pair(x.what, `keeps its own ${val(x.plantValue)} — now the same as the library`) + '<span class="wl-x">Back to the library value in Differences ends the difference; the value stays</span>'));
+      parts.push(capList(chgSame, (x) => pair(x.what, `keeps its own ${val(x.plantValue)} — now the same as the library`) + '<span class="wl-x">Back to the library value in Deviations ends the deviation; the value stays</span>'));
     }
-    /* v7: a value changed here from the plant graph's value is measured against the form, so the library change never reaches it */
+    /* v7: a value changed here from the Visualization's value is measured against the form, so the library change never reaches it */
     const frmForm = frm.filter((x) => !x.changedHere); const frmChanged = frm.filter((x) => x.changedHere);
     if (frmForm.length) {
-      parts.push(`<p class="wl-k">Set from the plant graph, so it stays</p>`);
+      parts.push(`<p class="wl-k">Set from the Visualization, so it stays</p>`);
       parts.push(capList(frmForm, (x) => pair(x.what, `keeps ${val(x.plantValue)}`) + (x.why ? `<span class="wl-x">${esc(x.why)}</span>` : ''), 3));
     }
     if (frmChanged.length) {
-      parts.push(`<p class="wl-k">Changed here from the plant graph value, so the library change doesn't touch it</p>`);
-      parts.push(capList(frmChanged, (x) => pair(x.what, `keeps its own ${val(x.plantValue)}${x.formValue ? ` · plant graph ${val(x.formValue)}` : ''}`) + (x.why ? `<span class="wl-x">${esc(x.why)}</span>` : ''), 3));
+      parts.push(`<p class="wl-k">Changed here from the Visualization value, so the library change doesn't touch it</p>`);
+      parts.push(capList(frmChanged, (x) => pair(x.what, `keeps its own ${val(x.plantValue)}${x.formValue ? ` · Visualization ${val(x.formValue)}` : ''}`) + (x.why ? `<span class="wl-x">${esc(x.why)}</span>` : ''), 3));
     }
     if (p.openIssues) parts.push(`<p class="wl-n">${esc(plural(p.openIssues, 'open issue'))} on these readings keep${p.openIssues === 1 ? 's the terms it' : ' the terms they'} opened under.</p>`);
     if (due.length) {
@@ -332,12 +332,12 @@
      ════════════════════════════════════════════════════════════════════════════════════════════════════════ */
   const SHOW_DIF = [['all', 'All'], ['oldlib', 'Probably never chosen'], ['libchanged', 'Library changed since'], ['review', 'Review due'], ['unrecorded', 'Reason not recorded'], ['notinlib', 'Not in the library'], ['ended', 'Ended']];
   const SHOW_NOTE = {
-    oldlib: 'Values equal to the library\'s own fixed number while the plant\'s value now comes from the plant graph: probably never chosen here. Adopt the plant graph value, or keep it with a reason.',
+    oldlib: 'Values equal to the library\'s own fixed number while the plant\'s value now comes from the Visualization: probably never chosen here. Adopt the Visualization value, or keep it with a reason.',
     libchanged: 'The library changed after these plants changed the value. Keep the plant\'s value, or go back to the library\'s new one.',
     review: 'Their review date has passed. Keep each one with a new date, or send it back to the library.',
     unrecorded: 'Changed before reasons were kept. Keep each one with a reason, or send it back to the library.',
     notinlib: 'Values a plant added that the library does not have. If every plant should have one, suggest it for the library.',
-    ended: 'Differences that ended: sent back to the library, ended by their date, or ended by a safety change.',
+    ended: 'Deviations that ended: sent back to the library, ended by their date, or ended by a safety change.',
   };
   function difLists(key, type) {
     const v = V();
@@ -367,10 +367,10 @@
   function whatText(o) { const k = o.target && o.target.kind; return (k === 'limit' || k === 'reading') && o.tag ? `${o.tag} · ${o.what}` : String(o.what || ''); }
   function difChip(o) {
     if (o.state === 'libchanged') return chip('Library changed since', { tone: 'libchanged' });
-    if (o.state === 'same') return chip(o.baseFrom === 'form' ? 'Now the same as the plant graph' : 'Now the same as the library', { tone: 'ok', title: 'The value it differed from now equals this plant’s value: going back ends the difference and changes nothing' });
+    if (o.state === 'same') return chip(o.baseFrom === 'form' ? 'Now the same as the Visualization' : 'Now the same as the library', { tone: 'ok', title: 'The value it differed from now equals this plant’s value: going back ends the deviation and changes nothing' });
     if (o.state === 'review') return chip('Review due', { tone: 'warn' });
     if (o.state === 'ended') return chip('Ended', { tone: 'muted' });
-    if (o.oldLib) return chip('Probably never chosen here', { tone: 'warn', title: 'It equals the library\'s own fixed number; the plant\'s base is now the plant graph' });
+    if (o.oldLib) return chip('Probably never chosen here', { tone: 'warn', title: 'It equals the library\'s own fixed number; the plant\'s base is now the Visualization' });
     if (o.reason === 'unrecorded') return chip('Reason not recorded', { tone: 'warn' });
     if (o.reason === 'notinlib') return chip('Not in the library', { tone: 'info' });
     return chip('OK', { tone: 'ok' });
@@ -382,19 +382,19 @@
     if (o.reason === 'notinlib') return 'suggest';
     return null;
   }
-  /* v7: "Back to the plant graph value" when the base is the form; its reason in plain words ("22 kW motor") */
-  const backText = (o) => (o.oldLib ? 'Adopt the plant graph value' : o.backText || (o.baseFrom === 'form' ? 'Back to the plant graph value' : 'Back to the library value'));
-  /* v7: the form's reason only when it says more than the chip ("22 kW motor"), never "(from the plant graph)" after "plant graph" */
-  const formWhy = (o) => String(o.baseWhy || '').replace(/^From the plant graph:?\s*/i, '');
-  const baseName = (o) => (o.baseFrom === 'form' ? `the plant graph's ${val(o.libValue)}${formWhy(o) ? ` (${formWhy(o)})` : ''}` : `the library's ${val(o.libValue)}`);
+  /* v7: "Back to the Visualization value" when the base is the form; its reason in plain words ("22 kW motor") */
+  const backText = (o) => (o.oldLib ? 'Adopt the Visualization value' : o.backText || (o.baseFrom === 'form' ? 'Back to the Visualization value' : 'Back to the library value'));
+  /* v7: the form's reason only when it says more than the chip ("22 kW motor"), never "(from the Visualization)" after "Visualization" */
+  const formWhy = (o) => String(o.baseWhy || '').replace(/^From the Visualization:?\s*/i, '');
+  const baseName = (o) => (o.baseFrom === 'form' ? `the Visualization's ${val(o.libValue)}${formWhy(o) ? ` (${formWhy(o)})` : ''}` : `the library's ${val(o.libValue)}`);
   function difRow(o) {
     const vals = [`<span>Here <b>${esc(val(o.plantValue))}</b></span>`];
     if (o.reason === 'notinlib') vals.push('<span class="muted">The library has no such value</span>');
     else {
       const form = o.baseFrom === 'form';
-      vals.push(`<span>${form ? 'plant graph' : 'Library'} <b>${esc(val(o.libValue))}</b>${form && formWhy(o) ? ` <span class="muted">(${esc(formWhy(o))})</span>` : ''}</span>`);
-      if (o.state === 'same') vals.push(`<span class="dif-was">Now the same as the ${form ? 'plant graph' : 'library'}${o.baseValue && o.baseValue !== o.libValue ? ` (it was ${esc(val(o.baseValue))} when this was changed)` : ''}: going back changes nothing</span>`);
-      else if (o.state === 'libchanged' || o.baseDiffers) vals.push(`<span class="dif-was">The ${form ? 'plant graph' : 'library'} was ${esc(val(o.baseValue))} when this was changed</span>`);
+      vals.push(`<span>${form ? 'Visualization' : 'Library'} <b>${esc(val(o.libValue))}</b>${form && formWhy(o) ? ` <span class="muted">(${esc(formWhy(o))})</span>` : ''}</span>`);
+      if (o.state === 'same') vals.push(`<span class="dif-was">Now the same as the ${form ? 'Visualization' : 'library'}${o.baseValue && o.baseValue !== o.libValue ? ` (it was ${esc(val(o.baseValue))} when this was changed)` : ''}: going back changes nothing</span>`);
+      else if (o.state === 'libchanged' || o.baseDiffers) vals.push(`<span class="dif-was">The ${form ? 'Visualization' : 'library'} was ${esc(val(o.baseValue))} when this was changed</span>`);
     }
     if (o.oldLib) vals.push(`<span class="dif-was">Same as the library's fixed number (${esc(val(o.oldLibText))}): probably never chosen here${o.plantValue === '—' || /none/.test(String(o.plantValue)) ? `. Adopting adds the band at ${esc(val(o.libValue))}` : ''}</span>`);
     const why = o.reason === 'unrecorded' ? 'Reason not recorded (changed before reasons were kept)'
@@ -439,38 +439,38 @@
       /* plants in the order of their most urgent difference, so attention comes first here too */
       const groups = plants().map((p) => ({ p, rows: rows.filter((o) => o.plant === p.key) })).filter((g) => g.rows.length).sort((x, y) => rows.indexOf(x.rows[0]) - rows.indexOf(y.rows[0]));
       listHtml = groups.map((g) => card({
-        title: g.p.name, sub: plural(g.rows.length, 'difference'),
+        title: g.p.name, sub: plural(g.rows.length, 'deviation'),
         actions: [link('Open at the plant', `#/p/${enc(g.p.key)}/differences${qs({ show, type })}`)],
         body: difListHtml(g.rows),
       })).join('');
       if (show === 'all' && !type) {
         const quiet = plants().filter((p) => !groups.some((g) => g.p.key === p.key)).map((p) => p.name);
-        if (quiet.length) listHtml += `<p class="small muted mt">No differences at ${esc(quiet.join(', '))}: ${quiet.length === 1 ? 'it uses' : 'they use'} the library's values everywhere.</p>`;
+        if (quiet.length) listHtml += `<p class="small muted mt">No deviations at ${esc(quiet.join(', '))}: ${quiet.length === 1 ? 'it uses' : 'they use'} the library's values everywhere.</p>`;
       }
     }
     return `<div class="dif-wrap">${fl}${typeLine}${intro}${listHtml}</div>`;
   }
   function differencesPage(params) {
     return page({
-      title: 'Differences from the library',
+      title: 'Deviations from the library',
       sub: 'Every value a plant uses that is not the library\'s: its reason, who changed it, the library value it started from and when to review it. Send it back to the library, keep it, or suggest it for the library.',
       body: differencesBody(null, (params && params._q) || {}, '#/differences'), cls: 'pg-difs',
     });
   }
   function plantTabs(key) {
     const b = `#/p/${enc(key)}`;
-    return [['home', 'Home', b], ['equipment', 'Equipment', b + '/equipment'], ['readings', 'Readings', b + '/readings'], ['issues', 'Issues', b + '/issues'], ['tasks', 'Tasks', b + '/tasks'], ['differences', 'Differences', b + '/differences'], ['activity', 'Activity', b + '/activity']].map(([id, label, href]) => ({ id, label, href }));
+    return [['home', 'Home', b], ['equipment', 'Equipment', b + '/equipment'], ['readings', 'Readings', b + '/readings'], ['issues', 'Issues', b + '/issues'], ['tasks', 'Tasks', b + '/tasks'], ['differences', 'Deviations', b + '/differences'], ['activity', 'Activity', b + '/activity']].map(([id, label, href]) => ({ id, label, href }));
   }
   function plantDifferencesPage(params) {
     const key = params && params.plant; const p = plantOf(key);
     if (!p) return page({ crumbs: [{ label: 'All Plants', href: '#/plants' }, { label: 'Not found' }], title: 'No such plant', body: empty('This plant is not in the prototype.', btn('All Plants', { href: '#/plants' })) });
     const base = `#/p/${enc(key)}/differences`;
-    const body = section('Differences from the library', differencesBody(key, params._q || {}, base), { sub: `Every value ${p.name} uses that is not the library's, with its reason. What needs attention comes first.` });
+    const body = section('Deviations from the library', differencesBody(key, params._q || {}, base), { sub: `Every value ${p.name} uses that is not the library's, with its reason. What needs attention comes first.` });
     const P = W.V7PLANT;
     if (P && typeof P.frame === 'function') { const out = safe(() => P.frame(key, 'differences', body), null); if (out) return String(out); }
     return page({
       crumbs: [{ label: 'All Plants', href: '#/plants' }, { label: p.name }], title: p.name,
-      chips: [chip(p.type || '', { mono: true }), stateChip(p.state), p.sample === false ? chip('Real plant graph', { tone: 'info' }) : chip('Sample plant', { tone: 'muted' })],
+      chips: [chip(p.type || '', { mono: true }), stateChip(p.state), p.sample === false ? chip('Real Visualization', { tone: 'info' }) : chip('Sample plant', { tone: 'muted' })],
       tabs: plantTabs(key), active: 'differences', body,
     });
   }
@@ -547,7 +547,7 @@
   }
   UI.on('lib:revert', (el) => {
     const v = V(); const o = findOv(attr(el, 'data-id'));
-    if (!o || o.state === 'ended') { UI.toast('That difference is no longer there.'); return undefined; }
+    if (!o || o.state === 'ended') { UI.toast('That deviation is no longer there.'); return undefined; }
     const live = (plantOf(o.plant) || {}).state === 'live';
     const form = o.baseFrom === 'form'; const where = o.plantName || plantName(o.plant);
     const tail = revertTail(o, live);
@@ -555,50 +555,50 @@
        every changed band on the reading together, with what each becomes */
     const pv = safe(() => (v.revertPreview ? v.revertPreview(o.id) : null), null);
     if (pv && pv.needsAll) {
-      const reading = o.tag ? `${String(o.what || '').replace(/ · .*$/, '')} on ${o.tag}` : String(whatText(o)).replace(/ · .*$/, ''); const plural2 = form ? 'Back to the plant graph values' : 'Back to the library values';
+      const reading = o.tag ? `${String(o.what || '').replace(/ · .*$/, '')} on ${o.tag}` : String(whatText(o)).replace(/ · .*$/, ''); const plural2 = form ? 'Back to the Visualization values' : 'Back to the library values';
       if (!pv.ok) { UI.toast(`${pv.allError || pv.error}.`); return undefined; }
       UI.confirm({
         title: `${plural2} for all ${pv.bands.length} bands?`,
         body: `<p>Going back on this band alone would leave ${esc(reading)}'s bands out of order (${esc(String(pv.error).replace(/^Send .*? back too:\s*/, ''))}). So the ${esc(pv.bands.length)} changed bands at ${esc(where)} go back together:</p><ul class="lib-bands">${pv.bands.map((b) => `<li>${esc(b.bandLabel)}: <b>${esc(val(b.from))}</b> → ${esc(val(b.to))}</li>`).join('')}</ul>${tail}`,
         ok: `${plural2} for all ${pv.bands.length} bands`,
-        onOk: () => { const r2 = safe(() => v.revertAll(o.id), null); if (!r2 || !r2.ok) { UI.toast((r2 && r2.error) || 'That did not work.'); return undefined; } UI.toast(`${where}: ${plural(r2.count || 0, 'band')} on ${reading} back to the ${r2.baseFrom === 'form' ? 'plant graph' : 'library'} values.`); return undefined; },
+        onOk: () => { const r2 = safe(() => v.revertAll(o.id), null); if (!r2 || !r2.ok) { UI.toast((r2 && r2.error) || 'That did not work.'); return undefined; } UI.toast(`${where}: ${plural(r2.count || 0, 'band')} on ${reading} back to the ${r2.baseFrom === 'form' ? 'Visualization' : 'library'} values.`); return undefined; },
       });
       return false;
     }
     UI.confirm({
       title: `${backText(o)}?`,
-      body: `<p>${o.state === 'same' ? `${esc(whatText(o))} at ${esc(where)} is <b>${esc(val(o.plantValue))}</b>, now the same as ${esc(baseName(o))}. Going back ends the difference; the value does not change.` : `${esc(whatText(o))} at ${esc(where)} goes from <b>${esc(val(o.plantValue))}</b> to ${esc(baseName(o))}.`}</p>${o.state === 'same' ? revertTail(o, live, true) : tail}`,
-      ok: form ? 'Use the plant graph value' : 'Use the library value',
+      body: `<p>${o.state === 'same' ? `${esc(whatText(o))} at ${esc(where)} is <b>${esc(val(o.plantValue))}</b>, now the same as ${esc(baseName(o))}. Going back ends the deviation; the value does not change.` : `${esc(whatText(o))} at ${esc(where)} goes from <b>${esc(val(o.plantValue))}</b> to ${esc(baseName(o))}.`}</p>${o.state === 'same' ? revertTail(o, live, true) : tail}`,
+      ok: form ? 'Use the Visualization value' : 'Use the library value',
       onOk: () => {
         const r = safe(() => v.revert(o.id), null);
         if (r && !r.ok && r.needsAll && typeof v.revertAll === 'function') {
           UI.confirm({
-            title: `${form ? 'Back to the plant graph values' : 'Back to the library values'} for all bands?`,
+            title: `${form ? 'Back to the Visualization values' : 'Back to the library values'} for all bands?`,
             body: `<p>${esc(r.error)}.</p><p class="mt">Send every changed band on ${esc(String(whatText(o)).replace(/ · .*$/, ''))} at ${esc(where)} back together, so the bands stay in order.</p>`,
-            ok: `${form ? 'Back to the plant graph values' : 'Back to the library values'} for all bands`,
-            onOk: () => { const r2 = safe(() => v.revertAll(o.id), null); if (!r2 || !r2.ok) { UI.toast((r2 && r2.error) || 'That did not work.'); return undefined; } UI.toast(`${where}: ${plural(r2.count || 0, 'band')} on ${String(whatText(o)).replace(/ · .*$/, '')} back to the ${r2.baseFrom === 'form' ? 'plant graph' : 'library'} values.`); return undefined; },
+            ok: `${form ? 'Back to the Visualization values' : 'Back to the library values'} for all bands`,
+            onOk: () => { const r2 = safe(() => v.revertAll(o.id), null); if (!r2 || !r2.ok) { UI.toast((r2 && r2.error) || 'That did not work.'); return undefined; } UI.toast(`${where}: ${plural(r2.count || 0, 'band')} on ${String(whatText(o)).replace(/ · .*$/, '')} back to the ${r2.baseFrom === 'form' ? 'Visualization' : 'library'} values.`); return undefined; },
           });
           return false;
         }
         if (!r || !r.ok) { UI.toast((r && r.error) || 'That did not work.'); return undefined; }
-        UI.toast(`${where}: ${whatText(o)} is back to the ${form ? 'plant graph' : 'library'} value, ${val(o.libValue)}${form && formWhy(o) ? ` (${formWhy(o)})` : ''}.`);
+        UI.toast(`${where}: ${whatText(o)} is back to the ${form ? 'Visualization' : 'library'} value, ${val(o.libValue)}${form && formWhy(o) ? ` (${formWhy(o)})` : ''}.`);
         return undefined;
       },
     });
     return false;
   });
   UI.on('lib:revert-all', (el) => {
-    const v = V(); const o = findOv(attr(el, 'data-id')); if (!o || o.state === 'ended') { UI.toast('That difference is no longer there.'); return undefined; }
+    const v = V(); const o = findOv(attr(el, 'data-id')); if (!o || o.state === 'ended') { UI.toast('That deviation is no longer there.'); return undefined; }
     const r = safe(() => v.revertAll(o.id), null); if (!r || !r.ok) { UI.toast((r && r.error) || 'That did not work.'); return undefined; }
-    UI.toast(`${o.plantName || plantName(o.plant)}: ${plural(r.count || 0, 'band')} back to the ${r.baseFrom === 'form' ? 'plant graph' : 'library'} values.`); return undefined;
+    UI.toast(`${o.plantName || plantName(o.plant)}: ${plural(r.count || 0, 'band')} back to the ${r.baseFrom === 'form' ? 'Visualization' : 'library'} values.`); return undefined;
   });
 
   function keepBody(o, F) {
     const tomorrow = dateIn(now() + DAY);
     const dateInput = (name, kind) => `<input type="date" name="${name}" value="${esc(F[name] || '')}" min="${tomorrow}" aria-label="${name === 'until' ? 'Until' : 'Review by'}" data-act="lib:field" data-form="keep" data-name="${name}"${kind ? ` data-kind="${kind}"` : ''} data-live>`;
-    const head = kv([['Here', `<b class="mono">${esc(val(o.plantValue))}</b>`], [o.baseFrom === 'form' ? 'plant graph' : 'Library', o.reason === 'notinlib' ? 'Not in the library' : `<span class="mono">${esc(val(o.libValue))}</span>${o.baseFrom === 'form' && formWhy(o) ? ` <span class="muted">(${esc(formWhy(o))})</span>` : ''}`]]);
+    const head = kv([['Here', `<b class="mono">${esc(val(o.plantValue))}</b>`], [o.baseFrom === 'form' ? 'Visualization' : 'Library', o.reason === 'notinlib' ? 'Not in the library' : `<span class="mono">${esc(val(o.libValue))}</span>${o.baseFrom === 'form' && formWhy(o) ? ` <span class="muted">(${esc(formWhy(o))})</span>` : ''}`]]);
     const moved = o.state === 'libchanged' ? note(`The library changed from ${val(o.baseValue)} to ${val(o.libValue)} after this plant changed it. Keeping it records the library's new value as the one it differs from.`, 'warn')
-      : o.state === 'same' ? note(`The ${o.baseFrom === 'form' ? 'plant graph' : 'library'} value is now ${val(o.libValue)}, the same as this plant's. ${backText(o)} ends the difference and the value stays ${val(o.plantValue)}.`, 'info') : '';
+      : o.state === 'same' ? note(`The ${o.baseFrom === 'form' ? 'Visualization' : 'library'} value is now ${val(o.libValue)}, the same as this plant's. ${backText(o)} ends the deviation and the value stays ${val(o.plantValue)}.`, 'info') : '';
     const choice = o.reason === 'notinlib'
       ? field({ label: 'Review by', html: dateInput('reviewBy'), hint: 'The library has no such value, so it stays until someone reviews it.' })
       : field({ label: 'How long', html: radios({ name: 'keepKind', value: F.kind, act: 'lib:field', data: { form: 'keep', name: 'kind' }, options: [
@@ -610,7 +610,7 @@
   }
   UI.on('lib:keep', (el) => {
     const o = findOv(attr(el, 'data-id'));
-    if (!o || o.state === 'ended') { UI.toast('That difference is no longer there.'); return undefined; }
+    if (!o || o.state === 'ended') { UI.toast('That deviation is no longer there.'); return undefined; }
     const t0 = now();
     const F = ST.forms.keep = {
       id: o.id, kind: o.reason === 'fornow' ? 'fornow' : 'tuned', note: o.note || '',
@@ -622,7 +622,7 @@
   });
   UI.on('lib:keep-save', (el) => {
     const v = V(); const F = ST.forms.keep || {}; const o = findOv(F.id || attr(el, 'data-id'));
-    if (!o || o.state === 'ended') { UI.closeModal(); UI.toast('That difference is no longer there.'); return undefined; }
+    if (!o || o.state === 'ended') { UI.closeModal(); UI.toast('That deviation is no longer there.'); return undefined; }
     if (!String(F.note || '').trim()) { UI.toast('Write a note: why does this plant keep its own value?'); return false; }
     const forNow = F.kind === 'fornow' && o.reason !== 'notinlib';
     const ms = dateMs(forNow ? F.until : F.reviewBy);
@@ -637,12 +637,12 @@
   function suggestText(o) {
     const where = o.plantName || plantName(o.plant);
     if (o.reason === 'notinlib') return `${where} added ${whatText(o)} (${val(o.plantValue)}). Should every ${o.typeName} carry it?`;
-    if (o.baseFrom === 'form') return `${where} uses ${val(o.plantValue)} for ${whatText(o)}, where the plant graph gives ${val(o.libValue)}${formWhy(o) ? ` (${formWhy(o)})` : ''}${o.note ? `; ${o.note}` : ''}. Should the library's rule for it change?`;
+    if (o.baseFrom === 'form') return `${where} uses ${val(o.plantValue)} for ${whatText(o)}, where the Visualization gives ${val(o.libValue)}${formWhy(o) ? ` (${formWhy(o)})` : ''}${o.note ? `; ${o.note}` : ''}. Should the library's rule for it change?`;
     return `${where} uses ${val(o.plantValue)} for ${whatText(o)}, where the library has ${val(o.libValue)}${o.note ? ` (${o.note})` : ''}. Should the library change?`;
   }
   UI.on('lib:suggest', (el) => {
     const o = findOv(attr(el, 'data-id'));
-    if (!o || !o.typeName) { UI.toast('This difference has no library type to suggest it for.'); return undefined; }
+    if (!o || !o.typeName) { UI.toast('This deviation has no library type to suggest it for.'); return undefined; }
     const F = ST.forms.sug = { id: o.id, text: suggestText(o) };
     UI.modal({
       title: 'Suggest for the library', sub: `${o.typeName} · from ${o.plantName || plantName(o.plant)}`,
@@ -654,7 +654,7 @@
   });
   UI.on('lib:suggest-send', (el) => {
     const v = V(); const F = ST.forms.sug || {}; const o = findOv(F.id || attr(el, 'data-id'));
-    if (!o || !o.typeName) { UI.closeModal(); UI.toast('That difference is no longer there.'); return undefined; }
+    if (!o || !o.typeName) { UI.closeModal(); UI.toast('That deviation is no longer there.'); return undefined; }
     const text = String(F.text || '').trim();
     if (!text) { UI.toast('Say what the library should change.'); return false; }
     const r = safe(() => v.suggest({ typeName: o.typeName, text, plant: o.plant }), null);

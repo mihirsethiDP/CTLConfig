@@ -12,7 +12,7 @@ window.V7_CALLS_MADE = {
   D6: { opt: 2, by: 'Mihir', atText: 'Tue 10 Nov' },
   D7: { opt: 2, by: 'Mihir', atText: 'Tue 10 Nov', note: 'The library gets a control-group type, and the changeover tasks are housed there.' },
   D8: { opt: 3, by: 'Mihir', atText: 'Tue 10 Nov' },
-  D9: { opt: 1, by: 'Mihir', atText: 'Tue 10 Nov', note: 'Use "plant graph" everywhere.' },
+  D9: { opt: 1, by: 'Mihir', atText: 'Tue 10 Nov', note: 'Use "Visualization" everywhere.' },
   D11: { opt: 2, by: 'Mihir', atText: 'Tue 10 Nov', note: "We don't want to touch any change the plant owners made themselves." },
   D26: { opt: 0, by: 'Mihir', atText: 'Tue 10 Nov' },
   /* made on the shared decision board, Tue 3 Nov 2026 */
@@ -36,7 +36,7 @@ window.V7_CALLS_MADE = {
   D29: { opt: 1, by: 'Mihir', atText: 'Thu 5 Nov', note: 'Four handles, and a slot per range for what it triggers.' },
 };
 window.V7_BUILT73 = {
-  D1: ['Built', "Each plant has a Structure tab: stages, unit processes with the equipment that takes part in them, control groups, and equipment not placed yet. A new plant's structure is proposed from the plant graph and confirmed once. The library is two libraries: equipment types and 53 unit-process types, each with its own readings, alerts and tasks. A tank or reactor at the centre of a treatment step gets the unit-process type when other equipment takes part in it, and its own equipment type when it stands alone. The unit-process content is a first draft to confirm. The sample plants keep the equipment types their records were made with."],
+  D1: ['Built', "Each plant has a Structure tab: stages, unit processes with the equipment that takes part in them, control groups, and equipment not placed yet. A new plant's structure is proposed from the Visualization and confirmed once. The library is two libraries: equipment types and 53 unit-process types, each with its own readings, alerts and tasks. A tank or reactor at the centre of a treatment step gets the unit-process type when other equipment takes part in it, and its own equipment type when it stands alone. The unit-process content is a first draft to confirm. The sample plants keep the equipment types their records were made with."],
   D2: ['Built', 'Readiness on the plant Home, fed by one checklist.'],
   D3: ['Built', 'On a new plant nothing is sent, Emergencies included: Vedanta\'s pH Emergency on Wed 28 Oct is kept as a trial firing and opens no issue. A plant that was Live keeps its Emergencies real when it is back in Commissioning.'],
   D4: ['Built', 'DigitalPaani for a new plant, Vedanta up to go live, Manesar and Bawal for live running. Prototype only.'],
@@ -44,7 +44,7 @@ window.V7_BUILT73 = {
   D6: ['Built', "A value is 'Follows the library' or 'Plant's own value'. Making it the plant's own asks one question: why."],
   D7: ['Partly built', 'A duty/standby changeover is one task per control group. The library page lists the control-group types and the work they house. Not built yet: editing a control-group type in the library.'],
   D8: ['Built', 'Each alert has its own state: Draft, On trial, On, Off.'],
-  D9: ['Built', '"Plant graph" on every screen; the word SCADA is gone.'],
+  D9: ['Built', '"Visualization" on every screen; the word SCADA is gone.'],
   D10: ['Parked', 'Not in focus for now. The phone card and the equipment page stay as v7/1 has them.'],
   D11: ['Partly built', 'A library change never replaces a value a plant changed itself, safety changes included. Not built yet: plants applying an update themselves; followers still change when the library publishes, with a dated note.'],
   D26: ['Built', "Each piece of equipment keeps its type's criticality; a plant changes it with a reason."],

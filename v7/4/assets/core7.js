@@ -12,7 +12,7 @@
               trial ends, so the engine uses the right terms on each side)
    Plants:    plants() → [{key,name,type,state,stateLabel,since,sample,realLayout}] · plant(key) (same + counts) · state(key)
               'commissioning'|'live' · withPlant(key,fn) (CTL.withPlant) · equipment(key) · eq(key,id) · sensors(key,eqId?) (incl. next phase)
-              readings(key,{eqId}) the plant graph readings + manual/lab ones (from the plant's manual tests) · alerts(key,{eqId,sensorId,state})
+              readings(key,{eqId}) the Visualization readings + manual/lab ones (from the plant's manual tests) · alerts(key,{eqId,sensorId,state})
               alert(key,id) · schedules(key,{eqId}) · people(key) → roster [{id,name,role,roleLabel,phone,channel,reachable}]
    Series:    series(key,sensorId,from,to,stepMin=15) → [{t,v}] (pure, deterministic; polls at :10/:25/:40/:55) · latest(key,sensorId) {t,v}
               replay(key,alertId,{from,to,limits?,hold?,clear?}) → {firings:[{start,end,band,firstBand,peak,limit,short,steps}],count,perDay,
@@ -21,10 +21,10 @@
    Alerts:    alertState(key,id) 'draft'|'trial'|'on'|'off' · setAlertState(key,id,state,{note}) → {ok,error?}
    Limits:    limitsOf(key,sensorId,dir?) → {dir,unit,nextPhase,bands,perBand:{band:{value,chip,chipText,libValue,baseValue,base,overrideId}}}
               dirs(key,sensorId) · libLimits(typeName,readingName,dir,{draft}) · sourceOf(key,target) (target as in the ledger) →
-              {value,chip,chipText,libValue,base,overrideId,baseFrom?} ('notinlib' chip: a task neither the library nor the plant graph has) · setLimits(key,sensorId,dir,bands,{reason,note,until}) → {ok,error?,changed,overrides}
+              {value,chip,chipText,libValue,base,overrideId,baseFrom?} ('notinlib' chip: a task neither the library nor the Visualization has) · setLimits(key,sensorId,dir,bands,{reason,note,until}) → {ok,error?,changed,overrides}
               setAlertTiming(key,alertId,{hold,clear},{reason,note,until}) · setCadence(key,scheduleId|taskId,{n,unit},{reason,note,until})
-              setTier(key,eqId,tier,{reason,note}). Chips: 'lib' From the library · 'form' From the plant graph · 'changed' Changed here ·
-              'libchanged' Library changed since · 'none' No limits yet · 'next' Next phase. Precedence per band: change here → plant graph → library.
+              setTier(key,eqId,tier,{reason,note}). Chips: 'lib' From the library · 'form' From the Visualization · 'changed' Changed here ·
+              'libchanged' Library changed since · 'none' No limits yet · 'next' Next phase. Precedence per band: change here → Visualization → library.
    Ledger:    overrides({plant,state}) (state: undefined = all not ended, 'all', 'ok'|'same'|'libchanged'|'review'|'ended') → records
               {id,plant,target,value,base,reason,note,until,reviewBy,author,at,endedAt,state,stateLabel,reasonLabel,what,plantValue,libValue,
               baseValue,baseFrom:'form'|'lib',baseWhy,baseLabel,backText,eqId,tag} · revert(id) (refuses a band that would break the order) ·
@@ -74,7 +74,7 @@
 
    ─── How the engine decides ─────────────────────────────────────────────────────────────────────────────
    Readings: value(plant, sensor, t) is a pure function (hash of plant:sensor and the 15-min slot) of a profile built from immutable
-   inputs (the shipped library, the plant graph, data.js), never from limits, plus scripted moments that make the story happen. Polls fall at
+   inputs (the shipped library, the Visualization, data.js), never from limits, plus scripted moments that make the story happen. Polls fall at
    :10/:25/:40/:55 IST. A firing starts at the first poll where the reading has been past a band for "must hold for" (time since the
    first poll past it; Emergency starts on the first reading); a deeper band in the same excursion is a step up; it ends at the first
    poll where the reading has been back inside every band for "must clear for". Short = lasted ≤ 30 min, no step up, peak within 10 % of
@@ -132,7 +132,7 @@ window.V7 = (function () {
     band: BAND_LABEL,
     alertState: { draft: 'Draft', trial: 'On trial', on: 'On', off: 'Off' },
     plantState: { commissioning: 'Commissioning', live: 'Live' },
-    chip: { lib: 'Follows the library', form: 'From the plant graph', changed: 'Plant’s own value', libchanged: 'Library changed since', none: 'No limits yet', next: 'Next phase' },
+    chip: { lib: 'Follows the library', form: 'From the Visualization', changed: 'Plant’s own value', libchanged: 'Library changed since', none: 'No limits yet', next: 'Next phase' },
     reason: { tuned: 'Tuned for this plant', fornow: 'For now, until …', unrecorded: 'Not recorded (changed before reasons were kept)', notinlib: 'Not in the library' },
     overrideState: { ok: 'OK', same: 'Now the same as the library', libchanged: 'Library changed since', review: 'Review due', ended: 'Ended' },
     issueStatus: { open: 'Open', diagnosing: 'Diagnosing', fixing: 'Fixing', verifying: 'Verifying', closed: 'Closed' },
@@ -229,15 +229,15 @@ window.V7 = (function () {
     return ta.clear != null ? ta.clear : 10;
   }
 
-  /* ── the plant graph ────────────────────────────────────────────────────────────────────────── */
+  /* ── the Visualization ────────────────────────────────────────────────────────────────────────── */
   function formSet(key, e, reading, dir) {
     if (!e) return null;
     return cached(`form:${key}:${e.id}:${reading}:${dir}`, () => withPlant(key, () => {
       C.ensureForm(e);
       const dl = C.derivedLimits(e, reading);
-      if (dl && dl.dir === dir) return { lim: norm4(dl.lim), why: cap(String(dl.why || 'from the plant graph')) };
+      if (dl && dl.dir === dir) return { lim: norm4(dl.lim), why: cap(String(dl.why || 'from the Visualization')) };
       const fa = (C.formItems(e).alerts || []).find((a) => a.sensorKind === reading && a.direction === dir);
-      return fa ? { lim: norm4(fa.limits), why: 'From the plant graph' } : null;
+      return fa ? { lim: norm4(fa.limits), why: 'From the Visualization' } : null;
     }));
   }
 
@@ -331,7 +331,7 @@ window.V7 = (function () {
     if (sc.workType === 'calibration' && sc.probe) return { n: 1, unit: 'month' };   /* every probe on the equipment: calibrated monthly */
     return null;
   }
-  /* v7: a task the plant graph proposes (no library schedule of that name): its cadence is "From the plant graph" (rule 8: override → form → library) */
+  /* v7: a task the Visualization proposes (no library schedule of that name): its cadence is "From the Visualization" (rule 8: override → form → library) */
   function formEveryForSched(key, sc) {
     if (!sc || !sc.subject || sc.subject.kind !== 'eq') return null; const e = eqRaw(key, sc.subject.id); if (!e) return null;
     return cached(`formev:${key}:${e.id}:${sc.name}`, () => withPlant(key, () => { C.ensureForm(e); const fs = (C.formItems(e).schedules || []).find((x) => x.name === sc.name); return fs ? C.cadenceOf(fs) : null; }));
@@ -861,8 +861,42 @@ window.V7 = (function () {
   /* run-hours left before it falls due (for the task page) */
   function meterLeft(key, sc, st) { const p = meterProfile(key, sc); if (!p) return null; const P = PS(key); const base = st && st.lastDone != null ? meterAtT(p, st.lastDone) : Math.max(typeof sc.meter.last === 'number' ? sc.meter.last : -Infinity, P.goLiveAt != null ? meterAtT(p, P.goLiveAt) : meterAtT(p, now())); return { now: round(meterAtT(p, now()), 1), at: round(base + sc.meter.hours, 1), left: round(base + sc.meter.hours - meterAtT(p, now()), 1), rateDay: round(p.rate * 24, 1) }; }
   const spreadFrac = (id) => mix(h32(id), 99);
+  /* v7/4: the work level. One choice for the plant says how much routine work it takes on, instead of switching tasks off one by one.
+     A task's level comes from what it is and how often it is done, so it needs no setting of its own:
+       1 preventive maintenance, calibration and statutory work · 2 weekly or slower · 3 daily · 4 several times a day.
+     What a lower level can never do: touch an alert, or work a reading raises, or level-1 work. And while keepUnwatched is on
+     (the default), routine work stays wherever an alert does not watch every piece of equipment it is done on. */
+  const WORK_LEVELS = [
+    { level: 1, label: 'Essentials', what: 'Preventive maintenance, calibration and statutory work' },
+    { level: 2, label: 'Weekly and slower', what: 'Essentials, plus anything done weekly or less often' },
+    { level: 3, label: 'Daily and slower', what: 'Weekly and slower, plus anything done once a day' },
+    { level: 4, label: 'Everything', what: 'Every task the library has, including work done several times a day' },
+  ];
+  const levelOfTask = (v) => (v.kind === 'line' ? 0 : v.workType === 'pm' || v.workType === 'calibration' || v.statutory ? 1 : v.intervalH >= 168 ? 2 : v.intervalH >= 24 ? 3 : 4);
+  function levelCut(key, level, keep) {
+    const d = dOf(key); const watched = new Set();
+    d.alerts.forEach((a) => { const st = alertState(key, a.id); if ((st === 'trial' || st === 'on') && a.subject && a.subject.kind === 'eq') watched.add(a.subject.id); });
+    return buildAllTasks(key).map((v) => { const lv = levelOfTask(v); const w = v.eqIds.length > 0 && v.eqIds.every((id) => watched.has(id)); return { v, lv, watched: w, out: lv > level && !(keep && !w) }; });
+  }
   function buildTasks(key) {
-    return cached(`tasks:${key}`, () => {
+    return cached(`tasks:${key}`, () => { const P = PS(key); const L = (P && P.workLevel) || 4; return L >= 4 ? buildAllTasks(key) : levelCut(key, L, P.keepUnwatched !== false).filter((x) => !x.out).map((x) => x.v); });
+  }
+  function workLevel(key) {
+    const P = PS(key); if (!P || !dOf(key)) return null; const level = P.workLevel || 4; const keep = P.keepUnwatched !== false;
+    const row = (x) => ({ id: x.v.id, line: x.v.line, everyText: x.v.everyText, workLabel: x.v.workLabel, watched: x.watched });
+    const options = WORK_LEVELS.map((o) => { const c = levelCut(key, o.level, keep); const inn = c.filter((x) => !x.out); const perDay = inn.reduce((n, x) => n + x.v.perDay, 0); return { ...o, on: o.level === level, tasks: inn.length, leftOut: c.length - inn.length, perDay, perMonth: Math.round(perDay * 30) }; });
+    const cut = levelCut(key, level, keep);
+    return { level, label: WORK_LEVELS[level - 1].label, keepUnwatched: keep, options, total: cut.length, leftOut: cut.filter((x) => x.out).map(row), kept: cut.filter((x) => x.lv > level && !x.out).map(row), unwatchedIfNotKept: levelCut(key, level, false).filter((x) => x.out && !x.watched).length };
+  }
+  function setWorkLevel(key, level, opts) {
+    const P = PS(key); const L = Number(level); if (!P || !dOf(key)) return { ok: false, error: 'No such plant.' }; if (![1, 2, 3, 4].includes(L)) return { ok: false, error: 'No such level.' };
+    P.workLevel = L; if (opts && opts.keepUnwatched != null) P.keepUnwatched = !!opts.keepUnwatched; touch(); ensureTaskStates(key);
+    const w = workLevel(key); const on = w.options[L - 1];
+    addActivity(now(), key, `Work level set to ${w.label}: ${Math.round(on.perDay)} tasks a day${w.leftOut.length ? `, ${plural(w.leftOut.length, 'task')} left out` : ', nothing left out'}${L < 4 ? (w.keepUnwatched ? '; routine work stays where no alert watches the equipment' : '; routine work is left out even where no alert watches the equipment') : ''}`, 'config');
+    touch(); persist(); return { ok: true, level: L, leftOut: w.leftOut.length, kept: w.kept.length };
+  }
+  function buildAllTasks(key) {
+    return cached(`tasksAll:${key}`, () => {
       const d = dOf(key); if (!d) return []; const out = []; const groups = {};
       d.schedules.filter((sc) => sc.status === 'active').forEach((sc) => {
         const e = sc.subject.kind === 'eq' ? eqRaw(key, sc.subject.id) : null;
@@ -1108,7 +1142,7 @@ window.V7 = (function () {
     return ids.map(causeOf).filter(Boolean).map((c) => ({ id: c.id, name: c.name, types: c.types || [], sensorFault: !!c.sensorFault, fixFlowId: c.fix || null }));
   }
 
-  /* ── reviews: What the plant graph has, What the library brings ───────────────────────────────────── */
+  /* ── reviews: What the Visualization has, What the library brings ───────────────────────────────────── */
   function scadaReview(key) {
     return cached(`scada:${key}`, () => {
       const P = PS(key); const d = dOf(key); const groups = withPlant(key, () => C.typeGroups());
@@ -1126,10 +1160,10 @@ window.V7 = (function () {
   function acceptScadaGroup(key, typeName, opts) {
     const P = PS(key); const g = scadaReview(key).groups.find((x) => x.typeName === typeName); if (!g) return { ok: false, error: 'No such equipment type at this plant.' };
     if (P.scada.accepted[typeName]) return { ok: true, already: true };
-    P.scada.accepted[typeName] = now(); if (!(opts && opts.quiet)) addActivity(now(), key, `Accepted what the plant graph found: ${plural(g.count, typeName)}`, 'scada');
+    P.scada.accepted[typeName] = now(); if (!(opts && opts.quiet)) addActivity(now(), key, `Accepted what the Visualization found: ${plural(g.count, typeName)}`, 'scada');
     touch(); if (!(opts && opts.noSave)) persist(); return { ok: true };
   }
-  function acceptAllScada(key) { const gs = scadaReview(key).groups.filter((g) => !g.accepted); gs.forEach((g) => acceptScadaGroup(key, g.typeName, { quiet: true, noSave: true })); if (gs.length) addActivity(now(), key, `Accepted what the plant graph found: ${plural(gs.length, 'equipment type')}`, 'scada'); touch(); persist(); return { ok: true, count: gs.length }; }
+  function acceptAllScada(key) { const gs = scadaReview(key).groups.filter((g) => !g.accepted); gs.forEach((g) => acceptScadaGroup(key, g.typeName, { quiet: true, noSave: true })); if (gs.length) addActivity(now(), key, `Accepted what the Visualization found: ${plural(gs.length, 'equipment type')}`, 'scada'); touch(); persist(); return { ok: true, count: gs.length }; }
   function findItem(key, eqId, kind, name) {
     const d = dOf(key);
     if (eqId === 'plant') { const sc = d.schedules.find((x) => x.subject.kind === 'plant' && x.name === name); return sc ? { type: 'schedule', obj: sc } : null; }
@@ -1180,7 +1214,7 @@ window.V7 = (function () {
               p.detail = `${cap(p.everyText)} · ${C.WT_LABEL[p.workType] || 'Calibration'}`;
             }
             else { const ts = inh && inh.schedules.find((y) => y.name === x.name); const rd = ts ? C.readingOf(ts.sensorKind) || {} : {}; const dw = ts && ts.doWhen != null && Number.isFinite(+ts.doWhen) ? fmtVal(+ts.doWhen, rd.unit || '', rd.kind) : ts ? ts.doWhen : null; p.detail = ts ? `When ${ts.sensorKind} passes ${dw}` : 'When a reading passes a line'; }
-            if (!x.ok) p.blockedBy = `Needs a ${(x.why.match(/needs an? (.+?) reading/) || [])[1] || 'reading'} reading the plant graph doesn't send`;
+            if (!x.ok) p.blockedBy = `Needs a ${(x.why.match(/needs an? (.+?) reading/) || [])[1] || 'reading'} reading the Visualization doesn't send`;
             else p.decided = itemDecided(key, findItem(key, e.id, kind, x.name));
             row.proposals.push(p);
           });
@@ -1230,7 +1264,7 @@ window.V7 = (function () {
     let n = 0, na = 0; todo.forEach((p) => { const r = decide(key, p.pid, 'accept', { quiet: true, noSave: true, at: opts && opts.at }); if (r.ok) { n++; if (p.kind === 'alert') na++; } });
     /* v7: say "N alerts go On trial" only when alerts were accepted; otherwise say why none were */
     const blockedAlerts = []; rows.forEach((r) => r.proposals.forEach((p) => { if (p.kind === 'alert' && p.blockedBy && !p.nextPhase) blockedAlerts.push(p); }));
-    const live = PS(key).state === 'live'; const noAlertWhy = blockedAlerts.length ? "its alerts need readings the plant graph doesn't send" : 'there were no alerts to accept';
+    const live = PS(key).state === 'live'; const noAlertWhy = blockedAlerts.length ? "its alerts need readings the Visualization doesn't send" : 'there were no alerts to accept';
     const tail = na ? `${plural(na, 'alert')} ${na === 1 ? 'goes' : 'go'} On trial${live ? ' for 7 days' : ''}` : `${live ? 'tasks start now' : 'tasks start at go live'}; ${noAlertWhy}`;
     if (n && !(opts && opts.quiet)) addActivity(opts && opts.at != null ? opts.at : now(), key, `Accepted ${plural(n, 'library proposal')}${o.typeName ? ` for ${o.typeName}` : o.eqId ? ` for ${(eqRaw(key, o.eqId) || {}).tag || 'the plant'}` : ''}; ${tail}`, 'config');
     touch(); persist(); return { ok: true, count: n, alerts: na, tasks: n - na, blockedAlerts: blockedAlerts.length, tail };
@@ -1254,14 +1288,14 @@ window.V7 = (function () {
       const reachOp = ppl.filter((p) => p.role === 'l1' && p.reachable); const reachLead = ppl.filter((p) => (p.role === 'l3' || p.role === 'l4') && p.reachable);
       const watching = d.alerts.filter((a) => ['trial', 'on'].includes(alertState(key, a.id)));
       const tracks = {
-        scada: { label: 'What the plant graph has', done: accG, total: sr.groups.length, items: sr.groups, next: accG < sr.groups.length ? 'Review and accept what the plant graph found' : null, link: `${base}/scada` },
-        library: { label: 'What the library brings', done: decidable.length - undecided.length, total: decidable.length, items: lr, next: undecided.length ? `Decide ${plural(undecided.length, 'proposal')}` : null, link: `${base}/library` },
+        scada: { label: 'What the Visualization has', done: accG, total: sr.groups.length, items: sr.groups, next: accG < sr.groups.length ? 'Review and accept what the Visualization found' : null, link: `${base}/scada` },
+        library: { label: 'Alerts & Tasks', done: decidable.length - undecided.length, total: decidable.length, items: lr, next: undecided.length ? `Decide ${plural(undecided.length, 'proposal')}` : null, link: `${base}/library` },
         people: { label: 'Who is told', done: (reachOp.length ? 1 : 0) + (reachLead.length ? 1 : 0), total: 2, items: ppl, next: !reachOp.length || !reachLead.length ? 'Add a reachable Operator and Lead in the User Center' : null, link: null, linkText: 'Edit in the User Center' },
       };
       const blockers = [];
-      if (sr.notInDb.length) blockers.push({ id: 'notindb', text: `${plural(sr.notInDb.length, 'piece', 'pieces')} of equipment has a type the database doesn't have: fix it in the plant graph, then read again`, link: `${base}/scada` });
+      if (sr.notInDb.length) blockers.push({ id: 'notindb', text: `${plural(sr.notInDb.length, 'piece', 'pieces')} of equipment has a type the database doesn't have: fix it in the Visualization, then read again`, link: `${base}/scada` });
       const live = P.state === 'live';
-      if (!live && accG < sr.groups.length) blockers.push({ id: 'scada', text: accG ? `What the plant graph has is not all accepted: ${sr.groups.length - accG} of ${plural(sr.groups.length, 'equipment type')} to go` : `What the plant graph has is not accepted yet (${plural(sr.groups.length, 'equipment type')})`, short: `accept what the plant graph found (${plural(sr.groups.length - accG, 'type')})`, link: `${base}/scada` });
+      if (!live && accG < sr.groups.length) blockers.push({ id: 'scada', text: accG ? `What the Visualization has is not all accepted: ${sr.groups.length - accG} of ${plural(sr.groups.length, 'equipment type')} to go` : `What the Visualization has is not accepted yet (${plural(sr.groups.length, 'equipment type')})`, short: `accept what the Visualization found (${plural(sr.groups.length - accG, 'type')})`, link: `${base}/scada` });
       if (!live && undecided.length) blockers.push({ id: 'library', text: undecided.length === 1 ? `One library proposal is not decided: ${undecided[0].name} on ${undecided[0].tag}` : `${undecided.length} library proposals are not decided yet`, short: undecided.length === 1 ? `decide ${undecided[0].name} on ${undecided[0].tag}` : `decide ${undecided.length} library proposals`, link: `${base}/library`, count: undecided.length, items: undecided.map((p) => ({ pid: p.pid, name: p.name, tag: p.tag })) });
       if (!watching.length) blockers.push({ id: 'alerts', text: live ? 'No alert is On' : 'No alert is On trial yet', short: 'put at least one alert On trial', link: `${base}/library` });
       if (!reachOp.length) blockers.push({ id: 'operator', text: 'No Operator can be reached: add one with a verified phone in the User Center', short: 'add a reachable Operator in the User Center', link: null });
@@ -1278,7 +1312,7 @@ window.V7 = (function () {
       const types = [...new Set(d.equipment.map((e) => e.type))];
       const noDiag = (window.ISSUES || []).filter((i) => (i.homeTypes || []).some((t) => types.includes(t)) && !(i.flow && libFlow(i.flow)));
       if (noDiag.length) gaps.push({ id: 'nodiag', text: `${plural(noDiag.length, 'issue')} of this plant's types with no diagnostic`, link: '#/library', count: noDiag.length, items: noDiag.map((i) => ({ issueTypeId: i.id, name: i.name })) });
-      if (sr.typeDiffers.length) gaps.push({ id: 'drawn', text: `${plural(sr.typeDiffers.length, 'piece', 'pieces')} of equipment drawn as one type and stored as another: fix it in the plant graph`, link: `${base}/scada`, count: sr.typeDiffers.length, items: sr.typeDiffers });
+      if (sr.typeDiffers.length) gaps.push({ id: 'drawn', text: `${plural(sr.typeDiffers.length, 'piece', 'pieces')} of equipment drawn as one type and stored as another: fix it in the Visualization`, link: `${base}/scada`, count: sr.typeDiffers.length, items: sr.typeDiffers });
       if (P.state === 'commissioning') {
         const starts = Object.values(P.alerts).filter((x) => x.state === 'trial' && x.trialSince != null).map((x) => x.trialSince);
         const days = starts.length ? (now() - Math.min(...starts)) / DAY : 0;
@@ -1286,7 +1320,7 @@ window.V7 = (function () {
       }
       const canGoLive = P.state === 'commissioning' && !blockers.length;
       /* v7: one pattern, one plain sentence: "Go live is blocked by 1 thing: decide MLSS low on SBR-1", "Go live is blocked by 5 things.
-         First: accept what the plant graph found (13 types)" */
+         First: accept what the Visualization found (13 types)" */
       const firstWhat = blockers.length ? (blockers[0].short || (blockers[0].text[0].toLowerCase() + blockers[0].text.slice(1))) : '';
       const whyNot = P.state === 'live' ? 'The plant is already Live' : blockers.length === 1 ? `Go live is blocked by 1 thing: ${firstWhat}` : blockers.length ? `Go live is blocked by ${blockers.length} things. First: ${firstWhat}` : '';
       return { state: P.state, tracks, blockers, gaps, canGoLive, whyNot };
@@ -1308,6 +1342,7 @@ window.V7 = (function () {
     const untried = d.alerts.filter((x) => alertState(key, x.id) === 'trial').map((x) => { const st = PS(key).alerts[x.id]; return { alertId: x.id, name: x.name, minutes: st && st.trialSince != null ? Math.max(0, Math.round((now() - st.trialSince) / MIN)) : 0 }; }).filter((x) => x.minutes < 24 * 60);
     const untriedText = !untried.length ? null : untried.length === 1 ? `${untried[0].name} has been On trial for ${fmtDur(untried[0].minutes)}; it turns On without a trial` : `${plural(untried.length, 'alert')} have been On trial for under a day (${untried.length <= 3 ? untried.map((x) => `${x.name}: ${fmtDur(x.minutes)}`).join(', ') : `the longest for ${fmtDur(Math.max(...untried.map((x) => x.minutes)))}`}); they turn On without a trial`;
     const changes = [`Alerts reach people: ${plural(trial, 'alert')} go from On trial to On`, 'Calls and the hooter start now', `Tasks start: ${a} a day${b !== a ? ` (${b} ${ea.phrase} — to confirm)` : ''}`, 'First due dates are spread across each task\'s interval; run-hours work falls due by its hour meter', 'Counts and metrics start today', 'Changes to structure need a reason from now on'];
+    const wl = workLevel(key); if (wl && wl.leftOut.length) changes.splice(3, 0, `Work level ${wl.label}: ${plural(wl.leftOut.length, 'routine task')} left out. Alerts, preventive maintenance, calibration and statutory work are not affected`);
     if (untriedText) changes.splice(1, 0, untriedText);
     return { alertsOn: trial, tasksPerDay: a, tasksPerDayIfEach: b, eachNoun: ea.noun, eachPhrase: ea.phrase, untried, untriedText, firstDueSpread: true, changes, checklist: checklist(key) };
   }
@@ -1447,7 +1482,7 @@ window.V7 = (function () {
     if (t.kind === 'runhours') { const i = runHoursInfo(key, t.scheduleId); return i ? i.libValue : null; }
     if (t.kind === 'onoff') return 'on'; return null;
   }
-  /* v7: where the value a difference is measured against comes from: the plant graph (e.g. a 22 kW motor) or the library */
+  /* v7: where the value a difference is measured against comes from: the Visualization (e.g. a 22 kW motor) or the library */
   function baseSourceOf(key, o) {
     const t = o.target;
     if (t.kind === 'limit') { const bi = bandsInfo(key, t.sensorId, t.dir); const pb = bi && bi.perBand[t.band]; return pb && pb.formValue != null ? { from: 'form', why: bi.formWhy || LABELS.chip.form } : { from: 'lib', why: null }; }
@@ -1455,7 +1490,7 @@ window.V7 = (function () {
     return { from: 'lib', why: null };
   }
   const sameValue = (kind, a, b) => (kind === 'cadence' ? sameEvery(a, b) : typeof a === 'number' || typeof b === 'number' ? same(a, b) : a === b);
-  /* v7: 'same' — the library (or plant graph) value now equals the plant's own value: nothing differs any more, so the obvious step is
+  /* v7: 'same' — the library (or Visualization) value now equals the plant's own value: nothing differs any more, so the obvious step is
      Back to the library value; it is not shown as Library changed since */
   const SAME_KINDS = ['limit', 'hold', 'clear', 'cadence', 'tier', 'runhours'];
   function ovState(key, o) {
@@ -1483,11 +1518,11 @@ window.V7 = (function () {
     libRaw = o.reason === 'notinlib' ? null : currentBaseOf(key, o);
     const st = ovState(key, o); const bs = o.reason === 'notinlib' ? { from: null, why: null } : baseSourceOf(key, o);
     /* v7 (card D25): a value nobody recorded a reason for that equals the library's own fixed number, while the plant's base is now the
-       plant graph's rule: probably never chosen here. It is kept, marked, and listed first so a review can adopt the rule in one step. */
+       Visualization's rule: probably never chosen here. It is kept, marked, and listed first so a review can adopt the rule in one step. */
     let oldLib = null;
     if (o.reason === 'unrecorded' && t.kind === 'limit' && bs.from === 'form' && typeName) { const s0 = sensorRaw(key, t.sensorId) || {}; const lb = libBands(typeName, s0.name, t.dir, false); if (lb && same(lb[t.band], o.value)) oldLib = { value: lb[t.band], text: lb[t.band] == null ? 'none' : fmtVal(lb[t.band], s0.unit, s0.kind) }; }
-    /* v7: baseFrom 'form'|'lib' says whether libValue is the plant graph's value (with its reason, e.g. "From the plant graph: 22 kW motor") or the library's */
-    return { ...o, baseFrom: bs.from, baseWhy: bs.why, baseLabel: bs.from === 'form' ? 'plant graph' : bs.from === 'lib' ? 'Library' : null, backText: bs.from === 'form' ? 'Back to the plant graph value' : 'Back to the library value', plantName: plantName(key), state: st, stateLabel: LABELS.overrideState[st], reasonLabel: o.reason === 'fornow' && o.until ? `For now, until ${fmtDay(o.until)}` : LABELS.reason[o.reason], what, eqId, tag, typeName, typeCode: typeName ? codeOfType(typeName) : null, plantValue: fmtTargetValue(key, o, o.value), libValue: o.reason === 'notinlib' ? 'Not in the library' : fmtTargetValue(key, o, libRaw), baseValue: o.reason === 'notinlib' ? null : fmtTargetValue(key, o, o.base), libRaw, baseDiffers: st === 'libchanged', sameAsLib: st === 'same', atText: o.at != null ? fmtDay(o.at) : '—', reviewByText: o.reviewBy != null ? fmtDay(o.reviewBy) : '—', untilText: o.until != null ? fmtDay(o.until) : null, authorText: o.author || 'Not recorded', oldLib: !!oldLib, oldLibText: oldLib ? oldLib.text : null };
+    /* v7: baseFrom 'form'|'lib' says whether libValue is the Visualization's value (with its reason, e.g. "From the Visualization: 22 kW motor") or the library's */
+    return { ...o, baseFrom: bs.from, baseWhy: bs.why, baseLabel: bs.from === 'form' ? 'Visualization' : bs.from === 'lib' ? 'Library' : null, backText: bs.from === 'form' ? 'Back to the Visualization value' : 'Back to the library value', plantName: plantName(key), state: st, stateLabel: LABELS.overrideState[st], reasonLabel: o.reason === 'fornow' && o.until ? `For now, until ${fmtDay(o.until)}` : LABELS.reason[o.reason], what, eqId, tag, typeName, typeCode: typeName ? codeOfType(typeName) : null, plantValue: fmtTargetValue(key, o, o.value), libValue: o.reason === 'notinlib' ? 'Not in the library' : fmtTargetValue(key, o, libRaw), baseValue: o.reason === 'notinlib' ? null : fmtTargetValue(key, o, o.base), libRaw, baseDiffers: st === 'libchanged', sameAsLib: st === 'same', atText: o.at != null ? fmtDay(o.at) : '—', reviewByText: o.reviewBy != null ? fmtDay(o.reviewBy) : '—', untilText: o.until != null ? fmtDay(o.until) : null, authorText: o.author || 'Not recorded', oldLib: !!oldLib, oldLibText: oldLib ? oldLib.text : null };
   }
   function overrides(opts) {
     const o = opts || {}; const list = S.overrides.filter((x) => !o.plant || x.plant === o.plant).map((x) => ovDecorate(x.plant, x));
@@ -1502,7 +1537,7 @@ window.V7 = (function () {
     return null;
   }
   function revertOne(o) {
-    const key = o.plant; const d = ovDecorate(key, o); const back = d.baseFrom === 'form' ? 'the plant graph value' : 'the library value'; endOverride(o, `Back to ${back}`); const t = o.target;
+    const key = o.plant; const d = ovDecorate(key, o); const back = d.baseFrom === 'form' ? 'the Visualization value' : 'the library value'; endOverride(o, `Back to ${back}`); const t = o.target;
     const scOld = t.scheduleId && (t.kind === 'cadence' || t.kind === 'runhours') ? clone(schedRaw(key, t.scheduleId) || null) : null;
     if (t.sensorId) syncSensor(key, t.sensorId); if (t.alertId && (t.kind === 'hold' || t.kind === 'clear')) syncAlert(key, t.alertId); if (t.scheduleId && t.kind === 'cadence') syncSched(key, t.scheduleId); if (t.kind === 'runhours') syncRunHours(key, t.scheduleId); if (t.kind === 'tier') syncTier(key, t.eqId);
     if (scOld) recountTask(key, t.scheduleId, scOld);   /* v7: the task's due date follows the value it went back to */
@@ -1510,10 +1545,10 @@ window.V7 = (function () {
     return d;
   }
   function revert(id) {
-    const o = S.overrides.find((x) => x.id === id); if (!o) return { ok: false, error: 'No such difference.' }; if (o.endedAt) return { ok: true, already: true };
+    const o = S.overrides.find((x) => x.id === id); if (!o) return { ok: false, error: 'No such deviation.' }; if (o.endedAt) return { ok: true, already: true };
     const key = o.plant;
     if (o.target.kind === 'limit') { const err = revertOrderError(key, [o]); if (err) return { ok: false, error: err, needsAll: true }; }
-    const d = revertOne(o); const back = d.baseFrom === 'form' ? 'the plant graph value' : 'the library value';
+    const d = revertOne(o); const back = d.baseFrom === 'form' ? 'the Visualization value' : 'the library value';
     addActivity(now(), key, `Back to ${back}: ${d.what} (${d.plantValue} → ${d.libValue})`, 'config'); touch(); persist(); return { ok: true, baseFrom: d.baseFrom };
   }
   /* v7: what "Back to the library value" would do, checked before the dialog opens: whether this band alone keeps the bands in order,
@@ -1528,24 +1563,24 @@ window.V7 = (function () {
   }
   /* v7: every changed band on one reading and direction goes back together (keeps the bands in order) */
   function revertAll(id) {
-    const o = S.overrides.find((x) => x.id === id); if (!o) return { ok: false, error: 'No such difference.' }; if (o.target.kind !== 'limit') return revert(id);
+    const o = S.overrides.find((x) => x.id === id); if (!o) return { ok: false, error: 'No such deviation.' }; if (o.target.kind !== 'limit') return revert(id);
     const key = o.plant; const t0 = o.target; const list = S.overrides.filter((x) => x.plant === key && !x.endedAt && x.target.kind === 'limit' && x.target.sensorId === t0.sensorId && x.target.dir === t0.dir);
     if (!list.length) return { ok: true, already: true };
     const err = revertOrderError(key, list); if (err) return { ok: false, error: err };
     const ds = list.map((x) => ({ band: x.target.band, d: ovDecorate(key, x) })); list.forEach((x) => revertOne(x)); const s = sensorRaw(key, t0.sensorId) || {};
     const form = ds.some((x) => x.d.baseFrom === 'form');
-    addActivity(now(), key, `Back to the ${form ? 'plant graph' : 'library'} values: ${sname(s)} ${dirWord(t0.dir)} (${ds.map((x) => `${BAND_LABEL[x.band]} ${x.d.plantValue} → ${x.d.libValue}`).join(', ')})`, 'config');
+    addActivity(now(), key, `Back to the ${form ? 'Visualization' : 'library'} values: ${sname(s)} ${dirWord(t0.dir)} (${ds.map((x) => `${BAND_LABEL[x.band]} ${x.d.plantValue} → ${x.d.libValue}`).join(', ')})`, 'config');
     touch(); persist(); return { ok: true, count: list.length, baseFrom: form ? 'form' : 'lib' };
   }
   function keep(id, opts) {
-    const o = S.overrides.find((x) => x.id === id); if (!o || o.endedAt) return { ok: false, error: 'No such difference.' }; const x = opts || {}; const key = o.plant;
+    const o = S.overrides.find((x) => x.id === id); if (!o || o.endedAt) return { ok: false, error: 'No such deviation.' }; const x = opts || {}; const key = o.plant;
     o.base = currentBaseOf(key, o); if (x.until != null) { const u = toMs(x.until); if (!u || u <= now()) return { ok: false, error: 'Pick a date after today.' }; o.reason = 'fornow'; o.until = u; o.reviewBy = u; } else { const r = toMs(x.reviewBy); o.reviewBy = r && r > now() ? r : now() + 182 * DAY; if (o.reason === 'unrecorded' || o.reason === 'fornow') { o.reason = 'tuned'; o.until = null; } }
     if (x.note) o.note = x.note; o.at = now(); o.author = ME;
     addActivity(now(), key, `Kept this plant's value: ${ovDecorate(key, o).what} · review by ${fmtDay(o.reviewBy)}`, 'config'); touch(); persist(); return { ok: true };
   }
   function suggest(arg) {
     let typeName, text, fromId = null, plantKey = null;
-    if (typeof arg === 'string') { const o = S.overrides.find((x) => x.id === arg); if (!o) return { ok: false, error: 'No such difference.' }; const d = ovDecorate(o.plant, o); typeName = d.typeName; plantKey = o.plant; fromId = o.id; text = `${plantName(o.plant)} uses ${d.plantValue} for ${d.what}${o.note ? ` (${o.note})` : ''}: should the library?`; }
+    if (typeof arg === 'string') { const o = S.overrides.find((x) => x.id === arg); if (!o) return { ok: false, error: 'No such deviation.' }; const d = ovDecorate(o.plant, o); typeName = d.typeName; plantKey = o.plant; fromId = o.id; text = `${plantName(o.plant)} uses ${d.plantValue} for ${d.what}${o.note ? ` (${o.note})` : ''}: should the library?`; }
     else { typeName = arg && arg.typeName; text = arg && arg.text; plantKey = (arg && arg.plant) || null; }
     if (!typeName || !String(text || '').trim()) return { ok: false, error: 'Say what the library should change.' };
     const sg = { id: nextId('sg'), at: now(), who: ME, typeName, code: codeOfType(typeName), text, fromOverride: fromId, plant: plantKey };
@@ -1611,7 +1646,7 @@ window.V7 = (function () {
               const bi = bandsInfo(key, s.id, dir); const bn = bandsInfo(key, s.id, dir, { draft: true });
               BANDS.forEach((b) => {
                 if (same(cur[b], nx[b])) return; const pb = bi.perBand[b]; const what = `${e.tag} · ${s.name} ${BAND_LABEL[b]} ${dirWord(dir)}`; const to = bn.perBand[b].baseValue;
-                /* v7: a value changed here keeps its own value. When it was changed from the plant graph's value the library change does
+                /* v7: a value changed here keeps its own value. When it was changed from the Visualization's value the library change does
                    not touch it at all (form before library, rule 8): it is listed with the form's values, never as "Library changed since" */
                 if (pb.overrideId && pb.formValue != null && !(kind === 'safety' && b === 'emergency')) res.fromForm.push({ what, tag: e.tag, plantValue: fmtVal(pb.value, s.unit, s.kind), newLib: fmtVal(nx[b], s.unit, s.kind), why: bi.formWhy, changedHere: true, formValue: fmtVal(pb.formValue, s.unit, s.kind) });
                 else if (pb.overrideId) { if (false && kind === 'safety' && b === 'emergency') res.follows.push({ what, tag: e.tag, from: fmtVal(pb.value, s.unit, s.kind), to: fmtVal(nx[b], s.unit, s.kind), fromValue: pb.value, toValue: nx[b], endsOverride: true, overrideId: pb.overrideId }); else res.changedHere.push({ what, tag: e.tag, plantValue: fmtVal(pb.value, s.unit, s.kind), newLib: fmtVal(nx[b], s.unit, s.kind), overrideId: pb.overrideId, baseFrom: pb.formValue != null ? 'form' : 'lib', sameAsNew: pb.formValue == null && same(pb.value, nx[b]) }); }
@@ -1679,7 +1714,7 @@ window.V7 = (function () {
       if (p.dueNow.length) p.dueNow.forEach((x) => { const st = PS(key).tasks[x.taskId]; if (st) { st.due = t; st.status = 'due'; } });
       /* v7: the due dates Where it lands showed are the ones set (one rule: dueAfterChange) */
       (p.recount || []).forEach((x) => { const st = PS(key).tasks[x.taskId]; if (!st || st.status !== 'upcoming') return; st.due = x.due; if (x.calDue != null) st.calDue = x.calDue; if (st.due <= t) st.status = 'due'; });
-      /* a plant whose only items were set from its plant graph is not reached: nothing there changes, so it gets no note */
+      /* a plant whose only items were set from its Visualization is not reached: nothing there changes, so it gets no note */
       if (p.follows.length || p.changedHere.length || p.dueNow.length) {
         reachedKeys.push(key);
         const ended = p.follows.filter((x) => x.endsOverride);
@@ -1703,7 +1738,7 @@ window.V7 = (function () {
       const scOld = t.scheduleId && (t.kind === 'cadence' || t.kind === 'runhours') ? clone(schedRaw(key, t.scheduleId) || null) : null;
       if (t.sensorId) syncSensor(key, t.sensorId); if (t.alertId && (t.kind === 'hold' || t.kind === 'clear')) syncAlert(key, t.alertId); if (t.kind === 'cadence') syncSched(key, t.scheduleId); if (t.kind === 'runhours') syncRunHours(key, t.scheduleId); if (t.kind === 'tier') syncTier(key, t.eqId);
       if (scOld) recountTask(key, t.scheduleId, scOld);
-      { const dd = ovDecorate(key, o); addActivity(o.until, key, `Back to the ${dd.baseFrom === 'form' ? 'plant graph' : 'library'} value on its date: ${dd.what}`, 'config', null); } if (out) out.expired.push(o.id);
+      { const dd = ovDecorate(key, o); addActivity(o.until, key, `Back to the ${dd.baseFrom === 'form' ? 'Visualization' : 'library'} value on its date: ${dd.what}`, 'config', null); } if (out) out.expired.push(o.id);
     });
   }
   function advance(minutes) {
@@ -1761,7 +1796,7 @@ window.V7 = (function () {
     d.equipment.forEach((e) => { const cat = catByType(e.type); if (cat && cat.tier !== e.tier) addOverride(key, { kind: 'tier', eqId: e.id }, e.tier, cat.tier, e.tierReason ? { reason: 'tuned', note: e.tierReason, author: key === 'manesar' ? 'Sunny Verma' : null, reviewBy: T('2026-10-26T09:00') } : { reason: 'unrecorded', note: '', author: null, reviewBy: null }, e.tierReason && key === 'manesar' ? T('2026-09-26T14:30') : null); });
     touch();
   }
-  /* v7: a task's cadence against the library, else the plant graph (rule 8); only a task neither has is "Not in the library" */
+  /* v7: a task's cadence against the library, else the Visualization (rule 8); only a task neither has is "Not in the library" */
   function importScheduleDifferences(key) {
     dOf(key).schedules.forEach((sc) => {
       if (ovCadence(key, sc.id)) return;
@@ -1823,7 +1858,7 @@ window.V7 = (function () {
   function seedVedanta() {
     const key = 'vedanta'; const P = PS(key); const d = dOf(key);
     if (!d.people.some((p) => (p.role === 'l3' || p.role === 'l4') && p.phone && p.phone.verified)) d.people.push({ id: 'pv3', name: 'Arjun Mehta', role: 'l3', phone: { verified: true, channel: 'wa' }, major: 'now', quiet: '22:00–06:00' });
-    addActivity(P.since, key, `Commissioning started: The plant graph read, ${plural(d.equipment.length, 'piece', 'pieces')} of equipment of ${plural(withPlant(key, () => C.typeGroups()).length, 'type')}`, 'scada', null);
+    addActivity(P.since, key, `Commissioning started: The Visualization read, ${plural(d.equipment.length, 'piece', 'pieces')} of equipment of ${plural(withPlant(key, () => C.typeGroups()).length, 'type')}`, 'scada', null);
     const tAcc = T('2026-10-23T10:25'), tLib = T('2026-10-23T10:55'), tOv = T('2026-10-23T11:30');
     S.now = tAcc; acceptAllScada(key);
     S.now = tLib; const keepOpen = (p) => p.name === 'MLSS low' && p.tag === 'SBR-1';
@@ -1832,7 +1867,7 @@ window.V7 = (function () {
     addActivity(tLib, key, `Accepted what the library brings: ${plural(n, 'proposal')}; MLSS low on SBR-1 left to decide while the biology settles. Alerts go On trial`, 'config');
     S.now = tOv; const ph = d.sensors.find((s) => s.id === 'v_eq1_PH');
     if (ph) { const r = setLimits(key, ph.id, 'below', { ...bandsInfo(key, ph.id, 'below').bands, emergency: 4.0 }, { reason: 'tuned', note: 'Acid from the pickling line can reach EQ-1; the Leads must know at once' }); if (!r.ok) throw new Error('seed: ' + r.error); }
-    /* v7: like Manesar and Bawal, every task the library and the plant graph do not have is listed in Differences */
+    /* v7: like Manesar and Bawal, every task the library and the Visualization do not have is listed in Differences */
     importScheduleDifferences(key);
     S.now = NOW0; P.engineAt = lastPollAtOrBefore(tLib); P.eng = {}; touch();
     runEngine(key, NOW0, { opened: [], closed: [], trial: [], tasksDue: [] });
@@ -1863,7 +1898,7 @@ window.V7 = (function () {
     S.now = NOW0; touch();
     seedHistory('manesar'); seedHistory('bawal'); seedStartedDiagnosis('manesar');
     seedVedanta();
-    addActivity(PLANT_META.digitalpaani.since, 'digitalpaani', `The plant graph read: ${dOf('digitalpaani').equipment.length} pieces of equipment of ${withPlant('digitalpaani', () => C.typeGroups()).length} types, from the real layout. Nothing reviewed yet`, 'scada', null);
+    addActivity(PLANT_META.digitalpaani.since, 'digitalpaani', `The Visualization read: ${dOf('digitalpaani').equipment.length} pieces of equipment of ${withPlant('digitalpaani', () => C.typeGroups()).length} types, from the real layout. Nothing reviewed yet`, 'scada', null);
     S.now = NOW0; ORDER.forEach((k) => { PS(k).engineAt = lastPollAtOrBefore(NOW0); }); syncClocks(); touch();
   }
 
@@ -1905,7 +1940,7 @@ window.V7 = (function () {
     checklist, noLimitsYet, eachOf, goLivePreview, goLive, returnToCommissioning,
     issues, issue, tasks, task, report, answer, chooseCause, diagStep, startFix, fixStep, verify, close, startTask, doTaskStep, doneTask, setLastDone,
     flowOf, diagFor, causeOf, fixFlowFor, linkedTask, taskForGeneral, issueTypes, issueTerms, reportSensorFault, causesFor,
-    taskGroups, tasksPerDay, coverage, lineWork, setLineWork, setAlertFlow, structure: (key) => structOf(key), unitProcess: upOf, controlGroupOf: cgOfEq,
+    taskGroups, tasksPerDay, workLevel, setWorkLevel, coverage, lineWork, setLineWork, setAlertFlow, structure: (key) => structOf(key), unitProcess: upOf, controlGroupOf: cgOfEq,
     libTypes, libType, libVersion, libDraft, editLib, discardDraft, whereItLands, publish,
     activity, log,
     LABELS, BANDS, fmtVal, limitsText, sevClock, bandLabel: (b) => BAND_LABEL[b] || '', everyText, plantName,

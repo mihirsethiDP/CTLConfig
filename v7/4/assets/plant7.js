@@ -5,7 +5,7 @@
 
    ROUTES
      p/:plant             Home: Readiness while the plant is in Commissioning, Coverage once it is Live
-     p/:plant/scada       What the plant graph has (accept per database type, or all; not-in-database; drawn ≠ stored; next phase)
+     p/:plant/scada       What the Visualization has (accept per database type, or all; not-in-database; drawn ≠ stored; next phase)
      p/:plant/library     What the library brings (per equipment, grouped by type; Accept → On trial; Not for this plant + reason)
                           query: ?show=undecided|decided|blocked|all  ?eq=<eqId> (opens that equipment)
      p/:plant/equipment   Equipment list by database type          query: ?show=all|issues|diffs|drawn
@@ -14,7 +14,7 @@
 
    API (window.V7PLANT)
      frame(key, active, bodyHtml, opts?) → the plant page frame (crumbs All Plants › Plant [› opts.crumbs], title, chips: type ·
-       state · Sample plant / Real plant graph, state line, tabs Home · Equipment · Readings · Issues · Tasks · Differences ·
+       state · Sample plant / Real Visualization, state line, tabs Home · Equipment · Readings · Issues · Tasks · Differences ·
        Activity). active = tab id ('home'|'equipment'|'readings'|'issues'|'tasks'|'differences'|'activity').
        opts: {crumbs:[{label,href}], title, sub, chips:[html], actions:[html], aside, banner, cls}. Unknown plant → a "No such
        plant" page. Used by ui7 (Activity), lib7 (Differences) and work7 (Issues).
@@ -77,7 +77,7 @@
   const say = (html, o) => U.toast(`<span>${html}</span>`, o);  /* toasts: escaped html, always wrapped so it is never escaped twice */
 
   /* ── the plant frame (shared by every plant route, also ui7/lib7/work7) ─────────────────────────────────────── */
-  const TABS = [['home', 'Home', ''], ['structure', 'Structure', '/structure'], ['library', 'Library', '/library'], ['equipment', 'Equipment', '/equipment'], ['readings', 'Readings', '/readings'], ['issues', 'Issues', '/issues'], ['tasks', 'Tasks', '/tasks'], ['differences', 'Differences', '/differences'], ['activity', 'Activity', '/activity']];
+  const TABS = [['home', 'Home', ''], ['structure', 'Structure', '/structure'], ['library', 'Alerts & Tasks', '/library'], ['equipment', 'Equipment', '/equipment'], ['readings', 'Readings', '/readings'], ['issues', 'Issues', '/issues'], ['tasks', 'Tasks', '/tasks'], ['differences', 'Deviations', '/differences'], ['activity', 'Activity', '/activity']];
   function plantOf(key) { const v = V(); return key && v ? call(() => v.plant(key), null) : null; }
   function tabs(key) {
     const p = plantOf(key) || {};
@@ -97,7 +97,7 @@
   function notFound(key) {
     return U.page({ crumbs: [{ label: 'All Plants', href: '#/plants' }, { label: 'Not found' }], title: 'No such plant', sub: key ? `There is no plant "${key}" in the prototype.` : '', body: empty('This plant is not in the prototype.', btn('All Plants', { href: '#/plants', kind: 'primary' })) });
   }
-  /* v7/4: while a plant is set up, the tabs give way to a timeline: the steps from the plant graph to go live, in the order
+  /* v7/4: while a plant is set up, the tabs give way to a timeline: the steps from the Visualization to go live, in the order
      they are done, each with how far it is and what it is. The pages that are not steps sit beside it. Every page also
      carries the next thing to do, so none is a dead end. A live plant keeps its tabs. */
   function setupSteps(key, active) {
@@ -112,13 +112,13 @@
     const limOpen = !!rds.length && (noLim > 0 || (!has('library') && !has('alerts')));
     const steps = [
       { id: 'scada', tab: 'equipment', label: 'Equipment', href: b + '/equipment', done: !has('scada') && !has('notindb'), pct: has('notindb') ? Math.min(frac(sc), 90) : frac(sc), count: `${sc.done} of ${pl(sc.total, 'type')} accepted`,
-        tip: 'The equipment found in the plant graph, grouped by type, with the readings on it. Accepting a type adds its equipment to the plant. Everything after this builds on it.',
-        what: has('notindb') ? 'Some equipment has a type the database does not have. Fix it in the plant graph, then read again.' : `Accept what the plant graph found: ${pl(left, 'equipment type')} to go.`,
+        tip: 'The equipment found in the Visualization, grouped by type, with the readings on it. Accepting a type adds its equipment to the plant. Everything after this builds on it.',
+        what: has('notindb') ? 'Some equipment has a type the database does not have. Fix it in the Visualization, then read again.' : `Accept what the Visualization found: ${pl(left, 'equipment type')} to go.`,
         cta: has('notindb') ? btn('See what is wrong', { href: b + '/scada', kind: 'primary', small: true }) : btn(left > 1 ? `Accept all ${left} types` : 'Accept it', { act: 'p7:scada-accept-all', data: { plant: key }, kind: 'primary', small: true }) + btn('Review first', { href: b + '/scada', kind: 'ghost', small: true }) },
       hasSt ? { id: 'structure', tab: 'structure', label: 'Structure', href: b + '/structure', done: stOk, pct: stOk ? 100 : 0, count: stOk ? 'Confirmed' : 'Proposed, not confirmed yet',
-        tip: 'How the equipment is grouped into unit processes and control groups. It is proposed from the plant graph. You look it over, move what is in the wrong place, and confirm it once.',
-        what: `Confirm the structure proposed from the plant graph: ${pl(arr(st.ups).length, 'unit process', 'unit processes')}.`, cta: active === 'structure' ? btn('Confirm the structure', { act: 'st:confirm', data: { plant: key }, kind: 'primary', small: true }) : btn('Review the structure', { href: b + '/structure', kind: 'primary', small: true }) } : null,
-      { id: 'library', tab: 'library', label: 'Alerts and tasks', href: b + '/library', done: !has('library') && !has('alerts'), pct: has('alerts') && !has('library') ? Math.min(frac(lb), 90) : frac(lb), count: `${lb.done} of ${lb.total} decided`,
+        tip: 'How the equipment is grouped into unit processes and control groups. It is proposed from the Visualization. You look it over, move what is in the wrong place, and confirm it once.',
+        what: `Confirm the structure proposed from the Visualization: ${pl(arr(st.ups).length, 'unit process', 'unit processes')}.`, cta: active === 'structure' ? btn('Confirm the structure', { act: 'st:confirm', data: { plant: key }, kind: 'primary', small: true }) : btn('Review the structure', { href: b + '/structure', kind: 'primary', small: true }) } : null,
+      { id: 'library', tab: 'library', label: 'Alerts & Tasks', href: b + '/library', done: !has('library') && !has('alerts'), pct: has('alerts') && !has('library') ? Math.min(frac(lb), 90) : frac(lb), count: `${lb.done} of ${lb.total} decided`,
         tip: 'The readings, alerts and tasks that each type of equipment normally comes with. They are proposed for this plant; you accept the ones that fit and leave out the rest. An accepted alert goes On trial.',
         what: lib ? `Decide the alerts and tasks proposed for this plant: ${lib.count || 'some'} to accept or leave out.` : 'Accept at least one alert, so that it goes On trial.', cta: active === 'library' ? btn('Accept all of them', { act: 'p7:lib-accept-all', data: { plant: key }, kind: 'primary', small: true, title: 'You see what it does before anything is accepted' }) : btn('Decide them', { href: b + '/library', kind: 'primary', small: true }) },
       { id: 'readings', tab: 'readings', label: 'Limits', href: b + '/readings', optional: true, done: limOpen && !noLim, pct: limOpen ? Math.round(100 * (rds.length - noLim) / rds.length) : 0, count: !limOpen ? 'Starts once the alerts and tasks are decided' : noLim ? `${noLim} of ${pl(rds.length, 'reading')} with no limits yet` : 'Every reading that needs limits has them',
@@ -135,7 +135,7 @@
     const next = steps.find((x) => !x.done && !x.optional) || steps[steps.length - 1];
     return { steps, next, overall, gaps: arr(cl.gaps) };
   }
-  const MORE = [['home', 'Overview', ''], ['issues', 'Issues', '/issues'], ['tasks', 'Tasks', '/tasks'], ['differences', 'Differences', '/differences'], ['activity', 'Activity', '/activity']];
+  const MORE = [['home', 'Overview', ''], ['issues', 'Issues', '/issues'], ['tasks', 'Tasks', '/tasks'], ['differences', 'Deviations', '/differences'], ['activity', 'Activity', '/activity']];
   function setupGuide(key, active) {
     const g = setupSteps(key, active); if (!g) return '';
     const p = plantOf(key) || {}; const i = g.steps.indexOf(g.next);
@@ -149,13 +149,31 @@
     const more = MORE.map(([id, label, suf]) => { const n = id === 'issues' && p.openIssues ? p.openIssues : id === 'differences' && p.differences ? p.differences : null; return `<a class="tl-m${id === active ? ' on' : ''}" href="${esc(base(key) + suf)}">${esc(label)}${n != null ? `<span class="tab-n">${esc(n)}</span>` : ''}</a>`; }).join('');
     return `<div class="tl" data-setup="${g.overall}"><div class="tl-h"><span class="tl-h-t">Setting up this plant</span><span class="tl-h-p">${g.overall}% of the way to go live</span></div><ol class="tl-steps" aria-label="Set-up steps, in order">${li}</ol><div class="sg-now"><div class="sg-now-t"><b>Step ${i + 1} of ${g.steps.length}: ${esc(g.next.label)}.</b> ${esc(g.next.what)}</div><div class="sg-now-a">${g.next.cta}</div></div><nav class="tl-more" aria-label="Other pages of this plant"><span class="tl-more-l">Also</span>${more}</nav></div>`;
   }
+  /* v7/4: how much routine work the site takes on: one choice, with what it costs said beside it */
+  function workLevelCard(key) {
+    const w = call(() => V().workLevel(key), null); if (!w || !w.total) return '';
+    const num = (x) => `about ${Math.round(x.perMonth).toLocaleString('en-US')} a month${x.perDay >= 1 ? ` · ${Math.round(x.perDay)} a day` : ''}`;
+    const opts = w.options.map((o) => `<button type="button" class="lvl-o${o.on ? ' is-on' : ''}" role="radio" aria-checked="${o.on ? 'true' : 'false'}" data-act="p7:worklevel" data-plant="${esc(key)}" data-level="${o.level}"><b>${esc(o.label)}</b><span class="lvl-w">${esc(o.what)}</span><span class="lvl-n">${esc(num(o))}</span><span class="lvl-l">${o.leftOut ? `${pl(o.leftOut, 'task')} left out` : 'Nothing left out'}</span></button>`).join('');
+    const cur = w.options[w.level - 1]; let safe;
+    if (w.level >= 4) safe = '<p class="lvl-note">A lower level never touches an alert, and never leaves out preventive maintenance, calibration or statutory work. Nothing is deleted: you can come back to Everything at any time.</p>';
+    else {
+      const sw = `<button type="button" class="lvl-sw${w.keepUnwatched ? ' is-on' : ''}" role="switch" aria-checked="${w.keepUnwatched ? 'true' : 'false'}" data-act="p7:worklevel-keep" data-plant="${esc(key)}" data-keep="${w.keepUnwatched ? '0' : '1'}"><span class="lvl-sw-k" aria-hidden="true"></span>Keep routine work where no alert watches the equipment</button>`;
+      const swText = w.keepUnwatched ? (w.kept.length ? `This keeps ${pl(w.kept.length, 'task')} that the level would leave out, because nothing else would notice a problem there.` : 'Every task the level leaves out is on equipment an alert watches.') : (w.unwatchedIfNotKept ? `<b class="lvl-warn">${pl(w.unwatchedIfNotKept, 'task')} left out ${w.unwatchedIfNotKept === 1 ? 'is' : 'are'} on equipment no alert watches.</b> A problem there is seen only when someone walks past.` : 'Every task left out is on equipment an alert watches.');
+      const li = (x, kept) => `<li><span>${esc(x.line)}</span><span class="muted">${esc(x.everyText || '')}</span>${kept ? chip('Kept: no alert watches it', { tone: 'ok' }) : x.watched ? chip('An alert watches it', { tone: 'muted' }) : chip('No alert watches it', { tone: 'warn' })}</li>`;
+      const K = W.V7KEEP || { open: () => '' };
+      const outL = w.leftOut.length ? `<details class="lvl-out" data-keep="lvl:out:${esc(key)}"${K.open(`lvl:out:${key}`, false)}><summary>${pl(w.leftOut.length, 'task')} left out at this level</summary><ul>${w.leftOut.map((x) => li(x, false)).join('')}</ul></details>` : '';
+      const keptL = w.kept.length ? `<details class="lvl-out" data-keep="lvl:kept:${esc(key)}"${K.open(`lvl:kept:${key}`, false)}><summary>${pl(w.kept.length, 'task')} kept although the level would leave ${w.kept.length === 1 ? 'it' : 'them'} out</summary><ul>${w.kept.map((x) => li(x, true)).join('')}</ul></details>` : '';
+      safe = `<ul class="lvl-safe"><li><b>Alerts are not affected.</b> Every alert still reaches people at once, and work that a reading raises still arrives.</li><li><b>Never left out:</b> preventive maintenance, calibration and statutory work.</li><li>${sw}<span class="lvl-sw-t">${swText}</span></li><li><b>Nothing is deleted.</b> Choose Everything to bring it all back.</li></ul>${outL}${keptL}`;
+    }
+    return card({ title: 'How much routine work can this site take on?', sub: `Now: ${cur.label}, ${num(cur)}. One choice for the whole plant, instead of switching tasks off one by one.`, body: `<div class="lvl" role="radiogroup" aria-label="Work level">${opts}</div>${safe}`, cls: 'p7-compact lvl-card' });
+  }
   function frame(key, active, body, opts) {
     const o = opts || {};
     const p = plantOf(key);
     if (!p) return notFound(key);
     const crumbs = [{ label: 'All Plants', href: '#/plants' }, { label: p.name, href: base(key) }].concat(arr(o.crumbs));
     const guide = p.state === 'commissioning' ? setupGuide(key, active || 'home') : '';
-    const chips = [chip(p.type || '—', { mono: true }), U.stateChip(p.state), p.sample ? chip('Sample plant', { tone: 'muted', title: 'A sample plant: its readings are generated samples' }) : chip('Real plant graph', { tone: 'info', title: "The layout is the plant's real plant graph; its readings are samples" })].concat(arr(o.chips));
+    const chips = [chip(p.type || '—', { mono: true }), U.stateChip(p.state), p.sample ? chip('Sample plant', { tone: 'muted', title: 'A sample plant: its readings are generated samples' }) : chip('Real Visualization', { tone: 'info', title: "The layout is the plant's real Visualization; its readings are samples" })].concat(arr(o.chips));
     return U.page({ crumbs, title: o.title || p.name, sub: o.sub != null ? o.sub : stateLine(p), chips, actions: o.actions, tabs: guide ? [] : tabs(key), active: active || 'home', body, aside: o.aside, banner: (o.banner || '') + guide, cls: ('pg-plant ' + (o.cls || '')).trim() });
   }
   function guard(params, fn) {
@@ -239,18 +257,18 @@
     const nEq = arr(sr.groups).reduce((n, g) => n + (g.count || 0), 0);
     const sc = t.scada || { done: 0, total: 0 };
     const scadaCard = trackCard({
-      title: 'What the plant graph has', done: sc.done, total: sc.total, progText: `${sc.done} of ${pl(sc.total, 'equipment type')} accepted`,
+      title: 'What the Visualization has', done: sc.done, total: sc.total, progText: `${sc.done} of ${pl(sc.total, 'equipment type')} accepted`,
       lines: [`Read ${esc(fmt(sr.readAt))} · ${esc(pieces(nEq))}`,
         arr(sr.notInDb).length ? `<span class="tx-bad">${esc(pieces(sr.notInDb.length))} with a type the database doesn't have</span>` : '',
         arr(sr.typeDiffers).length ? `<span class="tx-warn">${esc(arr(sr.typeDiffers).length)} drawn as one type, stored as another</span>` : ''],
-      action: sc.done < sc.total ? btn('Review what the plant graph found', { href: `${b}/scada`, kind: 'primary' }) : btn('Open', { href: `${b}/scada`, kind: 'ghost' }),
+      action: sc.done < sc.total ? btn('Review what the Visualization found', { href: `${b}/scada`, kind: 'primary' }) : btn('Open', { href: `${b}/scada`, kind: 'ghost' }),
     });
     const lb = t.library || { done: 0, total: 0 };
     const trial = arr(call(() => v.alerts(key, { state: 'trial' }), [])).length;
     let blocked = 0; let np = 0; arr(lb.items).forEach((r) => arr(r.proposals).forEach((p) => { if (p.blockedBy) blocked++; if (p.nextPhase) np++; }));
     const libCard = trackCard({
-      title: 'What the library brings', done: lb.done, total: lb.total, progText: `${lb.done} of ${pl(lb.total, 'proposal')} decided`,
-      lines: [trial ? `${pl(trial, 'alert')} On trial` : 'No alert On trial yet', blocked ? `<span class="muted">${blocked} more can't be used yet: ${np === blocked ? 'they read a connection (next phase)' : np ? "they need a reading the plant graph doesn't send, or a connection (next phase)" : "they need a reading the plant graph doesn't send"}</span>` : ''],
+      title: 'Alerts & Tasks', done: lb.done, total: lb.total, progText: `${lb.done} of ${pl(lb.total, 'proposal')} decided`,
+      lines: [trial ? `${pl(trial, 'alert')} On trial` : 'No alert On trial yet', blocked ? `<span class="muted">${blocked} more can't be used yet: ${np === blocked ? 'they read a connection (next phase)' : np ? "they need a reading the Visualization doesn't send, or a connection (next phase)" : "they need a reading the Visualization doesn't send"}</span>` : ''],
       action: lb.done < lb.total ? btn(lb.next || 'Decide', { href: `${b}/library`, kind: 'primary' }) : btn('Open', { href: `${b}/library`, kind: 'ghost' }),
     });
     const pe = t.people || { done: 0, total: 2 };
@@ -412,7 +430,7 @@
     const n = (f) => ov.filter(f).length;
     const bits = [[n((o) => o.state === 'libchanged'), 'Library changed since'], [n((o) => o.state === 'review'), 'Review due'], [n((o) => o.reason === 'unrecorded'), 'reason not recorded'], [n((o) => o.reason === 'notinlib'), 'not in the library']]
       .filter((x) => x[0]).map((x) => `${x[0]} ${x[1]}`);
-    return card({ title: `${pl(ov.length, 'difference')} from the library`, sub: bits.length ? bits.join(' · ') : 'Each one has a reason and a review date.', actions: [btn('See the differences', { href: `${base(key)}/differences` })], cls: 'p7-compact' });
+    return card({ title: `${pl(ov.length, 'deviation')} from the library`, sub: bits.length ? bits.join(' · ') : 'Each one has a reason and a review date.', actions: [btn('See the deviations', { href: `${base(key)}/differences` })], cls: 'p7-compact' });
   }
   function changesCard(key, c) {
     const ch = arr(c.changes); if (!ch.length) return '';
@@ -427,9 +445,9 @@
     const lb = cl.tracks.library || {}; const sc = cl.tracks.scada || {};
     const und = (lb.total || 0) - (lb.done || 0); const scLeft = (sc.total || 0) - (sc.done || 0);
     if (!und && !scLeft) return '';
-    const bits = [scLeft ? `${pl(scLeft, 'equipment type')} the plant graph found ${scLeft === 1 ? 'is' : 'are'} not accepted yet` : '', und ? `${pl(und, 'library proposal')} ${und === 1 ? 'is' : 'are'} not decided yet; alerts accepted now run On trial for 7 days before they reach people` : ''].filter(Boolean);
+    const bits = [scLeft ? `${pl(scLeft, 'equipment type')} the Visualization found ${scLeft === 1 ? 'is' : 'are'} not accepted yet` : '', und ? `${pl(und, 'library proposal')} ${und === 1 ? 'is' : 'are'} not decided yet; alerts accepted now run On trial for 7 days before they reach people` : ''].filter(Boolean);
     const b = base(key);
-    return card({ title: 'Still to review', sub: cap(bits.join('. ')) + '.', actions: [und ? btn('What the library brings', { href: `${b}/library` }) : btn('What the plant graph has', { href: `${b}/scada` })], tone: 'quiet', cls: 'p7-compact' });
+    return card({ title: 'Still to review', sub: cap(bits.join('. ')) + '.', actions: [und ? btn('Alerts & Tasks', { href: `${b}/library` }) : btn('What the Visualization has', { href: `${b}/scada` })], tone: 'quiet', cls: 'p7-compact' });
   }
   function returnCard(key) {
     return card({ title: 'Return to Commissioning', sub: 'For a rebuild or a long shutdown. Alerts go back On trial and tasks stop until the plant goes live again. Emergencies are still sent to the Leads.', actions: [btn('Return to Commissioning…', { act: 'p7:return', data: { plant: key }, kind: 'danger' })], tone: 'quiet', cls: 'p7-compact' });
@@ -444,7 +462,7 @@
       part('Open issues', () => openIssuesCard(key)),
       part('How the alerts are doing', () => alertsCard(key, c)),
       part('Gaps', () => gapsCard(key, cl)),
-      part('Differences', () => diffsCard(key)),
+      part('Deviations', () => diffsCard(key)),
       part('Blind spots', () => blindCard(key, c)),
       part('Library changes', () => changesCard(key, c)),
       part('Still to review', () => reviewsCard(key)),
@@ -454,7 +472,7 @@
   }
   function home(params) { return guard(params, (key) => (V().state(key) === 'live' ? coverage(key) : readiness(key))); }
 
-  /* ── What the plant graph has ─────────────────────────────────────────────────────────────────────────────────── */
+  /* ── What the Visualization has ─────────────────────────────────────────────────────────────────────────────────── */
   function formText(form) {
     if (!form || typeof form !== 'object') return '';
     if (U.formAnswers) return esc(shortList(U.formAnswers(form), 3));   /* v7: plain labels and units, the same as the equipment page */
@@ -469,11 +487,11 @@
     const rows = arr(g.equipment).map((e) => ({
       _href: eqHref(key, e.eqId),
       tag: `<a class="mono" href="${esc(eqHref(key, e.eqId))}">${esc(e.tag)}</a>`, name: e.name,
-      drawn: e.typeDiffers ? chip(`Drawn as ${e.drawn}`, { tone: 'warn', title: `Stored as ${e.stored}: fix the drawing in the plant graph` }) : `<span class="muted">${esc(e.drawn || g.typeName)}</span>`,
+      drawn: e.typeDiffers ? chip(`Drawn as ${e.drawn}`, { tone: 'warn', title: `Stored as ${e.stored}: fix the drawing in the Visualization` }) : `<span class="muted">${esc(e.drawn || g.typeName)}</span>`,
       readings: `${e.readings || 0}${e.nextPhaseReadings ? ` <span class="muted">+ ${e.nextPhaseReadings} next phase</span>` : ''}`,
       form: e.form ? formText(e.form) : '<span class="muted">—</span>',
     }));
-    const tbl = table({ cols: [{ label: 'Tag', key: 'tag' }, { label: 'Name', key: 'name' }, { label: 'Drawn as', key: 'drawn' }, { label: 'Readings', key: 'readings' }, { label: 'plant graph', key: 'form' }], rows });
+    const tbl = table({ cols: [{ label: 'Tag', key: 'tag' }, { label: 'Name', key: 'name' }, { label: 'Drawn as', key: 'drawn' }, { label: 'Readings', key: 'readings' }, { label: 'Visualization', key: 'form' }], rows });
     const sum = `<summary><span class="p7-sum-main"><span class="p7-sum-t">${esc(g.typeName)} <span class="muted">· ${esc(g.count)}</span></span><span class="p7-sum-s">${esc(shortList(tags, 6))} · ${pl(nRead, 'reading')}${differs ? ` · <span class="tx-warn">${differs} drawn as another type</span>` : ''}</span></span><span class="p7-sum-r">${right}</span></summary>`;
     return `<details class="p7-grp"${open ? ' open' : ''}>${sum}<div class="p7-grp-b">${tbl}${g.code ? `<p class="p7-more"><a href="${esc(libHref(g.code))}">${esc(g.typeName)} in the library →</a></p>` : ''}</div></details>`;
   }
@@ -481,41 +499,41 @@
     return guard(params, (key, q) => {
       const v = V(); const b = base(key); const live = v.state(key) === 'live';
       const sr = call(() => v.scadaReview(key), null);
-      if (!sr) return frame(key, 'home', note('What the plant graph has could not be read.', 'bad'), { crumbs: [{ label: 'What the plant graph has' }] });
+      if (!sr) return frame(key, 'home', note('What the Visualization has could not be read.', 'bad'), { crumbs: [{ label: 'What the Visualization has' }] });
       const groups = arr(sr.groups); const left = groups.filter((g) => !g.accepted);
       const nEq = groups.reduce((n, g) => n + (g.count || 0), 0); const nRead = groups.reduce((n, g) => n + arr(g.equipment).reduce((m, e) => m + (e.readings || 0), 0), 0);
       const nNext = arr(sr.nextPhase).length;
       const parts = [];
-      const sub = `Read from the plant graph ${fmt(sr.readAt)}: ${pieces(nEq)} of ${pl(groups.length, 'database type')}, with ${pl(nRead, 'reading')}${nNext ? `, plus ${nNext} on pipes between equipment (next phase)` : ''}. The plant graph is the only source of equipment, readings and answers: when something is wrong, fix it in the plant graph, then read again.`;
+      const sub = `Read from the Visualization ${fmt(sr.readAt)}: ${pieces(nEq)} of ${pl(groups.length, 'database type')}, with ${pl(nRead, 'reading')}${nNext ? `, plus ${nNext} on pipes between equipment (next phase)` : ''}. The Visualization is the only source of equipment, readings and answers: when something is wrong, fix it in the Visualization, then read again.`;
       if (arr(sr.notInDb).length) {
         const items = sr.notInDb.map((e) => ({ title: `<span class="mono">${esc(e.tag)}</span> ${esc(e.name)}`, sub: `Stored as "${e.stored || e.code || 'nothing'}", which the database doesn't have`, tone: 'bad' }));
-        parts.push(card({ title: `${pieces(sr.notInDb.length)} with a type the database doesn't have`, sub: 'This blocks go live. Give each one a database type in the plant graph, then read again.', body: list(items), actions: [btn('Fix it in the plant graph', { act: 'p7:scada-fix', kind: 'primary' })], tone: 'bad' }));
+        parts.push(card({ title: `${pieces(sr.notInDb.length)} with a type the database doesn't have`, sub: 'This blocks go live. Give each one a database type in the Visualization, then read again.', body: list(items), actions: [btn('Fix it in the Visualization', { act: 'p7:scada-fix', kind: 'primary' })], tone: 'bad' }));
       }
       if (arr(sr.typeDiffers).length) {
         const items = sr.typeDiffers.map((e) => ({ title: `<a class="mono" href="${esc(eqHref(key, e.eqId))}">${esc(e.tag)}</a> ${esc(e.name)}`, sub: `Drawn as <b>${esc(e.drawn)}</b>, stored as <b>${esc(e.stored)}</b>. The stored type is the one used.`, tone: 'warn' }));
-        parts.push(card({ title: `${pieces(sr.typeDiffers.length)} drawn as one type and stored as another`, sub: 'A gap, not a blocker: limits, alerts and tasks follow the stored type. Fix the drawing in the plant graph, then read again.', body: list(items), actions: [btn('Fix it in the plant graph', { act: 'p7:scada-fix' })], tone: 'warn' }));
+        parts.push(card({ title: `${pieces(sr.typeDiffers.length)} drawn as one type and stored as another`, sub: 'A gap, not a blocker: limits, alerts and tasks follow the stored type. Fix the drawing in the Visualization, then read again.', body: list(items), actions: [btn('Fix it in the Visualization', { act: 'p7:scada-fix' })], tone: 'warn' }));
       }
       if (!left.length && groups.length && !live) {
         const lr = call(() => v.checklist(key), null); const lb = lr && lr.tracks && lr.tracks.library;
-        parts.push(banner(`<b>Everything the plant graph found is accepted.</b>${lb && lb.done < lb.total ? ' Next: decide what the library brings for each piece of equipment.' : ''}`, { tone: 'ok', action: lb && lb.done < lb.total ? btn('What the library brings', { href: `${b}/library`, kind: 'primary' }) : btn('Back to Readiness', { href: b }) }));
+        parts.push(banner(`<b>Everything the Visualization found is accepted.</b>${lb && lb.done < lb.total ? ' Next: decide what the library brings for each piece of equipment.' : ''}`, { tone: 'ok', action: lb && lb.done < lb.total ? btn('Alerts & Tasks', { href: `${b}/library`, kind: 'primary' }) : btn('Back to Readiness', { href: b }) }));
       }
       const few = groups.length <= 4;
       parts.push(card({
         title: 'Equipment by database type',
         sub: left.length ? `${left.length} of ${pl(groups.length, 'type')} to accept. Open a type to check its equipment, then accept it.` : `All ${pl(groups.length, 'type')} accepted.`,
         actions: [left.length ? btn(left.length === groups.length ? `Accept all ${left.length} types` : `Accept the other ${left.length}`, { act: 'p7:scada-accept-all', data: { plant: key }, kind: 'primary' }) : ''],
-        body: groups.length ? groups.map((g) => scadaGroup(key, g, few || q.type === g.typeName)).join('') : empty('the plant graph sent no equipment for this plant.'),
+        body: groups.length ? groups.map((g) => scadaGroup(key, g, few || q.type === g.typeName)).join('') : empty('the Visualization sent no equipment for this plant.'),
       }));
       if (arr(sr.nextPhase).length) {
-        parts.push(note(`<b>Next phase:</b> readings on pipes between equipment are not used yet. The plant graph sends ${pl(sr.nextPhase.length, 'of them', 'of them')}: ${esc(shortList(sr.nextPhase.map((s) => `${s.name}${s.tag ? ` (${s.tag})` : ''}${s.eqTag ? ` near ${s.eqTag}` : ''}`), 5))}.`, 'next'));
+        parts.push(note(`<b>Next phase:</b> readings on pipes between equipment are not used yet. The Visualization sends ${pl(sr.nextPhase.length, 'of them', 'of them')}: ${esc(shortList(sr.nextPhase.map((s) => `${s.name}${s.tag ? ` (${s.tag})` : ''}${s.eqTag ? ` near ${s.eqTag}` : ''}`), 5))}.`, 'next'));
       }
-      return frame(key, 'home', parts.join(''), { crumbs: [{ label: 'What the plant graph has' }], title: 'What the plant graph has', sub });
+      return frame(key, 'home', parts.join(''), { crumbs: [{ label: 'What the Visualization has' }], title: 'What the Visualization has', sub });
     });
   }
 
   /* ── What the library brings ──────────────────────────────────────────────────────────────────────────── */
   const SHOWS = ['undecided', 'decided', 'blocked', 'all'];
-  function propKind(p) { return p.kind === 'alert' ? chip('Alert', { tone: 'info' }) : p.kindLabel ? chip(p.kindLabel, { tone: 'muted', title: 'Set by a plant graph answer, not a task' }) : chip('Task', { tone: 'muted' }); }
+  function propKind(p) { return p.kind === 'alert' ? chip('Alert', { tone: 'info' }) : p.kindLabel ? chip(p.kindLabel, { tone: 'muted', title: 'Set by a Visualization answer, not a task' }) : chip('Task', { tone: 'muted' }); }
   function propDetail(p) {
     if (p.kind === 'alert' && p.limits && p.limits.perBand) {
       const pbs = Object.keys(p.limits.perBand).map((k) => p.limits.perBand[k]).filter((x) => x && x.value != null);
@@ -582,7 +600,7 @@
     const rows = [
       row(c.accepted || 0, 'Inherited', 'Accepted here; they follow the library until someone changes a value.', qs('decided'), 'ok'),
       row(c.undecided, 'Could be inherited: waiting for a decision', c.undecided ? 'Nobody has accepted them or left them out yet.' : '', qs('undecided'), c.undecided ? 'warn' : ''),
-      row(needList.reduce((s, x) => s + x[1], 0), 'Not inherited: the reading is missing', needList.length ? `The plant graph has no ${esc(needList.slice(0, 6).map(([k, n]) => `${k} (${n})`).join(', '))}${needList.length > 6 ? ` and ${needList.length - 6} more` : ''} reading on that equipment. Add the sensor in the plant graph and they can be accepted.` : '', qs('blocked'), ''),
+      row(needList.reduce((s, x) => s + x[1], 0), 'Not inherited: the reading is missing', needList.length ? `The Visualization has no ${esc(needList.slice(0, 6).map(([k, n]) => `${k} (${n})`).join(', '))}${needList.length > 6 ? ` and ${needList.length - 6} more` : ''} reading on that equipment. Add the sensor in the Visualization and they can be accepted.` : '', qs('blocked'), ''),
       row(next, 'Not inherited: reads a connection between equipment', next ? 'This phase reads sensors on the equipment only. These arrive in the next phase.' : '', qs('blocked'), ''),
       row(left.length, 'Not inherited: left out at this plant', left.length ? esc(Object.entries(whyLeft).slice(0, 4).map(([k, n]) => `“${k}” (${n})`).join(', ')) : 'Nothing has been left out on purpose.', qs('decided'), ''),
     ];
@@ -657,7 +675,7 @@
         { label: "Can't be used yet", href: qs('blocked'), on: show === 'blocked', count: c.blocked },
         { label: 'All', href: qs('all'), on: show === 'all', count: lc.all },
       ]));
-      /* group equipment rows by stored type, in the order the plant graph groups them; the plant itself last */
+      /* group equipment rows by stored type, in the order the Visualization groups them; the plant itself last */
       const order = arr(call(() => v.scadaReview(key).groups, [])).map((g) => g.typeName);
       const byType = new Map(); order.forEach((t) => byType.set(t, []));
       let plantRow = null;
@@ -692,8 +710,8 @@
         const msg = { undecided: 'Nothing left to decide.', decided: 'Nothing decided yet.', blocked: 'Every proposal can be used.', all: 'The library proposes nothing for this plant.' }[show];
         parts.push(empty(msg, show !== 'all' ? btn('Show all', { href: qs('all') }) : ''));
       } else parts.push(`${folds.length > 2 ? '<p class="p7-fold-hint">One line per type. Open a type to decide line by line, or click a tag to look at that equipment without leaving this page.</p>' : ''}<div class="p7-cards">${cards.join('')}</div>`);
-      if (show === 'undecided' && c.blocked) parts.push(note(`${pl(c.blocked, 'more proposal')} can't be used yet: ${c.blocked === 1 ? 'it needs' : 'they need'} a reading the plant graph doesn't send, or a connection between equipment (next phase). They stay listed, greyed, under "Can't be used yet".`, 'quiet'));
-      return frame(key, 'library', `<div class="p7-sec-h"><h2>${live ? 'What the library brings' : 'Alerts and tasks for this plant'}</h2><p>${esc(sub)}</p></div>` + parts.join(''));
+      if (show === 'undecided' && c.blocked) parts.push(note(`${pl(c.blocked, 'more proposal')} can't be used yet: ${c.blocked === 1 ? 'it needs' : 'they need'} a reading the Visualization doesn't send, or a connection between equipment (next phase). They stay listed, greyed, under "Can't be used yet".`, 'quiet'));
+      return frame(key, 'library', `<div class="p7-sec-h"><h2>Alerts &amp; Tasks for this plant</h2><p>${esc(sub)}</p></div>` + workLevelCard(key) + parts.join(''));
     });
   }
 
@@ -735,13 +753,13 @@
           issues: issuesBy[e.id] ? `<span class="tx-warn">${issuesBy[e.id]} open</span>` : '<span class="muted">—</span>',
           diffs: diffsBy[e.id] ? String(diffsBy[e.id]) : '<span class="muted">—</span>',
         }));
-        const head = `<div class="p7-group-h"><h3>${esc(g.typeName)}</h3><span class="muted">${list.length}</span>${!live && !g.accepted ? ' ' + chip('Not accepted yet', { tone: 'warn', href: `${b}/scada?type=${enc(g.typeName)}`, title: 'What the plant graph found for this type has not been accepted yet' }) + ' ' + btn('Accept', { act: 'p7:scada-accept', data: { plant: key, type: g.typeName }, small: true, title: `Accept what the plant graph found for ${g.typeName}: its equipment and readings` }) : ''}${code ? `<a class="p7-group-l" href="${esc(libHref(code))}">In the library →</a>` : ''}</div>`;
-        return `<section class="p7-group">${head}${table({ cols: [{ label: 'Tag', key: 'tag' }, { label: 'Name', key: 'name' }, { label: 'Criticality', key: 'tier' }, { label: 'Alerts', key: 'alerts' }, { label: 'Open issues', key: 'issues' }, { label: 'Differences', key: 'diffs', cls: 'num' }], rows })}</section>`;
+        const head = `<div class="p7-group-h"><h3>${esc(g.typeName)}</h3><span class="muted">${list.length}</span>${!live && !g.accepted ? ' ' + chip('Not accepted yet', { tone: 'warn', href: `${b}/scada?type=${enc(g.typeName)}`, title: 'What the Visualization found for this type has not been accepted yet' }) + ' ' + btn('Accept', { act: 'p7:scada-accept', data: { plant: key, type: g.typeName }, small: true, title: `Accept what the Visualization found for ${g.typeName}: its equipment and readings` }) : ''}${code ? `<a class="p7-group-l" href="${esc(libHref(code))}">In the library →</a>` : ''}</div>`;
+        return `<section class="p7-group">${head}${table({ cols: [{ label: 'Tag', key: 'tag' }, { label: 'Name', key: 'name' }, { label: 'Criticality', key: 'tier' }, { label: 'Alerts', key: 'alerts' }, { label: 'Open issues', key: 'issues' }, { label: 'Deviations', key: 'diffs', cls: 'num' }], rows })}</section>`;
       }).filter(Boolean);
       const n = (f) => eqs.filter(f).length;
       const parts = [];
-      parts.push(`<p class="lead">${esc(pieces(eqs.length))} of ${pl(groups.length, 'database type')}, as the plant graph sent them. Open one to see its readings, issues, tasks and details.</p>`);
-      parts.push(`<div class="p7-tools">${filters([{ label: 'All', href: `${b}/equipment`, on: show === 'all', count: eqs.length }, { label: 'With open issues', href: `${b}/equipment?show=issues`, on: show === 'issues', count: n((e) => issuesBy[e.id]) }, { label: 'With differences', href: `${b}/equipment?show=diffs`, on: show === 'diffs', count: n((e) => diffsBy[e.id]) }, { label: 'Drawn as another type', href: `${b}/equipment?show=drawn`, on: show === 'drawn', count: n((e) => e.typeDiffers || e.notInDb) }].filter((f) => f.on || f.count || f.label === 'All'))}${searchBox('equipment', key, 'Find by tag, name or type')}</div>`);
+      parts.push(`<p class="lead">${esc(pieces(eqs.length))} of ${pl(groups.length, 'database type')}, as the Visualization sent them. Open one to see its readings, issues, tasks and details.</p>`);
+      parts.push(`<div class="p7-tools">${filters([{ label: 'All', href: `${b}/equipment`, on: show === 'all', count: eqs.length }, { label: 'With open issues', href: `${b}/equipment?show=issues`, on: show === 'issues', count: n((e) => issuesBy[e.id]) }, { label: 'With deviations', href: `${b}/equipment?show=diffs`, on: show === 'diffs', count: n((e) => diffsBy[e.id]) }, { label: 'Drawn as another type', href: `${b}/equipment?show=drawn`, on: show === 'drawn', count: n((e) => e.typeDiffers || e.notInDb) }].filter((f) => f.on || f.count || f.label === 'All'))}${searchBox('equipment', key, 'Find by tag, name or type')}</div>`);
       parts.push(blocks.length ? card({ body: blocks.join('') }) : empty(query ? H(`Nothing matches "${esc(query)}".`) : 'No equipment here.', show !== 'all' ? btn('Show all', { href: `${b}/equipment` }) : ''));
       return frame(key, 'equipment', parts.join(''));
     });
@@ -829,7 +847,7 @@
       const n = (f) => rs.filter(f).length;
       const nScada = n((r) => r.kind !== 'manual' && !r.nextPhase); const nMan = n((r) => r.kind === 'manual'); const nNext = n((r) => r.nextPhase);
       const parts = [];
-      parts.push(`<p class="lead">${pl(nScada, 'reading')} from the plant graph${nNext ? `, plus ${nNext} on pipes between equipment (next phase)` : ''}${nMan ? `${nNext ? ',' : ''} and ${nMan} manual or lab ${nMan === 1 ? 'reading' : 'readings'}` : ''}, grouped by equipment. Manual and lab readings take limits the same way and say how often they are expected.</p>`);
+      parts.push(`<p class="lead">${pl(nScada, 'reading')} from the Visualization${nNext ? `, plus ${nNext} on pipes between equipment (next phase)` : ''}${nMan ? `${nNext ? ',' : ''} and ${nMan} manual or lab ${nMan === 1 ? 'reading' : 'readings'}` : ''}, grouped by equipment. Manual and lab readings take limits the same way and say how often they are expected.</p>`);
       parts.push(`<div class="p7-tools">${filters([{ label: 'All', href: `${b}/readings`, on: show === 'all', count: rs.length }, { label: 'No limits yet', href: `${b}/readings?show=nolimits`, on: show === 'nolimits', count: noLim.size }, { label: 'Manual and lab', href: `${b}/readings?show=manual`, on: show === 'manual', count: nMan }, { label: 'Next phase', href: `${b}/readings?show=next`, on: show === 'next', count: n((r) => r.nextPhase) }].filter((f) => f.on || f.count || f.label === 'All'))}${searchBox('readings', key, 'Find by reading, tag or equipment')}</div>`);
       parts.push(blocks.length ? card({ body: blocks.join(''), actions: [U.sampleTag()], title: 'Every reading', sub: setup ? 'One line per piece of equipment, the ones that still need limits first. Open a line for its readings. Values under "Now" are sample readings.' : 'Values under "Now" are sample readings.' }) : empty(query ? H(`Nothing matches "${esc(query)}".`) : show === 'nolimits' ? 'Every reading that takes limits has them.' : 'No readings here.', show !== 'all' ? btn('Show all', { href: `${b}/readings` }) : ''));
       return frame(key, 'readings', parts.join(''));
@@ -870,7 +888,7 @@
       const v = V(); const b = base(key); const live = v.state(key) === 'live';
       const ts = arr(call(() => v.tasks(key), []));
       if (!ts.length) {
-        return frame(key, 'tasks', empty('No tasks yet. Tasks arrive when you accept what the library brings for each piece of equipment.', btn('What the library brings', { href: `${b}/library`, kind: 'primary' })));
+        return frame(key, 'tasks', empty('No tasks yet. Tasks arrive when you accept what the library brings for each piece of equipment.', btn('Alerts & Tasks', { href: `${b}/library`, kind: 'primary' })));
       }
       const a = Math.round(call(() => v.tasksPerDay(key, { each: false }), 0)); const e = Math.round(call(() => v.tasksPerDay(key, { each: true }), 0));
       const each = call(() => v.eachOf(key).phrase, 'if each piece of equipment gets its own');   /* v7: one wording on every plant */
@@ -879,6 +897,7 @@
       const due = live ? ts.filter((t) => t.status === 'due' || t.status === 'doing' || t.overdue) : [];
       const groups = ts.filter((t) => t.kind === 'group'); const singles = ts.filter((t) => t.kind !== 'group' && !t.plantLevel); const plantL = ts.filter((t) => t.kind !== 'group' && t.kind !== 'line' && t.plantLevel); const lineL = ts.filter((t) => t.kind === 'line');
       const parts = [];
+      const wl = call(() => v.workLevel(key), null); if (wl && wl.level < 4) parts.push(note(H(`Work level: <b>${esc(wl.label)}</b>. ${wl.leftOut.length ? `${pl(wl.leftOut.length, 'task')} left out` : 'Nothing left out'}${wl.kept.length ? `, ${wl.kept.length} kept because no alert watches the equipment` : ''}. Alerts are not affected. <a href="${esc(b)}/library">Change the level</a>`), 'info'));
       parts.push(`<p class="lead">${live ? `<b>${esc(both)}.</b> ` : `<b>When the plant goes live: ${esc(both)}.</b> First due dates are spread across each task's own interval, so day one is not a pile-up. `}Routine checks, routine work and manual tests are one task per type at this plant, with a line for each piece of equipment; maintenance and calibration stay on each piece of equipment.</p>`);
       parts.push(filters([{ label: 'All', href: `${b}/tasks`, on: show === 'all', count: ts.length }, { label: 'One per type', href: `${b}/tasks?show=shared`, on: show === 'shared', count: groups.length }, { label: 'On each piece of equipment', href: `${b}/tasks?show=each`, on: show === 'each', count: singles.length + plantL.length }]));
       if (due.length && show === 'all') parts.push(card({ title: due.length === 1 ? 'One task due now' : `${due.length} tasks due now`, body: taskTable(key, due, live), tone: due.some((t) => t.overdue) ? 'bad' : 'warn' }));
@@ -912,13 +931,13 @@
     /* v7: what would then block going live again (a Live plant runs with proposals undecided; Commissioning does not): from the checklist */
     const cl = call(() => V().checklist(key), null); const tr = (cl && cl.tracks) || {};
     const und = ((tr.library || {}).total || 0) - ((tr.library || {}).done || 0); const scLeft = ((tr.scada || {}).total || 0) - ((tr.scada || {}).done || 0);
-    const block = [scLeft ? `${pl(scLeft, 'equipment type')} the plant graph found not accepted` : '', und ? `${und === 1 ? 'one library proposal' : `${und} library proposals`} not decided` : ''].filter(Boolean);
+    const block = [scLeft ? `${pl(scLeft, 'equipment type')} the Visualization found not accepted` : '', und ? `${und === 1 ? 'one library proposal' : `${und} library proposals`} not decided` : ''].filter(Boolean);
     const body = `<ul class="p7-changes">
       <li>Alerts go back On trial: firings are recorded, nothing reaches the operators.</li>
       <li class="p7-loud">On a new plant an Emergency is kept as a trial firing too.</li>
       <li>Tasks stop until the plant goes live again.</li>
       <li>Home shows Readiness again, with its checklist.</li>${block.length ? `
-      <li class="p7-loud">Go live is then blocked until these are done: ${esc(block.join(', and '))} (<a href="${esc(base(key))}/${und ? 'library' : 'scada'}">${und ? 'What the library brings' : 'What the plant graph has'}</a>).</li>` : ''}</ul>`
+      <li class="p7-loud">Go live is then blocked until these are done: ${esc(block.join(', and '))} (<a href="${esc(base(key))}/${und ? 'library' : 'scada'}">${und ? 'Alerts &amp; Tasks' : 'What the Visualization has'}</a>).</li>` : ''}</ul>`
       + U.field({ label: 'Why it goes back', hint: 'Required. It is kept in Activity.', html: '<textarea id="p7-reason" placeholder="For example: aeration grid rebuild, two weeks"></textarea>' });
     U.modal({ title: `Return ${p.name} to Commissioning?`, body, foot: btn('Cancel', { act: 'ui:close', data: { what: 'modal' }, kind: 'ghost' }) + btn('Return to Commissioning', { act: 'p7:return-confirm', data: { plant: key }, kind: 'danger' }) });
   }
@@ -928,7 +947,7 @@
     const pr = r && r.proposals.find((y) => y.pid === pid); if (!pr) { U.toast('That proposal is no longer there.'); return; }
     const where = r.eqId === 'plant' ? 'the plant' : pr.tag;
     const quick = `<div class="p7-quick">${REASONS.map((t) => btn(t, { act: 'p7:reason-pick', data: { text: t }, small: true })).join('')}</div>`;
-    const body = `<p>The library keeps it; ${esc(plantOf(key).name)} leaves it out${pr.kind === 'alert' ? ', and it shows under Differences from the library' : ''}. Say why, so the next person knows.</p>${quick}`
+    const body = `<p>The library keeps it; ${esc(plantOf(key).name)} leaves it out${pr.kind === 'alert' ? ', and it shows under Deviations from the library' : ''}. Say why, so the next person knows.</p>${quick}`
       + U.field({ label: 'Why', html: '<textarea id="p7-reason" placeholder="In a few words"></textarea>' });
     U.modal({ title: `Not for this plant: ${pr.name} on ${where}`, body, foot: btn('Cancel', { act: 'ui:close', data: { what: 'modal' }, kind: 'ghost' }) + btn('Not for this plant', { act: 'p7:lib-reject-confirm', data: { plant: key, pid }, kind: 'primary' }) });
   }
@@ -953,19 +972,21 @@
   }
 
   /* ── actions ──────────────────────────────────────────────────────────────────────────────────────────── */
+  U.on('p7:worklevel', (el) => { const key = dget(el, 'plant'); const r = call(() => V().setWorkLevel(key, Number(dget(el, 'level'))), { ok: false }); say(r.ok ? (r.level >= 4 ? 'Every task is back.' : `Work level set. ${pl(r.leftOut, 'task')} left out${r.kept ? `, ${r.kept} kept because no alert watches the equipment` : ''}. Alerts are not affected.`) : esc(r.error || 'That did not work.')); });
+  U.on('p7:worklevel-keep', (el) => { const key = dget(el, 'plant'); const w = call(() => V().workLevel(key), null); if (!w) return; const keep = dget(el, 'keep') === '1'; const r = call(() => V().setWorkLevel(key, w.level, { keepUnwatched: keep }), { ok: false }); say(r.ok ? (keep ? 'Routine work stays wherever no alert watches the equipment.' : `Routine work is now left out there too: ${pl(r.leftOut, 'task')} left out in all.`) : 'That did not work.'); });
   U.on('p7:people-sample', (el) => { const key = dget(el, 'plant'); const r = call(() => V().addSamplePeople(key), { ok: false }); say(r.ok ? 'Added a sample Operator and a sample Lead, each with a verified phone. In the product they come from the User Center.' : 'That did not work.'); });
   U.on('p7:usercenter', () => { U.toast('People are kept in the User Center, outside this prototype. Readiness reads them from there; they are not edited here.'); return false; });
-  U.on('p7:scada-fix', () => { U.toast('Fix it in the plant graph, then read again: the console never edits what the plant graph sends.'); return false; });
+  U.on('p7:scada-fix', () => { U.toast('Fix it in the Visualization, then read again: the console never edits what the Visualization sends.'); return false; });
   U.on('p7:scada-accept', (el) => {
     const key = dget(el, 'plant'); const type = dget(el, 'type');
     const g = arr(call(() => V().scadaReview(key).groups, [])).find((x) => x.typeName === type);
     const r = call(() => V().acceptScadaGroup(key, type), { ok: false, error: 'That did not work.' });
-    say(r.ok ? `Accepted what the plant graph found for ${esc(g ? countType(g.count, type) : type)}.` : esc(r.error || 'That did not work.'));
+    say(r.ok ? `Accepted what the Visualization found for ${esc(g ? countType(g.count, type) : type)}.` : esc(r.error || 'That did not work.'));
   });
   U.on('p7:scada-accept-all', (el) => {
     const key = dget(el, 'plant');
     const r = call(() => V().acceptAllScada(key), { ok: false });
-    say(r.ok ? `Accepted ${pl(r.count || 0, 'equipment type')}. Next: <a href="${esc(base(key))}/library">what the library brings</a>.` : 'That did not work.');
+    say(r.ok ? `Accepted ${pl(r.count || 0, 'equipment type')}. Next: <a href="${esc(base(key))}/library">Alerts &amp; Tasks</a>.` : 'That did not work.');
   });
   U.on('p7:lib-accept', (el) => {
     const key = dget(el, 'plant'); const pid = dget(el, 'pid'); const pr = findProp(key, pid);
@@ -1036,7 +1057,7 @@
     const r = call(() => V().decide(key, pid, 'reject', { reason: r0.text }), { ok: false, error: 'That did not work.' });
     U.closeModal(true);
     if (!r.ok) { U.toast(r.error || 'That did not work.'); return undefined; }
-    say(`Left out at this plant: ${esc(pr ? `${pr.name} on ${pr.eqId === 'plant' ? 'the plant' : pr.tag}` : 'the proposal')}.${pr && pr.kind === 'alert' ? ' It shows under Differences from the library.' : ''}${afterDecide(key)}`, { ms: 7000 });
+    say(`Left out at this plant: ${esc(pr ? `${pr.name} on ${pr.eqId === 'plant' ? 'the plant' : pr.tag}` : 'the proposal')}.${pr && pr.kind === 'alert' ? ' It shows under Deviations from the library.' : ''}${afterDecide(key)}`, { ms: 7000 });
     return undefined;
   });
   U.on('p7:golive', (el) => { openGoLive(dget(el, 'plant')); return false; });
