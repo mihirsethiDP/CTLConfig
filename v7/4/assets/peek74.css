@@ -53,15 +53,40 @@ details.p7-rfold[open] { padding-bottom: 14px; }
 .p7-rquiet { margin-top: 14px; border: 1px solid var(--line); border-radius: 8px; padding: 0 14px; }
 .p7-rquiet > summary { cursor: pointer; padding: 12px 0; font-size: 13.5px; color: var(--ink-2); }
 .p7-rquiet details.p7-rfold:last-child { border-bottom: 0; }
-/* the set-up guide on every tab of a plant being set up */
-.sg { margin: 0 0 18px; border: 1px solid var(--line); border-left: 3px solid var(--accent, #2f6f62); border-radius: 10px; background: var(--surface); padding: 12px 16px; display: grid; gap: 10px; }
-.sg-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--ink-3); }
-.sg-step { display: flex; align-items: center; gap: 6px; }
-.sg-n { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--line); font-size: 11.5px; font-weight: 600; background: var(--surface-2); }
-.sg-step.is-done { color: var(--ink-2); }
-.sg-step.is-done .sg-n { background: var(--ok-tint, #e8f1ec); border-color: transparent; color: var(--ok-ink, #2f6b4f); }
-.sg-step.is-next { color: var(--ink); font-weight: 600; }
-.sg-step.is-next .sg-n { background: var(--accent, #2f6f62); border-color: transparent; color: #fff; }
-.sg-now { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+/* the set-up timeline: while a plant is set up it stands where the tabs were */
+.tl { margin: 0 0 24px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); padding: 14px 16px 12px; display: grid; gap: 12px; }
+.tl-h { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px; font-size: 13px; color: var(--ink-3); }
+.tl-h-t { font-weight: 600; color: var(--ink-2); }
+.tl-steps { list-style: none; margin: 0; padding: 0; display: flex; gap: 0; }
+.tl-step { position: relative; flex: 1 1 0; min-width: 0; }
+.tl-step + .tl-step::before { content: ""; position: absolute; top: 19px; left: calc(-50% + 22px); right: calc(50% + 22px); height: 2px; background: var(--line); border-radius: 2px; }
+.tl-step.is-done + .tl-step::before { background: var(--accent); }
+.tl-a { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 100%; padding: 2px 4px 6px; border: 0; background: none; font: inherit; color: var(--ink-2); text-align: center; cursor: pointer; border-radius: 8px; }
+a.tl-a:hover, button.tl-a:hover { text-decoration: none; background: var(--surface-2); }
+.tl-a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.tl-ring { --p: 0; position: relative; z-index: 1; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: conic-gradient(var(--accent) calc(var(--p) * 1%), var(--line) 0); }
+.tl-ring-in { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--surface); font: 600 12.5px var(--font); color: var(--ink-2); }
+.tl-step.is-done .tl-ring-in { background: var(--accent); color: #fff; }
+.tl-step.is-next .tl-ring-in { color: var(--accent-strong); box-shadow: inset 0 0 0 1.5px var(--accent); }
+.tl-txt { display: grid; gap: 1px; min-width: 0; }
+.tl-l { font-size: 13px; font-weight: 500; line-height: 1.25; }
+.tl-step.is-next .tl-l, .tl-step.is-on .tl-l { font-weight: 700; color: var(--ink); }
+.tl-step.is-on .tl-a { background: var(--accent-tint); }
+.tl-opt { display: block; font-size: 11px; font-weight: 400; color: var(--ink-3); }
+.tl-p { font: 500 12px var(--mono); color: var(--ink-3); }
+.tl-step.is-locked .tl-a { cursor: default; color: var(--ink-3); }
+.tl-tip { position: absolute; z-index: 30; top: calc(100% + 6px); left: 50%; transform: translateX(-50%); width: 260px; max-width: 78vw; padding: 10px 12px; border-radius: 8px; background: var(--ink); color: #fff; font-size: 12.5px; line-height: 1.45; text-align: left; display: none; gap: 4px; box-shadow: 0 6px 20px rgba(0,0,0,.18); }
+.tl-tip b { font-weight: 600; }
+.tl-tip-n { opacity: .8; }
+.tl-step:hover .tl-tip, .tl-step:focus-within .tl-tip { display: grid; }
+.tl-step:first-child .tl-tip { left: 0; transform: none; }
+.tl-step:last-child .tl-tip { left: auto; right: 0; transform: none; }
+.tl .sg-now { border-top: 1px solid var(--line); padding-top: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
 .sg-now-t { flex: 1; min-width: 240px; font-size: 14px; }
 .sg-now-a { display: flex; gap: 8px; flex: 0 0 auto; }
+.tl-more { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 4px; border-top: 1px solid var(--line); padding-top: 8px; font-size: 13px; }
+.tl-more-l { color: var(--ink-3); margin-right: 6px; }
+.tl-m { padding: 4px 8px; border-radius: 6px; color: var(--ink-2); }
+.tl-m:hover { text-decoration: none; background: var(--surface-2); color: var(--ink); }
+.tl-m.on { font-weight: 600; color: var(--ink); background: var(--surface-2); }
+@media (max-width: 760px) { .tl-steps { overflow-x: auto; padding-bottom: 4px; } .tl-step { flex: 0 0 96px; } .tl-tip { display: none !important; } }
