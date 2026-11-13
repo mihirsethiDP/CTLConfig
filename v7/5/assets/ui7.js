@@ -818,7 +818,7 @@
   function topbarHtml(path) {
     return `<header class="tb"><a class="tb-brand" href="#/plants">CloseTheLoop<span> · Configuration</span></a>${versionBadge()}${samePlaceHtml(path)}`
       + `<nav class="tb-nav" id="tbNav" aria-label="Main">${navHtml(path)}</nav>`
-      + `<div class="tb-right"><button type="button" class="tb-btn tb-review" data-act="ui:review" aria-pressed="false" title="Show or hide the notes for reviewers: decisions on each screen, the story, and the version links">Review</button>`
+      + `<div class="tb-right">${W.V7PERSONA ? W.V7PERSONA.pickerHtml() + '<a class="tb-persona-a" href="#/personas" title="Who uses the configuration, and what each one can change">Compare</a>' : ''}<button type="button" class="tb-btn tb-review" data-act="ui:review" aria-pressed="false" title="Show or hide the notes for reviewers: decisions on each screen, the story, and the version links">Review</button>`
       + `<button type="button" class="tb-btn tb-story" data-act="ui:story" aria-pressed="false" aria-controls="story">Story</button>`
       + `<button type="button" class="tb-btn tb-reset" data-act="ui:reset">Reset the story</button></div></header>`;
   }
