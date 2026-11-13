@@ -185,7 +185,7 @@ body:not([data-persona="all"]) .tb-persona select { background: var(--warn-tint)
 .pz-t th, .pz-t td { padding: 10px 12px; border-bottom: 1px solid var(--line); text-align: center; vertical-align: top; }
 .pz-t tbody tr:last-child th, .pz-t tbody tr:last-child td { border-bottom: 0; }
 .pz-t thead th { font-size: 12.5px; color: var(--ink-2); background: var(--surface-2); }
-.pz-t th[scope="row"], .pz-t thead th:first-child { text-align: left; width: 34%; }
+.pz-t th[scope="row"], .pz-t thead tr:first-child th:first-child { text-align: left; width: 30%; vertical-align: bottom; }
 .pz-t .on { background: var(--accent-tint); }
 .pz-what { display: block; font-weight: 400; color: var(--ink-3); font-size: 12.5px; margin-top: 3px; }
 .pz-y { color: var(--ok-ink); font-weight: 700; } .pz-n { color: var(--ink-3); }
@@ -199,3 +199,11 @@ body:not([data-persona="all"]) .tb-persona select { background: var(--warn-tint)
 .pz-card dt { font-size: 12px; font-weight: 600; color: var(--ink-3); margin-top: 8px; }
 .pz-card dd { margin: 2px 0 0; font-size: 13.5px; } .pz-card dd ul { margin: 0; padding-left: 18px; }
 @media (max-width: 1240px) { .tb-persona span { display: none; } }
+/* personas, single-role model: two pickers, links to screens that are not there, the grouped table head */
+.tb-persona select + select { margin-left: -2px; }
+.tb-persona select:disabled { opacity: .55; }
+body:not([data-persona="all"]) .tb-persona select { background: var(--warn-tint); border-color: var(--warn); }
+a[data-nosee] { display: none !important; }
+.pz-t th.pz-g { text-align: center; border-left: 1px solid var(--line); }
+.pz-go { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.pz-out { margin: 0; padding-left: 20px; display: grid; gap: 6px; max-width: 78ch; }
