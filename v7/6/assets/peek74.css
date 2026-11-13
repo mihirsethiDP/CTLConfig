@@ -207,3 +207,14 @@ a[data-nosee] { display: none !important; }
 .pz-t th.pz-g { text-align: center; border-left: 1px solid var(--line); }
 .pz-go { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
 .pz-out { margin: 0; padding-left: 20px; display: grid; gap: 6px; max-width: 78ch; }
+/* personas: what is not there for someone who does not configure */
+a[data-nosee="hide"] { display: none !important; }
+a[data-nosee="text"] { pointer-events: none; color: inherit !important; text-decoration: none !important; cursor: default; }
+[data-gone], [data-cfg] { display: none !important; }
+body:not([data-view="global"]) .pg-plant > .tl, body[data-view="plant"] .pg-plant > nav.tabs:not(.pz-tabs), body[data-view="plant"] .dec-mark { display: none !important; }
+.pz-list { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+.pz-plants { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; margin-bottom: 14px; }
+.pg-role .card { margin-top: 12px; }
+.pz-t.pz-s td { text-align: left; } .pz-t.pz-s th[scope="row"] { width: 30%; }
+body[data-view="plant"] .chip-btn[data-locked] { opacity: 1; cursor: default !important; }
+body[data-view="plant"] .chip-btn[data-locked]::after { content: none; }

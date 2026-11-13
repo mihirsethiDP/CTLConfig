@@ -50,9 +50,9 @@
     readplant: 'work:taskstep work:taskdone work:reading',
     work: 'work:report work:report-eq work:report-go work:report-pick work:answer work:causes work:cause-go work:startfix work:fixstep work:return obj:report obj:rsave',
     approve: 'work:verify work:closenote work:close-go work:false work:false-go',
-    people: 'p7:people-sample',
+    people: 'p7:people-sample p7:usercenter work:usercenter',
     tech: 'p7:lib-accept p7:lib-accept-all p7:lib-accept-eq p7:lib-accept-group p7:lib-accept-type p7:lib-reject p7:lib-reject-confirm p7:lib-reject-group p7:lib-reject-group-confirm p7:limits '
-      + 'obj:astate obj:aoff obj:tier obj:tiersave lib:keep lib:keep-save lib:revert lib:revert-all lib:suggest lib:suggest-send obj:suggest obj:sgsave work:suggest work:cadence work:cadence-save work:lastdone',
+      + 'obj:scada p7:scada-fix obj:astate obj:aoff obj:tier obj:tiersave lib:keep lib:keep-save lib:revert lib:revert-all lib:suggest lib:suggest-send obj:suggest obj:sgsave work:suggest work:cadence work:cadence-save work:lastdone',
     templates: 'p7:scada-accept p7:scada-accept-all st:confirm st:place st:up-new st:up-edit st:up-add st:up-save st:up-remove st:cg-new st:cg-edit st:cg-save st:cg-remove p7:worklevel p7:worklevel-keep '
       + 'lib:field lib:discard lib:publish fl:new fl:edit fl:add fl:del fl:move fl:set fl:save fl:discard work:cadence-lib p7:golive p7:golive-confirm p7:return p7:return-confirm',
   };
@@ -77,14 +77,58 @@
   function title() { const v = read(); if (!v) return 'All access'; return roleById[v.role].name + (v.grant !== 'none' ? ' + ' + grantById[v.grant].name : ''); }
   function orList(a) { return a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' or ' + a[a.length - 1]; }
   function holders(set) { return ROLES.filter((r) => r.sets.indexOf(set) >= 0).map((r) => 'a ' + r.name).concat(GRANTS.filter((g) => g.id !== 'none' && g.sets.indexOf(set) >= 0).map((g) => 'a ' + g.name)); }
-  function whyNot(set) { const s = setById[set]; return `${title()} cannot do this. It needs "${s ? s.label : set}": ${orList(holders(set))}.`; }
+  function whyNot(set) { if (set === 'setup') return 'This plant is still being set up, and setting a plant up is the Global Admin\'s. A Technical Admin changes its alerts, limits and tasks once it is live.'; const s = setById[set]; return `${title()} cannot do this. It needs "${s ? s.label : set}": ${orList(holders(set))}.`; }
 
   /* ── what is on screen for them: configuration is there for the Global Admin only ── */
-  const TECH_TOO = /^p\/[^/]+\/(readings|differences)$/; const PEOPLE_TOO = /^users$/;
-  const OPEN = /^(plants|personas)$|^p\/[^/]+$|^p\/[^/]+\/(issues|issue\/[^/]+|tasks|task\/[^/]+|equipment|eq\/.+|alert\/[^/]+|activity)$/;
+  const TECH_TOO = /^p\/[^/]+\/(readings|differences|activity|alert\/[^/]+)$|^p\/[^/]+\/eq\/[^/]+\/details$/; const PEOPLE_TOO = /^users$/;
+  const OPEN = /^(plants|personas)$|^p\/[^/]+$|^p\/[^/]+\/(issues|issue\/[^/]+|tasks|task\/[^/]+|equipment)$|^p\/[^/]+\/eq\/[^/]+(\/(readings|issues|tasks|phone))?$/;
+  /* three ways of seeing: 'global' everything · 'tech' the plant with its alerts, limits and deviations · 'plant' the plant's work only */
+  function level() { return isGlobal() ? 'global' : can('tech') ? 'tech' : 'plant'; }
+  function plantKey(path) { const m = /^p\/([^/]+)/.exec(pathOf(path)); return m ? m[1] : null; }
+  function stateOf(key) { try { return W.V7.state(key); } catch (e) { return null; } }
   function pathOf(href) { return String(href || '').replace(/^#\/?/, '').split('?')[0].replace(/\/$/, '') || 'plants'; }
-  function sees(path) { const p = pathOf(path); return isGlobal() || OPEN.test(p) || (can('tech') && TECH_TOO.test(p)) || (can('people') && PEOPLE_TOO.test(p)); }
-  function settingUp(path) { const m = /^p\/([^/]+)$/.exec(pathOf(path)); if (!m || isGlobal()) return null; const v = W.V7; let st = null; try { st = v && v.state ? v.state(m[1]) : null; } catch (e) { st = null; } return st === 'commissioning' ? m[1] : null; }
+  /* a plant still being set up is the Global Admin's: a Technical Admin gets its issues, tasks and equipment, and changes nothing yet */
+  function sees(path) { const p = pathOf(path); return isGlobal() || OPEN.test(p) || (can('tech') && TECH_TOO.test(p) && stateOf(plantKey(p)) !== 'commissioning') || (can('people') && PEOPLE_TOO.test(p)); }
+  function setupHere() { return !isGlobal() && stateOf(plantKey(typeof location !== 'undefined' ? location.hash : '')) === 'commissioning'; }
+  function settingUp(path) { const m = /^p\/([^/]+)$/.exec(pathOf(path)); if (!m || level() !== 'tech') return null; return stateOf(m[1]) === 'commissioning' ? m[1] : null; }
+
+  /* ── the plant's own screens, for people who do not configure ── */
+  function arr(x) { return Array.isArray(x) ? x : []; }
+  function pl(n, one, many) { return n + ' ' + (n === 1 ? one : (many || one + 's')); }
+  function tabsHtml(key, active) {
+    const b = '#/p/' + key; let open = 0; try { open = arr(W.V7.issues(key, { status: 'open' })).length; } catch (e) { open = 0; }
+    const items = (level() === 'tech' ? [] : [['home', 'Home', '']]).concat([['issues', 'Issues', '/issues'], ['tasks', 'Tasks', '/tasks'], ['equipment', 'Equipment', '/equipment']]);
+    return '<nav class="tabs pz-tabs" role="tablist">' + items.map(([id, label, suf]) => '<a class="tab' + (id === active ? ' on' : '') + '" href="' + esc(b + suf) + '" role="tab"' + (id === active ? ' aria-selected="true"' : '') + '>' + esc(label) + (id === 'issues' && open ? '<span class="tab-n">' + open + '</span>' : '') + '</a>').join('') + '</nav>';
+  }
+  function activeOf(path) { const m = /^p\/[^/]+\/([a-z]+)/.exec(pathOf(path)); const a = m ? m[1] : 'home'; return a === 'issue' ? 'issues' : a === 'task' ? 'tasks' : a === 'eq' ? 'equipment' : a; }
+  function ownTabs(main, path) {
+    const pg = main.querySelector('.pg-plant'); const key = plantKey(path); if (!pg || !key || pg.querySelector('.pz-tabs')) return;
+    if (level() === 'tech' && stateOf(key) !== 'commissioning') return;          /* a live plant's own tabs do for a Technical Admin */
+    const ph = pg.querySelector('.ph'); if (!ph) return; const d = document.createElement('div'); d.innerHTML = tabsHtml(key, activeOf(path)); pg.insertBefore(d.firstChild, ph.nextSibling);
+  }
+  function roleHome(key) {
+    const v = W.V7; let P = {}; let open = []; let due = [];
+    try { P = v.plant(key) || {}; open = arr(v.issues(key, { status: 'open' })); due = arr(v.tasks(key)).filter((t) => t.status === 'due'); } catch (e) { /* an empty page still renders */ }
+    const b = '#/p/' + key; const setup = P.state === 'commissioning';
+    const li = (href, text, tail) => '<li><a href="' + esc(href) + '">' + esc(text) + '</a>' + (tail || '') + '</li>';
+    const body = tabsHtml(key, 'home')
+      + (setup ? U.note('This plant is still being set up. Until it goes live nothing is sent to anyone, except an Emergency, which reaches the Leads.', 'quiet') : '')
+      + U.card({ title: open.length ? pl(open.length, 'open issue') : 'No open issues', body: open.length ? '<ul class="pz-list">' + open.map((i) => li(b + '/issue/' + i.id, i.title, ' ' + U.sev(i.band) + ' <span class="muted">opened ' + esc(U.fmt(i.opened)) + '</span>')).join('') + '</ul>' : '', actions: [U.btn('All issues', { href: b + '/issues', kind: 'ghost', small: true })] })
+      + U.card({ title: due.length ? pl(due.length, 'task') + ' due now' : 'No task is due now', body: due.length ? '<ul class="pz-list">' + due.map((t) => li(b + '/task/' + t.id, t.line || t.name, t.everyText ? ' <span class="muted">' + esc(t.everyText) + '</span>' : '')).join('') + '</ul>' : '', actions: [U.btn('All tasks', { href: b + '/tasks', kind: 'ghost', small: true })] })
+      + U.card({ title: 'Equipment', sub: pl(P.equipmentCount || 0, 'piece') + ' of equipment, with its readings, issues and tasks.', actions: [U.btn('Open', { href: b + '/equipment', kind: 'ghost', small: true })] });
+    return '<div class="pg pg-role">' + U.page({ crumbs: [{ label: can('portfolio') ? 'All your plants' : 'Your plants', href: '#/plants' }, { label: P.name || key }], title: P.name || key, chips: [U.chip(setup ? 'Being set up' : 'Live', { tone: setup ? 'warn' : 'ok' })], sub: (P.type || '') + (P.capacity ? ' · ' + P.capacity : ''), body }) + '</div>';
+  }
+  function yourPlants() {
+    const v = W.V7; const wide = can('portfolio'); let list = []; try { list = arr(v.plants()); } catch (e) { list = []; }
+    const cards = list.map((p) => {
+      let P = p; let due = 0; try { P = v.plant(p.key) || p; due = arr(v.tasks(p.key)).filter((t) => t.status === 'due').length; } catch (e) { /* keep the short record */ }
+      const setup = p.state === 'commissioning'; const b = '#/p/' + p.key;
+      const sub = (p.type || '') + ' · ' + (setup ? 'Being set up' : 'Live') + (wide ? ' · ' + (P.openIssues ? pl(P.openIssues, 'open issue') : 'no open issues') + ' · ' + (due ? pl(due, 'task') + ' due' : 'no task due') : '');
+      return U.card({ title: p.name, sub, actions: [U.btn('Open', { href: b, kind: 'primary', small: true }), U.btn('Issues', { href: b + '/issues', kind: 'ghost', small: true }), U.btn('Tasks', { href: b + '/tasks', kind: 'ghost', small: true })], cls: 'p7-compact' });
+    });
+    const how = wide ? 'This role sees all its plants at once, with what is open at each.' : 'This role opens one plant at a time: the list says only which plants it has.';
+    return U.page({ title: wide ? 'All your plants' : 'Your plants', sub: how, body: '<div class="pz-plants">' + cards.join('') + '</div>' + U.note('A person sees only the plants they are assigned to. In this prototype everyone is assigned to all four.', 'quiet') });
+  }
   function notHere(path) {
     const key = settingUp(path); const who = title();
     if (key) {
@@ -93,29 +137,69 @@
         + `<p class="pz-go">${U.btn('Issues', { href: `#/p/${key}/issues`, kind: 'primary' })}${U.btn('Tasks', { href: `#/p/${key}/tasks` })}${U.btn('Equipment', { href: `#/p/${key}/equipment` })}</p>` });
     }
     return U.page({ title: 'Not there for this person', sub: `Viewing as ${who}.`, body: U.note('This screen is configuration, and configuration is the Global Admin\'s alone. Everyone else gets the plant, its issues, tasks and equipment. A Technical Admin also gets the plant\'s limits and deviations.', 'quiet')
-      + `<p class="pz-go">${U.btn('All Plants', { href: '#/plants', kind: 'primary' })}${U.btn('Compare roles and grants', { href: '#/personas' })}</p>` });
+      + `<p class="pz-go">${U.btn(level() === 'plant' ? (can('portfolio') ? 'All your plants' : 'Your plants') : 'All Plants', { href: '#/plants', kind: 'primary' })}${U.btn('Compare roles and grants', { href: '#/personas' })}</p>` });
   }
 
   /* ── locking and hiding ── */
   function hasDom() { return typeof document !== 'undefined' && !!document && !!document.body && typeof document.querySelectorAll === 'function'; }
+  const CFG_WORDS = /^(Assumed|Follows the library|Plant[’']s own value|Not in the library|From the Visualization|Changed here|Library changed since|[Ff]rom the library|Real Visualization)$/;
+  /* sentences that name where a setting came from, said without it */
+  const PLAIN = [[/ · from the library/g, ''], [/Readings from the Visualization/g, 'Readings'], [/ of \d+ database types, as read from the Visualization\./g, '.'], [/Newest first\. A false alarm counts in Coverage\./g, 'Newest first.'],
+    [/ Assumed for now; the plant team agrees it later\./g, ''], [/Problems the library knows for/g, 'Known problems for'], [/From the workbook: how each one is found/g, 'How each one is found'], [/The library lists no problems for (.+) yet\./g, 'None listed for $1 yet.'],
+    [/The Visualization sends no readings for (.+)\./g, 'No readings on $1.'], [/Limits live on the reading; every alert on it follows them\./g, 'Each reading with its limits.'],
+    [/^Commissioning$/g, 'Being set up'], [/Commissioning since/g, 'Being set up since'], [/, day \d+ of the trial\./g, '.'], [/During Commissioning no alert opens one/g, 'While the plant is being set up no alert opens one']];
+  function plainWords(main) {
+    if (!main || typeof document.createTreeWalker !== 'function') return; const w = document.createTreeWalker(main, 4, null); let n = w.nextNode();
+    while (n) { let t = n.nodeValue; if (t && /library|Visualization|Coverage|Assumed|workbook|Limits live|Commissioning|of the trial/.test(t)) { PLAIN.forEach(([re, to]) => { t = t.replace(re, to); }); if (t !== n.nodeValue) n.nodeValue = t; } n = w.nextNode(); }
+  }
   function lock(root) {
     if (!hasDom()) return;
     const list = (root || document.body).querySelectorAll('[data-act]');
     for (let i = 0; i < list.length; i++) {
       const el = list[i]; const set = setOf(el.getAttribute('data-act'), el);
-      if (!set || can(set) || el.getAttribute('data-locked')) continue;
-      el.setAttribute('data-locked', set); el.setAttribute('aria-disabled', 'true'); el.setAttribute('title', whyNot(set));
+      if (!set || el.getAttribute('data-locked')) continue;
+      const early = set === 'tech' && can('tech') && setupHere();
+      if (can(set) && !early) continue;
+      el.setAttribute('data-locked', early ? 'setup' : set); el.setAttribute('aria-disabled', 'true'); el.setAttribute('title', whyNot(early ? 'setup' : set));
       if (/^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName || '')) el.disabled = true;
+      /* a button for configuring is not there for someone who does not configure; work they are not allowed stays, locked, with the reason */
+      if (set !== 'work' && set !== 'approve' && set !== 'readplant') {
+        if (el.classList.contains('btn')) {
+          el.setAttribute('data-gone', '1');
+          /* a card that exists only for that button goes with it */
+          const card = el.closest('section.card, section.sec'); const h = card && card.querySelector('h2'); if (h && h.textContent.trim() === el.textContent.replace(/…$/, '').trim()) card.setAttribute('data-gone', '1');
+        }
+        else if (el.disabled) { const dd = el.closest('dd'); const dt = dd && dd.previousElementSibling; if (dd && dt && dt.tagName === 'DT') { dd.setAttribute('data-gone', '1'); dt.setAttribute('data-gone', '1'); } }
+      }
     }
+    const lv = level(); document.body.setAttribute('data-view', lv);
     const links = document.body.querySelectorAll('a[href^="#/"]');
-    for (let i = 0; i < links.length; i++) { const a = links[i]; if (sees(a.getAttribute('href'))) a.removeAttribute('data-nosee'); else a.setAttribute('data-nosee', '1'); }
+    for (let i = 0; i < links.length; i++) {
+      const a = links[i]; const href = a.getAttribute('href');
+      if (sees(href) && !(lv === 'plant' && /[?&]show=diffs/.test(href))) { a.removeAttribute('data-nosee'); continue; }
+      a.setAttribute('data-nosee', a.classList.contains('btn') || a.classList.contains('tab') || a.classList.contains('filter') || a.closest('.tb') ? 'hide' : 'text');
+    }
+    if (lv !== 'plant') return;
+    /* what only says where a setting came from, or that set-up is unfinished, means nothing to someone who does not configure */
+    const bits = document.body.querySelectorAll('main .chip, main .p7-sub, main .inc, main .tab-flag, main .wk-setup, main .o-hint');
+    plainWords(document.querySelector('main'));
+    const mine = can('portfolio') ? 'All your plants' : 'Your plants'; const back = document.body.querySelectorAll('#tbNav a[href="#/plants"], main .crumbs a[href="#/plants"]');
+    for (let i = 0; i < back.length; i++) if (back[i].textContent !== mine) back[i].textContent = mine;
+    for (let i = 0; i < bits.length; i++) { const e = bits[i]; if (e.matches('.inc, .tab-flag, .chip-lib, .chip-changed, .wk-setup, .o-hint') || CFG_WORDS.test((e.textContent || '').trim())) e.setAttribute('data-cfg', '1'); }
+    const ths = document.body.querySelectorAll('main table thead th');
+    for (let i = 0; i < ths.length; i++) {
+      const th = ths[i]; if ((th.textContent || '').trim() !== 'Deviations') continue; th.setAttribute('data-cfg', '1');
+      const ix = Array.prototype.indexOf.call(th.parentNode.children, th); const rows = th.closest('table').querySelectorAll('tbody tr');
+      for (let r = 0; r < rows.length; r++) { const td = rows[r].children[ix]; if (td) td.setAttribute('data-cfg', '1'); }
+    }
   }
   function strip(main) {
     if (!main || !hasDom()) return; const old = main.querySelector('.pz-strip'); if (old) old.remove();
     if (isAll()) return;
     const mine = sets(); const yes = SETS.filter((s) => !s.info && mine.indexOf(s.id) >= 0).map((s) => s.label.toLowerCase());
     const d = document.createElement('div'); d.className = 'pz-strip'; d.setAttribute('role', 'status');
-    d.innerHTML = `<span><b>Viewing as ${esc(title())}.</b> Can: ${esc(yes.join('; '))}.${isGlobal() ? '' : ' Configuration is for the Global Admin, so it is not there.'}</span>`
+    const tail = level() === 'global' ? '' : level() === 'tech' ? ' Set-up, structure, libraries, flows and go live are the Global Admin\'s: not there.' : ' Configuration is the Global Admin\'s: not there.';
+    d.innerHTML = `<span><b>Viewing as ${esc(title())}.</b> Can: ${esc(yes.join('; '))}.${esc(tail)}</span>`
       + `<span class="pz-strip-a"><a href="#/personas">Compare</a><button type="button" class="pz-link" data-act="persona:all">Back to all access</button></span>`;
     main.insertBefore(d, main.firstChild);
   }
@@ -156,6 +240,11 @@
     };
     const body = U.note('A person has one role, the same at every plant, and at most one admin grant. Pick both in the top bar or here, then walk the prototype. Configuration is for the Global Admin only, so it is not there for anyone else. On the screens a person does get, what they may not change is locked: a click on it says what it needs.', 'quiet')
       + `<div class="pz-scroll"><table class="pz-t"><thead>${head}</thead><tbody>${rows.join('')}</tbody></table></div>`
+      + '<h2 class="pz-h">The screens each one gets</h2><div class="pz-scroll"><table class="pz-t pz-s"><thead><tr><th scope="col">Who</th><th scope="col">Screens</th></tr></thead><tbody>'
+      + '<tr><th scope="row">Any role, no grant<span class="pz-what">Operator, Lead, Senior Lead, Regular Non-op, Senior Non-op</span></th><td>Their plants. For each plant: Home (open issues and tasks due), Issues, Tasks, and Equipment with its readings, issues and tasks. Nothing about where a setting came from.</td></tr>'
+      + '<tr><th scope="row">With People Admin</th><td>The same, and the User Center.</td></tr>'
+      + '<tr><th scope="row">With Technical Admin or Full Site Admin</th><td>All Plants with how each is doing. For each live plant: how the alerts are doing, each alert, Readings with their limits, Deviations, the details of a piece of equipment, and Activity. A plant still being set up: its issues, tasks and equipment only.</td></tr>'
+      + '<tr><th scope="row">With Global Admin</th><td>Everything: setting a plant up, its structure, Alerts &amp; Tasks, go live, the libraries, flows and the Visualization.</td></tr></tbody></table></div>'
       + `<h2 class="pz-h">The five roles</h2><div class="pz-cards">${ROLES.map((r, i) => card(cols[i], r.who, r.also)).join('')}</div>`
       + `<h2 class="pz-h">The four admin grants</h2><div class="pz-cards">${grants.map((g, i) => card(cols[ROLES.length + i], g.who)).join('')}</div>`
       + `<h2 class="pz-h">What this prototype leaves out</h2><ul class="pz-out"><li><b>Licensed modules.</b> A permission works at a plant only where the plant is licensed for its module. Alert and task rules belong to Issue Resolution; sensors and limits belong to IoT. Here every plant has every module.</li>`
@@ -166,12 +255,34 @@
   U.route('personas', page);
 
   /* ── wiring ── */
-  U.afterRender((main, path) => { if (main && !sees(path)) main.innerHTML = notHere(path); else if (main && settingUp(path)) main.innerHTML = notHere(path); strip(main); lock(); syncPicker(); });
+  U.afterRender((main, path) => {
+    if (main) {
+      const p = pathOf(path); const lv = level();
+      if (!sees(p) || settingUp(p)) main.innerHTML = notHere(p);
+      else if (lv === 'plant' && p === 'plants') main.innerHTML = yourPlants();
+      else if (lv === 'plant' && /^p\/[^/]+$/.test(p)) main.innerHTML = roleHome(plantKey(p));
+      else if (lv !== 'global') ownTabs(main, p);
+    }
+    strip(main); lock(); syncPicker();
+  });
   if (hasDom()) {
     /* a locked control says what it needs, in place of doing nothing */
     document.addEventListener('click', (ev) => {
       const t = ev.target && ev.target.closest ? ev.target.closest('[data-locked]') : null; if (!t) return;
       ev.preventDefault(); ev.stopPropagation(); U.toast(whyNot(t.getAttribute('data-locked')));
+    }, true);
+    /* the side panel is for deciding what the library proposes: someone who does not configure goes straight to the equipment's page */
+    document.addEventListener('click', (ev) => {
+      if (level() !== 'plant' || ev.ctrlKey || ev.metaKey || ev.shiftKey || !ev.target || !ev.target.closest) return;
+      if (ev.target.closest('button, input, select, textarea, label, summary')) return;
+      const t = ev.target.closest('a[href], [data-href]'); const href = t ? (t.getAttribute('href') || t.getAttribute('data-href')) : '';
+      if (!/^#\/p\/[^/]+\/eq\/[^/]+$/.test(href || '')) return;
+      ev.preventDefault(); ev.stopImmediatePropagation(); U.go(href);
+    }, true);
+    /* a row that would open a screen that is not there does nothing */
+    document.addEventListener('click', (ev) => {
+      const r = ev.target && ev.target.closest ? ev.target.closest('[data-href]') : null; if (!r || sees(r.getAttribute('data-href'))) return;
+      if (ev.target.closest('a,button')) return; ev.preventDefault(); ev.stopPropagation();
     }, true);
     /* sheets, dialogs and the side panel are added outside a render: lock what arrives */
     if (typeof W.MutationObserver === 'function') { let due = false; new W.MutationObserver(() => { if (due) return; due = true; Promise.resolve().then(() => { due = false; lock(); }); }).observe(document.body, { childList: true, subtree: true }); }
