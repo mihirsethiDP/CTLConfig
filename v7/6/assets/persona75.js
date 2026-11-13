@@ -10,12 +10,12 @@
    locked, and a click on it says what it needs. #/personas compares them.
    Not modelled here: a plant's licensed modules (which cap every permission), per-person exceptions with a reason, and the three
    exception permissions (remote control, view as another user, the sensor health dashboard).
-   The choice is a way of looking, kept in this browser ('ctl75.persona'); it is not part of a plant's saved state.
+   The choice is a way of looking, kept in this browser ('ctl76.persona'); it is not part of a plant's saved state.
    Loads after ui7.js. ACTS says which permission set each action on screen needs; an action not listed is open to all. */
 (function () {
   'use strict';
   const W = window; const U = W.V7UI; if (!U) return;
-  const esc = U.esc; const KEY = 'ctl75.persona';
+  const esc = U.esc; const KEY = 'ctl76.persona';
 
   /* the permission sets this prototype has something for, in the order shown */
   const SETS = [
