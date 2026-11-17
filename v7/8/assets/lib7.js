@@ -113,12 +113,14 @@
     const proc = t.library === 'process'; const ico = ICONS[proc ? 'process' : t.archetype] || ICONS.fixed;
     const carries = [[t.readings, 'reading'], [t.alerts, 'alert'], [t.tasks, 'task']].filter((x) => +x[0] > 0).map((x) => plural(x[0], x[1]));
     const d = dev[t.code];
-    return `<a class="lc${t.plantCount ? '' : ' is-unused'}" href="#/library/${esc(enc(t.code))}"><span class="lc-ico" aria-hidden="true"><svg viewBox="0 0 24 24">${ico}</svg></span>`
-      + `<span class="lc-name">${esc(t.typeName)}</span><span class="lc-code">${esc(t.code)}${!proc && KIND[t.archetype] ? ` · ${esc(KIND[t.archetype])}` : ''}</span>`
+    const href = `#/library/${esc(enc(t.code))}`;
+    return `<div class="lc${t.plantCount ? '' : ' is-unused'}"><span class="lc-ico" aria-hidden="true"><svg viewBox="0 0 24 24">${ico}</svg></span>`
+      + `<a class="lc-name" href="${href}">${esc(t.typeName)}</a><span class="lc-code">${esc(t.code)}${!proc && KIND[t.archetype] ? ` · ${esc(KIND[t.archetype])}` : ''}</span>`
       + `<span class="lc-chips">${critChip(t.tier)}${t.draft ? chip('Draft', { tone: 'warn', title: 'Edited, not published yet' }) : ''}${t.suggestions ? chip(plural(t.suggestions, 'suggestion'), { tone: 'info' }) : ''}</span>`
       + `<span class="lc-facts"><span>${carries.length ? esc(carries.join(' · ')) : '<span class="muted">Nothing set up yet</span>'}</span>`
       + `<span>${t.plantCount ? `${esc(plural(t.plantCount, 'plant'))} · ${esc(t.equipmentCount)} equipment` : '<span class="muted">Not used at a plant yet</span>'}</span>`
-      + (d ? `<span class="lc-dev">${esc(plural(d.n, 'value'))} changed at ${esc(plural(d.p.size, 'plant'))}</span>` : '') + '</span></a>';
+      + (d ? `<a class="lc-dev" href="#/differences?type=${esc(enc(t.code))}" title="See the values plants changed away from this type">${esc(plural(d.n, 'value'))} changed at ${esc(plural(d.p.size, 'plant'))}</a>` : '') + '</span>'
+      + `<span class="lc-q">${+t.readings ? `<a href="${href}/readings" title="Straight to its readings and their limits">Limits</a>` : ''}${+t.tasks ? `<a href="${href}/tasks" title="Straight to its tasks and how often they come round">Tasks</a>` : ''}${t.draft ? `<a class="lc-q-p" href="${href}" title="See where the draft lands, then publish it">Publish…</a>` : ''}<a class="lc-q-o" href="${href}" aria-label="Open ${esc(t.typeName)}">Open →</a></span></div>`;
   }
   function devByType() { const dev = {}; arr(safe(() => V().overrides({}), [])).filter((o) => o.state !== 'ended' && o.typeCode).forEach((o) => { const d = dev[o.typeCode] || (dev[o.typeCode] = { n: 0, p: new Set() }); d.n++; d.p.add(o.plant); }); return dev; }
   function draftsCard(types) {
@@ -162,7 +164,7 @@
     const lib = q.lib === 'process' ? 'process' : 'equipment'; const nProc = every.filter((t) => t.library === 'process').length;
     const types = every.filter((t) => (t.library || 'equipment') === lib);
     const view = q.view === 'table' ? 'table' : 'cards';
-    const libTabs = nProc ? `<div class="lib-bar"><div class="cap" role="tablist" aria-label="Which library"><a href="#/library${view === 'table' ? '?view=table' : ''}" class="${lib === 'equipment' ? 'on' : ''}" role="tab" aria-selected="${lib === 'equipment'}">Equipment types<span class="cap-n">${every.length - nProc}</span></a><a href="#/library?lib=process${view === 'table' ? '&view=table' : ''}" class="${lib === 'process' ? 'on' : ''}" role="tab" aria-selected="${lib === 'process'}">Unit processes<span class="cap-n">${nProc}</span></a></div><span class="lib-count">${lib === 'process' ? 'One treatment step each. Control groups are set at each plant.' : 'A pump, a blower, a valve, or a tank on its own.'} <a href="#/library-structure">How it is decided</a></span></div>` : '';
+    const libTabs = nProc ? `<div class="lib-bar"><div class="capsule" role="tablist" aria-label="Which library"><a href="#/library${view === 'table' ? '?view=table' : ''}" class="${lib === 'equipment' ? 'on' : ''}" role="tab" aria-selected="${lib === 'equipment'}">Equipment types<span class="capsule-n">${every.length - nProc}</span></a><a href="#/library?lib=process${view === 'table' ? '&view=table' : ''}" class="${lib === 'process' ? 'on' : ''}" role="tab" aria-selected="${lib === 'process'}">Unit processes<span class="capsule-n">${nProc}</span></a></div><span class="lib-count">${lib === 'process' ? 'One treatment step each. Control groups are set at each plant.' : 'A pump, a blower, a valve, or a tank on its own.'} <a href="#/library-structure">How it is decided</a></span></div>` : '';
     const show = SHOW_LIB.some((s) => s[0] === q.show) ? q.show : 'all';
     const needle = ST.q.trim().toLowerCase();
     const counts = {}; SHOW_LIB.forEach(([id]) => { counts[id] = types.filter((t) => libShowOk(t, id)).length; });
@@ -172,7 +174,7 @@
     fams.forEach((f) => { f.rows = f.rows.filter((t) => t.plantCount).concat(f.rows.filter((t) => !t.plantCount)); });
     const tools = `<div class="lib-tools"><input type="search" id="libSearch" placeholder="Search a type, a code or a reading" aria-label="Search the library" value="${esc(ST.q)}" data-act="lib:search" data-live autocomplete="off">`
       + filters(SHOW_LIB.map(([id, label]) => ({ label, href: '#/library' + qs({ lib: lib === 'process' ? 'process' : null, show: id === 'all' ? null : id, view: view === 'table' ? 'table' : null }), on: id === show, count: counts[id] })))
-      + `<div class="cap" role="group" aria-label="Show as"><a href="${esc('#/library' + qs({ lib: lib === 'process' ? 'process' : null, show: show === 'all' ? null : show }))}" class="${view === 'cards' ? 'on' : ''}" aria-pressed="${view === 'cards'}">Cards</a><a href="${esc('#/library' + qs({ lib: lib === 'process' ? 'process' : null, show: show === 'all' ? null : show, view: 'table' }))}" class="${view === 'table' ? 'on' : ''}" aria-pressed="${view === 'table'}">Table</a></div></div>`;
+      + `<div class="capsule" role="group" aria-label="Show as"><a href="${esc('#/library' + qs({ lib: lib === 'process' ? 'process' : null, show: show === 'all' ? null : show }))}" class="${view === 'cards' ? 'on' : ''}" aria-pressed="${view === 'cards'}">Cards</a><a href="${esc('#/library' + qs({ lib: lib === 'process' ? 'process' : null, show: show === 'all' ? null : show, view: 'table' }))}" class="${view === 'table' ? 'on' : ''}" aria-pressed="${view === 'table'}">Table</a></div></div>`;
     const dev = devByType();
     const famHtml = fams.length
       ? fams.map((f) => (view === 'table' ? section(f.name, libTable(f.rows), { sub: plural(f.rows.length, 'type') }) : `<h2 class="lc-fam">${esc(f.name)} <span>${f.rows.length}</span></h2><div class="lc-grid">${f.rows.map((t) => typeCard(t, dev)).join('')}</div>`)).join('')

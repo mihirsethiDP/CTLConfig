@@ -178,7 +178,12 @@
     const crumbs = [{ label: 'All Plants', href: '#/plants' }, { label: p.name, href: base(key) }].concat(arr(o.crumbs));
     const guide = p.state === 'commissioning' ? setupGuide(key, active || 'home') : '';
     const chips = [chip(p.type || '—', { mono: true }), U.stateChip(p.state), p.sample ? chip('Sample plant', { tone: 'muted', title: 'A sample plant: its readings are generated samples' }) : chip('Real Visualization', { tone: 'info', title: "The layout is the plant's real Visualization; its readings are samples" })].concat(arr(o.chips));
-    return U.page({ crumbs, title: o.title || p.name, sub: o.sub != null ? o.sub : stateLine(p), chips, actions: o.actions, tabs: guide ? [] : tabs(key), active: active || 'home', body, aside: o.aside, banner: (o.banner || '') + guide, cls: ('pg-plant ' + (o.cls || '')).trim() });
+    let quick = o.actions;
+    if (!quick && p.state === 'live') {
+      const openN = arr(call(() => V().issues(key), [])).filter((i) => i.status !== 'closed').length; const dueN = arr(call(() => V().tasks(key), [])).filter((t) => t.status === 'due' || t.overdue).length;
+      quick = [openN && active !== 'issues' ? btn(pl(openN, 'open issue'), { href: `${base(key)}/issues`, small: true }) : '', dueN && active !== 'tasks' ? btn(`${pl(dueN, 'task')} due`, { href: `${base(key)}/tasks`, small: true }) : '', W.V7WORK && W.V7WORK.reportButton ? W.V7WORK.reportButton(key, null, { small: true }) : ''].filter(Boolean);
+    }
+    return U.page({ crumbs, title: o.title || p.name, sub: o.sub != null ? o.sub : stateLine(p), chips, actions: quick, tabs: guide ? [] : tabs(key), active: active || 'home', body, aside: o.aside, banner: (o.banner || '') + guide, cls: ('pg-plant ' + (o.cls || '')).trim() });
   }
   function guard(params, fn) {
     const key = params && params.plant;

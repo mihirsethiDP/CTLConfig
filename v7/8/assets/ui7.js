@@ -817,7 +817,7 @@
   }
   function topbarHtml(path) {
     return `<header class="tb"><a class="tb-brand" href="#/plants">DigitalPaani<span> · Configuration</span></a>${versionBadge()}${samePlaceHtml(path)}`
-      + `<nav class="tb-nav" id="tbNav" aria-label="Main">${navHtml(path)}</nav>`
+      + `<nav class="tb-nav" id="tbNav" aria-label="Main">${navHtml(path)}</nav><button type="button" class="tb-jump" data-act="q:jump" title="Go straight to a plant, a piece of equipment, a type or a flow, or open a reading's limits"><span>Jump to…</span><kbd>Ctrl K</kbd></button>`
       + `<div class="tb-right">${W.V7LANG ? W.V7LANG.pickerHtml() : ''}${W.V7PERSONA ? W.V7PERSONA.pickerHtml() + '<a class="tb-persona-a" href="#/personas" title="Who uses the configuration, and what each one can change">Compare</a>' : ''}<a class="tb-btn tb-design" href="#/design" title="The tokens and components every screen here is built from">Design</a><button type="button" class="tb-btn tb-review" data-act="ui:review" aria-pressed="false" title="Show or hide the notes for reviewers: decisions on each screen, the story, and the version links">Review</button>`
       + `<button type="button" class="tb-btn tb-story" data-act="ui:story" aria-pressed="false" aria-controls="story">Story</button>`
       + `<button type="button" class="tb-btn tb-reset" data-act="ui:reset">Reset the story</button></div></header>`;
@@ -997,6 +997,22 @@
     const day = Math.floor((now() - ts) / DAY) + 1;
     return `Since ${fmt(since)} · day ${day} of trial`;
   }
+  /* v7/8: one or two buttons per plant, for what a person most likely came to do */
+  const NEXT_STEP = { notindb: 'Check what was read', scada: 'Check what was read', library: 'Accept alerts and tasks', alerts: 'Accept alerts and tasks', operator: 'Add people', lead: 'Add people', shadow: 'Open the shadow run' };
+  function quickFor(s) {
+    const p = s.p; const b = `#/p/${encodeURIComponent(p.key)}`; const v = V();
+    if (p.state === 'commissioning') {
+      const cl = safe(() => v.checklist(p.key), null); const first = cl && arr(cl.blockers)[0];
+      if (cl && cl.canGoLive) return btn('Go live…', { act: 'p7:golive', data: { plant: p.key }, kind: 'primary', small: true, title: 'You see exactly what changes before anything does' });
+      return btn(first ? (NEXT_STEP[first.id] || 'Continue set-up') : 'Continue set-up', { href: (first && first.link) || b, kind: 'primary', small: true, title: first ? first.text : 'The next step of the set-up' });
+    }
+    const due = arr(safe(() => v.tasks(p.key), [])).filter((t) => t.status === 'due' || t.overdue).length;
+    const out = [];
+    if (s.open) out.push(btn(plural(s.open, 'open issue'), { href: b + '/issues', small: true, kind: 'primary' }));
+    if (due) out.push(btn(`${plural(due, 'task')} due`, { href: b + '/tasks', small: true }));
+    if (!out.length) out.push(btn('Open', { href: b, small: true }));
+    return out.join('');
+  }
   function statusHtml(s) {
     if (s.p.state === 'commissioning') {
       const head = s.blockers ? `<span class="tx-bad">Go live is blocked</span>` : `<span class="tx-ok">Ready to go live</span>`;
@@ -1027,10 +1043,10 @@
         + `<div class="prow-state">${stateChip(p.state)}<span class="muted small">${esc(sinceText(p))}</span></div>`
         + `<div class="prow-status">${statusHtml(s)}</div>`
         + `<div class="prow-diff"><a href="#/p/${esc(encodeURIComponent(p.key))}/differences">${s.diffs ? plural(s.diffs, 'deviation') : 'No deviations'}</a><span class="muted small">from the library</span></div>`
-        + `<span class="prow-go" aria-hidden="true">›</span></li>`;
+        + `<span class="prow-q">${quickFor(s)}</span></li>`;
     }).join('');
     const body = `<p class="lead${attention.length ? ' has-att' : ''}">${lead}</p>`
-      + `<div class="plist"><div class="prow prow-head" aria-hidden="true"><span>Plant</span><span>State</span><span>Readiness or Coverage</span><span>Deviations</span><span></span></div><ul>${rows}</ul></div>`
+      + `<div class="plist"><div class="prow prow-head" aria-hidden="true"><span>Plant</span><span>State</span><span>Readiness or Coverage</span><span>Deviations</span><span>Next</span></div><ul>${rows}</ul></div>`
       + `<p class="foot-note">Manesar STP, Bawal WTP and Vedanta ETP are sample plants. DigitalPaani's layout is its real Visualization; its readings are samples too. Counts of firings come from sample readings.</p>`;
     return page({ title: 'All Plants', sub: `${plural(ps.length, 'plant')} · ${comm} in Commissioning · ${live} Live. The ones that need attention come first.`, chips: [sampleTag()], body, cls: 'pg-plants' });
   }

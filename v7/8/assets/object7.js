@@ -584,26 +584,60 @@
     });
   }
   /* v7/8: the overview. Two columns answer the two questions a person has about a type: what it reads, and what it does with
-     what it reads. Nothing is edited here; each box has one button to the tab where its values are changed. */
+     what it reads. Every value is edited from where it is shown: a reading opens its limits, an alert has Limits and Timing on its
+     row, a task has How often. A row opens for the detail behind it. A Global Admin adds what the type does not have yet. */
   function typeOverview(lt) {
     const rd = arr(lt.readings); const al = arr(lt.alerts).filter((x) => !x.nextPhase); const sc = arr(lt.schedules); const is = arr(lt.issues); const np = lt.nextPhase || {};
     const unitOf = {}; const kindOf = {}; rd.forEach((r) => { unitOf[r.name] = r.unit; kindOf[r.name] = r.kind; });
-    const box = (title, n, body, o) => `<section class="ov-box${o && o.later ? ' is-later' : ''}"><header><h3>${esc(title)}</h3>${n != null ? `<span class="ov-n">${esc(n)}</span>` : ''}${o && o.note ? `<span class="ov-sub">${esc(o.note)}</span>` : ''}${o && o.btn ? o.btn : ''}</header><div class="ov-b">${body}</div></section>`;
-    const go = (label, tab, tip) => `<a class="btn btn-secondary btn-sm" href="${esc(libHref(lt.code, tab))}"${tip ? ` title="${esc(tip)}"` : ''}>${esc(label)}</a>`;
-    const kindWord = { process: 'measured', status: 'on or off', meter: 'counts up', manual: 'entered by hand' };
-    const reads = box('Readings on the equipment', rd.length, rd.length
-      ? `<div class="ov-pills">${rd.map((r) => `<a class="ov-pill" href="${esc(libHref(lt.code, 'readings'))}" data-tip="${esc(`${cap(kindWord[r.kind] || r.kind || 'reading')}${arr(r.dirs).length ? `; ${plural(arr(r.dirs).length, 'alert')} on it` : '; no alert on it'}`)}">${esc(r.name)}${r.unit ? ` <small>${esc(r.unit)}</small>` : ''}</a>`).join('')}</div>`
-      : '<p class="ov-none">The library lists no readings for this type.</p>', { btn: rd.length ? go('Change limits', 'readings', 'Each reading with its limits and timings') : '' });
+    const K = W.V7KEEP || { open: () => '' }; const LA = W.V7LIBADD || null;
+    const flows = arr(W.CTL && W.CTL.S && W.CTL.S.lib ? W.CTL.S.lib.flows : []);
+    const box = (title, n, body, o) => `<section class="ov-box${o && o.later ? ' is-later' : ''}"><header><h3>${esc(title)}</h3>${n != null ? `<span class="ov-n">${esc(n)}</span>` : ''}${o && o.note ? `<span class="ov-sub">${esc(o.note)}</span>` : ''}<span class="ov-hb">${(o && o.btn) || ''}</span></header><div class="ov-b">${body}</div></section>`;
+    const go = (label, tab, tip) => `<a class="btn btn-ghost btn-sm" href="${esc(libHref(lt.code, tab))}"${tip ? ` title="${esc(tip)}"` : ''}>${esc(label)}</a>`;
+    const add = (kind, label, tip, primary, reading) => (LA ? btn(label, { act: 'la:open', data: { kind, code: lt.code, reading: reading || null }, small: true, kind: primary ? 'primary' : 'secondary', title: tip }) : '');
+    const added = (kind, name) => (LA && LA.isAdded(lt.code, kind, name) ? `<span class="ov-rm">${chip('Added here', { tone: 'info', title: 'Added to this type in the console, not shipped with the library' })} ${btn('Remove', { act: 'la:remove', data: { code: lt.code, kind, name }, small: true, kind: 'ghost', title: 'Take it off the type again. Only while no plant has taken it.' })}</span>` : '');
+    const kindWord = { process: 'measured', analytical: 'measured', status: 'on or off', meter: 'counts up', manual: 'entered by hand' };
+    const hasAlert = (r) => arr(r.dirs).length > 0;
+
+    /* what it reads */
+    const pill = (r) => {
+      const tip = `${cap(kindWord[r.kind] || r.kind || 'reading')}${hasAlert(r) ? `; ${plural(arr(r.dirs).length, 'alert')} on it. Click to change its limits` : r.kind === 'meter' ? '; it takes no limits' : '; no alert on it yet. Click to add one'}`;
+      const inner = `${esc(r.name)}${r.unit ? ` <small>${esc(r.unit)}</small>` : ''}`;
+      if (hasAlert(r)) return `<button type="button" class="ov-pill is-act" data-act="obj:limits" data-mode="type" data-code="${esc(lt.code)}" data-reading="${esc(r.name)}" data-dir="${esc(r.dirs[0].dir)}" data-tip="${esc(tip)}">${inner}</button>`;
+      if (LA && r.kind !== 'meter') return `<button type="button" class="ov-pill is-act is-bare" data-act="la:open" data-kind="alert" data-code="${esc(lt.code)}" data-reading="${esc(r.name)}" data-tip="${esc(tip)}">${inner}</button>`;
+      return `<span class="ov-pill" data-tip="${esc(tip)}">${inner}</span>`;
+    };
+    const addedReads = rd.filter((r) => LA && LA.isAdded(lt.code, 'reading', r.name));
+    const reads = box('Readings on the equipment', rd.length, (rd.length
+      ? `<div class="ov-pills">${rd.map(pill).join('')}</div><p class="ov-sub" style="margin-top:10px">Click a reading to change its limits here. A dashed one has no alert yet.</p>`
+      : `<p class="ov-none">This type has no readings yet, so it can raise no alert. Start by adding the readings its equipment sends.</p>`)
+      + (addedReads.length ? `<ul class="ov-rows ov-added">${addedReads.map((r) => `<li class="ov-row2"><span>${esc(r.name)}</span>${added('reading', r.name)}</li>`).join('')}</ul>` : ''),
+      { btn: add('reading', 'Add a reading', 'From the readings the database knows', !rd.length) + (rd.length ? go('All readings', 'readings', 'Each reading with its limits, its bar and its timings') : '') });
     const later = arr(np.readings).length ? box('Readings on pipes', arr(np.readings).length, `<ul class="ov-rows">${arr(np.readings).map((x) => `<li><b>${esc(x.name)}</b>${x.note ? `<span class="ov-sub">${esc(x.note)}</span>` : ''}</li>`).join('')}</ul>`, { later: true, note: 'Alerts on these arrive in the next phase' }) : '';
-    const alerts = box('Alerts', al.length, al.length
-      ? `<ul class="ov-rows">${al.map((x) => { const u = unitOf[x.reading] || ''; const k = kindOf[x.reading]; const set = BANDS.filter((b) => num((x.bands || {})[b]) != null);
-        return `<li><div class="ov-row2"><b>${esc(x.name)}</b><span class="ov-sub">when ${esc(x.reading)} ${k === 'status' ? (x.dir === 'below' ? 'is OFF' : 'is ON') : x.dir === 'below' ? 'falls below' : 'rises above'}</span></div>`
-          + `<div class="ov-sev">${set.length ? set.map((b) => `<span class="sev sev-${b}">${esc(bandName(b))}${k === 'status' ? '' : ` ${x.dir === 'below' ? '&lt;' : '&gt;'} ${esc(fv(x.bands[b], u, k))}`}</span>`).join('') : '<span class="ov-none">No limits yet</span>'}</div>`
-          + `<span class="ov-sub">Must hold for ${esc(x.hold != null ? x.hold : 0)} min, must clear for ${esc(x.clear != null ? x.clear : 0)} min</span></li>`; }).join('')}</ul>`
-      : '<p class="ov-none">No alert yet. An alert needs a reading with at least one limit.</p>', { btn: rd.length ? go('Change', 'readings') : '' });
-    const tasks = box('Tasks', sc.length, sc.length
-      ? `<ul class="ov-rows">${sc.slice(0, 5).map((x) => `<li><div class="ov-row2"><b>${esc(x.name)}</b><span class="ov-sub">${esc(cap(x.draftEveryText || x.everyText || ''))}</span></div><span class="ov-sub">${esc(x.workLabel || '')}</span></li>`).join('')}</ul>${sc.length > 5 ? `<p class="ov-sub" style="margin-top:10px"><a href="${esc(libHref(lt.code, 'tasks'))}">And ${sc.length - 5} more</a></p>` : ''}`
-      : '<p class="ov-none">No task yet.</p>', { btn: go(sc.length ? 'Change' : 'See tasks', 'tasks') });
+
+    /* what it does: alerts */
+    const alertRow = (x) => {
+      const u = unitOf[x.reading] || ''; const k = kindOf[x.reading]; const set = BANDS.filter((b) => num((x.bands || {})[b]) != null);
+      const fl = x.flowId ? flows.find((f) => f.id === x.flowId) : null;
+      const acts = `<span class="ov-acts">${btn('Limits', { act: 'obj:limits', data: { mode: 'type', code: lt.code, reading: x.reading, dir: x.dir }, small: true, title: `Change the limits of ${x.name} here` })}${btn('Timing', { act: 'obj:timing', data: { mode: 'type', code: lt.code, alert: x.name }, small: true, kind: 'ghost', title: 'How long it must hold before it fires, and how long before it clears' })}</span>`;
+      const sevs = set.length ? set.map((b) => `<span class="sev sev-${b}">${esc(bandName(b))}${k === 'status' ? '' : ` ${x.dir === 'below' ? '&lt;' : '&gt;'} ${esc(fv(x.bands[b], u, k))}`}</span>`).join('') : '<span class="ov-none">No limits yet</span>';
+      return `<li><details class="ov-d" data-keep="ov:a:${esc(lt.code)}:${esc(x.name)}"${K.open(`ov:a:${lt.code}:${x.name}`, false)}><summary><span class="ov-d-t"><b>${esc(x.name)}</b><span class="ov-sev">${sevs}</span></span>${acts}</summary>`
+        + `<div class="ov-d-b"><span>Fires when ${esc(x.reading)} ${k === 'status' ? (x.dir === 'below' ? 'is OFF' : 'is ON') : x.dir === 'below' ? 'falls below a limit' : 'rises above a limit'}.</span><span>Must hold for ${esc(x.hold != null ? x.hold : 0)} min, must clear for ${esc(x.clear != null ? x.clear : 0)} min.</span>`
+        + `${fl ? `<span>Its issue starts <a href="#/flows/${esc(enc(fl.id))}">${esc(fl.name)}</a>.</span>` : '<span>No diagnostic flow yet: the person says what they found. <a href="#/flows?kind=diagnostic">Set one up in Flows</a></span>'}${added('alert', x.name)}</div></details></li>`;
+    };
+    const alerts = box('Alerts', al.length, al.length ? `<ul class="ov-rows">${al.map(alertRow).join('')}</ul>`
+      : `<p class="ov-none">${rd.some((r) => r.kind !== 'meter') ? 'No alert yet. Add one on a reading, with the limits that make it fire.' : 'No alert yet. An alert watches a reading, so add a reading first.'}</p>`,
+      { btn: rd.some((r) => r.kind !== 'meter') ? add('alert', 'Add an alert', 'On one of this type\'s readings, with its limits', !al.length) : '' });
+
+    /* what it does: tasks */
+    const taskRow = (x) => {
+      const fl = x.flowId ? flows.find((f) => f.id === x.flowId) : null;
+      return `<li><details class="ov-d" data-keep="ov:t:${esc(lt.code)}:${esc(x.name)}"${K.open(`ov:t:${lt.code}:${x.name}`, false)}><summary><span class="ov-d-t"><b>${esc(x.name)}</b><span class="ov-sub">${esc(cap(x.draftEveryText || x.everyText || ''))} · ${esc(x.workLabel || '')}</span></span>`
+        + `${x.every && x.every.n ? `<span class="ov-acts">${btn('How often', { act: 'obj:cadence', data: { mode: 'type', code: lt.code, schedule: x.name }, small: true, title: 'Change how often it comes round, here' })}</span>` : ''}</summary>`
+        + `<div class="ov-d-b">${fl ? `<span>${plural(arr(fl.steps).length, 'step')}: ${esc(arr(fl.steps).slice(0, 3).map((st) => st.text).join('; '))}${arr(fl.steps).length > 3 ? '; …' : ''}</span><span><a href="#/flows/${esc(enc(fl.id))}">Open the steps</a></span>` : '<span>No steps yet: the person marks it done. <a href="#/flows?kind=task">Set them up in Flows</a></span>'}${added('task', x.name)}</div></details></li>`;
+    };
+    const tasks = box('Tasks', sc.length, (sc.length ? `<ul class="ov-rows">${sc.slice(0, 5).map(taskRow).join('')}</ul>` : '<p class="ov-none">No task yet. Add the work this equipment needs, and how often.</p>')
+      + (sc.length > 5 ? `<details class="ov-more" data-keep="ov:more:${esc(lt.code)}"${K.open(`ov:more:${lt.code}`, false)}><summary>${sc.length - 5} more tasks</summary><ul class="ov-rows">${sc.slice(5).map(taskRow).join('')}</ul></details>` : ''),
+      { btn: add('task', 'Add a task', 'Work that comes round on a calendar interval', !sc.length) + (sc.length ? go('All tasks', 'tasks', 'Every task with its interval') : '') });
     const issues = is.length ? box('Issues it can have', is.length, `<div class="ov-pills">${is.map((i) => `<a class="ov-pill" href="${esc(libHref(lt.code, 'issues'))}">${esc(i.name)}</a>`).join('')}</div>`, { btn: go('See them', 'issues', 'How each is found and what fixes it') }) : '';
     return `<div class="ov"><div class="ov-col"><p class="ov-k">What it reads</p>${reads}${later}</div><div class="ov-col"><p class="ov-k">What it does</p>${alerts}${tasks}${issues}</div></div>`;
   }
