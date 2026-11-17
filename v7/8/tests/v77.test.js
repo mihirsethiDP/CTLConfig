@@ -123,6 +123,31 @@ check('trigger', 'and can go back to the library', LT.backToLib('vedanta', vb.id
 check('trigger', 'taking it off the type takes it off the plants that follow', LT.set('BLW', 'Motor current', 'above', 'caution', null).ok && V.lineWork('vedanta').length === 0 && V.lineWork('manesar').length === m0);
 V.reset();
 
+/* v7/8: a trigger goes through the draft, and a plant's own trigger is a deviation */
+V.reset(); V.autoSetup('vedanta'); const vb2 = V.sensors('vedanta').find((x) => x.name === 'Motor current' && x.eqTag === 'BL-1'); const ovM0 = V.overrides({ plant: 'manesar' }).length;
+check('draft', 'Emergency cannot raise a task, in the draft either', !V.editLib('BLW', { trigger: { reading: 'Motor current', dir: 'above', band: 'emergency', name: 'x' } }).ok);
+const e1 = V.editLib('BLW', { trigger: { reading: 'Motor current', dir: 'above', band: 'caution', name: 'Clean the intake filter' } });
+check('draft', 'saving a trigger on a type makes a draft, and reaches no plant', e1.ok && e1.draft.diffs.some((d) => d.kind === 'trigger' && d.band === 'caution' && d.to === 'Clean the intake filter') && V.lineWork('vedanta').length === 0 && Object.keys(LT.get('BLW', 'Motor current', 'above')).length === 0 && LT.get('BLW', 'Motor current', 'above', { draft: true }).caution.draft === true);
+const wl1 = V.whereItLands('BLW'); const wv = wl1.plants.find((p) => p.key === 'vedanta'); const wm = wl1.plants.find((p) => p.key === 'manesar');
+check('draft', 'Where it lands names the reading that follows and the one that keeps its own', wv.follows.some((x) => /BL-1 · Motor current Caution above triggers/.test(x.what) && x.from === 'An issue' && /Clean the intake filter/.test(x.to)) && wm.changedHere.some((x) => /triggers/.test(x.what) && /Clean the blower intake filters/.test(x.plantValue)), wl1.text);
+check('draft', 'setting it back to what is published empties the draft', V.editLib('BLW', { trigger: { reading: 'Motor current', dir: 'above', band: 'caution', name: null } }).ok && V.libDraft('BLW') === null);
+V.editLib('BLW', { trigger: { reading: 'Motor current', dir: 'above', band: 'caution', name: 'Clean the intake filter' } });
+check('draft', 'publishing needs a note', !V.publish('BLW', {}).ok && V.lineWork('vedanta').length === 0);
+const pb = V.publish('BLW', { note: 'Filters choke before the current limit is reached' });
+check('draft', 'publishing puts it on the type and on the plant that follows', pb.ok && LT.get('BLW', 'Motor current', 'above').caution.name === 'Clean the intake filter' && V.lineWork('vedanta').some((w) => w.eqTag === 'BL-1' && w.name === 'Clean the intake filter') && V.libDraft('BLW') === null && V.libVersion('BLW') === 2);
+check('draft', 'each plant it reached has a note in its Activity', /Library: Blower v2 published/.test(V.activity({ plant: 'vedanta', kind: 'library', limit: 1 })[0].text));
+const ovM = V.overrides({ plant: 'manesar' }).filter((o) => o.target.kind === 'trigger');
+check('deviation', 'a task a plant already had is listed as a deviation, its reason not recorded', V.overrides({ plant: 'manesar' }).length === ovM0 + 1 && ovM.length === 1 && ovM[0].reason === 'unrecorded' && /Motor current.*Caution above triggers/.test(ovM[0].what) && /Clean the blower intake filters/.test(ovM[0].plantValue) && /Clean the intake filter/.test(ovM[0].libValue) && ovM[0].tag === 'BL-1', ovM.map((o) => o.what + ' ' + o.plantValue).join());
+check('deviation', 'a plant that follows has none', V.overrides({ plant: 'vedanta' }).filter((o) => o.target.kind === 'trigger').length === 0);
+check('deviation', 'choosing an issue at a plant is a deviation with its reason', V.setLineWork('vedanta', vb2.id, 'above', 'caution', { name: null, reason: 'tuned', note: 'No spare filters on site yet' }).ok && V.overrides({ plant: 'vedanta' }).some((o) => o.target.kind === 'trigger' && o.plantValue === 'An issue' && o.reason === 'tuned' && o.note === 'No spare filters on site yet' && o.state === 'ok'));
+const ovV = V.overrides({ plant: 'vedanta' }).find((o) => o.target.kind === 'trigger');
+check('deviation', 'Back to the library value sends it back and ends the deviation', V.revert(ovV.id).ok && V.lineWork('vedanta').some((w) => w.name === 'Clean the intake filter') && LT.source('vedanta', vb2.id, 'above', 'caution') === 'lib' && V.overrides({ plant: 'vedanta' }).filter((o) => o.target.kind === 'trigger').length === 0);
+V.editLib('BLW', { trigger: { reading: 'Motor current', dir: 'above', band: 'caution', name: 'Clean the blower intake filters' } }); V.publish('BLW', { note: 'One name for the same job' });
+check('deviation', 'when the library comes to say the same, the deviation reads as the same', V.overrides({ plant: 'manesar' }).find((o) => o.target.kind === 'trigger').state === 'same');
+V.editLib('BLW', { trigger: { reading: 'Motor current', dir: 'above', band: 'caution', name: null } }); V.publish('BLW', { note: 'Back to an issue' });
+check('deviation', 'when the library stops setting it, nothing differs any more', V.overrides({ plant: 'manesar' }).filter((o) => o.target.kind === 'trigger').length === 0 && V.lineWork('manesar').some((w) => w.eqTag === 'BL-1') && V.lineWork('vedanta').length === 0);
+V.reset();
+
 const bad = results.filter((x) => !x).length;
 console.log(`v77.test · ${results.length - bad}/${results.length} checks pass · RESULT: ${bad ? 'FAIL' : 'PASS'}`);
 process.exit(bad ? 1 : 0);

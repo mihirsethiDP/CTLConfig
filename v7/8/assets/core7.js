@@ -1611,6 +1611,7 @@ window.V7 = (function () {
     if (t.kind === 'cadence') { const i = cadenceInfo(key, t.scheduleId); return i ? i.libValue : null; }
     if (t.kind === 'tier') { const i = tierInfo(key, t.eqId); return i ? i.libValue : null; }
     if (t.kind === 'runhours') { const i = runHoursInfo(key, t.scheduleId); return i ? i.libValue : null; }
+    if (t.kind === 'trigger') { const LT = window.V7LIBTRIG; const l = LT ? LT.libFor(key, t.sensorId, t.dir, t.band) : null; return l ? l.name : null; }
     if (t.kind === 'onoff') return 'on'; return null;
   }
   /* v7: where the value a difference is measured against comes from: the Visualization (e.g. a 22 kW motor) or the library */
@@ -1623,7 +1624,7 @@ window.V7 = (function () {
   const sameValue = (kind, a, b) => (kind === 'cadence' ? sameEvery(a, b) : typeof a === 'number' || typeof b === 'number' ? same(a, b) : a === b);
   /* v7: 'same' — the library (or Visualization) value now equals the plant's own value: nothing differs any more, so the obvious step is
      Back to the library value; it is not shown as Library changed since */
-  const SAME_KINDS = ['limit', 'hold', 'clear', 'cadence', 'tier', 'runhours'];
+  const SAME_KINDS = ['limit', 'hold', 'clear', 'cadence', 'tier', 'runhours', 'trigger'];
   function ovState(key, o) {
     if (o.endedAt != null) return 'ended'; if (o.reason === 'fornow' && o.until != null && o.until <= now()) return 'ended';
     if (o.reason !== 'notinlib') { const cb = currentBaseOf(key, o); if (SAME_KINDS.includes(o.target.kind) && o.value != null && cb != null && sameValue(o.target.kind, o.value, cb)) return 'same'; if (!sameValue(o.target.kind, o.base, cb)) return 'libchanged'; }
@@ -1638,11 +1639,12 @@ window.V7 = (function () {
     if (t.kind === 'runhours') return v ? `every ${v} run-hours` : '—';
     if (t.kind === 'tier') return v ? (C.TIER_LABEL[v] || v) : '—';
     if (t.kind === 'onoff') return v === 'off' ? 'Off' : 'On';
+    if (t.kind === 'trigger') return v == null || v === 'issue' ? 'An issue' : `The task "${v}"`;
     if (t.kind === 'alert') return v || '—'; return v == null ? '—' : String(v);
   }
   function ovDecorate(key, o) {
     const t = o.target; let what = '', eqId = null, tag = null, typeName = null, libRaw = null;
-    if (t.sensorId) { const s = sensorRaw(key, t.sensorId) || {}; const e = homeOf(key, s); eqId = e ? e.id : null; tag = e ? e.tag : null; typeName = e ? e.type : null; what = t.kind === 'limit' ? `${sname(s)} · ${BAND_LABEL[t.band]} ${dirWord(t.dir)}` : `${sname(s)} · limits ${dirWord(t.dir)}`; }
+    if (t.sensorId) { const s = sensorRaw(key, t.sensorId) || {}; const e = homeOf(key, s); eqId = e ? e.id : null; tag = e ? e.tag : null; typeName = e ? e.type : null; what = t.kind === 'limit' ? `${sname(s)} · ${BAND_LABEL[t.band]} ${dirWord(t.dir)}` : t.kind === 'trigger' ? `${sname(s)} · ${BAND_LABEL[t.band]} ${dirWord(t.dir)} triggers` : `${sname(s)} · limits ${dirWord(t.dir)}`; }
     if (t.alertId) { const a = alertRaw(key, t.alertId) || { name: '' }; const e = alertEq(key, a); eqId = e ? e.id : null; tag = e ? e.tag : null; typeName = e ? e.type : null; what = t.kind === 'hold' ? `${a.name} · must hold for` : t.kind === 'clear' ? `${a.name} · must clear for` : t.kind === 'onoff' ? `${a.name} · On or Off` : a.name; }
     if (t.scheduleId) { const sc = schedRaw(key, t.scheduleId) || { name: '', subject: {} }; const e = sc.subject.kind === 'eq' ? eqRaw(key, sc.subject.id) : null; eqId = e ? e.id : null; tag = e ? e.tag : null; typeName = e ? e.type : null; what = t.kind === 'onoff' ? `${sc.name} on ${tag || 'the plant'} · On or Off` : t.kind === 'runhours' ? `${sc.name} on ${tag || 'the plant'} · run-hours` : `${sc.name} on ${tag || 'the plant'} · how often`; }
     if (t.kind === 'tier') { const e = eqRaw(key, t.eqId) || {}; eqId = e.id; tag = e.tag; typeName = e.type; what = `${e.tag} · criticality`; }
@@ -1671,6 +1673,7 @@ window.V7 = (function () {
     const key = o.plant; const d = ovDecorate(key, o); const back = d.baseFrom === 'form' ? 'the Visualization value' : 'the library value'; endOverride(o, `Back to ${back}`); const t = o.target;
     const scOld = t.scheduleId && (t.kind === 'cadence' || t.kind === 'runhours') ? clone(schedRaw(key, t.scheduleId) || null) : null;
     if (t.sensorId) syncSensor(key, t.sensorId); if (t.alertId && (t.kind === 'hold' || t.kind === 'clear')) syncAlert(key, t.alertId); if (t.scheduleId && t.kind === 'cadence') syncSched(key, t.scheduleId); if (t.kind === 'runhours') syncRunHours(key, t.scheduleId); if (t.kind === 'tier') syncTier(key, t.eqId);
+    if (t.kind === 'trigger' && window.V7LIBTRIG) window.V7LIBTRIG.backToLib(key, t.sensorId, t.dir, t.band, { quiet: true });
     if (scOld) recountTask(key, t.scheduleId, scOld);   /* v7: the task's due date follows the value it went back to */
     if (t.kind === 'onoff' && t.alertId) putAlertState(key, t.alertId, 'trial'); if (t.kind === 'onoff' && t.scheduleId) { const sc = schedRaw(key, t.scheduleId); if (sc) sc.status = 'active'; }
     return d;
@@ -1744,13 +1747,17 @@ window.V7 = (function () {
     const out = []; if (!dr) return out;
     Object.keys(dr.limits).forEach((k) => { const [reading, dir] = k.split('|'); const cur = libBands(dr.typeName, reading, dir, false) || norm4(null); const nx = norm4(dr.limits[k]); const unit = (C.readingOf(reading) || {}).unit || ''; BANDS.forEach((b) => { if (!same(cur[b], nx[b])) out.push({ kind: 'limit', reading, dir, band: b, from: cur[b], to: nx[b], what: `${reading} · ${BAND_LABEL[b]} ${dirWord(dir)}`, text: `${reading} ${dirWord(dir)}: ${bandChange(b, cur[b], nx[b], unit, (C.readingOf(reading) || {}).kind)}`, safety: b === 'emergency' }); }); });
     Object.keys(dr.schedules).forEach((name) => { const ts = libSchedFor(dr.typeName, name); out.push({ kind: 'cadence', schedule: name, from: libEveryOf(ts), to: dr.schedules[name], what: `${name} · how often`, text: `${name}: ${ts ? C.every(ts) : everyText(libEveryOf(ts))} → ${everyWith(ts, dr.schedules[name])}` }); });
+    /* v7/8: what a range triggers, an issue or a task, is a library value too */
+    { const LT = window.V7LIBTRIG; Object.keys(dr.triggers || {}).forEach((k) => { const i = k.lastIndexOf('|'); const reading = k.slice(0, i); const dir = k.slice(i + 1); const cur = LT ? LT.get(dr.code, reading, dir) : {};
+      BANDS.forEach((b) => { if (!(b in dr.triggers[k])) return; const nx = dr.triggers[k][b]; const was = cur[b] || null; if ((was ? was.name : null) === (nx ? nx.name : null) && (was ? was.flowId || null : null) === (nx ? nx.flowId || null : null)) return;
+        out.push({ kind: 'trigger', reading, dir, band: b, from: was ? was.name : null, to: nx ? nx.name : null, flowId: nx ? nx.flowId || null : null, what: `${reading} · ${BAND_LABEL[b]} ${dirWord(dir)} triggers`, text: `${reading} ${dirWord(dir)}: the ${BAND_LABEL[b]} range ${nx ? `raises the task "${nx.name}"` : 'opens an issue again'}` }); }); }); }
     Object.keys(dr.alerts).forEach((name) => { const ta = (setOf(dr.typeName) || { alerts: [] }).alerts.find((a) => a.name === name); ['hold', 'clear'].forEach((w) => { if (dr.alerts[name][w] == null) return; const cur = ta ? libTiming(dr.typeName, ta.sensorKind, ta.direction, w) : null; if (!same(cur, dr.alerts[name][w])) out.push({ kind: w, alert: name, from: cur, to: dr.alerts[name][w], what: `${name} · must ${w} for`, text: `${name}: must ${w} for ${cur} → ${dr.alerts[name][w]} min` }); }); });
     return out;
   }
   function libDraft(code) { const dr = S && S.lib.drafts[code]; if (!dr) return null; const diffs = draftDiffs(dr); return { ...clone(dr), diffs, kind: diffs.some((x) => x.safety) ? 'safety' : 'normal', version: libVersion(code), nextVersion: libVersion(code) + 1 }; }
   function editLib(code, change) {
     const cat = catByCode(code); if (!cat) return { ok: false, error: 'No such equipment type.' }; const c = change || {};
-    const dr = S.lib.drafts[code] || { code, typeName: cat.type, base: libVersion(code), at: now(), limits: {}, schedules: {}, alerts: {} };
+    const dr = S.lib.drafts[code] || { code, typeName: cat.type, base: libVersion(code), at: now(), limits: {}, schedules: {}, alerts: {}, triggers: {} }; if (!dr.triggers) dr.triggers = {};
     if (c.reading) {
       const dir = c.dir || 'above'; const nx = norm4(c.bands); const r = C.readingOf(c.reading) || cat.sensors.find((s) => s.name === c.reading) || {};
       const err = validateBands(nx, dir, r.valid ? { kind: r.kind, valid: r.valid, unit: r.unit, name: c.reading } : null); if (err) return { ok: false, error: err };
@@ -1759,7 +1766,14 @@ window.V7 = (function () {
     }
     if (c.schedule) { const ts = libSchedFor(cat.type, c.schedule); if (!ts) return { ok: false, error: 'No such task in the library for this type.' }; const ev = c.every && c.every.n ? { n: Math.round(+c.every.n), unit: c.every.unit } : null; if (!ev || !C.UNIT_HOURS[ev.unit]) return { ok: false, error: 'Give how often: a number and a unit.' }; if (sameEvery(libEveryOf(ts), ev)) delete dr.schedules[c.schedule]; else dr.schedules[c.schedule] = ev; }
     if (c.alert) { const ta = (setOf(cat.type) || { alerts: [] }).alerts.find((a) => a.name === c.alert); if (!ta) return { ok: false, error: 'No such alert in the library for this type.' }; const x = dr.alerts[c.alert] || {}; ['hold', 'clear'].forEach((w) => { if (c[w] == null) return; const n = Math.round(+c[w]); if (same(n, libTiming(cat.type, ta.sensorKind, ta.direction, w))) delete x[w]; else x[w] = n; }); if (Object.keys(x).length) dr.alerts[c.alert] = x; else delete dr.alerts[c.alert]; }
-    if (!Object.keys(dr.limits).length && !Object.keys(dr.schedules).length && !Object.keys(dr.alerts).length) delete S.lib.drafts[code]; else { dr.at = now(); S.lib.drafts[code] = dr; }
+    if (c.trigger) {
+      const x = c.trigger; const LT = window.V7LIBTRIG; if (!LT) return { ok: false, error: 'Triggers are not available here.' }; if (!BANDS.includes(x.band)) return { ok: false, error: 'Pick a range.' };
+      const name = x.name == null ? '' : String(x.name).trim(); if (x.band === 'emergency' && name) return { ok: false, error: 'Emergency always opens an issue.' };
+      const dir = x.dir || 'above'; const k = `${x.reading}|${dir}`; const was = LT.get(code, x.reading, dir)[x.band] || null; const same2 = (was ? was.name : '') === name && (was ? was.flowId || null : null) === (name ? x.flowId || null : null);
+      if (same2) { if (dr.triggers[k]) { delete dr.triggers[k][x.band]; if (!Object.keys(dr.triggers[k]).length) delete dr.triggers[k]; } }
+      else { dr.triggers[k] = dr.triggers[k] || {}; dr.triggers[k][x.band] = name ? { name, flowId: x.flowId || null } : null; }
+    }
+    if (!Object.keys(dr.limits).length && !Object.keys(dr.schedules).length && !Object.keys(dr.alerts).length && !Object.keys(dr.triggers).length) delete S.lib.drafts[code]; else { dr.at = now(); S.lib.drafts[code] = dr; }
     touch(); persist(); return { ok: true, draft: libDraft(code) };
   }
   function discardDraft(code) { if (!S.lib.drafts[code]) return { ok: true, already: true }; delete S.lib.drafts[code]; touch(); persist(); return { ok: true }; }
@@ -1811,6 +1825,9 @@ window.V7 = (function () {
             ['hold', 'clear'].forEach((w) => { if (dr.alerts[name][w] == null) return; const ti = timingInfo(key, a.id, w); const what = `${a.name} · must ${w} for`; if (ti.overrideId) res.changedHere.push({ what, tag: e.tag, plantValue: `${ti.value} min`, newLib: `${dr.alerts[name][w]} min`, overrideId: ti.overrideId, sameAsNew: same(ti.value, dr.alerts[name][w]) }); else if (!same(ti.value, dr.alerts[name][w])) res.follows.push({ what, tag: e.tag, from: `${ti.value} min`, to: `${dr.alerts[name][w]} min` }); });
           });
         });
+        { const LT = window.V7LIBTRIG; if (LT) diffs.filter((x) => x.kind === 'trigger').forEach((x) => { const pv = LT.preview(code, x.reading, x.dir, x.band); const say = (v) => (v == null || v === LT.ISSUE ? 'An issue' : `The task "${v}"`);
+          pv.follow.filter((r) => r.key === key).forEach((r) => res.follows.push({ what: `${r.tag} · ${x.reading} ${BAND_LABEL[x.band]} ${dirWord(x.dir)} triggers`, tag: r.tag, from: say(x.from), to: say(x.to) }));
+          pv.own.filter((r) => r.key === key).forEach((r) => { const ov = S.overrides.find((o) => o.plant === key && !o.endedAt && o.target.kind === 'trigger' && o.target.sensorId === r.sensorId && o.target.dir === x.dir && o.target.band === x.band); res.changedHere.push({ what: `${r.tag} · ${x.reading} ${BAND_LABEL[x.band]} ${dirWord(x.dir)} triggers`, tag: r.tag, plantValue: say(r.ownValue), newLib: say(x.to), overrideId: ov ? ov.id : null, baseFrom: 'lib', sameAsNew: r.ownValue != null && r.ownValue === x.to }); }); }); }
         plantsOut.push(res);
       });
       const reached = plantsOut.filter((p) => p.follows.length).length; const values = plantsOut.reduce((n, p) => n + p.follows.length, 0); const keepN = plantsOut.filter((p) => p.changedHere.length).length;
@@ -1836,7 +1853,9 @@ window.V7 = (function () {
       Object.keys(dr.schedules).forEach((name) => { const ts = set.schedules.find((x) => x.name === name); if (ts) { ts.every = { ...dr.schedules[name] }; } });
       Object.keys(dr.alerts).forEach((name) => { const ta = set.alerts.find((a) => a.name === name); if (ta) Object.assign(ta, dr.alerts[name]); });
     }
+    { const LT = window.V7LIBTRIG; if (LT && dr.triggers) { Object.keys(dr.triggers).forEach((k) => { const i = k.lastIndexOf('|'); Object.keys(dr.triggers[k]).forEach((b) => LT.commit(code, k.slice(0, i), k.slice(i + 1), b, dr.triggers[k][b])); }); LT.adopt(code); } }
     S.lib.versions[code] = version; delete S.lib.drafts[code]; touch();
+    { const LT = window.V7LIBTRIG; if (LT) LT.sync(); }
     const reachedKeys = [];
     wl.plants.forEach((p) => {
       const key = p.key; const d = dOf(key);
@@ -2075,7 +2094,7 @@ window.V7 = (function () {
     libTypes, libType, libVersion, libDraft, editLib, discardDraft, whereItLands, publish,
     activity, log,
     LABELS, BANDS, fmtVal, limitsText, sevClock, bandLabel: (b) => BAND_LABEL[b] || '', everyText, plantName,
-    NOW0, POLL, touch,
+    NOW0, POLL, touch, _ov: { add: addOverride, end: endOverride },
   };
   Object.defineProperty(api, 'S', { get: () => S, enumerable: true });
   return api;
