@@ -577,7 +577,7 @@
         lt.library === 'process' ? chip('Unit process', { tone: 'info', href: '#/library-structure', title: 'From the unit-process library: a node gets it when other equipment takes part in it' }) : '',
         `<span class="crit crit-${esc(lt.tier)}" data-tip="${esc(TIER_MEANS[lt.tier] || 'How much a plant depends on it')}">${esc(TIER[lt.tier] || '')}</span>`,
       ],
-      sub: `${lt.family}. ${usedText}.`,
+      sub: `${lt.family}.`,
       banner: diffs.length ? banner(`You are editing a draft of version ${lt.version + 1}: ${plural(diffs.length, 'change')}. No plant changes until it is published.`, { tone: 'warn' }) : '',
       tabs: [{ id: 'overview', label: 'Overview', href: libHref(lt.code, 'overview'), count: '' }].concat(tabsFor((id) => libHref(lt.code, id), counts)), active: tab,
       body, aside, cls: 'pg-obj pg-type',

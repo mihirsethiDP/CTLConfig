@@ -85,7 +85,6 @@
     return table({
       cols: [
         { label: 'Type', render: typeCell },
-        { label: 'Used at', render: usedCell },
         { label: 'Deviations', render: (t) => { const d = dev[t.code]; return d ? `<a href="#/differences?type=${esc(enc(t.code))}" title="Values plants changed away from this type">${esc(plural(d.n, 'value'))} at ${esc(plural(d.p.size, 'plant'))}</a>` : '<span class="muted">None</span>'; } },
         { label: 'Carries', render: (t) => counted([[t.readings, 'reading'], [t.alerts, 'alert'], [t.tasks, 'task']]) },
         { label: 'From the workbook', render: (t) => counted([[t.issues, 'issue'], [t.generalTasks, 'task']]) },
@@ -118,7 +117,6 @@
       + `<a class="lc-name" href="${href}">${esc(t.typeName)}</a><span class="lc-code">${esc(t.code)}${!proc && KIND[t.archetype] ? ` · ${esc(KIND[t.archetype])}` : ''}</span>`
       + `<span class="lc-chips">${critChip(t.tier)}${t.draft ? chip('Draft', { tone: 'warn', title: 'Edited, not published yet' }) : ''}${t.suggestions ? chip(plural(t.suggestions, 'suggestion'), { tone: 'info' }) : ''}</span>`
       + `<span class="lc-facts"><span>${carries.length ? esc(carries.join(' · ')) : '<span class="muted">Nothing set up yet</span>'}</span>`
-      + `<span>${t.plantCount ? `${esc(plural(t.plantCount, 'plant'))} · ${esc(t.equipmentCount)} equipment` : '<span class="muted">Not used at a plant yet</span>'}</span>`
       + (d ? `<a class="lc-dev" href="#/differences?type=${esc(enc(t.code))}" title="See the values plants changed away from this type">${esc(plural(d.n, 'value'))} changed at ${esc(plural(d.p.size, 'plant'))}</a>` : '') + '</span>'
       + `<span class="lc-q">${+t.readings ? `<a href="${href}/readings" title="Straight to its readings and their limits">Limits</a>` : ''}${+t.tasks ? `<a href="${href}/tasks" title="Straight to its tasks and how often they come round">Tasks</a>` : ''}${t.draft ? `<a class="lc-q-p" href="${href}" title="See where the draft lands, then publish it">Publish…</a>` : ''}<a class="lc-q-o" href="${href}" aria-label="Open ${esc(t.typeName)}">Open →</a></span></div>`;
   }
@@ -342,9 +340,6 @@
     const difs = arr(safe(() => v.overrides({}), [])).filter((o) => o.typeCode === code);
     const moved = difs.filter((o) => o.state === 'libchanged').length;
     const body = `<p class="small">Plants follow these values unless they changed one. Change a limit, a task's interval or an alert's timing on this page: it becomes a draft, and this panel shows where it lands before you publish.</p>`
-      + (used.length
-        ? `<p class="wl-k">Used at</p><ul class="wl-l">${used.map((p) => `<li><a class="wl-w" href="#/p/${esc(enc(p.key))}/equipment">${esc(p.name)}</a><span class="wl-v">${esc(p.count)} equipment</span></li>`).join('')}</ul>`
-        : '<p class="wl-n muted">Not used at any plant yet: a change here reaches no plant today.</p>')
       + (difs.length ? `<p class="wl-n">${link(`${plural(difs.length, 'value')} changed at plants`, `#/differences?type=${enc(code)}`)}${moved ? ` · ${esc(moved)} with Library changed since` : ''}</p>` : '');
     const main = card({ title: `Library · version ${t.version}`, sub: t.family, cls: 'wl', body });
     const sg = arr(t.suggestions);
