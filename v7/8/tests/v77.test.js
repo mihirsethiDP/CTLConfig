@@ -12,7 +12,7 @@ g.localStorage = { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem
 const el = () => ({ classList: { toggle() {}, add() {}, remove() {} }, setAttribute() {}, removeAttribute() {}, addEventListener() {}, appendChild() {}, remove() {}, querySelector: () => null, querySelectorAll: () => [], style: {}, dataset: {}, innerHTML: '' });
 g.document = { querySelector: () => null, querySelectorAll: () => [], createElement: el, body: el(), onkeydown: null };
 g.location = { hash: '#/plants', href: 'http://localhost/prototype.html#/plants' }; g.scrollTo = () => {}; g.Blob = g.Blob || function Blob() {}; if (!g.URL) g.URL = {};
-for (const f of ['data.js', 'layout-digitalpaani.js', 'catalogue.js', 'flows.js', 'rca.js', 'app.js', 'runtime.js', 'structure73.js', 'nodes73.js', 'core7.js', 'calls73.js', 'decisions7.js', 'shadow77.js', 'lang77.js', 'libadd78.js']) vm.runInThisContext(fs.readFileSync(path.join(A, f), 'utf8'), { filename: f });
+for (const f of ['data.js', 'layout-digitalpaani.js', 'catalogue.js', 'flows.js', 'rca.js', 'app.js', 'runtime.js', 'structure73.js', 'nodes73.js', 'core7.js', 'calls73.js', 'decisions7.js', 'shadow77.js', 'lang77.js', 'libadd78.js', 'libtrig78.js']) vm.runInThisContext(fs.readFileSync(path.join(A, f), 'utf8'), { filename: f });
 const V = g.V7; const SH = g.V7SHADOW; const LG = g.V7LANG; V.boot();
 const results = [];
 function check(area, name, ok, detail) { results.push(!!ok); if (VERBOSE || !ok) console.log(`${ok ? '  ok  ' : '  FAIL'} [${area}] ${name}${detail ? ' — ' + detail : ''}`); }
@@ -108,6 +108,20 @@ check('add', 'a reading with an alert on it is not removed first', !LA.remove('S
 check('add', 'what shipped with the library cannot be removed here', !LA.remove('BLW', 'alert', 'Motor current high').ok);
 V.reset();
 check('add', 'a reset puts the library back as shipped', V.libType('SOFTNER').readings.length === t0.readings.length && V.libType('SOFTNER').schedules.length === t0.schedules.length);
+
+/* v7/8: what a range triggers is set on the type, and plants follow it */
+V.reset(); V.autoSetup('vedanta'); const LT = g.V7LIBTRIG; const vb = V.sensors('vedanta').find((x) => x.name === 'Motor current' && x.eqTag === 'BL-1'); const m0 = V.lineWork('manesar').length;
+check('trigger', 'Emergency always opens an issue, and a task needs a name', !LT.set('BLW', 'Motor current', 'above', 'emergency', { name: 'x' }).ok && !LT.set('BLW', 'Motor current', 'above', 'caution', { name: ' ' }).ok);
+const pvT = LT.preview('BLW', 'Motor current', 'above', 'caution');
+check('trigger', 'the type says which plant readings a trigger reaches before it is saved', pvT.follow.some((x) => x.key === 'vedanta' && x.tag === 'BL-1') && pvT.own.some((x) => x.key === 'manesar'), JSON.stringify(pvT));
+const st1 = LT.set('BLW', 'Motor current', 'above', 'caution', { name: 'Clean the intake filter' });
+check('trigger', 'a plant reading that follows the library gets the task', st1.ok && st1.reached >= 1 && V.lineWork('vedanta').some((w) => w.eqTag === 'BL-1' && w.band === 'caution' && w.name === 'Clean the intake filter') && LT.source('vedanta', vb.id, 'above', 'caution') === 'lib');
+check('trigger', 'a plant that set its own task keeps it', V.lineWork('manesar').length === m0 && V.lineWork('manesar').some((w) => w.eqTag === 'BL-1' && w.name !== 'Clean the intake filter'));
+check('trigger', 'renaming it on the type renames it at the plant', LT.set('BLW', 'Motor current', 'above', 'caution', { name: 'Clean the intake filters' }).ok && V.lineWork('vedanta').some((w) => w.name === 'Clean the intake filters'));
+check('trigger', 'a plant can choose an issue after all, and keeps that', V.setLineWork('vedanta', vb.id, 'above', 'caution', { name: null }).ok && V.lineWork('vedanta').length === 0 && LT.source('vedanta', vb.id, 'above', 'caution') === 'own' && !LT.sync() && V.lineWork('vedanta').length === 0);
+check('trigger', 'and can go back to the library', LT.backToLib('vedanta', vb.id, 'above', 'caution').ok && V.lineWork('vedanta').length === 1 && LT.source('vedanta', vb.id, 'above', 'caution') === 'lib');
+check('trigger', 'taking it off the type takes it off the plants that follow', LT.set('BLW', 'Motor current', 'above', 'caution', null).ok && V.lineWork('vedanta').length === 0 && V.lineWork('manesar').length === m0);
+V.reset();
 
 const bad = results.filter((x) => !x).length;
 console.log(`v77.test · ${results.length - bad}/${results.length} checks pass · RESULT: ${bad ? 'FAIL' : 'PASS'}`);

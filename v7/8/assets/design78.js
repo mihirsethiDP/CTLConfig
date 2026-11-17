@@ -44,6 +44,7 @@
         { a: 'Condition work, as its own list', b: 'A task that a range of a reading raises', c: 'It sits on the reading that raises it, beside the issue that the next range opens. No separate list.' },
         { a: 'SCADA vocabulary', b: 'Visualization', c: 'One word everywhere for the plant drawing and what it sends.' },
         { a: 'Pipe readings', b: 'Readings on pipes', c: 'Shown, dashed and marked "next phase". Nothing on them raises an alert yet.' },
+        { a: 'What a range does, chosen at each plant', b: 'Set on the type, followed by plants', c: 'A range opens an issue or raises a task. The type says which; a plant reading follows it and can choose its own.' },
         { a: 'Kind of equipment', b: 'Kind, on the card under the name', c: 'Kept: Rotating, Vessel, Fixed, Dosing, Valve, Membrane, Device.' },
         { a: 'Edit, as one long form', b: 'One editor per value, opened where the value is', c: 'A limit is changed on its bar, a task on its row. The change is a draft until it is published.' },
         { a: 'Save changes, with a reason', b: 'Publish, after "Where it lands"', c: 'The person sees which plants a change reaches, and which keep their own value, before it goes out.' },
