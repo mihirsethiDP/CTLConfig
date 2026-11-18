@@ -592,7 +592,7 @@
       sub: 'Library values reach every plant that follows them. Edits make a draft; nothing reaches a plant until it is published.',
       actions: [addBtn(lt, 'reading', 'Add a reading'), arr(lt.readings).some((r) => r.kind !== 'meter') ? addBtn(lt, 'alert', 'Add an alert') : ''],
     });
-    if (W.V7UPALERT) out += W.V7UPALERT.libBox(lt);
+    if (W.V7UPALERT) out += W.V7UPALERT.libBox(lt, { solo: true });
     const np = lt.nextPhase || {};
     out += nextPhaseBox(arr(np.readings), arr(np.alerts));
     return out;

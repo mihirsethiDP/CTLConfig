@@ -301,3 +301,16 @@ button.ov-pill { font: inherit; font-size: 13px; cursor: pointer; }
 /* the bar is as tall as its two rows, never taller */
 .tb { min-height: 0; }
 @media (max-width: 1100px) and (min-width: 721px) { :root { --tb-h: 102px; } }
+/* design QA · the top bar between 721 and 1100 px: two rows, never three. The product row keeps brand, pages and Jump to on one
+   line (the pages scroll sideways if they must); the tools strip stays on one line under it */
+@media (max-width: 1100px) and (min-width: 721px) {
+  .tb { flex-wrap: wrap; }
+  .tb-brand { order: 1; flex: 0 0 auto; }
+  .tb-ver { display: none; }
+  .tb-nav { order: 2; flex: 1 1 0; min-width: 0; padding-right: 8px; white-space: nowrap; }
+  .tb-jump { order: 3; flex: 0 0 auto; margin-right: 16px; }
+  .tb-jump kbd { display: none; }
+  .tb-right { order: 4; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; white-space: nowrap; }
+  .tb-right > * { flex: 0 0 auto; }
+}
+@media (max-width: 900px) and (min-width: 721px) { .tb-brand span, .tb-lang span, .tb-persona span { display: none !important; } }

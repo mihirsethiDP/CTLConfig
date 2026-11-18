@@ -55,3 +55,28 @@
 .ua-ed ~ .ua-add + *, .la-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0 14px; }
 .la-n { margin-top: 12px; padding: 10px 12px; background: var(--surface-2); border-radius: 6px; font-size: 13px; color: var(--ink-2); }
 .ua-newflow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 4px 0 0; font-size: 13px; color: var(--ink-3); }
+/* design QA: one line per reading in the form; two-column rows start level */
+.ua-er1 select { width: auto; flex: 0 0 auto; }
+.ua-er1 > select:first-child { flex: 1 1 200px; min-width: 0; }
+.ua-er1 > select:nth-child(2) { flex: 0 1 150px; }
+.ua-er1 .btn { margin-left: auto; }
+.ua-use select, .ua-ej select { width: auto; max-width: 100%; }
+.ua-ej select { height: 30px; font-size: 12.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+.ua-er .ua-use { font-size: 12.5px; }
+.ua-er .ua-use > select { height: 30px; font-size: 12.5px; color: var(--ink-2); }
+.la-2 { align-items: start; gap: 14px; }
+.la-2 > .field, .la-2 > .field + .field { margin-top: 0; }
+.modal-b > .la-2 + .la-2 { margin-top: 14px; }
+/* design QA: the plant card's groups sit inside the card's own gutter */
+.ua-card > .card-h { padding-bottom: 14px; }
+.ua-card > .ua-up { padding: 2px 22px 8px; }
+.ua-card > .ua-up:last-child { padding-bottom: 16px; }
+.ua-card .ua-uph { margin: 14px 0 4px; }
+.ua-card .ua-rows > .ua-row:first-child { padding-top: 8px; }
+@media (max-width: 720px) { .ua-card > .ua-up { padding-left: 16px; padding-right: 16px; } }
+.ua-ed, .ua-er { min-width: 0; max-width: 100%; }
+@media (max-width: 560px) {
+  .ua-er1 > select:first-child, .ua-er1 > select:nth-child(2) { flex: 1 1 100%; width: 100%; }
+  .ua-er1 .btn { margin-left: 0; }
+  .ua-use select { width: 100%; }
+}
