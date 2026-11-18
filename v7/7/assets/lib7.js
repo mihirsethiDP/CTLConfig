@@ -58,7 +58,8 @@
   /* ════════════════════════════════════════════════════════════════════════════════════════════════════════
      LIBRARY LIST  #/library
      ════════════════════════════════════════════════════════════════════════════════════════════════════════ */
-  const SHOW_LIB = [['all', 'All'], ['used', 'Used at a plant'], ['unused', 'Not used yet'], ['draft', 'With a draft']];
+  const SHOW_LIB = [['all', 'All'], ['used', 'Used at a plant'], ['unused', 'Not used yet'], ['draft', 'With a draft'], ['noflow', 'Missing a flow']];
+  const noFlow = (code) => (W.V7LIBFLOW ? safe(() => W.V7LIBFLOW.missing(code), null) : null) || { tasks: [], issues: [], n: 0 };
   const HAY = new Map();
   function catOf(code) { return (W.CATALOGUE_BY_CODE && W.CATALOGUE_BY_CODE[code]) || arr(W.CATALOGUE).find((c) => c && c.code === code) || null; }
   function hay(t) {
@@ -68,7 +69,7 @@
     }
     return HAY.get(t.code);
   }
-  function libShowOk(t, show) { return show === 'used' ? t.plantCount > 0 : show === 'unused' ? !t.plantCount : show === 'draft' ? !!t.draft : true; }
+  function libShowOk(t, show) { return show === 'used' ? t.plantCount > 0 : show === 'unused' ? !t.plantCount : show === 'draft' ? !!t.draft : show === 'noflow' ? noFlow(t.code).n > 0 : true; }
   function typeCell(t) {
     return `<a href="#/library/${esc(enc(t.code))}">${esc(t.typeName)}</a> ${chip(t.code, { mono: true })}`
       + (t.draft ? ' ' + chip('Draft', { tone: 'warn', title: 'Edited, not published yet' }) : '')
@@ -94,6 +95,35 @@
       rows: rows.map((t) => Object.assign({}, t, { _href: `#/library/${enc(t.code)}`, _cls: t.plantCount ? '' : 'lib-unused' })),
     });
   }
+  /* one card per type (first built for v7/8). It says what the type is, how much a plant depends on it, what it carries and where it is used.
+     A count of nothing is not shown; the whole card opens the type. */
+  const ICONS = {
+    vessel: '<path d="M5 6h14v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2z"/><path d="M5 11c2.3 1.6 4.7-1.6 7 0s4.7-1.6 7 0"/>',
+    rotating: '<circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="2"/><path d="M12 4.5v5.5M12 14v5.5M4.5 12H10M14 12h5.5"/>',
+    fixed: '<rect x="4" y="5" width="16" height="14" rx="2"/><path d="M8 5v14M12 5v14M16 5v14"/>',
+    dosing: '<path d="M12 3.5c3.2 4 5.5 6.800 5.5 10a5.500 5.500 0 0 1-11 0c0-3.200 2.300-6 5.500-10z"/>',
+    valve: '<path d="M4 8l8 4-8 4zM20 8l-8 4 8 4z"/><path d="M12 12V6M9 6h6"/>',
+    membrane: '<path d="M12 4l8 4-8 4-8-4z"/><path d="M4 12l8 4 8-4M4 16l8 4 8-4"/>',
+    device: '<rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 3v3M15 3v3M9 18v3M15 18v3M3 9h3M3 15h3M18 9h3M18 15h3"/>',
+    process: '<circle cx="6" cy="12" r="2.500"/><circle cx="18" cy="6" r="2.500"/><circle cx="18" cy="18" r="2.500"/><path d="M8.300 11l7.400-4M8.300 13l7.400 4"/>',
+  };
+  const KIND = { vessel: 'Vessel', rotating: 'Rotating', fixed: 'Fixed', dosing: 'Dosing', valve: 'Valve', membrane: 'Membrane', device: 'Device' };
+  const CRIT = { A: ['Critical', 'A failure breaks the discharge consent, is a safety hazard or stops the plant, and nothing takes over.'], B: ['Essential', 'A failure makes treatment worse within hours, or a standby or a second train takes over.'], C: ['Standard', 'A failure has no effect on the process within a day.'] };
+  const critChip = (tier) => (CRIT[tier] ? `<span class="crit crit-${esc(tier)}" data-tip="${esc(CRIT[tier][1])}" data-tip-side="right">${esc(CRIT[tier][0])}</span>` : '');
+  function typeCard(t, dev) {
+    const proc = t.library === 'process'; const ico = ICONS[proc ? 'process' : t.archetype] || ICONS.fixed;
+    const carries = [[t.readings, 'reading'], [t.alerts, 'alert'], [t.tasks, 'task']].filter((x) => +x[0] > 0).map((x) => plural(x[0], x[1]));
+    const d = dev[t.code]; const nf = noFlow(t.code);
+    const href = `#/library/${esc(enc(t.code))}`;
+    return `<div class="lc${t.plantCount ? '' : ' is-unused'}"><span class="lc-ico" aria-hidden="true"><svg viewBox="0 0 24 24">${ico}</svg></span>`
+      + `<a class="lc-name" href="${href}">${esc(t.typeName)}</a><span class="lc-code">${esc(t.code)}${!proc && KIND[t.archetype] ? ` · ${esc(KIND[t.archetype])}` : ''}</span>`
+      + `<span class="lc-chips">${critChip(t.tier)}${t.draft ? chip('Draft', { tone: 'warn', title: 'Edited, not published yet' }) : ''}${t.suggestions ? chip(plural(t.suggestions, 'suggestion'), { tone: 'info' }) : ''}</span>`
+      + `<span class="lc-facts"><span>${carries.length ? esc(carries.join(' · ')) : '<span class="muted">Nothing set up yet</span>'}</span>`
+      + (d ? `<a class="lc-dev" href="#/differences?type=${esc(enc(t.code))}" title="See the values plants changed away from this type">${esc(plural(d.n, 'value'))} changed at ${esc(plural(d.p.size, 'plant'))}</a>` : '')
+      + (nf.n ? `<a class="lc-nf" href="${href}/${nf.tasks.length ? 'tasks' : 'issues'}" title="${esc(nf.tasks.concat(nf.issues).slice(0, 8).join('\n'))}">${esc([nf.tasks.length ? plural(nf.tasks.length, 'task') : '', nf.issues.length ? plural(nf.issues.length, 'problem') : ''].filter(Boolean).join(' and '))} without a flow</a>` : '') + '</span>'
+      + `<span class="lc-q">${+t.readings ? `<a href="${href}/readings" title="Straight to its readings and their limits">Limits</a>` : ''}${+t.tasks ? `<a href="${href}/tasks" title="Straight to its tasks and how often they come round">Tasks</a>` : ''}${t.draft ? `<a class="lc-q-p" href="${href}" title="See where the draft lands, then publish it">Publish…</a>` : ''}<a class="lc-q-o" href="${href}" aria-label="Open ${esc(t.typeName)}">Open →</a></span></div>`;
+  }
+  function devByType() { const dev = {}; arr(safe(() => V().overrides({}), [])).filter((o) => o.state !== 'ended' && o.typeCode).forEach((o) => { const d = dev[o.typeCode] || (dev[o.typeCode] = { n: 0, p: new Set() }); d.n++; d.p.add(o.plant); }); return dev; }
   function draftsCard(types) {
     const v = V();
     const rows = types.filter((t) => t.draft).map((t) => {
@@ -134,8 +164,10 @@
     /* v7/3: two libraries. Equipment: a pump, a valve or a tank on its own. Unit processes: one treatment step. */
     const lib = q.lib === 'process' ? 'process' : 'equipment'; const nProc = every.filter((t) => t.library === 'process').length;
     const types = every.filter((t) => (t.library || 'equipment') === lib);
-    const libTabs = nProc ? `<div class="lib-two">${filters([{ label: 'Equipment types', href: '#/library', on: lib === 'equipment', count: every.length - nProc }, { label: 'Unit processes', href: '#/library?lib=process', on: lib === 'process', count: nProc }])}<p class="lib-two-s">${lib === 'process' ? 'One treatment step each. Control groups are set at each plant.' : 'A pump, a blower, a valve, or a tank on its own.'} <a href="#/library-structure">How it is decided</a></p></div>` : '';
     const show = SHOW_LIB.some((s) => s[0] === q.show) ? q.show : 'all';
+    const view = q.view === 'table' ? 'table' : 'cards';
+    const libTabs = nProc ? `<div class="lib-two">${filters([{ label: 'Equipment types', href: '#/library' + (view === 'table' ? '?view=table' : ''), on: lib === 'equipment', count: every.length - nProc }, { label: 'Unit processes', href: '#/library?lib=process' + (view === 'table' ? '&view=table' : ''), on: lib === 'process', count: nProc }])}<p class="lib-two-s">${lib === 'process' ? 'One treatment step each. Control groups are set at each plant.' : 'A pump, a blower, a valve, or a tank on its own.'} <a href="#/library-structure">How it is decided</a></p></div>` : '';
+
     const needle = ST.q.trim().toLowerCase();
     const counts = {}; SHOW_LIB.forEach(([id]) => { counts[id] = types.filter((t) => libShowOk(t, id)).length; });
     const shown = types.filter((t) => libShowOk(t, show) && (!needle || hay(t).includes(needle)));
@@ -143,9 +175,11 @@
     shown.forEach((t) => { let f = fams.find((x) => x.name === t.family); if (!f) fams.push(f = { name: t.family, rows: [] }); f.rows.push(t); });
     fams.forEach((f) => { f.rows = f.rows.filter((t) => t.plantCount).concat(f.rows.filter((t) => !t.plantCount)); });
     const tools = `<div class="lib-tools"><input type="search" id="libSearch" placeholder="Search a type, a code or a reading" aria-label="Search the library" value="${esc(ST.q)}" data-act="lib:search" data-live autocomplete="off">`
-      + filters(SHOW_LIB.map(([id, label]) => ({ label, href: '#/library' + qs({ lib: lib === 'process' ? 'process' : null, show: id }), on: id === show, count: counts[id] }))) + '</div>';
+      + filters(SHOW_LIB.map(([id, label]) => ({ label, href: '#/library' + qs({ lib: lib === 'process' ? 'process' : null, show: id === 'all' ? null : id, view: view === 'table' ? 'table' : null }), on: id === show, count: counts[id] })))
+      + `<div class="capsule" role="group" aria-label="Show as"><a href="${esc('#/library' + qs({ lib: lib === 'process' ? 'process' : null, show: show === 'all' ? null : show }))}" class="${view === 'cards' ? 'on' : ''}" aria-pressed="${view === 'cards'}">Cards</a><a href="${esc('#/library' + qs({ lib: lib === 'process' ? 'process' : null, show: show === 'all' ? null : show, view: 'table' }))}" class="${view === 'table' ? 'on' : ''}" aria-pressed="${view === 'table'}">Table</a></div></div>`;
+    const dev = devByType();
     const famHtml = fams.length
-      ? fams.map((f) => section(f.name, libTable(f.rows), { sub: plural(f.rows.length, 'type') })).join('')
+      ? fams.map((f) => (view === 'table' ? section(f.name, libTable(f.rows), { sub: plural(f.rows.length, 'type') }) : `<h2 class="lc-fam">${esc(f.name)} <span>${f.rows.length}</span></h2><div class="lc-grid">${f.rows.map((t) => typeCard(t, dev)).join('')}</div>`)).join('')
       : empty(needle ? `No type matches “${ST.q.trim()}”.` : 'No type here with this filter.', needle ? btn('Clear the search', { act: 'lib:search-clear' }) : btn('Show every type', { href: '#/library' + qs({ lib: lib === 'process' ? 'process' : null }) }));
     const body = [
       libTabs,

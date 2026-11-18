@@ -37,6 +37,7 @@
     }
     const cs = causes().filter((c) => c.fix === f.id).map((c) => `Root cause: ${c.name}`);
     const ts = arr(W.ISSUE_TASKS).filter((t) => t.flow === f.id).map((t) => `Task: ${t.name}`);
+    const seen = new Set(ts); arr(lib().standardSets || (W.SEED && W.SEED.standardSets)).forEach((st) => arr(st.schedules).forEach((x) => { if (x.flow !== f.id || seen.has(`Task: ${x.name}`)) return; const l = `Task: ${x.name} on ${st.type}`; if (!seen.has(l)) { seen.add(l); ts.push(l); } }));
     return { n: cs.length + ts.length, lines: cs.concat(ts) };
   }
   const short = (s, n) => { s = String(s || ''); return s.length > n ? s.slice(0, n - 1) + '…' : s; };

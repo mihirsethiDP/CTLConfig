@@ -1,0 +1,24 @@
+/* v7 · libflow7.css — the flow a problem or a task uses, shown where the problem or the task is listed */
+.lf { display: inline-flex; align-items: center; gap: 4px 8px; flex-wrap: wrap; min-width: 0; font-size: 13px; color: var(--ink-2); }
+.lf-k { color: var(--ink-3); }
+.lf-n { font-weight: 600; color: var(--accent-strong); min-width: 0; overflow-wrap: anywhere; }
+.lf-c { color: var(--ink-3); font-size: 12.5px; white-space: nowrap; }
+.lf.is-none .lf-0 { color: var(--warn-ink); }
+.lf.is-none .lf-0::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--warn); margin-right: 6px; vertical-align: 1px; }
+.lf-row { margin-top: 6px; }
+.lf-flag { color: var(--warn-ink); }
+.ov-prob { display: flex !important; align-items: center; justify-content: space-between; gap: 6px 14px; flex-wrap: wrap; }
+.ov-prob > b { flex: 1 1 180px; min-width: 0; }
+.lc-nf { color: var(--ink-2); }
+.lc-nf::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--ink-3); margin-right: 6px; vertical-align: 1px; }
+a.lc-nf:hover { text-decoration: underline; }
+/* the picker */
+#lf-sel { width: 100%; height: 38px; border: 1px solid var(--line-2); border-radius: 6px; padding: 0 10px; font: inherit; background: var(--surface); color: var(--ink); }
+.lf-prev { margin-top: 12px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2); font-size: 13px; color: var(--ink-2); }
+.lf-pk { font-weight: 600; color: var(--ink); margin: 0 0 6px; }
+.lf-ps { margin: 0; padding-left: 20px; display: grid; gap: 3px; }
+.lf-pm, .lf-p0 { margin: 6px 0 0; color: var(--ink-3); }
+.lf-p0:first-child { margin-top: 0; }
+.lf-pl { margin: 8px 0 0; }
+.lf-reach { margin: 12px 0 0; font-size: 13px; color: var(--ink-2); }
+.lf-new { margin: 10px 0 0; font-size: 13px; color: var(--ink-3); }

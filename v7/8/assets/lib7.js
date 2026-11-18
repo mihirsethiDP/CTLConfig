@@ -58,7 +58,8 @@
   /* ════════════════════════════════════════════════════════════════════════════════════════════════════════
      LIBRARY LIST  #/library
      ════════════════════════════════════════════════════════════════════════════════════════════════════════ */
-  const SHOW_LIB = [['all', 'All'], ['used', 'Used at a plant'], ['unused', 'Not used yet'], ['draft', 'With a draft']];
+  const SHOW_LIB = [['all', 'All'], ['used', 'Used at a plant'], ['unused', 'Not used yet'], ['draft', 'With a draft'], ['noflow', 'Missing a flow']];
+  const noFlow = (code) => (W.V7LIBFLOW ? safe(() => W.V7LIBFLOW.missing(code), null) : null) || { tasks: [], issues: [], n: 0 };
   const HAY = new Map();
   function catOf(code) { return (W.CATALOGUE_BY_CODE && W.CATALOGUE_BY_CODE[code]) || arr(W.CATALOGUE).find((c) => c && c.code === code) || null; }
   function hay(t) {
@@ -68,7 +69,7 @@
     }
     return HAY.get(t.code);
   }
-  function libShowOk(t, show) { return show === 'used' ? t.plantCount > 0 : show === 'unused' ? !t.plantCount : show === 'draft' ? !!t.draft : true; }
+  function libShowOk(t, show) { return show === 'used' ? t.plantCount > 0 : show === 'unused' ? !t.plantCount : show === 'draft' ? !!t.draft : show === 'noflow' ? noFlow(t.code).n > 0 : true; }
   function typeCell(t) {
     return `<a href="#/library/${esc(enc(t.code))}">${esc(t.typeName)}</a> ${chip(t.code, { mono: true })}`
       + (t.draft ? ' ' + chip('Draft', { tone: 'warn', title: 'Edited, not published yet' }) : '')
@@ -111,13 +112,14 @@
   function typeCard(t, dev) {
     const proc = t.library === 'process'; const ico = ICONS[proc ? 'process' : t.archetype] || ICONS.fixed;
     const carries = [[t.readings, 'reading'], [t.alerts, 'alert'], [t.tasks, 'task']].filter((x) => +x[0] > 0).map((x) => plural(x[0], x[1]));
-    const d = dev[t.code];
+    const d = dev[t.code]; const nf = noFlow(t.code);
     const href = `#/library/${esc(enc(t.code))}`;
     return `<div class="lc${t.plantCount ? '' : ' is-unused'}"><span class="lc-ico" aria-hidden="true"><svg viewBox="0 0 24 24">${ico}</svg></span>`
       + `<a class="lc-name" href="${href}">${esc(t.typeName)}</a><span class="lc-code">${esc(t.code)}${!proc && KIND[t.archetype] ? ` · ${esc(KIND[t.archetype])}` : ''}</span>`
       + `<span class="lc-chips">${critChip(t.tier)}${t.draft ? chip('Draft', { tone: 'warn', title: 'Edited, not published yet' }) : ''}${t.suggestions ? chip(plural(t.suggestions, 'suggestion'), { tone: 'info' }) : ''}</span>`
       + `<span class="lc-facts"><span>${carries.length ? esc(carries.join(' · ')) : '<span class="muted">Nothing set up yet</span>'}</span>`
-      + (d ? `<a class="lc-dev" href="#/differences?type=${esc(enc(t.code))}" title="See the values plants changed away from this type">${esc(plural(d.n, 'value'))} changed at ${esc(plural(d.p.size, 'plant'))}</a>` : '') + '</span>'
+      + (d ? `<a class="lc-dev" href="#/differences?type=${esc(enc(t.code))}" title="See the values plants changed away from this type">${esc(plural(d.n, 'value'))} changed at ${esc(plural(d.p.size, 'plant'))}</a>` : '')
+      + (nf.n ? `<a class="lc-nf" href="${href}/${nf.tasks.length ? 'tasks' : 'issues'}" title="${esc(nf.tasks.concat(nf.issues).slice(0, 8).join('\n'))}">${esc([nf.tasks.length ? plural(nf.tasks.length, 'task') : '', nf.issues.length ? plural(nf.issues.length, 'problem') : ''].filter(Boolean).join(' and '))} without a flow</a>` : '') + '</span>'
       + `<span class="lc-q">${+t.readings ? `<a href="${href}/readings" title="Straight to its readings and their limits">Limits</a>` : ''}${+t.tasks ? `<a href="${href}/tasks" title="Straight to its tasks and how often they come round">Tasks</a>` : ''}${t.draft ? `<a class="lc-q-p" href="${href}" title="See where the draft lands, then publish it">Publish…</a>` : ''}<a class="lc-q-o" href="${href}" aria-label="Open ${esc(t.typeName)}">Open →</a></span></div>`;
   }
   function devByType() { const dev = {}; arr(safe(() => V().overrides({}), [])).filter((o) => o.state !== 'ended' && o.typeCode).forEach((o) => { const d = dev[o.typeCode] || (dev[o.typeCode] = { n: 0, p: new Set() }); d.n++; d.p.add(o.plant); }); return dev; }

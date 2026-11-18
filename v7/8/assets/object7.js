@@ -454,12 +454,13 @@
   function issueTypesCard(typeName, types, opts) {
     const items = arr(types).map((t) => {
       const f = t.flowId ? safe(() => V().flowOf(t.flowId), null) : null;
-      const bits = [foundByText(t.foundBy), f ? `starts ${f.name}` : 'no diagnostic yet', plural(t.causes || 0, 'root cause')];
-      return { title: t.name, sub: bits.join(' · '), right: opts && opts.lt ? addedMark(opts.lt, 'issue', t.name) : '', chips: t.homeToConfirm ? [chip('Where it belongs: assumed', { tone: 'muted', title: 'Found by a report or lab test; which equipment it belongs to is still to confirm' })] : [] };
+      const LF = opts && opts.lt && W.V7LIBFLOW ? W.V7LIBFLOW : null;
+      const bits = LF ? [foundByText(t.foundBy), plural(t.causes || 0, 'root cause')] : [foundByText(t.foundBy), f ? `starts ${f.name}` : 'no diagnostic yet', plural(t.causes || 0, 'root cause')];
+      return { title: t.name, sub: LF ? H(`${esc(bits.join(' · '))}<div class="lf-row">${LF.slot('issue', opts.lt.code, t.id)}</div>`) : bits.join(' · '), right: opts && opts.lt ? addedMark(opts.lt, 'issue', t.name) : '', chips: t.homeToConfirm ? [chip('Where it belongs: assumed', { tone: 'muted', title: 'Found by a report or lab test; which equipment it belongs to is still to confirm' })] : [] };
     });
     return card({
       title: `Problems the library knows for ${typeName}`,
-      sub: 'From the workbook: how each one is found, and the diagnostic it starts.',
+      sub: opts && opts.lt ? 'How each one is found, and the diagnostic flow it starts. Choose the flow here.' : 'From the workbook: how each one is found, and the diagnostic it starts.',
       body: items.length ? list(items) : empty(`The library lists no problems for ${typeName} yet. Add one the library already knows for another type, or a new one.`, opts && opts.lt ? addBtn(opts.lt, 'issue', 'Add a problem', true) : ''),
       actions: opts && opts.actions,
     });
@@ -592,7 +593,7 @@
   function typeOverview(lt) {
     const rd = arr(lt.readings); const al = arr(lt.alerts).filter((x) => !x.nextPhase); const sc = arr(lt.schedules); const is = arr(lt.issues); const np = lt.nextPhase || {};
     const unitOf = {}; const kindOf = {}; rd.forEach((r) => { unitOf[r.name] = r.unit; kindOf[r.name] = r.kind; });
-    const K = W.V7KEEP || { open: () => '' }; const LA = W.V7LIBADD || null;
+    const K = W.V7KEEP || { open: () => '' }; const LA = W.V7LIBADD || null; const LF = W.V7LIBFLOW || null;
     const flows = arr(W.CTL && W.CTL.S && W.CTL.S.lib ? W.CTL.S.lib.flows : []);
     const box = (title, n, body, o) => `<section class="ov-box${o && o.later ? ' is-later' : ''}"><header><h3>${esc(title)}</h3>${n != null ? `<span class="ov-n">${esc(n)}</span>` : ''}${o && o.note ? `<span class="ov-sub">${esc(o.note)}</span>` : ''}<span class="ov-hb">${(o && o.btn) || ''}</span></header><div class="ov-b">${body}</div></section>`;
     const go = (label, tab, tip) => `<a class="btn btn-ghost btn-sm" href="${esc(libHref(lt.code, tab))}"${tip ? ` title="${esc(tip)}"` : ''}>${esc(label)}</a>`;
@@ -634,15 +635,15 @@
 
     /* what it does: tasks */
     const taskRow = (x) => {
-      const fl = x.flowId ? flows.find((f) => f.id === x.flowId) : null;
-      return `<li><details class="ov-d" data-keep="ov:t:${esc(lt.code)}:${esc(x.name)}"${K.open(`ov:t:${lt.code}:${x.name}`, false)}><summary><span class="ov-d-t"><b>${esc(x.name)}</b><span class="ov-sub">${esc(cap(x.draftEveryText || x.everyText || ''))} · ${esc(x.workLabel || '')}</span></span>`
+      const fl = LF ? LF.flowOf('task', lt.code, x.name) : x.flowId ? flows.find((f) => f.id === x.flowId) : null;
+      return `<li><details class="ov-d" data-keep="ov:t:${esc(lt.code)}:${esc(x.name)}"${K.open(`ov:t:${lt.code}:${x.name}`, false)}><summary><span class="ov-d-t"><b>${esc(x.name)}</b><span class="ov-sub">${esc(cap(x.draftEveryText || x.everyText || ''))} · ${esc(x.workLabel || '')} · ${fl ? esc(plural(arr(fl.steps).length, 'step')) : '<span class="lf-flag">no flow yet</span>'}</span></span>`
         + `${x.every && x.every.n ? `<span class="ov-acts">${btn('How often', { act: 'obj:cadence', data: { mode: 'type', code: lt.code, schedule: x.name }, small: true, title: 'Change how often it comes round, here' })}</span>` : ''}</summary>`
-        + `<div class="ov-d-b">${fl ? `<span>${plural(arr(fl.steps).length, 'step')}: ${esc(arr(fl.steps).slice(0, 3).map((st) => st.text).join('; '))}${arr(fl.steps).length > 3 ? '; …' : ''}</span><span><a href="#/flows/${esc(enc(fl.id))}">Open the steps</a></span>` : '<span>No steps yet: the person marks it done. <a href="#/flows?kind=task">Set them up in Flows</a></span>'}${added('task', x.name)}</div></details></li>`;
+        + `<div class="ov-d-b">${LF ? `<span>${LF.slot('task', lt.code, x.name)}</span>` : ''}${fl ? `<span>${esc(arr(fl.steps).slice(0, 3).map((st) => st.text).join('; '))}${arr(fl.steps).length > 3 ? '; …' : ''}</span>` : ''}${added('task', x.name)}</div></details></li>`;
     };
     const tasks = box('Tasks', sc.length, (sc.length ? `<ul class="ov-rows">${sc.slice(0, 5).map(taskRow).join('')}</ul>` : '<p class="ov-none">No task yet. Add the work this equipment needs, and how often.</p>')
       + (sc.length > 5 ? `<details class="ov-more" data-keep="ov:more:${esc(lt.code)}"${K.open(`ov:more:${lt.code}`, false)}><summary>${sc.length - 5} more tasks</summary><ul class="ov-rows">${sc.slice(5).map(taskRow).join('')}</ul></details>` : ''),
       { btn: add('task', 'Add a task', 'Work that comes round on a calendar interval', !sc.length) + (sc.length ? go('All tasks', 'tasks', 'Every task with its interval') : '') });
-    const issues = box('Problems it can have', is.length, is.length ? `<div class="ov-pills">${is.map((i) => `<a class="ov-pill" href="${esc(libHref(lt.code, 'issues'))}">${esc(i.name)}</a>`).join('')}</div>` : '<p class="ov-none">No problem yet. Add one the library already knows for another type, or a new one.</p>', { btn: add('issue', 'Add a problem', 'What a person can report on this type of equipment', !is.length) + (is.length ? go('See them', 'issues', 'How each is found and what fixes it') : '') });
+    const issues = box('Problems it can have', is.length, is.length ? (LF ? `<ul class="ov-rows">${is.map((i) => `<li class="ov-prob"><b>${esc(i.name)}</b>${LF.slot('issue', lt.code, i.id)}</li>`).join('')}</ul>` : `<div class="ov-pills">${is.map((i) => `<a class="ov-pill" href="${esc(libHref(lt.code, 'issues'))}">${esc(i.name)}</a>`).join('')}</div>`) : '<p class="ov-none">No problem yet. Add one the library already knows for another type, or a new one.</p>', { btn: add('issue', 'Add a problem', 'What a person can report on this type of equipment', !is.length) + (is.length ? go('See them', 'issues', 'How each is found and what fixes it') : '') });
     return `<div class="ov"><div class="ov-col"><p class="ov-k">What it reads</p>${reads}${later}</div><div class="ov-col"><p class="ov-k">What it does</p>${alerts}${tasks}${issues}</div></div>`;
   }
   function typeReadingsTab(lt) {
@@ -663,12 +664,13 @@
       return {
         task: H(`<b>${esc(x.name)}</b><div class="muted small">${esc(x.workLabel || '')}</div>${W.V7HELP73 ? W.V7HELP73.typeTask(lt, x) : ''}`),
         every: H(evText),
+        flow: W.V7LIBFLOW ? H(W.V7LIBFLOW.slot('task', lt.code, x.name, { bare: true })) : '',
         act: H((x.every && x.every.n ? btn('Change how often', { act: 'obj:cadence', data: { mode: 'type', code: lt.code, schedule: x.name }, small: true, kind: 'ghost' }) : '') + addedMark(lt, 'task', x.name)),
       };
     });
     let out = card({
-      title: plural(rows.length, 'task'), sub: 'They travel with the type to every plant. Routine checks become one task per type at a plant.',
-      body: rows.length ? UI.table({ cols: [{ label: 'Task', key: 'task' }, { label: 'How often', key: 'every' }, { label: '', key: 'act', cls: 'r' }], rows }) : empty('The library has no tasks for this type. Add the work this equipment needs, and how often.', addBtn(lt, 'task', 'Add a task', true)),
+      title: plural(rows.length, 'task'), sub: 'They travel with the type to every plant. Routine checks become one task per type at a plant. The flow is the steps a person works through.',
+      body: rows.length ? UI.table({ cols: [{ label: 'Task', key: 'task' }, { label: 'How often', key: 'every' }].concat(W.V7LIBFLOW ? [{ label: 'Flow', key: 'flow' }] : []).concat([{ label: '', key: 'act', cls: 'r' }]), rows }) : empty('The library has no tasks for this type. Add the work this equipment needs, and how often.', addBtn(lt, 'task', 'Add a task', true)),
       actions: [addBtn(lt, 'task', 'Add a task')],
     });
     const gt = arr(lt.generalTasks);

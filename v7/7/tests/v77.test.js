@@ -12,7 +12,7 @@ g.localStorage = { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem
 const el = () => ({ classList: { toggle() {}, add() {}, remove() {} }, setAttribute() {}, removeAttribute() {}, addEventListener() {}, appendChild() {}, remove() {}, querySelector: () => null, querySelectorAll: () => [], style: {}, dataset: {}, innerHTML: '' });
 g.document = { querySelector: () => null, querySelectorAll: () => [], createElement: el, body: el(), onkeydown: null };
 g.location = { hash: '#/plants', href: 'http://localhost/prototype.html#/plants' }; g.scrollTo = () => {}; g.Blob = g.Blob || function Blob() {}; if (!g.URL) g.URL = {};
-for (const f of ['data.js', 'layout-digitalpaani.js', 'catalogue.js', 'flows.js', 'rca.js', 'app.js', 'runtime.js', 'structure73.js', 'nodes73.js', 'core7.js', 'calls73.js', 'decisions7.js', 'shadow77.js', 'lang77.js']) vm.runInThisContext(fs.readFileSync(path.join(A, f), 'utf8'), { filename: f });
+for (const f of ['data.js', 'layout-digitalpaani.js', 'catalogue.js', 'flows.js', 'rca.js', 'app.js', 'runtime.js', 'structure73.js', 'nodes73.js', 'core7.js', 'calls73.js', 'decisions7.js', 'shadow77.js', 'lang77.js', 'libflow7.js']) vm.runInThisContext(fs.readFileSync(path.join(A, f), 'utf8'), { filename: f });
 const V = g.V7; const SH = g.V7SHADOW; const LG = g.V7LANG; V.boot();
 const results = [];
 function check(area, name, ok, detail) { results.push(!!ok); if (VERBOSE || !ok) console.log(`${ok ? '  ok  ' : '  FAIL'} [${area}] ${name}${detail ? ' — ' + detail : ''}`); }
@@ -94,6 +94,24 @@ check('language', 'English, Hindi, Marathi and Tamil', LG.LANGS.map((l) => l.id)
 });
 check('language', 'a flow is a draft until someone marks it reviewed', LG.flowState('f_lowdo', 'hi') === 'draft' && LG.review('f_lowdo', 'hi') && LG.flowState('f_lowdo', 'hi') === 'reviewed' && LG.flowState('f_cip', 'hi') === 'none' && LG.flowState('f_lowdo', 'mr') === 'draft');
 LG.set('en');
+
+/* which flow a problem or a task uses, chosen on the library type */
+V.reset(); { const LF = g.V7LIBFLOW; const bl = V.libType('BLW'); const is0 = bl.issues[0]; const diag0 = is0.flowId;
+  const o = LF.options('task', 'BLW'); const od = LF.options('issue', 'BLW'); const other = o.rest[0]; const was = LF.flowOf('task', 'BLW', 'Bearing service');
+  check('flow', 'a task says which flow it follows, a problem which diagnostic it starts', !!was && was.id === 'f_blower_pm' && LF.flowOf('issue', 'BLW', is0.id).id === diag0);
+  check('flow', 'the choices are task flows for a task and diagnostic flows for a problem, the type\'s own first', o.near.length > 0 && o.near.every((f) => f.forTypes.includes('Blower')) && o.near.concat(o.rest).every((f) => f.kind !== 'diagnostic' && f.use !== 'fix') && od.near.concat(od.rest).every((f) => f.kind === 'diagnostic'));
+  check('flow', 'a task cannot take a diagnostic flow, nor a problem a task flow', !LF.set('task', 'BLW', 'Bearing service', diag0).ok && !LF.set('issue', 'BLW', is0.id, other.id).ok && LF.flowOf('task', 'BLW', 'Bearing service').id === was.id);
+  const a0 = V.activity({ plant: 'manesar', kind: 'library' }).length; const r = LF.set('task', 'BLW', 'Bearing service', other.id);
+  check('flow', 'choosing a flow for a task changes the type, and the plants that followed follow', r.ok && r.changed && r.plants.includes('manesar') && V.libType('BLW').schedules.find((x) => x.name === 'Bearing service').flowId === other.id && V.tasks('manesar').filter((t) => t.name === 'Bearing service').every((t) => t.flowId === other.id) && V.tasks('manesar').some((t) => t.name === 'Bearing service'));
+  check('flow', 'each plant it reached has a note in its Activity', V.activity({ plant: 'manesar', kind: 'library' }).length === a0 + 1 && /Bearing service.*now follows the flow/.test(V.activity({ plant: 'manesar', kind: 'library', limit: 1 })[0].text));
+  check('flow', 'choosing the same flow again changes nothing', LF.set('task', 'BLW', 'Bearing service', other.id).changed === false);
+  check('flow', 'a task that came with its steps cannot be left with none', (() => { const x = V.libType('BLW').schedules.find((y) => y.generalTaskId); return !!x && !LF.set('task', 'BLW', x.name, null).ok; })());
+  const m0 = LF.missing('BLW').n; const ri = LF.set('issue', 'BLW', is0.id, null);
+  check('flow', 'a problem can be left without a diagnostic, and the type then says what is missing', ri.ok && V.libType('BLW').issues[0].flowId == null && LF.missing('BLW').n === m0 + 1 && LF.missing('BLW').issues[0] === is0.name);
+  check('flow', 'a problem takes another diagnostic', LF.set('issue', 'BLW', is0.id, od.rest[0].id).ok && V.libType('BLW').issues[0].flowId === od.rest[0].id && LF.missing('BLW').n === m0);
+  check('flow', 'some types have a task without a flow, and the count is per type', V.libTypes().filter((t) => LF.missing(t.code).n > 0).length > 0 && LF.missing('BLW').tasks.length === 0);
+  V.reset();
+  check('flow', 'a reset puts every flow back', LF.flowOf('task', 'BLW', 'Bearing service').id === 'f_blower_pm' && V.libType('BLW').issues[0].flowId === diag0 && V.tasks('manesar').filter((t) => t.name === 'Bearing service').every((t) => t.flowId === 'f_blower_pm')); }
 
 const bad = results.filter((x) => !x).length;
 console.log(`v77.test · ${results.length - bad}/${results.length} checks pass · RESULT: ${bad ? 'FAIL' : 'PASS'}`);
