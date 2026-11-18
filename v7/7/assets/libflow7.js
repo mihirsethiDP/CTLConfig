@@ -127,6 +127,9 @@
   const STEP = { instruction: 'Do this', question: 'Ask yes or no', reading: 'Record a reading', wait: 'Wait' };
   const USE = { diagnostic: 'Diagnostic flow', fix: 'Fix flow', pm: 'Preventive maintenance flow', round: 'Routine check flow', calibration: 'Calibration flow', test: 'Manual testing flow' };
   const chip = U.chip; const STACK = [];
+  /* a sheet or a form that sent the person here gets the screen back when they are done: fn(newFlowId | null) */
+  let RET = null; const fire = (id) => { const r = RET; RET = null; if (r) setTimeout(() => { try { r(id || null); } catch (e) { console.error(e); } }, 0); };
+  W.V7LIBFLOW.returning = (fn) => { RET = typeof fn === 'function' ? fn : null; };
   function stepsHtml(f) {
     const st = arr(f.steps); if (!st.length) return '<p class="lf-p0">Nothing is written in it yet, so the person says what they found or marks the work done.</p>';
     const no = (id) => { const i = st.findIndex((x) => String(x.id) === String(id)); return i < 0 ? null : i + 1; };
@@ -145,10 +148,10 @@
     const n = arr(f.steps).length; const diag = isDiag(f); const back = STACK.length ? flowById(STACK[STACK.length - 1]) : null;
     U.openSheet({ title: f.name, sub: `${USE[diag ? 'diagnostic' : f.use] || 'Flow'} · ${plural(n, diag ? 'question' : 'step')}${arr(f.forTypes).length ? ` · for ${arr(f.forTypes).slice(0, 3).join(', ')}${arr(f.forTypes).length > 3 ? ' and more' : ''}` : ''}`,
       body: `<p class="lf-qv-n">${diag ? 'What a person is asked when the issue opens, one question at a time, until an answer lands on a root cause and its fix.' : 'What a person works through in the app, in this order.'} Every plant that follows the library gets it as it is here.</p>${stepsHtml(f)}`,
-      foot: (back ? btn(`Back to ${back.name}`, { act: 'lf:view-back', kind: 'ghost' }) : '') + btn('Close', { act: 'ui:close', data: { what: 'sheet' }, kind: 'ghost' }) + btn('Edit', { act: 'lf:edit', data: { id: f.id }, kind: 'secondary', title: diag ? 'Change its questions, here' : 'Change its steps, here' }) });
+      foot: (back ? btn(`Back to ${back.name}`, { act: 'lf:view-back', kind: 'ghost' }) : '') + btn('Close', { act: 'ui:close', data: { what: 'sheet' }, kind: 'ghost' }) + btn('Edit', { act: 'lf:edit', data: { id: f.id }, kind: 'secondary', title: diag ? 'Change its questions, here' : 'Change its steps, here' }), onClose: () => fire(null) });
   }
   W.V7LIBFLOW.view = view;
-  U.on('lf:view', (el) => { view(el.getAttribute('data-id'), el.getAttribute('data-from')); return false; });
+  U.on('lf:view', (el) => { if (!el.getAttribute('data-from')) RET = null; view(el.getAttribute('data-id'), el.getAttribute('data-from')); return false; });
   U.on('lf:view-back', () => { const id = STACK.pop(); if (id) view(id, true); return false; });
   /* writing and editing a flow without leaving the library: the Flows page's own editor, in the side panel */
   let EDIT = null;          // { id, isNew, attach: { kind, code, key } | null }
@@ -160,7 +163,7 @@
     return { title: EDIT.isNew ? (diag ? 'New diagnostic flow' : 'New flow') : `Edit: ${f.name || 'flow'}`, sub: diag ? 'Questions that lead to a root cause and its fix' : 'The steps a person works through', wide: true,
       body: `<div class="lf-edit">${lead}${FL().editHtml(f)}${probs}</div>`,
       foot: btn('Cancel', { act: 'lf:edit-cancel', kind: 'ghost' }) + btn(EDIT.isNew ? 'Save the flow' : 'Save changes', { act: 'fl:save', kind: 'primary' }),
-      onClose: () => { if (EDIT) { EDIT = null; try { FL().discard(); } catch (e) { /* nothing to discard */ } } } };
+      onClose: () => { if (EDIT) { EDIT = null; try { FL().discard(); } catch (e) { /* nothing to discard */ } } fire(null); } };
   }
   function startEdit(id, attach) {
     const F = FL(); if (!F || !F.edit) { U.toast('The flow editor is not loaded.'); return; }
@@ -175,23 +178,24 @@
   U.on('lf:edit', (el) => { startEdit(el.getAttribute('data-id')); return false; });
   U.on('lf:new', (el) => {
     const kind = el.getAttribute('data-kind'); const code = el.getAttribute('data-code'); const key = el.getAttribute('data-key'); const c = cat(code); if (!c) return false;
-    const item = kind === 'issue' ? issueOf(key) : schedOf(c.type, key); U.closeModal(true);
+    const item = kind === 'issue' ? issueOf(key) : schedOf(c.type, key); U.closeModal(true); RET = null;
     startNew(kind === 'issue' ? 'diagnostic' : 'task', [c.type], item ? { kind, code, key, name: item.name } : null); return false;
   });
-  U.on('lf:edit-cancel', () => { const e = EDIT; EDIT = null; try { FL().discard(); } catch (x) { /* nothing to discard */ } U.closeSheet(true); if (e && !e.isNew && flowById(e.id)) view(e.id); return undefined; });
+  U.on('lf:edit-cancel', () => { const e = EDIT; EDIT = null; try { FL().discard(); } catch (x) { /* nothing to discard */ } U.closeSheet(true); if (e && !e.isNew && flowById(e.id)) view(e.id, true); else fire(null); return undefined; });
   if (U.afterRender) U.afterRender(() => {
     if (!EDIT) return; const d = FL() && FL()._draft();
     if (d && d.id === EDIT.id) { if (U.sheetEl()) U.refreshSheet(editParts()); else U.openSheet(editParts()); return; }
     const e = EDIT; EDIT = null; const f = flowById(e.id);           /* the draft is gone: saved, or dropped elsewhere */
-    if (!f || !f.name || f.status !== 'published') { U.closeSheet(true); return; }
+    if (!f || !f.name || f.status !== 'published') { U.closeSheet(true); fire(null); return; }
+    if (RET && e.isNew) { U.closeSheet(true); U.toast(`Saved ${f.name}. It is chosen here.`); fire(f.id); return; }
     if (e.attach) { const r = set(e.attach.kind, e.attach.code, e.attach.key, f.id); if (r.ok) U.toast(`Saved, and chosen for “${e.attach.name}”.`); else U.toast(r.error); }
-    view(f.id); if (e.attach) U.render();
+    view(f.id, true); if (e.attach) U.render();
   });
   /* any link to one flow, clicked while in the library, opens here instead of leaving for the Flows page */
   document.addEventListener('click', (ev) => {
     if (ev.defaultPrevented || ev.button || !/^#\/library(\/|\?|$)/.test(location.hash || '')) return;
     const a = ev.target && ev.target.closest ? ev.target.closest('a[href]') : null; const m = a ? /^#\/flows\/([^/?#]+)$/.exec(a.getAttribute('href') || '') : null; if (!m) return;
-    ev.preventDefault(); ev.stopPropagation(); view(decodeURIComponent(m[1]));
+    ev.preventDefault(); ev.stopPropagation(); RET = null; view(decodeURIComponent(m[1]));
   }, true);
   U.on('lf:open', (el) => { open(el.getAttribute('data-kind'), el.getAttribute('data-code'), el.getAttribute('data-key')); return false; });
   U.on('lf:save', (el) => {

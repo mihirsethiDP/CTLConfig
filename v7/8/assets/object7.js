@@ -1003,6 +1003,12 @@
 
   /* ── sheets: shared bits ──────────────────────────────────────────────────────────────────────────────── */
   let LS = null;           // the open limits sheet
+  /* a flow is read or written in the side panel, then the limits sheet comes back as it was left */
+  function lsReopen(keep) { LS = keep; UI.openSheet({ title: lsTitle(keep), sub: lsSub(keep), body: lsBody(keep), foot: lsFoot(keep), onBind: lsBind, onClose: () => { LS = null; } }); }
+  UI.on('obj:flow-view', (el) => { const LF = W.V7LIBFLOW; if (!LS || !LF) return false; const keep = LS; LF.returning(() => lsReopen(keep)); LF.view(el.getAttribute('data-id')); return false; });
+  UI.on('obj:flow-new', (el) => { const LF = W.V7LIBFLOW; if (!LS || !LF) return false; const keep = LS; const diag = el.getAttribute('data-kind') === 'diag'; const band = el.getAttribute('data-band');
+    LF.returning((id) => { if (id) { if (diag) keep.flowSel = id; else if (band) { keep.taskFlow = keep.taskFlow || {}; keep.taskFlow[band] = id; } } lsReopen(keep); });
+    LF.newFlow(diag ? 'diagnostic' : 'task', keep.typeName ? [keep.typeName] : []); return false; });
   let VS = null;           // the open small value sheet (timing, cadence, tier)
   let MOD = null;          // the open modal's element
   let prevTimer = null;
@@ -1092,15 +1098,18 @@
     return `<select ${attrs}><option value=""${cur ? '' : ' selected'}>${kind === 'diag' ? (near.length ? 'None yet' : `None for ${st.typeName || 'this equipment'} yet`) : 'No steps yet'}</option>${near.length ? `<optgroup label="For ${esc(st.typeName || 'this equipment')}">${near.map(opt).join('')}</optgroup>` : ''}${any.length ? `<optgroup label="For any equipment">${any.map(opt).join('')}</optgroup>` : ''}</select>`;
   }
   const newTab = (href, label) => `<a href="${esc(href)}" target="_blank" rel="noopener">${esc(label)} ↗</a>`;
+  const flowBtn = (act, label, data, title) => `<button type="button" class="lw-flowbtn" data-act="${act}"${Object.keys(data).map((k) => ` data-${k}="${esc(data[k])}"`).join('')} title="${esc(title)}">${esc(label)}</button>`;
+  const inPlace = () => !!(W.V7LIBFLOW && W.V7LIBFLOW.returning);
   function howHtml(flowId) {
     const f = flowId ? libFlows73().find((x) => x.id === flowId) : null;
-    if (!f) return `<span class="lw-does">No questions yet, so the person says what they found.</span> ${newTab('#/flows?kind=diagnostic', 'Set one up in Flows')}`;
+    if (!f) return `<span class="lw-does">No questions yet, so the person says what they found.</span> ${inPlace() ? flowBtn('obj:flow-new', 'Write one here', { kind: 'diag' }, 'Write the questions without leaving this sheet') : newTab('#/flows?kind=diagnostic', 'Set one up in Flows')}`;
     const ids = [...new Set(arr(f.steps).flatMap((s) => Object.values(s.answers || {}).filter((a) => a && a.t === 'cause').map((a) => a.id)))];
     const fixed = ids.filter((id) => { const c = libCauses73().find((x) => x.id === id); return c && c.fix; }).length;
-    return `<span class="lw-does">How it is resolved: ${plural(arr(f.steps).length, 'question')} lead to ${plural(ids.length, 'root cause')}, ${fixed} with a fix flow.</span> ${newTab(`#/flows/${encodeURIComponent(f.id)}`, 'Open or edit')}`;
+    return `<span class="lw-does">How it is resolved: ${plural(arr(f.steps).length, 'question')} lead to ${plural(ids.length, 'root cause')}, ${fixed} with a fix flow.</span> ${inPlace() ? flowBtn('obj:flow-view', 'See or edit it', { id: f.id }, 'Its questions, here') : newTab(`#/flows/${encodeURIComponent(f.id)}`, 'Open or edit')}`;
   }
-  function taskFlowLinks(flowId) {
+  function taskFlowLinks(flowId, band) {
     const f = flowId ? libFlows73().find((x) => x.id === flowId) : null;
+    if (inPlace()) return f ? `<span class="lw-does">${plural(arr(f.steps).length, 'step')}.</span> ${flowBtn('obj:flow-view', 'See or edit it', { id: f.id }, 'Its steps, here')}` : flowBtn('obj:flow-new', 'Write the steps here', { kind: 'task', band: band || '' }, 'Write the steps without leaving this sheet');
     return f ? `<span class="lw-does">${plural(arr(f.steps).length, 'step')}.</span> ${newTab(`#/flows/${encodeURIComponent(f.id)}`, 'Open or edit')}` : newTab('#/flows?kind=task', 'Set one up in Flows');
   }
   function trigAlert(st) { return st.mode === 'instance' ? arr(safe(() => V().alerts(st.key, { sensorId: st.sensorId }), [])).find((x) => x.dir === st.dir) || null : null; }
@@ -1129,7 +1138,7 @@
     if (b === 'emergency') does = `<div class="o-band-d"${on ? '' : ' hidden'}><span class="o-trig-k">Triggers</span><span class="lw-does"><b>An issue</b>, on the first reading; calls everyone and sounds the hooter</span><span class="o-trig-i">${flow}</span></div>`;
     else does = `<div class="o-band-d"${on ? '' : ' hidden'}><span class="o-trig-k">Triggers</span><select data-does="${b}" aria-label="What the ${esc(bandName(b))} range triggers"><option value="issue"${st.does[b] !== 'task' ? ' selected' : ''}>An issue</option><option value="task"${st.does[b] === 'task' ? ' selected' : ''}>A task</option></select>`
       + `<span class="o-trig-i"${st.does[b] === 'task' ? ' hidden' : ''}>${flow}<span class="lw-does">Told: ${told}</span></span>`
-      + `<span class="o-trig-t"${st.does[b] === 'task' ? '' : ' hidden'}><input type="text" data-taskname="${b}" value="${esc(st.taskName[b] || '')}" placeholder="Name the task, e.g. Clean the intake filters" aria-label="The task the ${esc(bandName(b))} range raises"><span class="lw-does">on ${esc(st.eqTag || 'this equipment')}</span>${whereSel}<label class="o-trig-l">Steps ${flowSelect('task', st, `data-tflow="${b}" aria-label="Task flow for ${esc(bandName(b))}"`, (st.taskFlow || {})[b] || '')}</label><span class="o-trig-tl" data-b="${b}">${taskFlowLinks((st.taskFlow || {})[b])}</span></span></div>`;
+      + `<span class="o-trig-t"${st.does[b] === 'task' ? '' : ' hidden'}><input type="text" data-taskname="${b}" value="${esc(st.taskName[b] || '')}" placeholder="Name the task, e.g. Clean the intake filters" aria-label="The task the ${esc(bandName(b))} range raises"><span class="lw-does">on ${esc(st.eqTag || 'this equipment')}</span>${whereSel}<label class="o-trig-l">Steps ${flowSelect('task', st, `data-tflow="${b}" aria-label="Task flow for ${esc(bandName(b))}"`, (st.taskFlow || {})[b] || '')}</label><span class="o-trig-tl" data-b="${b}">${taskFlowLinks((st.taskFlow || {})[b], b)}</span></span></div>`;
     const slot = st.mode === 'instance' || st.mode === 'type' ? `<div class="o-band-e"${on ? ' hidden' : ''}><span class="o-trig-k">Triggers</span><span class="muted">Nothing yet. Switch this range on to choose what it triggers.</span></div>` : '';
     return `<div class="o-band o-band-t" data-row="${b}"><div class="o-band-k"><button type="button" class="o-tog" role="switch" aria-checked="${on}" aria-label="${esc(bandName(b))} line" data-act="obj:ltog" data-band="${b}"><i></i></button>${sev(b)}</div>`
       + does + slot + trigSrc(st, b)
@@ -1394,8 +1403,8 @@
       const tog = q1(row, '.o-tog'); if (tog) tog.setAttribute('aria-checked', String(st.vals[b] !== ''));
       const does = q1(row, '.o-band-d'); if (does) { setHidden(does, st.vals[b] === ''); setHidden(q1(row, '.o-trig-t'), st.does[b] !== 'task'); setHidden(q1(row, '.o-trig-i'), st.does[b] === 'task'); }
       setHidden(q1(row, '.o-band-e'), st.vals[b] !== '');
-      if (st.mode === 'type') { setHtml(q1(row, '.o-trig-tl'), taskFlowLinks((st.taskFlow || {})[b])); const ld = q1(row, '.o-trig-land'); if (ld) { setHtml(ld, landText(st, b)); setHidden(ld, st.vals[b] === ''); } }
-      if (st.mode === 'instance') { const ds = q1(row, 'select[data-dflow]'); if (ds && ds.value !== String(st.flowSel || '')) ds.value = st.flowSel || ''; setHtml(q1(row, '.o-trig-how'), howHtml(st.flowSel)); setHtml(q1(row, '.o-trig-tl'), taskFlowLinks((st.taskFlow || {})[b])); }
+      if (st.mode === 'type') { setHtml(q1(row, '.o-trig-tl'), taskFlowLinks((st.taskFlow || {})[b], b)); const ld = q1(row, '.o-trig-land'); if (ld) { setHtml(ld, landText(st, b)); setHidden(ld, st.vals[b] === ''); } }
+      if (st.mode === 'instance') { const ds = q1(row, 'select[data-dflow]'); if (ds && ds.value !== String(st.flowSel || '')) ds.value = st.flowSel || ''; setHtml(q1(row, '.o-trig-how'), howHtml(st.flowSel)); setHtml(q1(row, '.o-trig-tl'), taskFlowLinks((st.taskFlow || {})[b], b)); }
       const back = q1(row, '.o-back'); if (back) { setHidden(back, !v.view[b].back); if (st.mode === 'instance') back.textContent = baseIsForm(st, b) ? 'Back to the Visualization value' : 'Back to the library value'; }
     });
     { const tr = q1(el, '.o-try'); if (tr) { const any = BANDS.some((b) => st.vals[b] !== '') || (st.other && BANDS.some((b) => num(st.other.bands[b]) != null)); setHidden(tr, !any); setHtml(q1(tr, '.o-try-r'), any ? tryText(st) : ''); }

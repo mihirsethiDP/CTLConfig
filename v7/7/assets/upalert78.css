@@ -54,3 +54,4 @@
 .ua-solo .ov-sub, .ua-solo .ov-none { color: var(--ink-3); font-size: 13px; }
 .ua-ed ~ .ua-add + *, .la-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0 14px; }
 .la-n { margin-top: 12px; padding: 10px 12px; background: var(--surface-2); border-radius: 6px; font-size: 13px; color: var(--ink-2); }
+.ua-newflow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 4px 0 0; font-size: 13px; color: var(--ink-3); }
