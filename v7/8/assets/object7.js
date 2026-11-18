@@ -644,7 +644,7 @@
       + (sc.length > 5 ? `<details class="ov-more" data-keep="ov:more:${esc(lt.code)}"${K.open(`ov:more:${lt.code}`, false)}><summary>${sc.length - 5} more tasks</summary><ul class="ov-rows">${sc.slice(5).map(taskRow).join('')}</ul></details>` : ''),
       { btn: add('task', 'Add a task', 'Work that comes round on a calendar interval', !sc.length) + (sc.length ? go('All tasks', 'tasks', 'Every task with its interval') : '') });
     const issues = box('Problems it can have', is.length, is.length ? (LF ? `<ul class="ov-rows">${is.map((i) => `<li class="ov-prob"><b>${esc(i.name)}</b>${LF.slot('issue', lt.code, i.id)}</li>`).join('')}</ul>` : `<div class="ov-pills">${is.map((i) => `<a class="ov-pill" href="${esc(libHref(lt.code, 'issues'))}">${esc(i.name)}</a>`).join('')}</div>`) : '<p class="ov-none">No problem yet. Add one the library already knows for another type, or a new one.</p>', { btn: add('issue', 'Add a problem', 'What a person can report on this type of equipment', !is.length) + (is.length ? go('See them', 'issues', 'How each is found and what fixes it') : '') });
-    return `<div class="ov"><div class="ov-col"><p class="ov-k">What it reads</p>${reads}${later}</div><div class="ov-col"><p class="ov-k">What it does</p>${alerts}${tasks}${issues}</div></div>`;
+    return `<div class="ov"><div class="ov-col"><p class="ov-k">What it reads</p>${reads}${later}</div><div class="ov-col"><p class="ov-k">What it does</p>${alerts}${W.V7UPALERT ? W.V7UPALERT.libBox(lt) : ''}${tasks}${issues}</div></div>`;
   }
   function typeReadingsTab(lt) {
     const models = arr(lt.readings).map((r) => typeReadingModel(lt, r));
@@ -652,6 +652,7 @@
       sub: 'Library values reach every plant that follows them. Edits make a draft; nothing reaches a plant until it is published.',
       actions: [addBtn(lt, 'reading', 'Add a reading'), arr(lt.readings).some((r) => r.kind !== 'meter') ? addBtn(lt, 'alert', 'Add an alert') : ''],
     });
+    if (W.V7UPALERT) out += W.V7UPALERT.libBox(lt);
     const np = lt.nextPhase || {};
     out += nextPhaseBox(arr(np.readings), arr(np.alerts));
     return out;

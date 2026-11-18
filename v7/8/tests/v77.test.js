@@ -12,7 +12,7 @@ g.localStorage = { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem
 const el = () => ({ classList: { toggle() {}, add() {}, remove() {} }, setAttribute() {}, removeAttribute() {}, addEventListener() {}, appendChild() {}, remove() {}, querySelector: () => null, querySelectorAll: () => [], style: {}, dataset: {}, innerHTML: '' });
 g.document = { querySelector: () => null, querySelectorAll: () => [], createElement: el, body: el(), onkeydown: null };
 g.location = { hash: '#/plants', href: 'http://localhost/prototype.html#/plants' }; g.scrollTo = () => {}; g.Blob = g.Blob || function Blob() {}; if (!g.URL) g.URL = {};
-for (const f of ['data.js', 'layout-digitalpaani.js', 'catalogue.js', 'flows.js', 'rca.js', 'app.js', 'runtime.js', 'structure73.js', 'nodes73.js', 'core7.js', 'calls73.js', 'decisions7.js', 'shadow77.js', 'lang77.js', 'libadd78.js', 'libtrig78.js', 'libflow7.js']) vm.runInThisContext(fs.readFileSync(path.join(A, f), 'utf8'), { filename: f });
+for (const f of ['data.js', 'layout-digitalpaani.js', 'catalogue.js', 'flows.js', 'rca.js', 'app.js', 'runtime.js', 'structure73.js', 'nodes73.js', 'core7.js', 'calls73.js', 'decisions7.js', 'shadow77.js', 'lang77.js', 'libadd78.js', 'libtrig78.js', 'libflow7.js', 'upalert78.js']) vm.runInThisContext(fs.readFileSync(path.join(A, f), 'utf8'), { filename: f });
 const V = g.V7; const SH = g.V7SHADOW; const LG = g.V7LANG; V.boot();
 const results = [];
 function check(area, name, ok, detail) { results.push(!!ok); if (VERBOSE || !ok) console.log(`${ok ? '  ok  ' : '  FAIL'} [${area}] ${name}${detail ? ' — ' + detail : ''}`); }
@@ -169,6 +169,30 @@ V.reset(); { const LF = g.V7LIBFLOW; const bl = V.libType('BLW'); const is0 = bl
   check('flow', 'some types have a task without a flow, and the count is per type', V.libTypes().filter((t) => LF.missing(t.code).n > 0).length > 0 && LF.missing('BLW').tasks.length === 0);
   V.reset();
   check('flow', 'a reset puts every flow back', LF.flowOf('task', 'BLW', 'Bearing service').id === 'f_blower_pm' && V.libType('BLW').issues[0].flowId === diag0 && V.tasks('manesar').filter((t) => t.name === 'Bearing service').every((t) => t.flowId === 'f_blower_pm')); }
+
+/* alerts across a unit process: kinds of reading wherever they sit, clubbed, offered at each plant */
+V.reset(); { const UA = g.V7UPALERT; const mo = UA.offers('manesar'); const by = (tag, re) => UA.offers('manesar').find((o) => o.upTag === tag && re.test(o.name));
+  check('process', 'an equipment type takes no alert across readings; a unit process does', !UA.saveAlert('BLW', { name: 'x', when: [{ reading: 'Motor current', dir: 'above', limit: 5 }] }).ok && UA.alerts('activated_sludge').length >= 3 && UA.alerts('BLW').length === 0);
+  const hdr = by('AT-1', /header/);
+  check('process', 'a plant is offered an alert that reads a pipe and the tank together', !!hdr && !hdr.skipped && hdr.onPipe && hdr.conds.length === 2 && hdr.conds[0].found.length === 2 && hdr.conds[0].found.every((x) => x.onPipe) && hdr.conds[1].found.length === 1 && !hdr.conds[1].found[0].onPipe);
+  const ras = by('AT-1', /Return flow/); const eq = by('EQ-1', /Level high/);
+  check('process', 'an alert whose kind of reading nothing in the unit process sends is skipped, and says which', ras.skipped && ras.missing.join() === 'Flow' && eq.skipped && eq.missing.join() === 'Motor current' && !UA.decide('manesar', ras.pid, 'applied').ok);
+  check('process', 'whether it would fire is worked out on the latest readings', by('AT-2', /Low DO/).now.fires === true && by('AT-1', /Low DO/).now.fires === false && by('MGF-1', /choking/).now.fires === true);
+  const a0 = V.activity({ plant: 'manesar' }).length;
+  check('process', 'a person applies it or leaves it out, and can undo', UA.decide('manesar', hdr.pid, 'applied').ok && UA.offer('manesar', hdr.pid).state === 'applied' && UA.decide('manesar', by('AT-1', /Low DO/).pid, 'left').ok && by('AT-1', /Low DO/).state === 'left' && UA.decide('manesar', by('AT-1', /Low DO/).pid, null).ok && by('AT-1', /Low DO/).state === null && V.activity({ plant: 'manesar' }).length === a0 + 3);
+  const ve = UA.offers('vedanta').find((o) => o.upTag === 'EQ-1' && /Level high/.test(o.name)); const amps = ve.conds[1].found;
+  check('process', 'the same kind of reading on several machines is found on each', amps.length === 3 && ve.conds[1].of === 'all');
+  const e1 = UA.edit('vedanta', ve.pid, { match: 'all', band: 'major', hold: 10, when: [{ reading: 'Level', dir: 'above', limit: 80, of: 'any' }, { reading: 'Motor current', dir: 'below', limit: 1, of: 'all', use: amps.filter((x) => !/MX/.test(x.tag)).map((x) => x.id) }, { reading: 'pH', dir: 'above', limit: 9, of: 'any' }] });
+  const ve2 = UA.offer('vedanta', ve.pid);
+  check('process', 'at the plant its limit is changed, its sensors are chosen, and another reading from the unit process is added', e1.ok && ve2.own && ve2.conds.length === 3 && ve2.conds[0].limit === 80 && ve2.conds[1].use.length === 2 && UA.alerts('equalization')[0].when[0].limit === 85 && UA.alerts('equalization')[0].when.length === 2);
+  check('process', 'a reading the unit process does not send cannot be added there, and a limit must fit the reading', !UA.edit('vedanta', ve.pid, { when: [{ reading: 'Flow', dir: 'below', limit: 5 }] }).ok && !UA.edit('vedanta', ve.pid, { when: [{ reading: 'Level', dir: 'above', limit: 400 }] }).ok);
+  check('process', "it can go back to the library's", UA.edit('vedanta', ve.pid, null).ok && !UA.offer('vedanta', ve.pid).own && UA.offer('vedanta', ve.pid).conds.length === 2);
+  const n0 = UA.alerts('activated_sludge').length;
+  check('process', 'a task or a calibration needs its flow, of the right kind, and never at Emergency', !UA.saveAlert('activated_sludge', { name: 'T', when: [{ reading: 'MLSS', dir: 'above', limit: 5000 }], starts: { kind: 'task' } }).ok && !UA.saveAlert('activated_sludge', { name: 'T', when: [{ reading: 'MLSS', dir: 'above', limit: 5000 }], starts: { kind: 'calibration', flowId: 'f_lowdo' } }).ok && !UA.saveAlert('activated_sludge', { name: 'T', band: 'emergency', when: [{ reading: 'MLSS', dir: 'above', limit: 5000 }], starts: { kind: 'task', flowId: 'f_backwash' } }).ok);
+  const sv = UA.saveAlert('activated_sludge', { name: 'High MLSS with the header pressure up', match: 'all', band: 'minor', hold: 20, when: [{ reading: 'MLSS', dir: 'above', limit: 4500 }, { reading: 'Line pressure', dir: 'above', limit: 0.7 }], starts: { kind: 'calibration', flowId: 'f_do_cal' } });
+  check('process', 'the Global Admin clubs several kinds of reading into one alert that leads to one flow, and plants are offered it', sv.ok && UA.alerts('activated_sludge').length === n0 + 1 && UA.offers('manesar').filter((o) => o.alert.id === sv.alert.id).length === 2 && UA.offers('manesar').filter((o) => o.alert.id === sv.alert.id).every((o) => !o.skipped && o.starts.kind === 'calibration'));
+  check('process', 'an alert a plant applied cannot be removed from the library; one nobody took can', !UA.removeAlert('activated_sludge', hdr.alert.id).ok && UA.removeAlert('activated_sludge', sv.alert.id).ok && UA.alerts('activated_sludge').length === n0);
+  V.reset(); check('process', 'a reset puts the library and the plants back', UA.offers('manesar').every((o) => !o.state && !o.own) && UA.alerts('activated_sludge').length === n0); }
 
 const bad = results.filter((x) => !x).length;
 console.log(`v77.test · ${results.length - bad}/${results.length} checks pass · RESULT: ${bad ? 'FAIL' : 'PASS'}`);
