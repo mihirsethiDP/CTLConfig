@@ -118,7 +118,7 @@
       title: `Flow for “${item.name}”`,
       body: U.field({ label: kind === 'issue' ? 'Diagnostic flow it starts' : 'Flow it follows', hint: kind === 'issue' ? 'The questions that lead a person to the root cause.' : 'The steps a person works through.', html: `<select id="lf-sel">${canNone ? '<option value="">None</option>' : ''}${o.near.length ? `<optgroup label="Written for ${esc(c.type)}">${o.near.map(op).join('')}</optgroup>` : ''}<optgroup label="${o.near.length ? 'Other flows' : 'Flows'}">${o.rest.map(op).join('')}</optgroup></select>` })
         + `<div class="lf-prev" id="lf-prev">${preview(kind, cur ? cur.id : (canNone ? '' : (o.near[0] || o.rest[0] || {}).id))}</div>`
-        + `<p class="la-n lf-reach">${reach}</p><p class="lf-new">None of these fits? A new flow is written on the Flows page, and can then be chosen here.</p>`,
+        + `<p class="la-n lf-reach">${reach}</p><p class="lf-new">None of these fits? ${btn(kind === 'issue' ? 'Write a new diagnostic flow' : 'Write a new flow', { act: 'lf:new', data: { kind, code, key }, small: true, kind: 'secondary', title: 'Write it here; once saved it is chosen for this ' + (kind === 'issue' ? 'problem' : 'task') })}</p>`,
       foot: btn('Cancel', { act: 'ui:close', data: { what: 'modal' }, kind: 'ghost' }) + btn('Save', { act: 'lf:save', data: { kind, code, key }, kind: 'primary' }),
     });
     const sel = document.getElementById('lf-sel'); const box = document.getElementById('lf-prev'); if (sel && box) sel.addEventListener('change', () => { box.innerHTML = preview(kind, sel.value); });
@@ -145,11 +145,48 @@
     const n = arr(f.steps).length; const diag = isDiag(f); const back = STACK.length ? flowById(STACK[STACK.length - 1]) : null;
     U.openSheet({ title: f.name, sub: `${USE[diag ? 'diagnostic' : f.use] || 'Flow'} · ${plural(n, diag ? 'question' : 'step')}${arr(f.forTypes).length ? ` · for ${arr(f.forTypes).slice(0, 3).join(', ')}${arr(f.forTypes).length > 3 ? ' and more' : ''}` : ''}`,
       body: `<p class="lf-qv-n">${diag ? 'What a person is asked when the issue opens, one question at a time, until an answer lands on a root cause and its fix.' : 'What a person works through in the app, in this order.'} Every plant that follows the library gets it as it is here.</p>${stepsHtml(f)}`,
-      foot: (back ? btn(`Back to ${back.name}`, { act: 'lf:view-back', kind: 'ghost' }) : '') + btn('Close', { act: 'ui:close', data: { what: 'sheet' }, kind: 'secondary' }) });
+      foot: (back ? btn(`Back to ${back.name}`, { act: 'lf:view-back', kind: 'ghost' }) : '') + btn('Close', { act: 'ui:close', data: { what: 'sheet' }, kind: 'ghost' }) + btn('Edit', { act: 'lf:edit', data: { id: f.id }, kind: 'secondary', title: diag ? 'Change its questions, here' : 'Change its steps, here' }) });
   }
   W.V7LIBFLOW.view = view;
   U.on('lf:view', (el) => { view(el.getAttribute('data-id'), el.getAttribute('data-from')); return false; });
   U.on('lf:view-back', () => { const id = STACK.pop(); if (id) view(id, true); return false; });
+  /* writing and editing a flow without leaving the library: the Flows page's own editor, in the side panel */
+  let EDIT = null;          // { id, isNew, attach: { kind, code, key } | null }
+  const FL = () => W.V7FLOWS || null;
+  function editParts() {
+    const d = FL()._draft(); const f = d.flow; const pr = FL().problems(f); const diag = isDiag(f);
+    const probs = pr.length ? `<div class="lf-todo"><b>${plural(pr.length, 'thing')} to finish:</b><ul>${pr.slice(0, 6).map((x) => `<li>${esc(x)}</li>`).join('')}</ul></div>` : '';
+    const lead = EDIT.attach ? `<p class="lf-qv-n">Once saved it is chosen for “${esc(EDIT.attach.name)}” straight away.</p>` : EDIT.isNew ? '' : '<p class="lf-qv-n">Everything that uses this flow follows it once saved, at every plant.</p>';
+    return { title: EDIT.isNew ? (diag ? 'New diagnostic flow' : 'New flow') : `Edit: ${f.name || 'flow'}`, sub: diag ? 'Questions that lead to a root cause and its fix' : 'The steps a person works through', wide: true,
+      body: `<div class="lf-edit">${lead}${FL().editHtml(f)}${probs}</div>`,
+      foot: btn('Cancel', { act: 'lf:edit-cancel', kind: 'ghost' }) + btn(EDIT.isNew ? 'Save the flow' : 'Save changes', { act: 'fl:save', kind: 'primary' }),
+      onClose: () => { if (EDIT) { EDIT = null; try { FL().discard(); } catch (e) { /* nothing to discard */ } } } };
+  }
+  function startEdit(id, attach) {
+    const F = FL(); if (!F || !F.edit) { U.toast('The flow editor is not loaded.'); return; }
+    if (!F.edit(id)) { U.toast('That flow is not in the library any more.'); return; }
+    EDIT = { id, isNew: false, attach: attach || null }; U.openSheet(editParts());
+  }
+  function startNew(kind, forTypes, attach) {
+    const F = FL(); if (!F || !F.begin) { U.toast('The flow editor is not loaded.'); return; }
+    const id = F.begin(kind, forTypes); EDIT = { id, isNew: true, attach: attach || null }; U.openSheet(editParts());
+  }
+  W.V7LIBFLOW.editFlow = startEdit; W.V7LIBFLOW.newFlow = startNew;
+  U.on('lf:edit', (el) => { startEdit(el.getAttribute('data-id')); return false; });
+  U.on('lf:new', (el) => {
+    const kind = el.getAttribute('data-kind'); const code = el.getAttribute('data-code'); const key = el.getAttribute('data-key'); const c = cat(code); if (!c) return false;
+    const item = kind === 'issue' ? issueOf(key) : schedOf(c.type, key); U.closeModal(true);
+    startNew(kind === 'issue' ? 'diagnostic' : 'task', [c.type], item ? { kind, code, key, name: item.name } : null); return false;
+  });
+  U.on('lf:edit-cancel', () => { const e = EDIT; EDIT = null; try { FL().discard(); } catch (x) { /* nothing to discard */ } U.closeSheet(true); if (e && !e.isNew && flowById(e.id)) view(e.id); return undefined; });
+  if (U.afterRender) U.afterRender(() => {
+    if (!EDIT) return; const d = FL() && FL()._draft();
+    if (d && d.id === EDIT.id) { if (U.sheetEl()) U.refreshSheet(editParts()); else U.openSheet(editParts()); return; }
+    const e = EDIT; EDIT = null; const f = flowById(e.id);           /* the draft is gone: saved, or dropped elsewhere */
+    if (!f || !f.name || f.status !== 'published') { U.closeSheet(true); return; }
+    if (e.attach) { const r = set(e.attach.kind, e.attach.code, e.attach.key, f.id); if (r.ok) U.toast(`Saved, and chosen for “${e.attach.name}”.`); else U.toast(r.error); }
+    view(f.id); if (e.attach) U.render();
+  });
   /* any link to one flow, clicked while in the library, opens here instead of leaving for the Flows page */
   document.addEventListener('click', (ev) => {
     if (ev.defaultPrevented || ev.button || !/^#\/library(\/|\?|$)/.test(location.hash || '')) return;

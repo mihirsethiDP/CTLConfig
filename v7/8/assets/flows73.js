@@ -239,5 +239,13 @@
 
   UI.route('flows', listPage);
   UI.route('flows/:id', flowPage);
-  W.V7FLOWS = { listPage, flowPage, problems, usedBy, _draft: () => DRAFT };
+  /* v7/8: the same editor, started from the library's side panel: no page change */
+  function begin(kind, forTypes) {
+    const diag = kind === 'diagnostic'; const id = `f_new_${Date.now().toString(36)}`;
+    const f = { id, name: '', kind: diag ? 'diagnostic' : 'action', forTypes: arr(forTypes).slice(), forStage: null, use: diag ? 'diagnostic' : kind === 'fix' ? 'fix' : kind === 'calibration' ? 'calibration' : 'round', version: 0, status: 'draft', steps: [] };
+    f.steps.push(blankStep(f)); DRAFT = { id, flow: f, causes: {}, isNew: true }; lib().flows.push(clone({ ...f, steps: [] })); return id;
+  }
+  function edit(id) { const f = flowById(id); if (!f) return false; DRAFT = { id: f.id, flow: clone(f), causes: {}, isNew: false }; return true; }
+  function discard() { if (!DRAFT) return false; const d = DRAFT; DRAFT = null; if (d.isNew) { const i = lib().flows.findIndex((f) => f.id === d.id); if (i >= 0) lib().flows.splice(i, 1); } return true; }
+  W.V7FLOWS = { listPage, flowPage, problems, usedBy, editHtml, begin, edit, discard, _draft: () => DRAFT };
 }());

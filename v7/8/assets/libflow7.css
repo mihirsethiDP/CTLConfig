@@ -29,3 +29,10 @@ button.lf-n:hover, button.fl-fix:hover { text-decoration: underline; text-decora
 button.fl-fix { color: var(--accent-strong); font-size: 13.5px; }
 .lf-qv-n { margin: 0 0 14px; padding: 10px 12px; border-radius: 6px; background: var(--surface-2); color: var(--ink-2); font-size: 13px; }
 .lf-ps { max-height: 220px; overflow: auto; }
+/* the flow editor in the side panel */
+.lf-edit { display: grid; gap: 14px; }
+.lf-edit > .card { margin: 0; }
+.lf-edit .lf-qv-n { margin: 0; }
+.lf-todo { padding: 10px 12px; border-radius: 6px; background: var(--warn-tint); color: var(--warn-ink); font-size: 13px; }
+.lf-todo ul { margin: 6px 0 0; padding-left: 18px; }
+.lf-new { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
