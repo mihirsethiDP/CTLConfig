@@ -1,4 +1,4 @@
-/* v7/8 · libadd78.js — adding to a library type: a reading, an alert on a reading, a task.
+/* v7/7 and v7/8 · libadd78.js — adding to a library type: a reading, an alert on a reading, a task.
    Until now a type could only have its existing values changed. A Global Admin can now give a type what it does not have yet.
    What is added reaches no plant by itself: at each plant with equipment of the type it shows up as a proposal on Alerts & Tasks,
    and a person there accepts it or leaves it out. An alert needs its reading to come from that plant's Visualization.

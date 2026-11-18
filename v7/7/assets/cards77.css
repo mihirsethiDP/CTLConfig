@@ -43,3 +43,8 @@ a.lc-dev:hover { text-decoration: underline; }
   .lc-grid { grid-template-columns: 1fr; }
   .pg-lib .lib-tools .capsule { margin-left: 0; }
 }
+/* the forms that add to a type */
+.la-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; margin: 4px 0 6px; }
+.la-b { display: grid; gap: 6px; justify-items: start; }
+.la-b input, .la-ev input, .la-ev select { width: 100%; min-width: 0; height: 36px; border: 1px solid var(--line-2); border-radius: var(--r-sm); padding: 0 10px; font: inherit; background: var(--surface); color: var(--ink); }
+.la-ev { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 8px; }

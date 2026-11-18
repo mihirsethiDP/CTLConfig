@@ -191,10 +191,11 @@
     if (e.attach) { const r = set(e.attach.kind, e.attach.code, e.attach.key, f.id); if (r.ok) U.toast(`Saved, and chosen for “${e.attach.name}”.`); else U.toast(r.error); }
     view(f.id, true); if (e.attach) U.render();
   });
-  /* any link to one flow, clicked while in the library, opens here instead of leaving for the Flows page */
+  /* any link to one flow opens here instead of leaving for the Flows page: in the library and on a plant's pages alike.
+     Left alone: the Flows pages themselves, Jump to (a person asked to go there), and a link inside another open sheet */
   document.addEventListener('click', (ev) => {
-    if (ev.defaultPrevented || ev.button || !/^#\/library(\/|\?|$)/.test(location.hash || '')) return;
-    const a = ev.target && ev.target.closest ? ev.target.closest('a[href]') : null; const m = a ? /^#\/flows\/([^/?#]+)$/.exec(a.getAttribute('href') || '') : null; if (!m) return;
+    if (ev.defaultPrevented || ev.button || /^#\/flows(\/|\?|$)/.test(location.hash || '')) return;
+    const a = ev.target && ev.target.closest ? ev.target.closest('a[href]') : null; const m = a ? /^#\/flows\/([^/?#]+)$/.exec(a.getAttribute('href') || '') : null; if (!m || a.closest('.qj, .modal-wrap, .tb') || (a.closest('.sheet') && !a.closest('.lf-edit'))) return;
     ev.preventDefault(); ev.stopPropagation(); RET = null; view(decodeURIComponent(m[1]));
   }, true);
   U.on('lf:open', (el) => { open(el.getAttribute('data-kind'), el.getAttribute('data-code'), el.getAttribute('data-key')); return false; });

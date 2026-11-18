@@ -456,12 +456,12 @@
       const f = t.flowId ? safe(() => V().flowOf(t.flowId), null) : null;
       const LF = opts && opts.lt && W.V7LIBFLOW ? W.V7LIBFLOW : null;
       const bits = LF ? [foundByText(t.foundBy), plural(t.causes || 0, 'root cause')] : [foundByText(t.foundBy), f ? `starts ${f.name}` : 'no diagnostic yet', plural(t.causes || 0, 'root cause')];
-      return { title: t.name, sub: LF ? H(`${esc(bits.join(' · '))}<div class="lf-row">${LF.slot('issue', opts.lt.code, t.id)}</div>`) : bits.join(' · '), chips: t.homeToConfirm ? [chip('Where it belongs: assumed', { tone: 'muted', title: 'Found by a report or lab test; which equipment it belongs to is still to confirm' })] : [] };
+      return { title: t.name, sub: LF ? H(`${esc(bits.join(' · '))}<div class="lf-row">${LF.slot('issue', opts.lt.code, t.id)}</div>`) : bits.join(' · '), right: opts && opts.lt ? addedMark(opts.lt, 'issue', t.name) : '', chips: t.homeToConfirm ? [chip('Where it belongs: assumed', { tone: 'muted', title: 'Found by a report or lab test; which equipment it belongs to is still to confirm' })] : [] };
     });
     return card({
       title: `Problems the library knows for ${typeName}`,
       sub: opts && opts.lt ? 'How each one is found, and the diagnostic flow it starts. Choose the flow here.' : 'From the workbook: how each one is found, and the diagnostic it starts.',
-      body: items.length ? list(items) : empty(`The library lists no problems for ${typeName} yet.`),
+      body: items.length ? list(items) : empty(`The library lists no problems for ${typeName} yet.${opts && opts.lt ? ' Add one the library already knows for another type, or a new one.' : ''}`, opts && opts.lt ? addBtn(opts.lt, 'issue', 'Add a problem', true) : ''),
       actions: opts && opts.actions,
     });
   }
@@ -562,7 +562,7 @@
     const counts = { readings: arr(lt.readings).length, issues: arr(lt.issues).length, tasks: arr(lt.schedules).length };
     let body = '';
     if (tab === 'readings') body = typeReadingsTab(lt);
-    else if (tab === 'issues') body = issueTypesCard(lt.typeName, lt.issues, { lt });
+    else if (tab === 'issues') body = issueTypesCard(lt.typeName, lt.issues, { lt, actions: [arr(lt.issues).length ? addBtn(lt, 'issue', 'Add a problem') : ''] });
     else if (tab === 'tasks') body = typeTasksTab(lt);
     else body = typeDetailsTab(lt);
     const used = arr(lt.plants);
@@ -583,10 +583,14 @@
       body, aside, cls: 'pg-obj pg-type',
     });
   }
+  /* the same add buttons on every tab of a type */
+  function addBtn(lt, kind, label, primary) { return W.V7LIBADD ? btn(label, { act: 'la:open', data: { kind, code: lt.code }, small: true, kind: primary ? 'primary' : 'secondary' }) : ''; }
+  function addedMark(lt, kind, name) { return W.V7LIBADD && W.V7LIBADD.isAdded(lt.code, kind, name) ? ` ${chip('Added here', { tone: 'info' })} ${btn('Remove', { act: 'la:remove', data: { code: lt.code, kind, name }, small: true, kind: 'ghost' })}` : ''; }
   function typeReadingsTab(lt) {
     const models = arr(lt.readings).map((r) => typeReadingModel(lt, r));
-    let out = section('Readings and their limits', models.length ? `<div class="o-rds">${models.map(readingCard).join('')}</div>` : empty('The library lists no readings for this type.'), {
+    let out = section('Readings and their limits', models.length ? `<div class="o-rds">${models.map(readingCard).join('')}</div>` : empty('The library lists no readings for this type. Add the readings its equipment sends, then an alert on one.', addBtn(lt, 'reading', 'Add a reading', true)), {
       sub: 'Library values reach every plant that follows them. Edits make a draft; nothing reaches a plant until it is published.',
+      actions: [addBtn(lt, 'reading', 'Add a reading'), arr(lt.readings).some((r) => r.kind !== 'meter') ? addBtn(lt, 'alert', 'Add an alert') : ''],
     });
     if (W.V7UPALERT) out += W.V7UPALERT.libBox(lt);
     const np = lt.nextPhase || {};
@@ -602,12 +606,13 @@
         task: H(`<b>${esc(x.name)}</b><div class="muted small">${esc(x.workLabel || '')}</div>${W.V7HELP73 ? W.V7HELP73.typeTask(lt, x) : ''}`),
         every: H(evText),
         flow: W.V7LIBFLOW ? H(W.V7LIBFLOW.slot('task', lt.code, x.name, { bare: true })) : '',
-        act: x.every && x.every.n ? H(btn('Change how often', { act: 'obj:cadence', data: { mode: 'type', code: lt.code, schedule: x.name }, small: true, kind: 'ghost' })) : '',
+        act: H((x.every && x.every.n ? btn('Change how often', { act: 'obj:cadence', data: { mode: 'type', code: lt.code, schedule: x.name }, small: true, kind: 'ghost' }) : '') + addedMark(lt, 'task', x.name)),
       };
     });
     let out = card({
       title: plural(rows.length, 'task'), sub: 'They travel with the type to every plant. Routine checks become one task per type at a plant. The flow is the steps a person works through.',
-      body: rows.length ? UI.table({ cols: [{ label: 'Task', key: 'task' }, { label: 'How often', key: 'every' }].concat(W.V7LIBFLOW ? [{ label: 'Flow', key: 'flow' }] : []).concat([{ label: '', key: 'act', cls: 'r' }]), rows }) : empty('The library has no tasks for this type.'),
+      body: rows.length ? UI.table({ cols: [{ label: 'Task', key: 'task' }, { label: 'How often', key: 'every' }].concat(W.V7LIBFLOW ? [{ label: 'Flow', key: 'flow' }] : []).concat([{ label: '', key: 'act', cls: 'r' }]), rows }) : empty('The library has no tasks for this type. Add the work this equipment needs, and how often.', addBtn(lt, 'task', 'Add a task', true)),
+      actions: [addBtn(lt, 'task', 'Add a task')],
     });
     const gt = arr(lt.generalTasks);
     if (gt.length) out += card({ title: 'General tasks from the workbook', sub: 'Fix steps link to these, and each plant runs them as tasks.', body: list(gt.map((t) => ({ title: t.name, sub: String(t.frequency || '').split('\n')[0] || '' }))) });

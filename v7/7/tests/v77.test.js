@@ -12,7 +12,7 @@ g.localStorage = { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem
 const el = () => ({ classList: { toggle() {}, add() {}, remove() {} }, setAttribute() {}, removeAttribute() {}, addEventListener() {}, appendChild() {}, remove() {}, querySelector: () => null, querySelectorAll: () => [], style: {}, dataset: {}, innerHTML: '' });
 g.document = { querySelector: () => null, querySelectorAll: () => [], createElement: el, body: el(), onkeydown: null };
 g.location = { hash: '#/plants', href: 'http://localhost/prototype.html#/plants' }; g.scrollTo = () => {}; g.Blob = g.Blob || function Blob() {}; if (!g.URL) g.URL = {};
-for (const f of ['data.js', 'layout-digitalpaani.js', 'catalogue.js', 'flows.js', 'rca.js', 'app.js', 'runtime.js', 'structure73.js', 'nodes73.js', 'core7.js', 'calls73.js', 'decisions7.js', 'shadow77.js', 'lang77.js', 'libflow7.js', 'upalert78.js']) vm.runInThisContext(fs.readFileSync(path.join(A, f), 'utf8'), { filename: f });
+for (const f of ['data.js', 'layout-digitalpaani.js', 'catalogue.js', 'flows.js', 'rca.js', 'app.js', 'runtime.js', 'structure73.js', 'nodes73.js', 'core7.js', 'calls73.js', 'decisions7.js', 'shadow77.js', 'lang77.js', 'libadd78.js', 'libflow7.js', 'upalert78.js']) vm.runInThisContext(fs.readFileSync(path.join(A, f), 'utf8'), { filename: f });
 const V = g.V7; const SH = g.V7SHADOW; const LG = g.V7LANG; V.boot();
 const results = [];
 function check(area, name, ok, detail) { results.push(!!ok); if (VERBOSE || !ok) console.log(`${ok ? '  ok  ' : '  FAIL'} [${area}] ${name}${detail ? ' — ' + detail : ''}`); }
@@ -94,6 +94,24 @@ check('language', 'English, Hindi, Marathi and Tamil', LG.LANGS.map((l) => l.id)
 });
 check('language', 'a flow is a draft until someone marks it reviewed', LG.flowState('f_lowdo', 'hi') === 'draft' && LG.review('f_lowdo', 'hi') && LG.flowState('f_lowdo', 'hi') === 'reviewed' && LG.flowState('f_cip', 'hi') === 'none' && LG.flowState('f_lowdo', 'mr') === 'draft');
 LG.set('en');
+
+/* v7/8: adding to a library type */
+V.reset(); const LA = g.V7LIBADD; const t0 = V.libType('SOFTNER');
+check('add', 'only readings taken on the equipment are offered, and not ones the type has', LA.readingsFor('SOFTNER').some((r) => r.name === 'Level') && !LA.readingsFor('SOFTNER').some((r) => r.name === 'Outlet hardness') && !LA.readingsFor('BLW').some((r) => r.name === 'Motor current'));
+check('add', 'a reading on a pipe is refused', !LA.addReading('SOFTNER', 'Outlet hardness').ok);
+check('add', 'a reading is added to the type', LA.addReading('SOFTNER', 'Level').ok && V.libType('SOFTNER').readings.length === t0.readings.length + 1);
+check('add', 'an alert needs limits in order', !LA.addAlert('SOFTNER', { reading: 'Level', dir: 'below', name: 'Brine level low', limits: { minor: 15, major: 30 } }).ok && !LA.addAlert('SOFTNER', { reading: 'Level', dir: 'below', name: 'Brine level low', limits: {} }).ok);
+check('add', 'an alert is added with its limits and is not next phase', LA.addAlert('SOFTNER', { reading: 'Level', dir: 'below', name: 'Brine level low', limits: { minor: 30, major: 15 }, hold: 5, clear: 10 }).ok && V.libType('SOFTNER').alerts.some((a) => a.name === 'Brine level low' && a.bands.minor === 30 && a.bands.major === 15 && !a.nextPhase));
+check('add', 'a plant with the type sees it as a proposal, not as something already on', [].concat(...V.libraryReview('bawal').map((r) => r.proposals)).some((p) => /Brine level low/.test(p.name) && !p.decided));
+check('add', 'no task more often than once a day', !LA.addTask('SOFTNER', { name: 'Look at it', workType: 'routine', every: { n: 4, unit: 'hour' } }).ok && LA.addTask('SOFTNER', { name: 'Check the brine level', workType: 'pm', every: { n: 1, unit: 'week' } }).ok && V.libType('SOFTNER').schedules.some((x) => x.name === 'Check the brine level'));
+check('add', 'a reading with an alert on it is not removed first', !LA.remove('SOFTNER', 'reading', 'Level').ok && LA.remove('SOFTNER', 'alert', 'Brine level low').ok && LA.remove('SOFTNER', 'reading', 'Level').ok);
+const i0 = V.libType('cass').issues.length; const known = LA.issuesFor('cass');
+check('add', 'a problem the library knows for another type can be given to this one, with its diagnostic and causes', known.length > 0 && LA.addIssue('cass', { existingId: known[0].id }).ok && V.libType('cass').issues.length === i0 + 1 && V.libType('cass').issues.some((i) => i.id === known[0].id) && !LA.addIssue('cass', { existingId: known[0].id }).ok);
+check('add', 'a new problem needs a name, and one found by an alert needs the alert', !LA.addIssue('cass', { name: ' ' }).ok && !LA.addIssue('cass', { name: 'Decanter arm stuck', foundBy: 'sensor', alert: 'No such alert' }).ok && LA.addIssue('cass', { name: 'Decanter arm stuck', foundBy: 'visual' }).ok && V.libType('cass').issues.some((i) => i.name === 'Decanter arm stuck' && i.foundBy.join() === 'visual'));
+check('add', 'both are taken off again, and the known problem stays on its own types', LA.remove('cass', 'issue', 'Decanter arm stuck').ok && LA.remove('cass', 'issue', known[0].name).ok && V.libType('cass').issues.length === i0 && g.ISSUES.some((i) => i.id === known[0].id && i.homeTypes.length > 0 && !i.homeTypes.includes('Cyclic activated sludge system')));
+check('add', 'what shipped with the library cannot be removed here', !LA.remove('BLW', 'alert', 'Motor current high').ok);
+V.reset();
+check('add', 'a reset puts the library back as shipped', V.libType('SOFTNER').readings.length === t0.readings.length && V.libType('SOFTNER').schedules.length === t0.schedules.length);
 
 /* which flow a problem or a task uses, chosen on the library type */
 V.reset(); { const LF = g.V7LIBFLOW; const bl = V.libType('BLW'); const is0 = bl.issues[0]; const diag0 = is0.flowId;
