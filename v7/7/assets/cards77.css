@@ -48,3 +48,5 @@ a.lc-dev:hover { text-decoration: underline; }
 .la-b { display: grid; gap: 6px; justify-items: start; }
 .la-b input, .la-ev input, .la-ev select { width: 100%; min-width: 0; height: 36px; border: 1px solid var(--line-2); border-radius: var(--r-sm); padding: 0 10px; font: inherit; background: var(--surface); color: var(--ink); }
 .la-ev { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 8px; }
+/* where a range's trigger lands, or comes from */
+.o-trig-land { grid-column: 1 / -1; margin: 6px 0 0; font-size: 12.5px; color: var(--ink-3); display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }

@@ -1053,6 +1053,21 @@
     return f ? `<span class="lw-does">${plural(arr(f.steps).length, 'step')}.</span> ${newTab(`#/flows/${encodeURIComponent(f.id)}`, 'Open or edit')}` : newTab('#/flows?kind=task', 'Set one up in Flows');
   }
   function trigAlert(st) { return st.mode === 'instance' ? arr(safe(() => V().alerts(st.key, { sensorId: st.sensorId }), [])).find((x) => x.dir === st.dir) || null : null; }
+  /* v7/8: where this range's trigger comes from. On a type: which plant readings it reaches. At a plant: whether it follows the type. */
+  function trigSrc(st, b) {
+    const LT = W.V7LIBTRIG; if (!LT || b === 'emergency') return '';
+    if (st.mode === 'type') return `<p class="o-trig-land" data-land="${b}"></p>`;
+    const lib = LT.libFor(st.key, st.sensorId, st.dir, b); if (!lib) return '';
+    const src = LT.source(st.key, st.sensorId, st.dir, b); const mine = src === 'own' || (st.does[b] === 'task' ? st.taskName0[b] !== lib.name : true);
+    return `<p class="o-trig-land">${mine ? `${chip("Plant's own", { tone: 'changed' })} The library raises the task “${esc(lib.name)}” here. ${btn('Back to the library', { act: 'obj:ltrigback', data: { plant: st.key, sensor: st.sensorId, dir: st.dir, band: b }, small: true, kind: 'ghost' })}` : `${chipNamed('lib')} The ${esc(st.typeName || 'type')} type sets this. Change it here and this reading keeps its own, listed under Deviations.`}</p>`;
+  }
+  function landText(st, b) {
+    const LT = W.V7LIBTRIG; if (!LT || st.vals[b] === '') return '';
+    const pv = LT.preview(st.code, st.reading, st.dir, b); const n = pv.follow.length; const ps = [...new Set(pv.follow.map((x) => x.plant))];
+    const what = st.does[b] === 'task' ? 'This task' : 'An issue';
+    if (!n && !pv.own.length && !pv.noLine.length) return 'No plant has this reading yet.';
+    return `Once published: ${what.toLowerCase()} at ${n ? `${plural(n, 'reading')} that ${n === 1 ? 'follows' : 'follow'} the library (${esc(ps.join(', '))})` : 'no reading yet'}${pv.own.length ? `; ${pv.own.length} ${pv.own.length === 1 ? 'keeps its' : 'keep their'} own` : ''}${pv.noLine.length ? `; ${pv.noLine.length} ${pv.noLine.length === 1 ? 'has' : 'have'} no ${esc(bandName(b))} line` : ''}.`;
+  }
   function tbRow(st, b) {
     const on = st.vals[b] !== ''; const al = trigAlert(st);
     const flow = st.mode === 'instance' ? `<label class="o-trig-l">Diagnostic flow ${flowSelect('diag', st, `data-dflow="1" aria-label="Diagnostic flow for ${esc(bandName(b))}"`, st.flowSel)}</label><span class="o-trig-how">${howHtml(st.flowSel)}</span>` : '';
@@ -1060,14 +1075,13 @@
     const where = [];   /* v7/3: the task sits on this reading's equipment, like the issue: nothing to choose */
     const whereSel = where.length > 1 ? `<select data-filed="${b}" aria-label="Where the task is filed">${where.map((x) => `<option value="${esc(x.id)}"${String(st.filedAt && st.filedAt[b] != null ? st.filedAt[b] : (where[0] || {}).id) === String(x.id) ? ' selected' : ''}>at ${esc(x.label)}</option>`).join('')}</select>` : '';
     let does;
-    if (st.mode !== 'instance') does = `<div class="o-band-d"${on ? '' : ' hidden'}><span class="lw-does">What it triggers is set at each plant</span></div>`;
-    else if (b === 'emergency') does = `<div class="o-band-d"${on ? '' : ' hidden'}><span class="o-trig-k">Triggers</span><span class="lw-does"><b>An issue</b>, on the first reading; calls everyone and sounds the hooter</span><span class="o-trig-i">${flow}</span></div>`;
+    if (b === 'emergency') does = `<div class="o-band-d"${on ? '' : ' hidden'}><span class="o-trig-k">Triggers</span><span class="lw-does"><b>An issue</b>, on the first reading; calls everyone and sounds the hooter</span><span class="o-trig-i">${flow}</span></div>`;
     else does = `<div class="o-band-d"${on ? '' : ' hidden'}><span class="o-trig-k">Triggers</span><select data-does="${b}" aria-label="What the ${esc(bandName(b))} range triggers"><option value="issue"${st.does[b] !== 'task' ? ' selected' : ''}>An issue</option><option value="task"${st.does[b] === 'task' ? ' selected' : ''}>A task</option></select>`
       + `<span class="o-trig-i"${st.does[b] === 'task' ? ' hidden' : ''}>${flow}<span class="lw-does">Told: ${told}</span></span>`
       + `<span class="o-trig-t"${st.does[b] === 'task' ? '' : ' hidden'}><input type="text" data-taskname="${b}" value="${esc(st.taskName[b] || '')}" placeholder="Name the task, e.g. Clean the intake filters" aria-label="The task the ${esc(bandName(b))} range raises"><span class="lw-does">on ${esc(st.eqTag || 'this equipment')}</span>${whereSel}<label class="o-trig-l">Steps ${flowSelect('task', st, `data-tflow="${b}" aria-label="Task flow for ${esc(bandName(b))}"`, (st.taskFlow || {})[b] || '')}</label><span class="o-trig-tl" data-b="${b}">${taskFlowLinks((st.taskFlow || {})[b], b)}</span></span></div>`;
-    const slot = st.mode === 'instance' ? `<div class="o-band-e"${on ? ' hidden' : ''}><span class="o-trig-k">Triggers</span><span class="muted">Nothing yet. Switch this range on to choose what it triggers.</span></div>` : '';
+    const slot = st.mode === 'instance' || st.mode === 'type' ? `<div class="o-band-e"${on ? ' hidden' : ''}><span class="o-trig-k">Triggers</span><span class="muted">Nothing yet. Switch this range on to choose what it triggers.</span></div>` : '';
     return `<div class="o-band o-band-t" data-row="${b}"><div class="o-band-k"><button type="button" class="o-tog" role="switch" aria-checked="${on}" aria-label="${esc(bandName(b))} line" data-act="obj:ltog" data-band="${b}"><i></i></button>${sev(b)}</div>`
-      + does + slot
+      + does + slot + trigSrc(st, b)
       + `<div class="o-band-m"><span class="o-band-chip"></span><span class="o-band-ref"></span><button type="button" class="o-back" data-act="obj:lback" data-band="${b}" hidden>${esc(st.mode === 'type' ? 'Back to the published value' : 'Back to the library value')}</button></div>`
       + '</div>';
   }
@@ -1133,7 +1147,8 @@
       free: false, vals: {}, err: null, showWhy: false, version: lt.version,
     };
     BANDS.forEach((b) => { const p = st.perBand[b] || {}; st.cur[b] = num(p.value); st.base[b] = num(p.libValue); st.lib[b] = st.base[b]; st.vals[b] = st.cur[b] == null ? '' : String(st.cur[b]); });
-    st.other = otherSide(st); st.does = {}; st.taskName = {}; st.does0 = {}; st.taskName0 = {};
+    st.other = otherSide(st); st.does = {}; st.taskName = {}; st.does0 = {}; st.taskName0 = {}; st.taskFlow = {}; st.taskFlow0 = {};
+    { const LT = W.V7LIBTRIG; const T = LT ? LT.get(code, r.name, dir, { draft: true }) : {}; Object.keys(T).forEach((b) => { st.does[b] = st.does0[b] = 'task'; st.taskName[b] = st.taskName0[b] = T[b].name; st.taskFlow[b] = st.taskFlow0[b] = T[b].flowId || ''; }); }
     return st;
   }
   function lsBands(st) {
@@ -1154,8 +1169,14 @@
     }
     return null;
   }
+  /* v7/8: a range whose trigger the library sets, changed here to something else */
+  function trigDiffers(st, bands) {
+    const LT = W.V7LIBTRIG; if (!LT || st.mode !== 'instance') return false;
+    return BANDS.some((b) => { if (b === 'emergency' || bands[b] == null || Number.isNaN(bands[b])) return false; const lib = LT.libFor(st.key, st.sensorId, st.dir, b); if (!lib) return false;
+      const now2 = st.does[b] === 'task' ? String(st.taskName[b] || '').trim() : ''; const was = st.does0[b] === 'task' ? String(st.taskName0[b] || '').trim() : ''; return now2 !== was && now2 !== lib.name; });
+  }
   function lsNeedsWhy(st, bands) {
-    if (st.mode !== 'instance' || st.free) return false;
+    if (st.mode !== 'instance') return false; if (trigDiffers(st, bands)) return true; if (st.free) return false;
     return BANDS.some((b) => !same(bands[b], st.cur[b]) && !same(bands[b], st.base[b]));
   }
   function baseIsForm(st, b) { return st.form[b] != null && same(st.base[b], st.form[b]) && !same(st.base[b], st.lib[b]); }
@@ -1180,7 +1201,7 @@
     }
     return `<input type="number" step="any" inputmode="decimal" data-band="${b}" value="${esc(st.vals[b])}" placeholder="Not set" aria-label="${esc(label)}">${st.unit ? `<span class="o-unit">${esc(st.unit)}</span>` : ''}`;
   }
-  /* v7/7: Try a value is there only where it changes something: a measured reading at a plant, with at least one line on it */
+  /* v7/8: Try a value is there only where it changes something: a measured reading at a plant, with at least one line on it */
   const tryFits = (st) => st.mode === 'instance' && st.kind !== 'status' && !st.manual;
   function tryText(st) {
     const raw = String(st.tryVal == null ? '' : st.tryVal).trim(); if (raw === '') return '';
@@ -1222,7 +1243,7 @@
       ? note(`Library values for ${st.typeName}. Saving puts them in the draft of version ${st.version + 1}; no plant changes until the draft is published.`, 'quiet')
       : st.free ? note('The library has no limits for this reading, so these are this plant\'s own.', 'quiet') : '';
     if (barMode(st)) return `${sw}${intro}<div class="o-ls-bar">${UI.tbHtml(tbOpts(st))}</div><div class="o-bands o-bands-t">${BANDS.map((b) => tbRow(st, b)).join('')}</div>${tryHtml(st)}${factsHtml(st)}`
-      + (st.mode === 'type' ? '<p class="o-hint">What a line does at a plant, open an issue or raise a task there, is set at each plant.</p>' : '')
+      + (st.mode === 'type' ? '<p class="o-hint">What a range triggers here is what it triggers at every plant reading that follows the library. Like a limit, it goes to the draft and reaches plants when you publish. A plant can still choose its own.</p>' : '')
       + `${st.mode === 'type' ? `<div class="o-safety" hidden>${note('Changing Emergency is a safety change: it needs a reason, and it reaches every plant that follows the library. A plant that changed the value keeps its own.', 'warn')}</div>` : ''}<div class="o-prev" aria-live="polite"></div><p class="field-e o-ls-err" role="alert"></p>${st.mode === 'instance' && !st.free ? whyHtml(st, { fault: !st.manual, scada: true, lib: true }) : ''}`;
     const rows = BANDS.map((b) => `<div class="o-band" data-row="${b}"><div class="o-band-k">${sev(b)}<small>${st.kind === 'status' ? 'fires' : esc(dirWord(st.dir))}</small></div>`
       + `<div class="o-band-v">${lsInput(st, b)}</div>`
@@ -1322,6 +1343,7 @@
       const tog = q1(row, '.o-tog'); if (tog) tog.setAttribute('aria-checked', String(st.vals[b] !== ''));
       const does = q1(row, '.o-band-d'); if (does) { setHidden(does, st.vals[b] === ''); setHidden(q1(row, '.o-trig-t'), st.does[b] !== 'task'); setHidden(q1(row, '.o-trig-i'), st.does[b] === 'task'); }
       setHidden(q1(row, '.o-band-e'), st.vals[b] !== '');
+      if (st.mode === 'type') { setHtml(q1(row, '.o-trig-tl'), taskFlowLinks((st.taskFlow || {})[b], b)); const ld = q1(row, '.o-trig-land'); if (ld) { setHtml(ld, landText(st, b)); setHidden(ld, st.vals[b] === ''); } }
       if (st.mode === 'instance') { const ds = q1(row, 'select[data-dflow]'); if (ds && ds.value !== String(st.flowSel || '')) ds.value = st.flowSel || ''; setHtml(q1(row, '.o-trig-how'), howHtml(st.flowSel)); setHtml(q1(row, '.o-trig-tl'), taskFlowLinks((st.taskFlow || {})[b], b)); }
       const back = q1(row, '.o-back'); if (back) { setHidden(back, !v.view[b].back); if (st.mode === 'instance') back.textContent = baseIsForm(st, b) ? 'Back to the Visualization value' : 'Back to the library value'; }
     });
@@ -1356,7 +1378,7 @@
     const el = UI.sheetEl(); if (el) readWhy(el, st);
     const bands = lsBands(st); const err = lsValidate(st, bands);
     if (err) { st.err = err; if (el) lsUpdate(el); return false; }
-    const what = changesText(st, bands); const tk = st.mode === 'instance' ? taskChanges(st, bands) : { removes: [], sets: [], text: '', err: null };
+    const what = changesText(st, bands); const tk = taskChanges(st, bands);
     if (tk.err) { st.err = tk.err; if (el) lsUpdate(el); return false; }
     const flowChanged = st.mode === 'instance' && st.alertId && String(st.flowSel || '') !== String(st.flowSel0 || '');
     const factsChanged = !!(st.facts && st.facts0 && (+st.facts.lo !== +st.facts0.lo || +st.facts.hi !== +st.facts0.hi || +st.facts.every !== +st.facts0.every));
@@ -1366,15 +1388,21 @@
     }
     if (!what && !tk.text && !flowChanged && !factsChanged) { UI.closeSheet(); UI.toast('Nothing changed.'); return false; }
     if (st.mode === 'type') {
-      const r = safe(() => V().editLib(st.code, { reading: st.reading, dir: st.dir, bands }), null);
-      if (!r || !r.ok) { st.err = (r && r.error) || 'That did not save.'; if (el) lsUpdate(el); return false; }
+      if (what) { const r = safe(() => V().editLib(st.code, { reading: st.reading, dir: st.dir, bands }), null);
+        if (!r || !r.ok) { st.err = (r && r.error) || 'That did not save.'; if (el) lsUpdate(el); return false; } }
+      let bad = null;
+      tk.removes.forEach((b) => { const x = safe(() => V().editLib(st.code, { trigger: { reading: st.reading, dir: st.dir, band: b, name: null } }), null); if (!x || !x.ok) bad = bad || (x && x.error) || 'That did not save.'; });
+      tk.sets.forEach((b) => { const x = safe(() => V().editLib(st.code, { trigger: { reading: st.reading, dir: st.dir, band: b, name: String(st.taskName[b]).trim(), flowId: (st.taskFlow || {})[b] || null } }), null); if (!x || !x.ok) bad = bad || (x && x.error) || 'That did not save.'; });
+      if (bad) { st.err = bad; if (el) lsUpdate(el); return false; }
       UI.closeSheet(); LS = null;
-      UI.toast(`Saved to the draft of ${st.typeName}: ${st.reading} ${dirWord(st.dir)}, ${what}. Check Where it lands, then publish.`);
+      const said = [what ? `${st.reading} ${dirWord(st.dir)}, ${what}` : '', tk.text ? tk.text.replace(/ on this equipment/g, '').replace(/\.$/, '') : ''].filter(Boolean).join('. ');
+      UI.toast(`Saved to the draft of ${st.typeName}: ${said}. Check Where it lands, then publish.`);
       return undefined;
     }
     const opts = lsNeedsWhy(st, bands) ? { reason: st.reason, note: st.note, until: st.reason === 'fornow' ? st.until : undefined } : {};
+    if (trigDiffers(st, bands) && !what && (!(st.reason === 'tuned' || st.reason === 'fornow') || !String(st.note || '').trim())) { st.err = 'Say why this plant differs from the library: pick a reason and write a short note.'; st.forceWhy = true; if (el) lsUpdate(el); return false; }
     /* v7: a line's task comes off before its line can go; a new task goes on once its line is saved */
-    tk.removes.forEach((b) => safe(() => V().setLineWork(st.key, st.sensorId, st.dir, b, { name: null }), null));
+    tk.removes.forEach((b) => safe(() => V().setLineWork(st.key, st.sensorId, st.dir, b, { name: null, reason: opts.reason, note: opts.note, until: opts.until }), null));
     const r = what ? safe(() => V().setLimits(st.key, st.sensorId, st.dir, bands, opts), null) : { ok: true };
     if (!r || !r.ok) {
       tk.removes.forEach((b) => safe(() => V().setLineWork(st.key, st.sensorId, st.dir, b, { name: st.taskName0[b] }), null));
@@ -1382,7 +1410,7 @@
     }
     let factsText = '';
     if (factsChanged) { const fr = safe(() => V().setSensorFacts(st.key, st.sensorId, { valid: [+st.facts.lo, +st.facts.hi], reportEvery: +st.facts.every }), null); factsText = fr && fr.ok ? (fr.text ? ` Saved with the reading: ${fr.text}.` : '') : ` ${(fr && fr.error) || 'What the sensor sends did not save.'}`; }
-    const bad = tk.sets.map((b) => ({ b, r: safe(() => V().setLineWork(st.key, st.sensorId, st.dir, b, { name: String(st.taskName[b]).trim(), filedAt: (st.filedAt || {})[b] || null, flowId: (st.taskFlow || {})[b] || null }), null) })).find((x) => !x.r || !x.r.ok);
+    const bad = tk.sets.map((b) => ({ b, r: safe(() => V().setLineWork(st.key, st.sensorId, st.dir, b, { name: String(st.taskName[b]).trim(), filedAt: (st.filedAt || {})[b] || null, flowId: (st.taskFlow || {})[b] || null, reason: opts.reason, note: opts.note, until: opts.until }), null) })).find((x) => !x.r || !x.r.ok);
     UI.closeSheet(); LS = null;
     const why = opts.reason === 'tuned' ? ' Tuned for this plant.' : opts.reason === 'fornow' ? ` For now, until ${fmtDay(Date.parse(st.until + 'T06:00:00+05:30'))}.` : '';
     let flowText = '';
@@ -1577,7 +1605,7 @@
     UI.toast(st.mode === 'type' ? `Saved to the draft of ${st.typeName}: ${st.schedule}, ${what}. Check Where it lands, then publish.` : `${st.name}: ${what}.`);
     return undefined;
   }
-  /* v7/7: what the three words mean, said where one is chosen */
+  /* v7/8: what the three words mean, said where one is chosen */
   const TIER_MEANS = { A: 'A failure breaks the discharge consent, is a safety hazard or stops the plant, and nothing takes over.', B: 'A failure makes treatment worse within hours, or a standby or a second train takes over.', C: 'A failure has no effect on the process within a day.' };
   function tierMeans() { return `<dl class="o-tier-m">${['A', 'B', 'C'].map((t) => `<div><dt>${esc(TIER[t])}</dt><dd>${esc(TIER_MEANS[t])}</dd></div>`).join('')}</dl><p class="o-hint">It sets how early a late task gets loud and how far it reaches. Issues use their own severity.</p>`; }
   function openTier(key, eqId) {
