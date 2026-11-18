@@ -22,3 +22,10 @@ a.lc-nf:hover { text-decoration: underline; }
 .lf-pl { margin: 8px 0 0; }
 .lf-reach { margin: 12px 0 0; font-size: 13px; color: var(--ink-2); }
 .lf-new { margin: 10px 0 0; font-size: 13px; color: var(--ink-3); }
+/* the quick view of a flow */
+button.lf-view { border: 0; background: none; padding: 0; font: inherit; cursor: pointer; text-align: left; }
+button.lf-n { font-weight: 600; color: var(--accent-strong); text-decoration: underline; text-decoration-color: var(--line-2); text-underline-offset: 3px; }
+button.lf-n:hover, button.fl-fix:hover { text-decoration: underline; text-decoration-color: currentColor; }
+button.fl-fix { color: var(--accent-strong); font-size: 13.5px; }
+.lf-qv-n { margin: 0 0 14px; padding: 10px 12px; border-radius: 6px; background: var(--surface-2); color: var(--ink-2); font-size: 13px; }
+.lf-ps { max-height: 220px; overflow: auto; }

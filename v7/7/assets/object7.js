@@ -588,6 +588,7 @@
     let out = section('Readings and their limits', models.length ? `<div class="o-rds">${models.map(readingCard).join('')}</div>` : empty('The library lists no readings for this type.'), {
       sub: 'Library values reach every plant that follows them. Edits make a draft; nothing reaches a plant until it is published.',
     });
+    if (W.V7UPALERT) out += W.V7UPALERT.libBox(lt);
     const np = lt.nextPhase || {};
     out += nextPhaseBox(arr(np.readings), arr(np.alerts));
     return out;

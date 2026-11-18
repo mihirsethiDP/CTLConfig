@@ -1,4 +1,4 @@
-/* v7/8 · upalert78.js — alerts across a unit process.
+/* v7/7 and v7/8 · upalert78.js — alerts across a unit process.
    An equipment type stands for one piece of equipment with its own identity, so its alerts read only what sits on it.
    A unit process is a treatment step: a tank, the equipment that serves it and the pipes between them. Its alerts are written
    against kinds of reading, wherever in the step the sensor sits, on equipment or on a pipe. One alert may club several
@@ -142,7 +142,7 @@
   function libBox(lt) {
     if (!lt || !isProcess(lt.code)) return ''; const list = alerts(lt.code);
     const rows = list.map((a) => `<li class="ua-row"><div class="ua-main"><div class="ua-t"><b>${esc(a.name)}</b> ${U.sev(a.band)}${a.when.length > 1 ? ` ${chip(plural(a.when.length, 'reading') + ' together', { tone: 'info', title: 'Several kinds of reading fire one alert' })}` : ''}</div><div class="ua-w">When ${whenHtml(a.when, a.match, null)}, for ${esc(a.hold)} min</div><div class="ua-s">${startsHtml(a.starts)}</div></div><div class="ua-acts">${btn('Edit', { act: 'ua:lib-open', data: { code: lt.code, id: a.id }, small: true })}${btn('Remove', { act: 'ua:lib-remove', data: { code: lt.code, id: a.id }, small: true, kind: 'ghost' })}</div></li>`).join('');
-    return `<section class="ov-box ua-box"><header><h3>Alerts across the unit process</h3><span class="ov-n">${list.length}</span><span class="ov-hb">${btn('Add an alert', { act: 'ua:lib-open', data: { code: lt.code }, small: true, kind: list.length ? 'secondary' : 'primary', title: 'On one kind of reading, or several together' })}</span></header><div class="ov-b"><p class="ov-sub ua-lead">Written against kinds of reading, wherever in the step the sensor sits: on the tank, on the equipment that serves it, or on a pipe. Each plant is offered the ones its sensors can serve.</p>${rows ? `<ul class="ua-rows">${rows}</ul>` : '<p class="ov-none">None yet. Add one on a kind of reading, or on several together.</p>'}</div></section>`;
+    return `<section class="ov-box ua-box${W.V7LIBTRIG ? '' : ' ua-solo'}"><header><h3>Alerts across the unit process</h3><span class="ov-n">${list.length}</span><span class="ov-hb">${btn('Add an alert', { act: 'ua:lib-open', data: { code: lt.code }, small: true, kind: list.length ? 'secondary' : 'primary', title: 'On one kind of reading, or several together' })}</span></header><div class="ov-b"><p class="ov-sub ua-lead">Written against kinds of reading, wherever in the step the sensor sits: on the tank, on the equipment that serves it, or on a pipe. Each plant is offered the ones its sensors can serve.</p>${rows ? `<ul class="ua-rows">${rows}</ul>` : '<p class="ov-none">None yet. Add one on a kind of reading, or on several together.</p>'}</div></section>`;
   }
   W.V7UPALERT.libBox = libBox;
 

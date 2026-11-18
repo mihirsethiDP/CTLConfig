@@ -627,7 +627,7 @@
       const sevs = set.length ? set.map((b) => `<span class="sev sev-${b}">${esc(bandName(b))}${k === 'status' ? '' : ` ${x.dir === 'below' ? '&lt;' : '&gt;'} ${esc(fv(x.bands[b], u, k))}`}</span>`).join('') : '<span class="ov-none">No limits yet</span>';
       return `<li><details class="ov-d" data-keep="ov:a:${esc(lt.code)}:${esc(x.name)}"${K.open(`ov:a:${lt.code}:${x.name}`, false)}><summary><span class="ov-d-t"><b>${esc(x.name)}</b><span class="ov-sev">${sevs}</span></span>${acts}</summary>`
         + `<div class="ov-d-b"><span>Fires when ${esc(x.reading)} ${k === 'status' ? (x.dir === 'below' ? 'is OFF' : 'is ON') : x.dir === 'below' ? 'falls below a limit' : 'rises above a limit'}.</span><span>Must hold for ${esc(x.hold != null ? x.hold : 0)} min, must clear for ${esc(x.clear != null ? x.clear : 0)} min.</span>`
-        + `${trigLines(x)}${fl ? `<span>Its issue starts <a href="#/flows/${esc(enc(fl.id))}">${esc(fl.name)}</a>.</span>` : '<span>No diagnostic flow yet: the person says what they found. <a href="#/flows?kind=diagnostic">Set one up in Flows</a></span>'}${added('alert', x.name)}</div></details></li>`;
+        + `${trigLines(x)}${fl ? `<span>Its issue starts <a href="#/flows/${esc(enc(fl.id))}">${esc(fl.name)}</a>.</span>` : '<span>No diagnostic flow yet: the person says what they found.</span>'}${added('alert', x.name)}</div></details></li>`;
     };
     const alerts = box('Alerts', al.length, al.length ? `<ul class="ov-rows">${al.map(alertRow).join('')}</ul>`
       : `<p class="ov-none">${rd.some((r) => r.kind !== 'meter') ? 'No alert yet. Add one on a reading, with the limits that make it fire.' : 'No alert yet. An alert watches a reading, so add a reading first.'}</p>`,

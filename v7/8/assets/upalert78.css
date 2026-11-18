@@ -44,3 +44,13 @@
 .ua-ej { display: flex; justify-content: center; padding: 6px 0; min-height: 10px; }
 .ua-add { margin-top: 10px; }
 @media (max-width: 720px) { .ua-acts { width: 100%; } }
+/* v7/7: the box stands alone on the Readings tab, and the form brings its own two-column rows */
+.ua-solo { margin: 16px 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); }
+.ua-solo > header { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 14px 18px 0; }
+.ua-solo > header h3 { margin: 0; font-size: 15px; font-weight: 600; }
+.ua-solo .ov-n { font: 500 12px var(--mono); color: var(--ink-3); background: var(--surface-3); border-radius: 999px; padding: 1px 8px; }
+.ua-solo .ov-hb { margin-left: auto; }
+.ua-solo .ov-b { padding: 8px 18px 14px; }
+.ua-solo .ov-sub, .ua-solo .ov-none { color: var(--ink-3); font-size: 13px; }
+.ua-ed ~ .ua-add + *, .la-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0 14px; }
+.la-n { margin-top: 12px; padding: 10px 12px; background: var(--surface-2); border-radius: 6px; font-size: 13px; color: var(--ink-2); }

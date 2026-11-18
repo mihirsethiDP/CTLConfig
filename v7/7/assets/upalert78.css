@@ -1,0 +1,56 @@
+/* v7/8 · upalert78.css — alerts across a unit process: the library box, the offer at a plant, the editor */
+.ua-rows { list-style: none; margin: 0; padding: 0; display: grid; }
+.ua-row { display: flex; gap: 10px 16px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; padding: 12px 0; border-top: 1px solid var(--line); }
+.ua-rows > .ua-row:first-child { border-top: 0; padding-top: 4px; }
+.ua-main { flex: 1 1 320px; min-width: 0; display: grid; gap: 5px; }
+.ua-t { display: flex; gap: 6px 8px; align-items: center; flex-wrap: wrap; }
+.ua-t b { font-weight: 600; }
+.ua-w { font-size: 13.5px; color: var(--ink-2); line-height: 1.9; }
+.ua-c { white-space: normal; }
+.ua-c b { font-weight: 600; color: var(--ink); }
+.ua-c.is-miss b { color: var(--warn-ink); text-decoration: underline dashed; text-underline-offset: 3px; }
+.ua-j { display: inline-block; margin: 0 7px; padding: 0 7px; border-radius: 999px; background: var(--surface-3); color: var(--ink-2); font-size: 11.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; line-height: 20px; }
+.ua-tags { display: inline-flex; gap: 4px; flex-wrap: wrap; vertical-align: middle; }
+.ua-tag { font: 500 11.5px var(--mono); padding: 1px 6px; border-radius: 4px; background: var(--accent-tint); color: var(--accent-strong); }
+.ua-tag.is-pipe { background: var(--surface); color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--line-2); border-radius: 999px; }
+.ua-of { font-size: 12px; color: var(--ink-3); }
+.ua-s { font-size: 13px; color: var(--ink-2); }
+.ua-0 { color: var(--warn-ink); }
+.ua-now { margin-left: 8px; font-size: 12px; color: var(--ink-3); white-space: nowrap; }
+.ua-now::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--line-2); margin-right: 5px; }
+.ua-now.is-on { color: var(--bad-ink); font-weight: 600; }
+.ua-now.is-on::before { background: var(--bad); }
+.ua-miss { padding: 8px 10px; border-radius: 6px; background: var(--warn-tint); color: var(--warn-ink); font-size: 13px; }
+.ua-row.is-skip .ua-t b { color: var(--ink-2); }
+.ua-acts { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.ua-lead { margin: 0 0 6px; }
+.ua-card { margin-bottom: 16px; }
+.ua-up { padding: 4px 0 2px; border-top: 1px solid var(--line); }
+.ua-uph { margin: 12px 0 2px; font-size: 13px; color: var(--ink-2); }
+.ua-uph b { font: 600 12.5px var(--mono); color: var(--ink); margin-right: 4px; }
+.ua-upt { margin-left: 6px; font-size: 12.5px; }
+/* the editor */
+.ua-ed { display: grid; gap: 0; }
+.ua-er { padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2); display: grid; gap: 8px; }
+.ua-er1 { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.ua-er select, .ua-er input[type=number], .ua-ej select { height: 36px; border: 1px solid var(--line-2); border-radius: 6px; padding: 0 10px; font: inherit; background: var(--surface); color: var(--ink); min-width: 0; }
+.ua-er1 > select:first-child { flex: 1 1 200px; }
+.ua-lim { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-3); font-size: 13px; }
+.ua-lim input { width: 96px; }
+.ua-use { display: flex; gap: 6px 14px; flex-wrap: wrap; align-items: center; font-size: 13px; color: var(--ink-2); }
+.ua-use label { display: inline-flex; align-items: center; gap: 5px; font-family: var(--mono); font-size: 12.5px; }
+.ua-use.is-miss { color: var(--warn-ink); }
+.ua-pp { font: 400 11px var(--font); color: var(--ink-3); border: 1px solid var(--line-2); border-radius: 999px; padding: 0 6px; }
+.ua-ej { display: flex; justify-content: center; padding: 6px 0; min-height: 10px; }
+.ua-add { margin-top: 10px; }
+@media (max-width: 720px) { .ua-acts { width: 100%; } }
+/* v7/7: the box stands alone on the Readings tab, and the form brings its own two-column rows */
+.ua-solo { margin: 16px 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); }
+.ua-solo > header { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 14px 18px 0; }
+.ua-solo > header h3 { margin: 0; font-size: 15px; font-weight: 600; }
+.ua-solo .ov-n { font: 500 12px var(--mono); color: var(--ink-3); background: var(--surface-3); border-radius: 999px; padding: 1px 8px; }
+.ua-solo .ov-hb { margin-left: auto; }
+.ua-solo .ov-b { padding: 8px 18px 14px; }
+.ua-solo .ov-sub, .ua-solo .ov-none { color: var(--ink-3); font-size: 13px; }
+.ua-ed ~ .ua-add + *, .la-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0 14px; }
+.la-n { margin-top: 12px; padding: 10px 12px; background: var(--surface-2); border-radius: 6px; font-size: 13px; color: var(--ink-2); }

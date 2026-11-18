@@ -98,13 +98,13 @@
   const NONE = { issue: 'No diagnostic flow: the person says what they found', task: 'No flow: the person marks it done' };
   function slot(kind, code, key, o) {
     const f = flowOf(kind, code, key); const data = { kind, code, key };
-    if (f) return `<span class="lf">${o && o.bare ? '' : `<span class="lf-k">${kind === 'issue' ? 'Starts' : 'Follows'}</span>`}<a class="lf-n" href="#/flows/${esc(enc(f.id))}" title="Open the flow">${esc(f.name)}</a><span class="lf-c">${esc(plural(arr(f.steps).length, NOUN[kind]))}</span>${btn('Change', { act: 'lf:open', data, small: true, kind: 'ghost', title: 'Choose another flow' })}</span>`;
+    if (f) return `<span class="lf">${o && o.bare ? '' : `<span class="lf-k">${kind === 'issue' ? 'Starts' : 'Follows'}</span>`}<button type="button" class="lf-n lf-view" data-act="lf:view" data-id="${esc(f.id)}" title="See its ${NOUN[kind]}s here">${esc(f.name)}</button><span class="lf-c">${esc(plural(arr(f.steps).length, NOUN[kind]))}</span>${btn('Change', { act: 'lf:open', data, small: true, kind: 'ghost', title: 'Choose another flow' })}</span>`;
     return `<span class="lf is-none"><span class="lf-0">${esc(NONE[kind])}</span>${btn('Choose a flow', { act: 'lf:open', data, small: true, kind: 'secondary', title: kind === 'issue' ? 'The questions that lead to a root cause' : 'The steps of this task' })}</span>`;
   }
   W.V7LIBFLOW.slot = slot;
   function preview(kind, id) {
     const f = flowById(id); if (!f) return `<p class="lf-p0">${esc(NONE[kind])}.</p>`;
-    const st = arr(f.steps); return `<p class="lf-pk">${esc(plural(st.length, NOUN[kind]))}</p>${st.length ? `<ol class="lf-ps">${st.slice(0, 4).map((s) => `<li>${esc(s.text || '')}</li>`).join('')}</ol>${st.length > 4 ? `<p class="lf-pm">and ${st.length - 4} more</p>` : ''}` : '<p class="lf-p0">Nothing written in it yet.</p>'}<p class="lf-pl"><a href="#/flows/${esc(enc(f.id))}" target="_blank" rel="noopener">Open the flow</a></p>`;
+    const st = arr(f.steps); return `<p class="lf-pk">${esc(plural(st.length, NOUN[kind]))}</p>${st.length ? `<ol class="lf-ps">${st.map((s) => `<li>${esc(s.text || '')}</li>`).join('')}</ol>` : '<p class="lf-p0">Nothing written in it yet.</p>'}`;
   }
   function open(kind, code, key) {
     const c = cat(code); if (!c) return; const item = kind === 'issue' ? issueOf(key) : schedOf(c.type, key); if (!item) return;
@@ -118,11 +118,44 @@
       title: `Flow for “${item.name}”`,
       body: U.field({ label: kind === 'issue' ? 'Diagnostic flow it starts' : 'Flow it follows', hint: kind === 'issue' ? 'The questions that lead a person to the root cause.' : 'The steps a person works through.', html: `<select id="lf-sel">${canNone ? '<option value="">None</option>' : ''}${o.near.length ? `<optgroup label="Written for ${esc(c.type)}">${o.near.map(op).join('')}</optgroup>` : ''}<optgroup label="${o.near.length ? 'Other flows' : 'Flows'}">${o.rest.map(op).join('')}</optgroup></select>` })
         + `<div class="lf-prev" id="lf-prev">${preview(kind, cur ? cur.id : (canNone ? '' : (o.near[0] || o.rest[0] || {}).id))}</div>`
-        + `<p class="la-n lf-reach">${reach}</p><p class="lf-new">None of these fits? <a href="#/flows?kind=${kind === 'issue' ? 'diagnostic' : 'task'}" target="_blank" rel="noopener">Write a new one in Flows</a>, then choose it here.</p>`,
+        + `<p class="la-n lf-reach">${reach}</p><p class="lf-new">None of these fits? A new flow is written on the Flows page, and can then be chosen here.</p>`,
       foot: btn('Cancel', { act: 'ui:close', data: { what: 'modal' }, kind: 'ghost' }) + btn('Save', { act: 'lf:save', data: { kind, code, key }, kind: 'primary' }),
     });
     const sel = document.getElementById('lf-sel'); const box = document.getElementById('lf-prev'); if (sel && box) sel.addEventListener('change', () => { box.innerHTML = preview(kind, sel.value); });
   }
+  /* the quick view: what a plant inherits, read in place. Nothing in the library leaves for the Flows page */
+  const STEP = { instruction: 'Do this', question: 'Ask yes or no', reading: 'Record a reading', wait: 'Wait' };
+  const USE = { diagnostic: 'Diagnostic flow', fix: 'Fix flow', pm: 'Preventive maintenance flow', round: 'Routine check flow', calibration: 'Calibration flow', test: 'Manual testing flow' };
+  const chip = U.chip; const STACK = [];
+  function stepsHtml(f) {
+    const st = arr(f.steps); if (!st.length) return '<p class="lf-p0">Nothing is written in it yet, so the person says what they found or marks the work done.</p>';
+    const no = (id) => { const i = st.findIndex((x) => String(x.id) === String(id)); return i < 0 ? null : i + 1; };
+    if (isDiag(f)) return `<ol class="fl-qs">${st.map((q, i) => `<li class="fl-q"><div class="fl-q-t"><span class="fl-n">${i + 1}</span><span>${esc(q.text || '')}</span></div><div class="fl-as">${Object.entries(q.answers || {}).map(([k, a]) => {
+      let out;
+      if (!a || a.t === 'open') out = '<span class="fl-out fl-open">Ends here: the person says what they found</span>';
+      else if (a.t === 'step') out = no(a.id) ? `<span class="fl-out fl-next">Question ${no(a.id)}</span>` : '<span class="fl-out fl-bad">A question that was removed</span>';
+      else { let c = null; let fx = null; try { c = V().causeOf(a.id); fx = c ? V().fixFlowFor(c.id) : null; } catch (e) { c = null; } out = `<span class="fl-out fl-cause"><b>Root cause</b> ${esc(c ? c.name : 'not found')}</span>${fx ? `<button type="button" class="fl-fix lf-view" data-act="lf:view" data-id="${esc(fx.id)}" data-from="${esc(f.id)}">Fix: ${esc(fx.name)} →</button>` : '<span class="fl-fix muted">No fix flow yet</span>'}`; }
+      return `<div class="fl-a"><span class="fl-ak">${esc(k)}</span><span class="fl-arrow" aria-hidden="true">→</span>${out}</div>`;
+    }).join('')}</div></li>`).join('')}</ol>`;
+    return `<ol class="fl-steps">${st.map((x, i) => `<li class="fl-s"><span class="fl-n">${i + 1}</span><div><div>${esc(x.text || '')}</div><div class="fl-meta">${chip(STEP[x.type] || 'Step', { tone: 'muted' })}${x.photo ? chip(x.photo === 'required' ? 'Photo required' : 'Photo optional', { tone: 'muted' }) : ''}${x.sensorKind ? chip(`Reads ${x.sensorKind}`, { tone: 'muted' }) : ''}${x.link && x.link.kind === 'task' ? chip('Opens a task', { tone: 'info' }) : ''}</div></div></li>`).join('')}</ol>`;
+  }
+  function view(id, from) {
+    const f = flowById(id); if (!f) { U.toast('That flow is not in the library any more.'); return; }
+    if (from === true) { /* going back: the stack is already right */ } else if (from) STACK.push(from); else STACK.length = 0;
+    const n = arr(f.steps).length; const diag = isDiag(f); const back = STACK.length ? flowById(STACK[STACK.length - 1]) : null;
+    U.openSheet({ title: f.name, sub: `${USE[diag ? 'diagnostic' : f.use] || 'Flow'} · ${plural(n, diag ? 'question' : 'step')}${arr(f.forTypes).length ? ` · for ${arr(f.forTypes).slice(0, 3).join(', ')}${arr(f.forTypes).length > 3 ? ' and more' : ''}` : ''}`,
+      body: `<p class="lf-qv-n">${diag ? 'What a person is asked when the issue opens, one question at a time, until an answer lands on a root cause and its fix.' : 'What a person works through in the app, in this order.'} Every plant that follows the library gets it as it is here.</p>${stepsHtml(f)}`,
+      foot: (back ? btn(`Back to ${back.name}`, { act: 'lf:view-back', kind: 'ghost' }) : '') + btn('Close', { act: 'ui:close', data: { what: 'sheet' }, kind: 'secondary' }) });
+  }
+  W.V7LIBFLOW.view = view;
+  U.on('lf:view', (el) => { view(el.getAttribute('data-id'), el.getAttribute('data-from')); return false; });
+  U.on('lf:view-back', () => { const id = STACK.pop(); if (id) view(id, true); return false; });
+  /* any link to one flow, clicked while in the library, opens here instead of leaving for the Flows page */
+  document.addEventListener('click', (ev) => {
+    if (ev.defaultPrevented || ev.button || !/^#\/library(\/|\?|$)/.test(location.hash || '')) return;
+    const a = ev.target && ev.target.closest ? ev.target.closest('a[href]') : null; const m = a ? /^#\/flows\/([^/?#]+)$/.exec(a.getAttribute('href') || '') : null; if (!m) return;
+    ev.preventDefault(); ev.stopPropagation(); view(decodeURIComponent(m[1]));
+  }, true);
   U.on('lf:open', (el) => { open(el.getAttribute('data-kind'), el.getAttribute('data-code'), el.getAttribute('data-key')); return false; });
   U.on('lf:save', (el) => {
     const sel = document.getElementById('lf-sel'); const kind = el.getAttribute('data-kind');
