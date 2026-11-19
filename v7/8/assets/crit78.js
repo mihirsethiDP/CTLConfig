@@ -1,7 +1,8 @@
 /* v7/7 and v7/8 · crit78.js — criticality, and what it sets.
    A piece of equipment shows ONE criticality, and it is worked out:
      the criticality of the unit process it takes part in, lowered by its role in that step
-       the step stops without it: the same · the step runs degraded without it: one lower · a standby takes over: two lower.
+       the step stops without it: the same · the step runs degraded without it, or a standby takes over: one lower.
+     Until a person says otherwise the step is taken to stop without it: a standby is never assumed.
      Equipment in no unit process keeps its type's criticality. A criticality set by hand at the plant wins, and is a deviation.
      An issue has a severity; that is a separate label and is never folded in.
    Criticality sets one thing: when a task or a check that is due and not done is reminded, and who is told next.
@@ -64,15 +65,15 @@
   }
   const upsOfEq = (key, eqId) => ups(key).filter((u) => u.id === eqId || arr(u.members).some((m) => m.eqId === eqId));
   /* the role of a piece of equipment in its step, and the one criticality worked out from it */
-  const ROLES = ['stops', 'degraded', 'standby']; const DROP = { stops: 0, degraded: 1, standby: 2 };
+  const ROLES = ['stops', 'degraded', 'standby']; const DROP = { stops: 0, degraded: 1, standby: 1 };
   const ROLE_LABEL = { stops: 'The step stops without it', degraded: 'The step runs degraded without it', standby: 'A standby takes over' };
   const ROLE_WHY = { stops: 'the step stops without it', degraded: 'the step runs degraded without it', standby: 'a standby takes over' };
   const cgsOf = (key) => { try { return arr(V().structure(key).cgs); } catch (e) { return []; } };
   function roleStore(key) { const P = plantRec(key); if (!P) return {}; if (!P.eqRole || typeof P.eqRole !== 'object') P.eqRole = {}; return P.eqRole; }
   function roleIn(key, eqId, us, cgs) {
     const o = roleStore(key)[eqId]; if (ROLES.includes(o)) return { role: o, own: true, why: 'set here' };
-    const g = cgs.find((c) => arr(c.memberIds).length > 1 && arr(c.memberIds).includes(eqId)); if (g) return { role: 'standby', own: false, why: `it is one of ${arr(g.memberIds).length} in ${g.name}` };
-    return { role: 'stops', own: false, why: us.some((u) => u.id === eqId) ? 'it is the step itself' : 'nothing stands in for it' };
+    const g = cgs.find((c) => arr(c.memberIds).length > 1 && arr(c.memberIds).includes(eqId)); if (g) return { role: 'stops', own: false, group: g.name, why: `it is one of ${arr(g.memberIds).length} in ${g.name}, and nobody has confirmed that one of them stands by` };
+    return { role: 'stops', own: false, why: us.some((u) => u.id === eqId) ? 'it is the step itself' : 'nobody has said that something stands in for it' };
   }
   const role = (key, eqId) => roleIn(key, eqId, upsOfEq(key, eqId), cgsOf(key));
   function setRole(key, eqId, r) {
@@ -150,20 +151,20 @@
   U.on('ct:reset', () => { if (!ED || !ED.key) return false; const r = setPlant(ED.key, ED.tier, null); ED = null; U.closeModal(true); U.toast(r.ok ? 'It follows the library again.' : r.error); return undefined; });
   let UE = null;
   U.on('ct:up-open', (el) => { const key = el.getAttribute('data-plant'); const upId = el.getAttribute('data-up'); const u = ups(key).find((x) => x.id === upId); const t = upTier(key, upId); if (!u || !t) return false; UE = { key, upId };
-    U.modal({ title: `Criticality of ${u.tag}`, body: U.field({ label: 'How much the plant depends on this unit process', hint: `Its library type, ${u.typeName}, is ${LABEL[t.lib]}.`, html: `<select id="ct-up">${TIERS.map((x) => `<option value="${x}"${x === t.tier ? ' selected' : ''}>${LABEL[x]}${x === t.lib ? ' (as the library)' : ''}</option>`).join('')}</select>` }) + '<p class="la-n">The criticality of each piece of equipment in this step is worked out from it: the same when the step stops without the equipment, lower when the step only runs degraded or a standby takes over. A criticality set by hand is left alone.</p>',
+    U.modal({ title: `Criticality of ${u.tag}`, body: U.field({ label: 'How much the plant depends on this unit process', hint: `Its library type, ${u.typeName}, is ${LABEL[t.lib]}.`, html: `<select id="ct-up">${TIERS.map((x) => `<option value="${x}"${x === t.tier ? ' selected' : ''}>${LABEL[x]}${x === t.lib ? ' (as the library)' : ''}</option>`).join('')}</select>` }) + '<p class="la-n">The criticality of each piece of equipment in this step is worked out from it: the same when the step stops without the equipment, one lower when the step only runs degraded or a standby takes over. A criticality set by hand is left alone.</p>',
       foot: btn('Cancel', { act: 'ui:close', data: { what: 'modal' }, kind: 'ghost' }) + btn('Save', { act: 'ct:up-save', kind: 'primary' }) }); return false; });
   U.on('ct:up-save', () => { if (!UE) return false; const e = document.getElementById('ct-up'); const r = setUpTier(UE.key, UE.upId, e ? e.value : null); UE = null; U.closeModal(true); U.toast(r.ok ? 'Saved.' : r.error); return undefined; });
 
   let WE = null;
   U.on('ct:why', (el) => { const key = el.getAttribute('data-plant'); const eqId = el.getAttribute('data-eq'); const d = derived(key, eqId); const e = eqs(key).find((x) => x.id === eqId); if (!d || !e) return false; WE = { key, eqId };
-    const rule = `<ul class="ct-mini"><li><b>${esc(ROLE_LABEL.stops)}</b> the same as the unit process.</li><li><b>${esc(ROLE_LABEL.degraded)}</b> one lower.</li><li><b>${esc(ROLE_LABEL.standby)}</b> two lower.</li></ul>`;
+    const rule = `<ul class="ct-mini"><li><b>${esc(ROLE_LABEL.stops)}</b> the same as the unit process.</li><li><b>${esc(ROLE_LABEL.degraded)}</b> one lower.</li><li><b>${esc(ROLE_LABEL.standby)}</b> one lower.</li></ul>`;
     const hand = btn('Set it by hand instead', { act: 'obj:tier', data: { plant: key, eq: eqId }, kind: 'ghost', title: 'Give this equipment a criticality of its own, with a reason. It is listed under Deviations' });
     if (d.from !== 'worked') { U.modal({ title: `Criticality of ${e.tag}: ${LABEL[d.tier]}`, body: `<p class="la-n">${d.from === 'hand' ? 'This one was set by hand at this plant, so nothing is worked out for it. Open the criticality sheet to change it or to go back.' : `${esc(e.tag)} is in no unit process, so it keeps the criticality of its type, ${esc(e.typeName)}. Place it in a unit process under Structure and its criticality is worked out from that step.`}</p>${rule}`, foot: btn('Close', { act: 'ui:close', data: { what: 'modal' }, kind: 'ghost' }) + btn(d.from === 'hand' ? 'Open the criticality sheet' : 'Set it by hand', { act: 'obj:tier', data: { plant: key, eq: eqId }, kind: 'primary' }) }); return false; }
     const r = role(key, eqId); WE.upId = d.up.id; const ut = upTier(key, d.up.id);
     U.modal({ title: `Criticality of ${e.tag}: ${LABEL[d.tier]}`,
       body: `<p class="la-n">Worked out from two things. Change either and the criticality follows.</p>`
         + U.field({ label: `1. How much the plant depends on ${d.up.tag} (${d.up.typeName})`, hint: `Its library type is ${LABEL[ut.lib]}. This changes every piece of equipment in the step.`, html: `<select id="ct-wup">${TIERS.map((x) => `<option value="${x}"${x === ut.tier ? ' selected' : ''}>${LABEL[x]}${x === ut.lib ? ' (as the library)' : ''}</option>`).join('')}</select>` })
-        + U.field({ label: `2. What happens to the step without ${e.tag}`, hint: r.own ? 'Set here.' : `Assumed, because ${r.why}.`, html: `<select id="ct-wrole">${ROLES.map((x) => `<option value="${x}"${x === r.role ? ' selected' : ''}>${ROLE_LABEL[x]}</option>`).join('')}</select>` })
+        + U.field({ label: `2. What happens to the step without ${e.tag}`, hint: r.own ? 'Set here.' : `Not confirmed yet: ${r.why}. Until someone confirms a standby, the step is taken to stop without it.`, html: `<select id="ct-wrole">${ROLES.map((x) => `<option value="${x}"${x === r.role ? ' selected' : ''}>${ROLE_LABEL[x]}</option>`).join('')}</select>` })
         + rule + `<p class="la-n">Its type, ${esc(e.typeName)}, is ${LABEL[d.typeTier]} in the library. That is used only for equipment that is in no unit process.</p>`,
       foot: hand + btn('Cancel', { act: 'ui:close', data: { what: 'modal' }, kind: 'ghost' }) + btn('Save', { act: 'ct:why-save', kind: 'primary' }) }); return false; });
   U.on('ct:why-save', () => { if (!WE) return false; const g = (id) => { const x = document.getElementById(id); return x ? x.value : null; }; const a = setUpTier(WE.key, WE.upId, g('ct-wup')); const b = a.ok ? setRole(WE.key, WE.eqId, g('ct-wrole')) : a; const d = b.ok ? derived(WE.key, WE.eqId) : null; WE = null; U.closeModal(true); U.toast(b.ok ? `Saved. Its criticality is ${LABEL[d.tier]}.` : b.error); return undefined; });
