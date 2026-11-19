@@ -43,3 +43,5 @@ details.ct-card { margin: 0 0 16px; }
 .ct-one .ct-v { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; min-width: 0; }
 .ct-go { margin-left: auto; }
 @media (max-width: 720px) { .ct-go { margin-left: 0; } }
+/* the criticality chip in a page header wraps on a phone instead of pushing the page wider */
+@media (max-width: 720px) { .ph .chip-btn { max-width: 100%; height: auto; white-space: normal; text-align: left; } .ph .chip-why { white-space: normal; overflow-wrap: anywhere; } }

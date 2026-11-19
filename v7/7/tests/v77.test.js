@@ -284,6 +284,9 @@ V.reset(); { const CR = g.V7CRIT; const k = 'manesar'; const st = V.structure(k)
   check('worked out', 'equipment in no unit process keeps its type\'s criticality', !lone || (CR.derived(k, lone.id).from === 'type' && lone.tier === lone.typeTier));
   check('worked out', 'the timeline card counts equipment by the worked-out value, and a reset puts it back', V.equipment(k).every((e) => T.includes(e.tier)) && (V.reset(), CR.derived(k, b1).tier === d0.tier)); }
 
+/* every action that changes something is behind a permission */
+{ const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'assets', 'persona75.js'), 'utf8'); check('permissions', 'the new save actions need a grant', ['ct:why-save', 'sv:save', 'sv:lib-save', 'cal:save', 'cal:lib-save', 'cal:off', 'cal:lib-off', 'ct:save', 'ct:lib-save', 'ct:up-save', 'ua:decide', 'dy:lib-save'].every((a) => (' ' + src.replace(/[^a-z0-9:-]+/g, ' ') + ' ').includes(' ' + a + ' '))); }
+
 const bad = results.filter((x) => !x).length;
 console.log(`v77.test · ${results.length - bad}/${results.length} checks pass · RESULT: ${bad ? 'FAIL' : 'PASS'}`);
 process.exit(bad ? 1 : 0);

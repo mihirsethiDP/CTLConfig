@@ -96,7 +96,7 @@
   /* every screen reads equipment through these two, so every screen shows the one worked-out criticality */
   (function wrap() {
     const v = V(); if (!v || typeof v.equipment !== 'function' || v.equipment._ct) return; let busy = false;
-    const dress = (key, e, us, cgs) => { if (!e || e._ct) return e; const d = work(key, { ...e, typeTier: e.tier }, us, cgs); return { ...e, typeTier: e.tier, tier: d.tier, tierLabel: e.tierLabel != null ? LABEL[d.tier] : e.tierLabel, tierWhy: d.from === 'worked' ? 'worked out: ' + d.why : null, tierFrom: d.from, _ct: true }; };
+    const dress = (key, e, us, cgs) => { if (!e || e._ct) return e; const d = work(key, { ...e, typeTier: e.tier }, us, cgs); return { ...e, typeTier: e.tier, tier: d.tier, tierLabel: e.tierLabel != null ? LABEL[d.tier] : e.tierLabel, tierWhy: d.from === 'worked' ? `worked out from ${d.up.tag}` : null, tierFrom: d.from, _ct: true }; };
     const e0 = v.equipment; const q0 = v.eq; RAW.equipment = (key) => e0.call(v, key); RAW.eq = (key, id) => (typeof q0 === 'function' ? q0.call(v, key, id) : arr(e0.call(v, key)).find((x) => x.id === id) || null);
     v.equipment = function (key) { const out = e0.apply(this, arguments); if (busy || !Array.isArray(out)) return out; busy = true; try { const us = ups(key); const cgs = cgsOf(key); return out.map((e) => dress(key, e, us, cgs)); } catch (err) { return out; } finally { busy = false; } };
     v.equipment._ct = true;
