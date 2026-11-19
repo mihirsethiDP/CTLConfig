@@ -820,6 +820,7 @@
       + `<nav class="tb-nav" id="tbNav" aria-label="Main">${navHtml(path)}</nav>`
       + `<div class="tb-right">${W.V7LANG ? W.V7LANG.pickerHtml() : ''}${W.V7PERSONA ? W.V7PERSONA.pickerHtml() + '<a class="tb-persona-a" href="#/personas" title="Who uses the configuration, and what each one can change">Compare</a>' : ''}<button type="button" class="tb-btn tb-review" data-act="ui:review" aria-pressed="false" title="Show or hide the notes for reviewers: decisions on each screen, the story, and the version links">Review</button>`
       + `<button type="button" class="tb-btn tb-story" data-act="ui:story" aria-pressed="false" aria-controls="story">Story</button>`
+      + `<button type="button" class="tb-btn tb-reset" data-act="ui:advance" data-min="1440" title="Move the sample clock on by one day. Readings, issues, tasks and the shadow run move with it">Move on 1 day</button><button type="button" class="tb-btn tb-reset" data-act="ui:advance" data-min="10080" title="Move the sample clock on by seven days">Move on 7 days</button>`
       + `<button type="button" class="tb-btn tb-reset" data-act="ui:reset">Reset the story</button></div></header>`;
   }
 
@@ -942,7 +943,7 @@
         + `<p class="ch-go"><a class="ch-link" href="${esc(c.href)}">Take me there →</a>${c.also.map((a) => `<a class="ch-also" href="${esc(a.href)}">${esc(a.label)}</a>`).join('')}`
         + `${c.compare72 ? `<a class="ch-also ch-cmp" href="${esc(c.compare72.href)}" target="${esc(c.compare72.target)}" title="${esc(c.compare72.title)}">${esc(c.compare72.label)} →</a>` : ''}</p>`
         + `<p class="ch-dec"><span class="ch-dec-k">Decisions</span>${c.decisions.map((d) => `<a class="chip chip-dec" href="${esc(d.href)}" title="${esc(d.title)}">${esc(d.label)}</a>`).join('')}</p></div></li>`).join('')}</ol>`
-      + `<div class="story-f"><p>Sample plants run on sample readings, generated the same way every time. Reset the story to start again.</p><button type="button" class="tb-btn" data-act="ui:reset">Reset the story</button></div>`;
+      + `<div class="story-f"><p>Sample plants run on sample readings, generated the same way every time. Reset the story to start again.</p><button type="button" class="tb-btn" data-act="ui:advance" data-min="1440">Move on 1 day</button> <button type="button" class="tb-btn" data-act="ui:advance" data-min="10080">Move on 7 days</button> <button type="button" class="tb-btn" data-act="ui:reset">Reset the story</button></div>`;
   }
   function storyOpen() { return hasDom() && document.body.classList.contains('story-open'); }
   function setStory(open, transient) {
