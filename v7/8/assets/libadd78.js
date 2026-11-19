@@ -54,7 +54,7 @@
     const dir = x.dir === 'below' ? 'below' : 'above'; const st = setOf(c.type, true); const name = String(x.name || '').trim();
     if (!name) return { ok: false, error: 'Give the alert a name.' };
     if (st.alerts.some((y) => y.name === name)) return { ok: false, error: `${c.type} already has an alert called ${name}.` };
-    if (st.alerts.some((y) => y.sensorKind === s.name && y.direction === dir)) return { ok: false, error: `${s.name} already has an alert for when it ${dir === 'below' ? 'falls' : 'rises'}. Change its limits instead.` };
+    if (st.alerts.some((y) => y.sensorKind === s.name && y.direction === dir)) return { ok: false, error: `${s.name} already has limits for when it ${dir === 'below' ? 'falls' : 'rises'}. For a second alert on the same reading, with its own issue, use "${c.library === 'process' ? 'Alerts across the unit process' : 'More alerts on these readings'}" on this page.` };
     const limits = {}; let last = null;
     for (const b of BANDS) {
       const raw = x.limits ? x.limits[b] : null; if (raw == null || raw === '') continue; const v = Number(raw);

@@ -1667,7 +1667,7 @@
   }
   /* v7/8: what the three words mean, said where one is chosen */
   const TIER_MEANS = { A: 'A failure breaks the discharge consent, is a safety hazard or stops the plant, and nothing takes over.', B: 'A failure makes treatment worse within hours, or a standby or a second train takes over.', C: 'A failure has no effect on the process within a day.' };
-  function tierMeans() { return `<dl class="o-tier-m">${['A', 'B', 'C'].map((t) => `<div><dt>${esc(TIER[t])}</dt><dd>${esc(TIER_MEANS[t])}</dd></div>`).join('')}</dl><p class="o-hint">It sets how early a late task gets loud and how far it reaches. Issues use their own severity.</p>`; }
+  function tierMeans() { return `<dl class="o-tier-m">${['A', 'B', 'C'].map((t) => `<div><dt>${esc(TIER[t])}</dt><dd>${esc(TIER_MEANS[t])}</dd></div>`).join('')}</dl><p class="o-hint">It sets when a late task is reminded and who is told next. Issues use their own severity.</p>${W.V7CRIT ? W.V7CRIT.sheetNote() : ''}`; }
   function openTier(key, eqId) {
     const e = eqOf(key, eqId); if (!e) { UI.toast('That equipment could not be found.'); return null; }
     const P = plantOf(key); const ti = e.tierSource || {};

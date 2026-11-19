@@ -12,7 +12,7 @@ g.localStorage = { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem
 const el = () => ({ classList: { toggle() {}, add() {}, remove() {} }, setAttribute() {}, removeAttribute() {}, addEventListener() {}, appendChild() {}, remove() {}, querySelector: () => null, querySelectorAll: () => [], style: {}, dataset: {}, innerHTML: '' });
 g.document = { querySelector: () => null, querySelectorAll: () => [], createElement: el, body: el(), onkeydown: null };
 g.location = { hash: '#/plants', href: 'http://localhost/prototype.html#/plants' }; g.scrollTo = () => {}; g.Blob = g.Blob || function Blob() {}; if (!g.URL) g.URL = {};
-for (const f of ['data.js', 'layout-digitalpaani.js', 'catalogue.js', 'flows.js', 'rca.js', 'app.js', 'runtime.js', 'structure73.js', 'nodes73.js', 'core7.js', 'calls73.js', 'decisions7.js', 'shadow77.js', 'lang77.js', 'libadd78.js', 'libtrig78.js', 'libflow7.js', 'upalert78.js']) vm.runInThisContext(fs.readFileSync(path.join(A, f), 'utf8'), { filename: f });
+for (const f of ['data.js', 'layout-digitalpaani.js', 'catalogue.js', 'flows.js', 'rca.js', 'app.js', 'runtime.js', 'structure73.js', 'nodes73.js', 'core7.js', 'calls73.js', 'decisions7.js', 'shadow77.js', 'lang77.js', 'libadd78.js', 'libtrig78.js', 'libflow7.js', 'upalert78.js', 'crit78.js']) vm.runInThisContext(fs.readFileSync(path.join(A, f), 'utf8'), { filename: f });
 const V = g.V7; const SH = g.V7SHADOW; const LG = g.V7LANG; V.boot();
 const results = [];
 function check(area, name, ok, detail) { results.push(!!ok); if (VERBOSE || !ok) console.log(`${ok ? '  ok  ' : '  FAIL'} [${area}] ${name}${detail ? ' — ' + detail : ''}`); }
@@ -172,7 +172,7 @@ V.reset(); { const LF = g.V7LIBFLOW; const bl = V.libType('BLW'); const is0 = bl
 
 /* alerts across a unit process: kinds of reading wherever they sit, clubbed, offered at each plant */
 V.reset(); { const UA = g.V7UPALERT; const mo = UA.offers('manesar'); const by = (tag, re) => UA.offers('manesar').find((o) => o.upTag === tag && re.test(o.name));
-  check('process', 'an equipment type takes no alert across readings; a unit process does', !UA.saveAlert('BLW', { name: 'x', when: [{ reading: 'Motor current', dir: 'above', limit: 5 }] }).ok && UA.alerts('activated_sludge').length >= 3 && UA.alerts('BLW').length === 0);
+  check('process', 'an equipment type takes no reading from outside itself; a unit process reads across the step', !UA.saveAlert('BLW', { name: 'x', when: [{ reading: 'Dissolved oxygen', dir: 'below', limit: 1 }] }).ok && UA.alerts('activated_sludge').length >= 3 && UA.alerts('BLW').length === 0);
   const hdr = by('AT-1', /header/);
   check('process', 'a plant is offered an alert that reads a pipe and the tank together', !!hdr && !hdr.skipped && hdr.onPipe && hdr.conds.length === 2 && hdr.conds[0].found.length === 2 && hdr.conds[0].found.every((x) => x.onPipe) && hdr.conds[1].found.length === 1 && !hdr.conds[1].found[0].onPipe);
   const ras = by('AT-1', /Return flow/); const eq = by('EQ-1', /Level high/);
@@ -193,6 +193,27 @@ V.reset(); { const UA = g.V7UPALERT; const mo = UA.offers('manesar'); const by =
   check('process', 'the Global Admin clubs several kinds of reading into one alert that leads to one flow, and plants are offered it', sv.ok && UA.alerts('activated_sludge').length === n0 + 1 && UA.offers('manesar').filter((o) => o.alert.id === sv.alert.id).length === 2 && UA.offers('manesar').filter((o) => o.alert.id === sv.alert.id).every((o) => !o.skipped && o.starts.kind === 'calibration'));
   check('process', 'an alert a plant applied cannot be removed from the library; one nobody took can', !UA.removeAlert('activated_sludge', hdr.alert.id).ok && UA.removeAlert('activated_sludge', sv.alert.id).ok && UA.alerts('activated_sludge').length === n0);
   V.reset(); check('process', 'a reset puts the library and the plants back', UA.offers('manesar').every((o) => !o.state && !o.own) && UA.alerts('activated_sludge').length === n0); }
+
+/* two issues on the same reading; criticality timelines; a unit process's own criticality */
+V.reset(); { const UA = g.V7UPALERT; const CR = g.V7CRIT; const LA = g.V7LIBADD;
+  const a1 = UA.saveAlert('BLW', { name: 'Overload', when: [{ reading: 'Motor current', dir: 'above', limit: 5 }], band: 'major', hold: 5, starts: { kind: 'issue' } });
+  const a2 = UA.saveAlert('BLW', { name: 'Bearing drag', when: [{ reading: 'Motor current', dir: 'above', limit: 4 }], band: 'minor', hold: 30, starts: { kind: 'issue' } });
+  check('same reading', 'two alerts on the same reading of an equipment type, each with its own name and severity', a1.ok && a2.ok && UA.alerts('BLW').length === 2 && UA.alerts('BLW').every((a) => a.when[0].reading === 'Motor current'));
+  check('same reading', 'an equipment type reads only what sits on it', !UA.saveAlert('BLW', { name: 'x', when: [{ reading: 'Dissolved oxygen', dir: 'below', limit: 1 }] }).ok);
+  const mo = UA.offers('manesar').filter((o) => o.eq); const one = mo.find((o) => o.upTag === 'BL-1' && o.name === 'Overload');
+  check('same reading', 'each plant is offered both, per piece of equipment, on the sensors of that equipment only', mo.length === 4 && !!one && !one.skipped && one.conds[0].found.length === 1 && !one.onPipe);
+  check('same reading', 'a person applies one and leaves the other; an applied one cannot be removed from the library', UA.decide('manesar', one.pid, 'applied').ok && UA.offer('manesar', one.pid).state === 'applied' && !UA.removeAlert('BLW', a1.alert.id).ok && UA.removeAlert('BLW', a2.alert.id).ok);
+  check('same reading', 'two alerts across a unit process may watch the same kinds of reading', UA.saveAlert('mbbr', { name: 'Low DO, second issue', when: [{ reading: 'Dissolved oxygen', dir: 'below', limit: 1 }], band: 'major', hold: 10, starts: { kind: 'issue' } }).ok && UA.alerts('mbbr').filter((a) => a.when.some((c) => c.reading === 'Dissolved oxygen')).length >= 2);
+  V.reset();
+  check('criticality', 'the library ships one timeline per criticality, the tighter the more critical', ['A', 'B', 'C'].every((t) => CR.lib(t).remind > 0) && CR.lib('A').lead < CR.lib('B').lead && CR.lib('B').lead < CR.lib('C').lead);
+  check('criticality', 'a timeline must be in order and above zero', !CR.setLib('A', { remind: 2, repeat: 2, lead: 1, senior: 8 }).ok && !CR.setLib('A', { remind: 1, repeat: 0, lead: 4, senior: 8 }).ok && !CR.setLib('A', { remind: 1, repeat: 1, lead: 9, senior: 8 }).ok);
+  check('criticality', 'the library changes it once and every plant that follows has it', CR.setLib('A', { remind: 0.5, repeat: 1, lead: 2, senior: 6 }).ok && CR.plant('manesar', 'A').lead === 2 && !CR.plant('manesar', 'A').own && CR.plant('vedanta', 'A').senior === 6);
+  check('criticality', 'a plant keeps its own, the library and the other plants are left alone, and it can go back', CR.setPlant('manesar', 'A', { remind: 1, repeat: 1, lead: 3, senior: 5 }).ok && CR.plant('manesar', 'A').own && CR.plant('manesar', 'A').lead === 3 && CR.lib('A').lead === 2 && !CR.plant('vedanta', 'A').own && CR.setLib('A', { remind: 0.5, repeat: 1, lead: 4, senior: 6 }).ok && CR.plant('manesar', 'A').lead === 3 && CR.setPlant('manesar', 'A', null).ok && CR.plant('manesar', 'A').lead === 4);
+  const u = V.structure('manesar').ups.find((x) => x.members.length || true); const t0 = CR.upTier('manesar', u.id); const other = t0.tier === 'A' ? 'B' : 'A'; const e0 = V.equipment('manesar').map((e) => e.id + e.tier).join();
+  check('criticality', 'a unit process starts on its library type\'s criticality and a plant changes it', !t0.own && t0.tier === t0.lib && CR.setUpTier('manesar', u.id, other).ok && CR.upTier('manesar', u.id).tier === other && CR.upTier('manesar', u.id).own);
+  check('criticality', 'it is its own label: no equipment changes criticality with it', V.equipment('manesar').map((e) => e.id + e.tier).join() === e0);
+  check('criticality', 'a piece of equipment knows the unit processes it takes part in', CR.upsOfEq('manesar', 'at2').length >= 1 && CR.setUpTier('manesar', u.id, null).ok && !CR.upTier('manesar', u.id).own);
+  V.reset(); check('criticality', 'a reset puts all of it back', CR.lib('A').lead === CR.DEF.A.lead && !CR.plant('manesar', 'A').own && UA.alerts('BLW').length === 0); }
 
 const bad = results.filter((x) => !x).length;
 console.log(`v77.test · ${results.length - bad}/${results.length} checks pass · RESULT: ${bad ? 'FAIL' : 'PASS'}`);
