@@ -31,3 +31,5 @@ input.dy-expr { font-family: var(--mono, ui-monospace, SFMono-Regular, Menlo, Co
   .ua-pick select { width: 100%; }
   .ua-pick > span { white-space: normal; }
 }
+.ua-calc { flex: 1 1 100%; font-size: 13px; color: var(--ink-3); overflow-wrap: anywhere; }
+.ua-calc b { color: var(--ink); }

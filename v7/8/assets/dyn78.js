@@ -53,6 +53,7 @@
   function removeDef(code, id) {
     const c = typeOf(code); const list = defs(code); const i = list.findIndex((d) => d.id === id); if (!c || i < 0) return { ok: false, error: 'No such calculated value.' };
     const at = arr(V().plants()).find((p) => offers(p.key).some((o) => o.def.id === id && o.typeId === code && o.state === 'on')); if (at) return { ok: false, error: `${at.name} uses it. Turn it off there first.` };
+    const al = UA() ? UA().alerts(code).find((a) => a.when.some((q) => q.calc === id)) : null; if (al) return { ok: false, error: `The alert "${al.name}" watches it. Change or remove that alert first.` };
     const [d] = list.splice(i, 1); libStore()[code] = list; V().log(null, `${c.type}: removed the calculated value "${d.name}"`, 'library'); if (V().persist) V().persist(); return { ok: true };
   }
   const nameOf = (q, i) => q.label || `${q.reading}${''}`;
@@ -95,7 +96,7 @@
   function libBox(code) {
     const c = typeOf(code); if (!c) return ''; if (isEqType(code) && !ownNames(code).length) return ''; const list = defs(code);
     const rows = list.map((d) => `<li class="ua-row"><div class="ua-main"><div class="ua-t"><b>${esc(d.name)}</b>${d.unit ? ` <span class="dy-u">in ${esc(d.unit)}</span>` : ''}</div><div class="ua-w dy-f">= ${esc(d.expr)}</div><div class="ua-s dy-ins">${usesHtml(d)}</div></div><div class="ua-acts">${btn('Edit', { act: 'dy:lib-open', data: { code, id: d.id }, small: true })}${btn('Remove', { act: 'dy:lib-remove', data: { code, id: d.id }, small: true, kind: 'ghost' })}</div></li>`).join('');
-    return `<section class="ov-box ua-box ua-solo dy-box"><header><h3>Calculated values</h3><span class="ov-n">${list.length}</span><span class="ov-hb">${btn('Add a calculated value', { act: 'dy:lib-open', data: { code }, small: true, kind: 'secondary', title: 'A number worked out on the fly from readings' })}</span></header><div class="ov-b"><p class="ov-sub ua-lead">Optional. A number worked out on the fly from readings, such as a difference or a share. It opens no issue and no task. Each plant is offered it, and chooses the exact sensors.</p>${rows ? `<ul class="ua-rows">${rows}</ul>` : '<p class="ov-none">None yet.</p>'}</div></section>`;
+    return `<section class="ov-box ua-box ua-solo dy-box"><header><h3>Calculated values</h3><span class="ov-n">${list.length}</span><span class="ov-hb">${btn('Add a calculated value', { act: 'dy:lib-open', data: { code }, small: true, kind: 'secondary', title: 'A number worked out on the fly from readings' })}</span></header><div class="ov-b"><p class="ov-sub ua-lead">Optional. A number worked out on the fly from readings, such as a difference or a share. On its own it opens no issue and no task; an alert on this type may watch it. Each plant is offered it, and chooses the exact sensors.</p>${rows ? `<ul class="ua-rows">${rows}</ul>` : '<p class="ov-none">None yet.</p>'}</div></section>`;
   }
   W.V7DYN.libBox = libBox;
   let ED = null;

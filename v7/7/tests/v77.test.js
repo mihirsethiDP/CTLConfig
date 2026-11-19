@@ -237,6 +237,22 @@ V.reset(); { const UA = g.V7UPALERT; const DY = g.V7DYN;
   check('calculated', 'an equipment type\'s value is offered per piece of equipment; one with a single sensor needs no choosing', bl.length === 2 && bl.some((o) => !o.choose && !o.missing.length && o.value != null));
   V.reset(); check('calculated', 'a reset puts it back', UA.alerts('@group').length === 0 && UA.alerts('@plant').length === 0 && !DY.defs('@plant').some((d) => d.name === 'Pressure gap') && UA.offers('manesar').every((o) => !o.sk)); }
 
+/* a calculated value inside an alert's condition */
+V.reset(); { const UA = g.V7UPALERT; const DY = g.V7DYN;
+  const d = DY.saveDef('@plant', { name: 'Pressure gap', unit: 'bar', inputs: [{ reading: 'Line pressure', label: 'Upstream' }, { reading: 'Line pressure', label: 'Downstream' }], expr: 'A − B' });
+  const a = UA.saveAlert('@plant', { name: 'Pressure gap too wide', match: 'all', when: [{ calc: d.def.id, dir: 'above', limit: 0.2 }, { reading: 'Motor current', dir: 'above', limit: 1 }], band: 'major', hold: 5, starts: { kind: 'issue' } });
+  check('calc in alert', 'an alert watches a calculated value of its own type, beside a reading', a.ok && a.alert.when[0].calc === d.def.id && UA.alerts('@plant')[0].when[0].reading === 'Pressure gap' && /Pressure gap is above 0.2 bar and Motor current is above 1 A/.test(UA.sentence(UA.alerts('@plant')[0], null)));
+  check('calc in alert', 'one from another type, or with no limit, is refused', !UA.saveAlert('@group', { name: 'x', when: [{ calc: d.def.id, dir: 'above', limit: 1 }] }).ok && !UA.saveAlert('@plant', { name: 'y', when: [{ calc: d.def.id, dir: 'above', limit: '' }] }).ok);
+  const o = UA.offers('manesar').find((x) => x.sk === 'plant'); const dp = o.conds[0].dyn;
+  check('calc in alert', 'at the plant it waits until the sensors behind the value are chosen', o.conds[0].calc === d.def.id && o.choose && !UA.decide('manesar', o.pid, 'applied').ok && !o.now.fires);
+  DY.pick('manesar', dp.pid, 0, dp.inputs[0].found[0].id); DY.pick('manesar', dp.pid, 1, dp.inputs[1].found[1].id); const o2 = UA.offer('manesar', o.pid); const gap = Math.round((dp.inputs[0].found[0].v - dp.inputs[1].found[1].v) * 100) / 100;
+  check('calc in alert', 'then it is worked out on the latest readings and the alert fires on it', !o2.choose && o2.conds[0].found[0].v === gap && o2.now.parts[0].ok === (gap > 0.2) && UA.decide('manesar', o.pid, 'applied').ok);
+  check('calc in alert', 'the plant can change the limit on it; the library value cannot be removed while an alert watches it', UA.edit('manesar', o.pid, { match: 'all', band: 'major', hold: 5, when: [{ calc: d.def.id, dir: 'above', limit: 5 }] }).ok && UA.offer('manesar', o.pid).conds[0].limit === 5 && UA.offer('manesar', o.pid).now.fires === (gap > 5) && !DY.removeDef('@plant', d.def.id).ok);
+  check('calc in alert', 'renaming the value renames it on the alert', DY.saveDef('@plant', { ...d.def, name: 'Header gap' }).ok && UA.alerts('@plant')[0].when[0].reading === 'Header gap');
+  const h = DY.saveDef('BLW', { name: 'Half load', unit: 'A', inputs: [{ reading: 'Motor current' }], expr: 'A / 2' }); const ha = UA.saveAlert('BLW', { name: 'Half load high', when: [{ calc: h.def.id, dir: 'above', limit: 10 }], band: 'minor', hold: 5, starts: { kind: 'issue' } }); const ho = UA.offers('manesar').find((x) => x.upTag === 'BL-1' && x.name === 'Half load high'); const ho2 = UA.offers('manesar').find((x) => x.upTag === 'BL-2' && x.name === 'Half load high');
+  check('calc in alert', 'an equipment type does the same on its own readings; equipment without the sensor is skipped', h.ok && ha.ok && !!ho && !ho.skipped && !ho.choose && ho.now.fires === (ho.conds[0].found[0].v > 10) && ho2.skipped);
+  V.reset(); }
+
 const bad = results.filter((x) => !x).length;
 console.log(`v77.test · ${results.length - bad}/${results.length} checks pass · RESULT: ${bad ? 'FAIL' : 'PASS'}`);
 process.exit(bad ? 1 : 0);
