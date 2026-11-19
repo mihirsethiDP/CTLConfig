@@ -117,7 +117,7 @@
     const sinceFix = st.lastFixAt != null ? (to - st.lastFixAt) / DAY : null;
     const okDays = d >= NEED_DAYS; const okFix = sinceFix == null || sinceFix >= AFTER_FIX_DAYS; const pass = okDays && okFix && unexplained === 0;
     const parts = [];
-    if (!okDays) parts.push(s0 == null ? 'the shadow run has not started: it starts when alerts go On trial' : `day ${Math.floor(d) + 1} of ${NEED_DAYS}`);
+    if (!okDays) parts.push(s0 == null ? 'the shadow run has not started: it starts when alerts go On trial' : `day ${Math.floor(d) + 1} of ${NEED_DAYS}${Math.floor(d) + 1 >= NEED_DAYS ? ', the last day: it clears when the day is over' : ''}`);
     if (unexplained) parts.push(`${unexplained} Major or Emergency ${unexplained === 1 ? 'firing' : 'firings'} that CloseTheLoop missed or rated lower ${unexplained === 1 ? 'is' : 'are'} not explained`);
     if (okDays && !okFix) parts.push(`${Math.ceil(AFTER_FIX_DAYS - sinceFix)} more ${Math.ceil(AFTER_FIX_DAYS - sinceFix) === 1 ? 'day' : 'days'} needed after the last configuration fix`);
     return { since: s0, days: d, need: NEED_DAYS, unexplained, toReason, sinceFix, needAfterFix: AFTER_FIX_DAYS, pass, parts, text: pass ? `${Math.floor(d)} days of shadow, every difference that matters explained` : parts.join('; '), total: rs.length, matched: rs.filter((x) => x.outcome === 'matched').length };

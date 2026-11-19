@@ -1389,7 +1389,7 @@ window.V7 = (function () {
       const live = P.state === 'live';
       if (!live && accG < sr.groups.length) blockers.push({ id: 'scada', text: accG ? `What the Visualization has is not all accepted: ${sr.groups.length - accG} of ${plural(sr.groups.length, 'equipment type')} to go` : `What the Visualization has is not accepted yet (${plural(sr.groups.length, 'equipment type')})`, short: `accept what the Visualization found (${plural(sr.groups.length - accG, 'type')})`, link: `${base}/scada` });
       const before = wasLive(P);
-      if (!live && undecided.length && !before) blockers.push({ id: 'library', text: undecided.length === 1 ? `One line is not decided: ${undecided[0].name} on ${undecided[0].tag}` : `${undLines} lines of alerts and tasks are not decided yet`, short: undecided.length === 1 ? `decide ${undecided[0].name} on ${undecided[0].tag}` : `decide ${undLines} lines of alerts and tasks`, link: `${base}/library`, count: undLines, items: undecided.map((p) => ({ pid: p.pid, name: p.name, tag: p.tag })) });
+      if (!live && undecided.length && !before) blockers.push({ id: 'library', text: undecided.length === 1 ? `One line is not decided: ${undecided[0].name} on ${undecided[0].tag}` : `${undLines} lines of alerts and tasks are not decided yet${undecided.length > undLines ? ` (${undecided.length} across the equipment)` : ''}`, short: undecided.length === 1 ? `decide ${undecided[0].name} on ${undecided[0].tag}` : `decide ${undLines} lines of alerts and tasks`, link: `${base}/library`, count: undLines, items: undecided.map((p) => ({ pid: p.pid, name: p.name, tag: p.tag })) });
       /* v7/8: a plant that has alerting today goes live through the shadow run's gate */
       { const SH = window.V7SHADOW; const g = SH && !live && !before && SH.has(key) ? SH.gate(key) : null; if (g && !g.pass) blockers.push({ id: 'shadow', text: `The shadow run is not through its gate: ${g.text}`, short: `finish the shadow run (${g.text})`, link: `${base}/shadow` }); }
       if (!watching.length) blockers.push({ id: 'alerts', text: live ? 'No alert is On' : 'No alert is On trial yet', short: 'put at least one alert On trial', link: `${base}/library` });
@@ -1612,6 +1612,7 @@ window.V7 = (function () {
     if (t.kind === 'tier') { const i = tierInfo(key, t.eqId); return i ? i.libValue : null; }
     if (t.kind === 'runhours') { const i = runHoursInfo(key, t.scheduleId); return i ? i.libValue : null; }
     if (t.kind === 'trigger') { const LT = window.V7LIBTRIG; const l = LT ? LT.libFor(key, t.sensorId, t.dir, t.band) : null; return l ? l.name : null; }
+    { const X = window.V7OVX && window.V7OVX.kinds[t.kind]; if (X) return X.base(key, t); }
     if (t.kind === 'onoff') return 'on'; return null;
   }
   /* v7: where the value a difference is measured against comes from: the Visualization (e.g. a 22 kW motor) or the library */
@@ -1624,7 +1625,7 @@ window.V7 = (function () {
   const sameValue = (kind, a, b) => (kind === 'cadence' ? sameEvery(a, b) : typeof a === 'number' || typeof b === 'number' ? same(a, b) : a === b);
   /* v7: 'same' — the library (or Visualization) value now equals the plant's own value: nothing differs any more, so the obvious step is
      Back to the library value; it is not shown as Library changed since */
-  const SAME_KINDS = ['limit', 'hold', 'clear', 'cadence', 'tier', 'runhours', 'trigger'];
+  const SAME_KINDS = ['limit', 'hold', 'clear', 'cadence', 'tier', 'runhours', 'trigger', 'crittime', 'sevtime', 'cal'];
   function ovState(key, o) {
     if (o.endedAt != null) return 'ended'; if (o.reason === 'fornow' && o.until != null && o.until <= now()) return 'ended';
     if (o.reason !== 'notinlib') { const cb = currentBaseOf(key, o); if (SAME_KINDS.includes(o.target.kind) && o.value != null && cb != null && sameValue(o.target.kind, o.value, cb)) return 'same'; if (!sameValue(o.target.kind, o.base, cb)) return 'libchanged'; }
@@ -1648,6 +1649,7 @@ window.V7 = (function () {
     if (t.alertId) { const a = alertRaw(key, t.alertId) || { name: '' }; const e = alertEq(key, a); eqId = e ? e.id : null; tag = e ? e.tag : null; typeName = e ? e.type : null; what = t.kind === 'hold' ? `${a.name} · must hold for` : t.kind === 'clear' ? `${a.name} · must clear for` : t.kind === 'onoff' ? `${a.name} · On or Off` : a.name; }
     if (t.scheduleId) { const sc = schedRaw(key, t.scheduleId) || { name: '', subject: {} }; const e = sc.subject.kind === 'eq' ? eqRaw(key, sc.subject.id) : null; eqId = e ? e.id : null; tag = e ? e.tag : null; typeName = e ? e.type : null; what = t.kind === 'onoff' ? `${sc.name} on ${tag || 'the plant'} · On or Off` : t.kind === 'runhours' ? `${sc.name} on ${tag || 'the plant'} · run-hours` : `${sc.name} on ${tag || 'the plant'} · how often`; }
     if (t.kind === 'tier') { const e = eqRaw(key, t.eqId) || {}; eqId = e.id; tag = e.tag; typeName = e.type; what = `${e.tag} · criticality`; }
+    { const X = window.V7OVX && window.V7OVX.kinds[t.kind]; if (X) { const w = X.what(key, t) || {}; what = w.what || what; if (w.eqId) { eqId = w.eqId; tag = w.tag || null; typeName = w.typeName || null; } } }
     libRaw = o.reason === 'notinlib' ? null : currentBaseOf(key, o);
     const st = ovState(key, o); const bs = o.reason === 'notinlib' ? { from: null, why: null } : baseSourceOf(key, o);
     /* v7 (card D25): a value nobody recorded a reason for that equals the library's own fixed number, while the plant's base is now the
@@ -1674,6 +1676,7 @@ window.V7 = (function () {
     const scOld = t.scheduleId && (t.kind === 'cadence' || t.kind === 'runhours') ? clone(schedRaw(key, t.scheduleId) || null) : null;
     if (t.sensorId) syncSensor(key, t.sensorId); if (t.alertId && (t.kind === 'hold' || t.kind === 'clear')) syncAlert(key, t.alertId); if (t.scheduleId && t.kind === 'cadence') syncSched(key, t.scheduleId); if (t.kind === 'runhours') syncRunHours(key, t.scheduleId); if (t.kind === 'tier') syncTier(key, t.eqId);
     if (t.kind === 'trigger' && window.V7LIBTRIG) window.V7LIBTRIG.backToLib(key, t.sensorId, t.dir, t.band, { quiet: true });
+    { const X = window.V7OVX && window.V7OVX.kinds[t.kind]; if (X) X.back(key, t); }
     if (scOld) recountTask(key, t.scheduleId, scOld);   /* v7: the task's due date follows the value it went back to */
     if (t.kind === 'onoff' && t.alertId) putAlertState(key, t.alertId, 'trial'); if (t.kind === 'onoff' && t.scheduleId) { const sc = schedRaw(key, t.scheduleId); if (sc) sc.status = 'active'; }
     return d;
@@ -2081,7 +2084,7 @@ window.V7 = (function () {
   const api = {
     boot, reset, persist,
     now, fmt, fmtDay, fmtDate, fmtTime, fmtDur, advance,
-    plants, plant, state, trialStart, withPlant, equipment, eq, sensors, readings, alerts, alert, schedules, people, addSamplePeople,
+    plants, plant, state, trialStart, tellList, withPlant, equipment, eq, sensors, readings, alerts, alert, schedules, people, addSamplePeople,
     series, latest, replay, previewLimits, trialStats, isNoisy,
     alertState, setAlertState,
     limitsOf, dirs: dirsOf, libLimits, sourceOf, setLimits, setAlertTiming, setCadence, setTier,

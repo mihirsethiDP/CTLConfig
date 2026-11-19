@@ -1063,7 +1063,7 @@
       ok: `Accept all ${lc.undecided}`,
       onOk: () => {
         const r = call(() => V().acceptAllFor(key, {}), { ok: false });
-        say(r.ok ? `Accepted ${pl(r.count || 0, 'proposal')}; ${esc(acceptTail(r))}.${afterDecide(key)}` : 'That did not work.', { ms: 7000 });
+        say(r.ok ? `Accepted all ${lc.undecided} lines${(r.count || 0) > lc.undecided ? `, which is ${r.count} tasks and alerts across the equipment` : ''}; ${esc(acceptTail(r))}.${afterDecide(key)}` : 'That did not work.', { ms: 7000 });
       },
     });
     return false;
@@ -1104,6 +1104,7 @@
   U.on('p7:golive-confirm', (el) => {
     const key = dget(el, 'plant'); const p = plantOf(key); const r0 = reasonFrom(el);
     if (!r0.text) { needReason(r0.ta, 'Say why the plant goes live now.'); return false; }
+    if (r0.ta) { if (r0.ta.classList) r0.ta.classList.remove('bad'); const fe = r0.ta.parentNode && r0.ta.parentNode.querySelector ? r0.ta.parentNode.querySelector('.field-e') : null; if (fe && fe.parentNode) fe.parentNode.removeChild(fe); }
     const box = document.getElementById('p7-ack-noisy'); const PZ = W.V7PERSONA; const who = PZ && PZ.isAll && !PZ.isAll() ? PZ.title() : undefined;
     if (box && !box.checked) { U.toast('Tick that you have seen the noisy alerts, or tune their limits first.'); box.focus(); return false; }
     const r = call(() => V().goLive(key, { reason: r0.text, ackNoisy: !!box, who }), { ok: false, error: 'Go live did not work.' });

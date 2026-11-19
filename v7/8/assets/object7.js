@@ -587,7 +587,7 @@
     if (!lt) return notFound(crumbs0.concat([{ label: 'Not found' }]), 'This type is not one of the database types.', { label: 'Library', href: '#/library' });
     tab = TABS.some((t) => t[0] === tab) ? tab : 'overview';
     const diffs = lt.draft ? arr(lt.draft.diffs) : [];
-    const counts = { readings: arr(lt.readings).length, issues: arr(lt.issues).length, tasks: arr(lt.schedules).length };
+    const counts = { readings: arr(lt.readings).length, issues: arr(lt.issues).length + arr(lt.alerts).filter((x) => !x.nextPhase).length + (W.V7UPALERT ? arr(safe(() => W.V7UPALERT.alerts(lt.code), [])).length : 0), tasks: arr(lt.schedules).length };
     let body = '';
     if (tab === 'overview') body = typeOverview(lt);
     else if (tab === 'readings') body = typeReadingsTab(lt);

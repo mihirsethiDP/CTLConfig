@@ -42,3 +42,26 @@ details.sv-card { margin: 0 0 16px; }
 .ri-kv dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
 .ri-kv .ov-sev { display: inline-flex; flex-wrap: wrap; gap: 6px; }
 @media (max-width: 720px) { .ri-kv > div { grid-template-columns: minmax(0, 1fr); gap: 1px; } .cal-a { margin-left: 0; } }
+
+/* why a plant differs, inside the three plant editors */
+.ox-why { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); display: grid; gap: 8px; }
+.ox-why-h { margin: 0; font-weight: 600; font-size: 13.5px; }
+.ox-why-r { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; font-size: 13.5px; }
+.ox-why-r label { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.ox-why-r input[type=date] { height: 32px; border: 1px solid var(--line-2); border-radius: var(--r-sm); padding: 0 8px; font: inherit; background: var(--surface); color: var(--ink); }
+.ox-why textarea { width: 100%; box-sizing: border-box; border: 1px solid var(--line-2); border-radius: var(--r-sm); padding: 8px 10px; font: inherit; background: var(--surface); color: var(--ink); resize: vertical; }
+.ox-why-n { margin: 0; font-size: 12.5px; color: var(--ink-3); }
+.ox-starter { margin-left: 8px; }
+/* library changes waiting to be published */
+.pd-card { margin: 0 0 16px; border-left: 3px solid var(--warn-ink, #8a5a00); }
+.pd-b { padding: 0 20px 16px; display: grid; gap: 12px; }
+.pd-rows { list-style: none; margin: 0; padding: 0; display: grid; }
+.pd-row { display: flex; gap: 10px 16px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; padding: 10px 0; border-top: 1px solid var(--line); }
+.pd-m { flex: 1 1 320px; min-width: 0; display: grid; gap: 3px; font-size: 13.5px; overflow-wrap: anywhere; }
+.pd-m b { font-weight: 600; }
+.pd-l { color: var(--ink-3); font-size: 13px; }
+.pd-note { display: grid; gap: 4px; font-size: 13px; color: var(--ink-3); }
+.pd-note textarea { width: 100%; box-sizing: border-box; border: 1px solid var(--line-2); border-radius: var(--r-sm); padding: 8px 10px; font: inherit; background: var(--surface); color: var(--ink); resize: vertical; }
+.pd-f { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+.pd-next { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; margin-top: 6px; font-size: 13px; color: var(--ink-2); overflow-wrap: anywhere; }
+@media (max-width: 720px) { .pd-b { padding: 0 16px 16px; } }

@@ -78,6 +78,7 @@
     const o = offer(key, pid); if (!o) return { ok: false, error: 'No such calculated value here.' }; const st = plantStore(key);
     if (state === 'on' && o.missing.length) return { ok: false, error: `It cannot be worked out here: ${why(o)}` };
     if (state === 'on' && o.choose) return { ok: false, error: `Choose which sensor to use for ${o.inputs.filter((q) => q.choose).map((q) => q.label || q.reading).join(' and ')} first.` };
+    if (state !== 'on' && o.state === 'on' && W.V7UPALERT) { const by = W.V7UPALERT.offers(key).find((a) => a.state === 'applied' && a.conds.some((c) => c.dyn && c.dyn.pid === pid)); if (by) return { ok: false, error: `The alert "${by.name}" on ${by.upTag} reads it. Leave that alert out first.` }; }
     const rec = st[pid] || (st[pid] = {}); if (state == null) delete rec.state; else rec.state = state; if (!rec.state && !rec.pick) delete st[pid];
     V().log(key, state === 'on' ? `${o.tag}: now works out "${o.def.name}" (${words(o.def, o)})` : state === 'off' ? `${o.tag}: "${o.def.name}" is not used here` : `${o.tag}: "${o.def.name}" is undecided again`, 'config'); if (V().persist) V().persist(); return { ok: true };
   }

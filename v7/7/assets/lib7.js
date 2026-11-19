@@ -395,6 +395,7 @@
   }
   function targetHref(o) {
     const t = o.target || {}; const p = `#/p/${enc(o.plant)}`;
+    if (t.kind === 'crittime' || t.kind === 'sevtime') return `${p}/library`;
     if (t.kind === 'tier') return o.eqId ? `${p}/eq/${enc(o.eqId)}/details` : `${p}/equipment`;
     if (t.alertId && t.kind !== 'limit') return `${p}/alert/${enc(t.alertId)}`;
     if (t.scheduleId) return `${p}/task/${enc(t.scheduleId)}`;
