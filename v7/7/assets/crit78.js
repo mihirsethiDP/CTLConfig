@@ -1,6 +1,9 @@
 /* v7/7 and v7/8 · crit78.js — criticality, and what it sets.
-   Three labels sit side by side and none is worked out from another:
-     a unit process has a criticality · a piece of equipment has a criticality · an issue has a severity.
+   A piece of equipment shows ONE criticality, and it is worked out:
+     the criticality of the unit process it takes part in, lowered by its role in that step
+       the step stops without it: the same · the step runs degraded without it: one lower · a standby takes over: two lower.
+     Equipment in no unit process keeps its type's criticality. A criticality set by hand at the plant wins, and is a deviation.
+     An issue has a severity; that is a separate label and is never folded in.
    Criticality sets one thing: when a task or a check that is due and not done is reminded, and who is told next.
    That timeline is set once per criticality in the library, and a plant may keep its own.
 
@@ -10,6 +13,8 @@
      plant(key, tier) → { remind, repeat, lead, senior, own }      setPlant(key, tier, vals | null)
      upTier(key, upId) → { tier, lib, own }                         setUpTier(key, upId, tier | null)
      upsOfEq(key, eqId) → the unit processes a piece of equipment takes part in
+     role(key, eqId) → { role, own, why }      setRole(key, eqId, role | null)
+     derived(key, eqId) → { tier, from: 'hand' | 'worked' | 'type', typeTier, up, upTier, role, why }
      sentence(vals) · trail(key, { eqId, band, name, what })
    This prototype stores and shows the timelines; the reminders it plays back still use the earlier fixed rule. */
 (function () {
@@ -54,11 +59,49 @@
   function setUpTier(key, upId, tier) {
     const u = ups(key).find((x) => x.id === upId); if (!u) return { ok: false, error: 'No such unit process here.' }; const cur = upTier(key, upId);
     if (tier == null || tier === cur.lib) delete upStore(key)[upId]; else if (!TIERS.includes(tier)) return { ok: false, error: 'Pick a criticality: Critical, Essential or Standard.' }; else upStore(key)[upId] = tier;
-    const now = upTier(key, upId); if (now.tier !== cur.tier) V().log(key, `Criticality of the unit process ${u.tag}: ${LABEL[cur.tier]} → ${LABEL[now.tier]}${now.own ? '' : ' (as its library type)'}. Its equipment keeps its own criticality`, 'config');
+    const now = upTier(key, upId); if (now.tier !== cur.tier) V().log(key, `Criticality of the unit process ${u.tag}: ${LABEL[cur.tier]} → ${LABEL[now.tier]}${now.own ? '' : ' (as its library type)'}. The criticality of its equipment is worked out again`, 'config'); if (V().touch) V().touch();
     if (V().persist) V().persist(); return { ok: true };
   }
   const upsOfEq = (key, eqId) => ups(key).filter((u) => u.id === eqId || arr(u.members).some((m) => m.eqId === eqId));
-  W.V7CRIT = { TIERS, LABEL, DEF, lib, setLib, plant, setPlant, upTier, setUpTier, upsOfEq, sentence, fmt, trail: () => '', sheetNote: () => '' };
+  /* the role of a piece of equipment in its step, and the one criticality worked out from it */
+  const ROLES = ['stops', 'degraded', 'standby']; const DROP = { stops: 0, degraded: 1, standby: 2 };
+  const ROLE_LABEL = { stops: 'The step stops without it', degraded: 'The step runs degraded without it', standby: 'A standby takes over' };
+  const ROLE_WHY = { stops: 'the step stops without it', degraded: 'the step runs degraded without it', standby: 'a standby takes over' };
+  const cgsOf = (key) => { try { return arr(V().structure(key).cgs); } catch (e) { return []; } };
+  function roleStore(key) { const P = plantRec(key); if (!P) return {}; if (!P.eqRole || typeof P.eqRole !== 'object') P.eqRole = {}; return P.eqRole; }
+  function roleIn(key, eqId, us, cgs) {
+    const o = roleStore(key)[eqId]; if (ROLES.includes(o)) return { role: o, own: true, why: 'set here' };
+    const g = cgs.find((c) => arr(c.memberIds).length > 1 && arr(c.memberIds).includes(eqId)); if (g) return { role: 'standby', own: false, why: `it is one of ${arr(g.memberIds).length} in ${g.name}` };
+    return { role: 'stops', own: false, why: us.some((u) => u.id === eqId) ? 'it is the step itself' : 'nothing stands in for it' };
+  }
+  const role = (key, eqId) => roleIn(key, eqId, upsOfEq(key, eqId), cgsOf(key));
+  function setRole(key, eqId, r) {
+    if (!plantRec(key)) return { ok: false, error: 'No such plant.' }; const e = RAW.eq ? RAW.eq(key, eqId) : null; if (!e) return { ok: false, error: 'No such equipment here.' };
+    if (r != null && !ROLES.includes(r)) return { ok: false, error: 'Pick what happens to the step without this equipment.' };
+    const was = derived(key, eqId); const st = roleStore(key); delete st[eqId]; if (r != null && r !== role(key, eqId).role) st[eqId] = r;
+    const now = derived(key, eqId); V().log(key, `${e.tag}: ${ROLE_LABEL[now.role || 'stops'].toLowerCase()}${now.tier !== was.tier ? `. Its criticality goes from ${LABEL[was.tier]} to ${LABEL[now.tier]}` : ''}`, 'config'); if (V().touch) V().touch(); if (V().persist) V().persist(); return { ok: true };
+  }
+  const RAW = {};
+  function work(key, e, usAll, cgs) {
+    const ti = e.tierSource || {}; const typeTier = TIERS.includes(e.typeTier) ? e.typeTier : e.tier;
+    if (ti.chip && ti.chip !== 'lib') return { tier: typeTier, from: 'hand', typeTier, up: null, upTier: null, role: null, why: ti.chip === 'form' ? 'from the Visualization' : 'set by hand at this plant' };
+    const us = usAll.filter((u) => u.id === e.id || arr(u.members).some((m) => m.eqId === e.id)); if (!us.length) return { tier: typeTier, from: 'type', typeTier, up: null, upTier: null, role: null, why: `from its type, ${e.typeName}; it is in no unit process` };
+    const r = roleIn(key, e.id, us, cgs); let best = null;
+    us.forEach((u) => { const t = upTier(key, u.id); if (!t) return; const i = Math.min(2, TIERS.indexOf(t.tier) + DROP[r.role]); if (!best || i < best.i) best = { i, u, t: t.tier }; });
+    if (!best) return { tier: typeTier, from: 'type', typeTier, up: null, upTier: null, role: null, why: `from its type, ${e.typeName}` };
+    return { tier: TIERS[best.i], from: 'worked', typeTier, up: best.u, upTier: best.t, role: r.role, roleOwn: r.own, roleWhy: r.why, why: best.u.id === e.id && r.role === 'stops' ? `it is the unit process ${best.u.tag}, which is ${LABEL[best.t]}` : `${best.u.tag} is ${LABEL[best.t]}, and ${ROLE_WHY[r.role]}` };
+  }
+  function derived(key, eqId) { const e = RAW.eq ? RAW.eq(key, eqId) : null; if (!e) return null; return work(key, e, ups(key), cgsOf(key)); }
+  /* every screen reads equipment through these two, so every screen shows the one worked-out criticality */
+  (function wrap() {
+    const v = V(); if (!v || typeof v.equipment !== 'function' || v.equipment._ct) return; let busy = false;
+    const dress = (key, e, us, cgs) => { if (!e || e._ct) return e; const d = work(key, { ...e, typeTier: e.tier }, us, cgs); return { ...e, typeTier: e.tier, tier: d.tier, tierLabel: e.tierLabel != null ? LABEL[d.tier] : e.tierLabel, tierWhy: d.from === 'worked' ? 'worked out: ' + d.why : null, tierFrom: d.from, _ct: true }; };
+    const e0 = v.equipment; const q0 = v.eq; RAW.equipment = (key) => e0.call(v, key); RAW.eq = (key, id) => (typeof q0 === 'function' ? q0.call(v, key, id) : arr(e0.call(v, key)).find((x) => x.id === id) || null);
+    v.equipment = function (key) { const out = e0.apply(this, arguments); if (busy || !Array.isArray(out)) return out; busy = true; try { const us = ups(key); const cgs = cgsOf(key); return out.map((e) => dress(key, e, us, cgs)); } catch (err) { return out; } finally { busy = false; } };
+    v.equipment._ct = true;
+    if (typeof q0 === 'function') v.eq = function (key) { const e = q0.apply(this, arguments); if (busy || !e) return e; busy = true; try { return dress(key, e, ups(key), cgsOf(key)); } catch (err) { return e; } finally { busy = false; } };
+  })();
+  W.V7CRIT = { TIERS, LABEL, DEF, ROLES, ROLE_LABEL, lib, setLib, plant, setPlant, upTier, setUpTier, upsOfEq, role, setRole, derived, sentence, fmt, trail: () => '', sheetNote: () => '' };
 
   /* ── on the page ───────────────────────────────────────────────────────────────────────────────────────── */
   const U = W.V7UI; if (!U || !U.on || typeof document === 'undefined') return;
@@ -66,15 +109,12 @@
   const lv = (tier, title) => chip(LABEL[tier] || tier, { tone: TONE[tier] || 'muted', title: title || '' });
   const eqs = (key) => { try { return arr(V().equipment(key)); } catch (e) { return []; } };
 
-  /* the three labels, side by side */
+  /* one criticality, why it is that, and one way in to change what it is worked out from */
   function trail(key, o) {
-    o = o || {}; const e = o.eqId ? eqs(key).find((x) => x.id === o.eqId) : null; if (!e) return '';
-    const us = upsOfEq(key, e.id); const parts = [];
-    if (us.length) { const u = us[0]; const t = upTier(key, u.id); parts.push(`<span class="ct-st"><span class="ct-k">Unit process</span><span class="ct-v"><b>${esc(u.tag)}</b> <button type="button" class="ct-chipb" data-act="ct:up-open" data-plant="${esc(key)}" data-up="${esc(u.id)}" title="The unit process has its own criticality. Click to change it.">${lv(t.tier)}</button>${us.length > 1 ? ` <span class="ct-more" title="${esc(us.slice(1).map((x) => x.tag).join(', '))}">+${us.length - 1}</span>` : ''}</span></span>`); }
-    else parts.push('<span class="ct-st"><span class="ct-k">Unit process</span><span class="ct-v ct-none">Not part of one</span></span>');
-    parts.push(`<span class="ct-st"><span class="ct-k">Equipment</span><span class="ct-v"><b>${esc(e.tag)}</b> ${lv(e.tier, 'How much the plant depends on this equipment')}</span></span>`);
-    if (o.band) parts.push(`<span class="ct-st"><span class="ct-k">${esc(o.what || 'Issue')}</span><span class="ct-v"><b>${esc(o.name || '')}</b> ${o.upTo ? '<span class="ct-upto">up to</span> ' : ''}${U.sev(o.band)}</span></span>`);
-    return `<div class="ct-trail" id="ct-trail" role="group" aria-label="Criticality and severity">${parts.join('<span class="ct-sep" aria-hidden="true">›</span>')}<span class="ct-note">Three separate labels. Criticality sets the reminders on late tasks; severity sets who an issue tells.</span></div>`;
+    o = o || {}; const d = o.eqId ? derived(key, o.eqId) : null; const e = d ? eqs(key).find((x) => x.id === o.eqId) : null; if (!e) return '';
+    const how = d.from === 'worked' ? `Worked out: ${d.why}.` : d.from === 'hand' ? `${d.why.charAt(0).toUpperCase()}${d.why.slice(1)}.` : `${d.why.charAt(0).toUpperCase()}${d.why.slice(1)}.`;
+    const sevBit = o.band ? `<span class="ct-sep" aria-hidden="true">·</span><span class="ct-st"><span class="ct-k">Severity of this ${esc((o.what || 'Issue').toLowerCase())}</span><span class="ct-v">${o.upTo ? '<span class="ct-upto">up to</span> ' : ''}${U.sev(o.band)}</span></span>` : '';
+    return `<div class="ct-trail ct-one" id="ct-trail" role="group" aria-label="Criticality"><span class="ct-st"><span class="ct-k">Criticality of ${esc(e.tag)}</span><span class="ct-v">${lv(d.tier)} <span class="ct-why">${esc(how)}</span></span></span>${sevBit}<span class="ct-go">${btn('How it is worked out', { act: 'ct:why', data: { plant: key, eq: e.id }, small: true, kind: 'ghost', title: 'See what the criticality comes from, and change it' })}</span>${o.band ? '<span class="ct-note">Criticality sets the reminders on late tasks. Severity sets who an issue tells, and how fast.</span>' : ''}</div>`;
   }
   W.V7CRIT.trail = trail;
 
@@ -92,7 +132,7 @@
   function plantCard(key) {
     const us = ups(key); const own = TIERS.filter((t) => plant(key, t).own).length;
     const upRows = us.map((u) => { const t = upTier(key, u.id); return `<li><span class="ct-ut"><b>${esc(u.tag)}</b> ${esc(u.name)}</span><button type="button" class="ct-chipb" data-act="ct:up-open" data-plant="${esc(key)}" data-up="${esc(u.id)}" title="Click to change it">${lv(t.tier)}</button>${t.own ? chip('Changed here', { tone: 'warn' }) : ''}</li>`; }).join('');
-    return fold('Criticality timelines', `A late task or check is first reminded: ${short((t) => plant(key, t))}. ${own ? `${own} changed for this plant` : 'As the library'}. Open to change it, or the criticality of a unit process.`, `<p class="ct-lead">When a task or a check is due and nobody has done it: when it is reminded, and who is told next. Inherited from the library, one per criticality. This plant may keep its own.</p><ul class="ct-rows">${rowsHtml(key)}</ul>${us.length ? `<details class="ct-ups"${OPEN2 ? ' open' : ''}><summary>Criticality of the ${us.length} unit ${us.length === 1 ? 'process' : 'processes'}</summary><p class="ct-upn">A unit process has its own criticality. It does not change the criticality of its equipment.</p><ul class="ct-upl">${upRows}</ul></details>` : ''}`);
+    return fold('Criticality timelines', `A late task or check is first reminded: ${short((t) => plant(key, t))}. ${own ? `${own} changed for this plant` : 'As the library'}. Open to change it, or the criticality of a unit process.`, `<p class="ct-lead">When a task or a check is due and nobody has done it: when it is reminded, and who is told next. Inherited from the library, one per criticality. This plant may keep its own. The count is equipment by its worked-out criticality.</p><ul class="ct-rows">${rowsHtml(key)}</ul>${us.length ? `<details class="ct-ups"${OPEN2 ? ' open' : ''}><summary>Criticality of the ${us.length} unit ${us.length === 1 ? 'process' : 'processes'}</summary><p class="ct-upn">Set the criticality of a unit process here. The criticality of each piece of equipment in it is worked out from this and from the equipment's role in the step.</p><ul class="ct-upl">${upRows}</ul></details>` : ''}`);
   }
   W.V7CRIT.sheetNote = (k0) => { const key = k0 || decodeURIComponent((/^#\/p\/([^/?]+)/.exec(location.hash || '') || [])[1] || ''); return `<ul class="ct-mini">${TIERS.map((t) => `<li><b>${esc(LABEL[t])}</b> ${esc(sentence(key && plantRec(key) ? plant(key, t) : lib(t)))}</li>`).join('')}</ul>`; };
 
@@ -110,9 +150,23 @@
   U.on('ct:reset', () => { if (!ED || !ED.key) return false; const r = setPlant(ED.key, ED.tier, null); ED = null; U.closeModal(true); U.toast(r.ok ? 'It follows the library again.' : r.error); return undefined; });
   let UE = null;
   U.on('ct:up-open', (el) => { const key = el.getAttribute('data-plant'); const upId = el.getAttribute('data-up'); const u = ups(key).find((x) => x.id === upId); const t = upTier(key, upId); if (!u || !t) return false; UE = { key, upId };
-    U.modal({ title: `Criticality of ${u.tag}`, body: U.field({ label: 'How much the plant depends on this unit process', hint: `Its library type, ${u.typeName}, is ${LABEL[t.lib]}.`, html: `<select id="ct-up">${TIERS.map((x) => `<option value="${x}"${x === t.tier ? ' selected' : ''}>${LABEL[x]}${x === t.lib ? ' (as the library)' : ''}</option>`).join('')}</select>` }) + '<p class="la-n">This is the unit process\'s own label. Each piece of equipment in it keeps its own criticality, and each issue its own severity.</p>',
+    U.modal({ title: `Criticality of ${u.tag}`, body: U.field({ label: 'How much the plant depends on this unit process', hint: `Its library type, ${u.typeName}, is ${LABEL[t.lib]}.`, html: `<select id="ct-up">${TIERS.map((x) => `<option value="${x}"${x === t.tier ? ' selected' : ''}>${LABEL[x]}${x === t.lib ? ' (as the library)' : ''}</option>`).join('')}</select>` }) + '<p class="la-n">The criticality of each piece of equipment in this step is worked out from it: the same when the step stops without the equipment, lower when the step only runs degraded or a standby takes over. A criticality set by hand is left alone.</p>',
       foot: btn('Cancel', { act: 'ui:close', data: { what: 'modal' }, kind: 'ghost' }) + btn('Save', { act: 'ct:up-save', kind: 'primary' }) }); return false; });
   U.on('ct:up-save', () => { if (!UE) return false; const e = document.getElementById('ct-up'); const r = setUpTier(UE.key, UE.upId, e ? e.value : null); UE = null; U.closeModal(true); U.toast(r.ok ? 'Saved.' : r.error); return undefined; });
+
+  let WE = null;
+  U.on('ct:why', (el) => { const key = el.getAttribute('data-plant'); const eqId = el.getAttribute('data-eq'); const d = derived(key, eqId); const e = eqs(key).find((x) => x.id === eqId); if (!d || !e) return false; WE = { key, eqId };
+    const rule = `<ul class="ct-mini"><li><b>${esc(ROLE_LABEL.stops)}</b> the same as the unit process.</li><li><b>${esc(ROLE_LABEL.degraded)}</b> one lower.</li><li><b>${esc(ROLE_LABEL.standby)}</b> two lower.</li></ul>`;
+    const hand = btn('Set it by hand instead', { act: 'obj:tier', data: { plant: key, eq: eqId }, kind: 'ghost', title: 'Give this equipment a criticality of its own, with a reason. It is listed under Deviations' });
+    if (d.from !== 'worked') { U.modal({ title: `Criticality of ${e.tag}: ${LABEL[d.tier]}`, body: `<p class="la-n">${d.from === 'hand' ? 'This one was set by hand at this plant, so nothing is worked out for it. Open the criticality sheet to change it or to go back.' : `${esc(e.tag)} is in no unit process, so it keeps the criticality of its type, ${esc(e.typeName)}. Place it in a unit process under Structure and its criticality is worked out from that step.`}</p>${rule}`, foot: btn('Close', { act: 'ui:close', data: { what: 'modal' }, kind: 'ghost' }) + btn(d.from === 'hand' ? 'Open the criticality sheet' : 'Set it by hand', { act: 'obj:tier', data: { plant: key, eq: eqId }, kind: 'primary' }) }); return false; }
+    const r = role(key, eqId); WE.upId = d.up.id; const ut = upTier(key, d.up.id);
+    U.modal({ title: `Criticality of ${e.tag}: ${LABEL[d.tier]}`,
+      body: `<p class="la-n">Worked out from two things. Change either and the criticality follows.</p>`
+        + U.field({ label: `1. How much the plant depends on ${d.up.tag} (${d.up.typeName})`, hint: `Its library type is ${LABEL[ut.lib]}. This changes every piece of equipment in the step.`, html: `<select id="ct-wup">${TIERS.map((x) => `<option value="${x}"${x === ut.tier ? ' selected' : ''}>${LABEL[x]}${x === ut.lib ? ' (as the library)' : ''}</option>`).join('')}</select>` })
+        + U.field({ label: `2. What happens to the step without ${e.tag}`, hint: r.own ? 'Set here.' : `Assumed, because ${r.why}.`, html: `<select id="ct-wrole">${ROLES.map((x) => `<option value="${x}"${x === r.role ? ' selected' : ''}>${ROLE_LABEL[x]}</option>`).join('')}</select>` })
+        + rule + `<p class="la-n">Its type, ${esc(e.typeName)}, is ${LABEL[d.typeTier]} in the library. That is used only for equipment that is in no unit process.</p>`,
+      foot: hand + btn('Cancel', { act: 'ui:close', data: { what: 'modal' }, kind: 'ghost' }) + btn('Save', { act: 'ct:why-save', kind: 'primary' }) }); return false; });
+  U.on('ct:why-save', () => { if (!WE) return false; const g = (id) => { const x = document.getElementById(id); return x ? x.value : null; }; const a = setUpTier(WE.key, WE.upId, g('ct-wup')); const b = a.ok ? setRole(WE.key, WE.eqId, g('ct-wrole')) : a; const d = b.ok ? derived(WE.key, WE.eqId) : null; WE = null; U.closeModal(true); U.toast(b.ok ? `Saved. Its criticality is ${LABEL[d.tier]}.` : b.error); return undefined; });
 
   document.addEventListener('toggle', (ev) => { const d = ev.target; if (d && d.id === 'ct-card') OPEN = d.open; else if (d && d.classList && d.classList.contains('ct-ups')) OPEN2 = d.open; }, true);
   if (U.afterRender) U.afterRender((main, path) => {

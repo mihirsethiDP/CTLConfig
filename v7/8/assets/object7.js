@@ -402,7 +402,7 @@
     return [{ label: 'Equipment', href: plantHref(key, 'equipment') }];
   }
   /* why the criticality is what it is, in words */
-  function tierWhy(e) { const ti = e.tierSource || {}; return !ti.chip || ti.chip === 'lib' ? `from its type, ${e.typeName}` : ti.chip === 'form' ? 'from the Visualization' : 'set at this plant'; }
+  function tierWhy(e) { const ti = e.tierSource || {}; if (e.tierWhy && (!ti.chip || ti.chip === 'lib')) return e.tierWhy; return !ti.chip || ti.chip === 'lib' ? `from its type, ${e.typeName}` : ti.chip === 'form' ? 'from the Visualization' : 'set at this plant'; }
   function tierHint(key, e) {
     const ti = e.tierSource || {}; const pl = placeOf(key, e);
     if (!pl || !pl.cg || !pl.cgWith.length || e.tier !== 'A' || (ti.chip && ti.chip !== 'lib')) return '';

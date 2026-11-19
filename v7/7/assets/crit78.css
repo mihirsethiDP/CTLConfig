@@ -36,3 +36,10 @@ details.ct-card { margin: 0 0 16px; }
   .ct-sep { display: none; }
   .ct-trail { flex-direction: column; align-items: flex-start; }
 }
+
+/* 19 Nov: one worked-out criticality */
+.ct-one { align-items: center; }
+.ct-why { color: var(--ink-3); font-size: 13px; overflow-wrap: anywhere; }
+.ct-one .ct-v { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; min-width: 0; }
+.ct-go { margin-left: auto; }
+@media (max-width: 720px) { .ct-go { margin-left: 0; } }

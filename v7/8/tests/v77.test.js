@@ -209,9 +209,9 @@ V.reset(); { const UA = g.V7UPALERT; const CR = g.V7CRIT; const LA = g.V7LIBADD;
   check('criticality', 'a timeline must be in order and above zero', !CR.setLib('A', { remind: 2, repeat: 2, lead: 1, senior: 8 }).ok && !CR.setLib('A', { remind: 1, repeat: 0, lead: 4, senior: 8 }).ok && !CR.setLib('A', { remind: 1, repeat: 1, lead: 9, senior: 8 }).ok);
   check('criticality', 'the library changes it once and every plant that follows has it', CR.setLib('A', { remind: 0.5, repeat: 1, lead: 2, senior: 6 }).ok && CR.plant('manesar', 'A').lead === 2 && !CR.plant('manesar', 'A').own && CR.plant('vedanta', 'A').senior === 6);
   check('criticality', 'a plant keeps its own, the library and the other plants are left alone, and it can go back', CR.setPlant('manesar', 'A', { remind: 1, repeat: 1, lead: 3, senior: 5 }).ok && CR.plant('manesar', 'A').own && CR.plant('manesar', 'A').lead === 3 && CR.lib('A').lead === 2 && !CR.plant('vedanta', 'A').own && CR.setLib('A', { remind: 0.5, repeat: 1, lead: 4, senior: 6 }).ok && CR.plant('manesar', 'A').lead === 3 && CR.setPlant('manesar', 'A', null).ok && CR.plant('manesar', 'A').lead === 4);
-  const u = V.structure('manesar').ups.find((x) => x.members.length || true); const t0 = CR.upTier('manesar', u.id); const other = t0.tier === 'A' ? 'B' : 'A'; const e0 = V.equipment('manesar').map((e) => e.id + e.tier).join();
+  const u = V.structure('manesar').ups.find((x) => x.members.length || true); const t0 = CR.upTier('manesar', u.id); const other = t0.tier === 'A' ? 'B' : 'A'; const e0 = V.equipment('manesar').map((e) => e.id + e.typeTier).join();
   check('criticality', 'a unit process starts on its library type\'s criticality and a plant changes it', !t0.own && t0.tier === t0.lib && CR.setUpTier('manesar', u.id, other).ok && CR.upTier('manesar', u.id).tier === other && CR.upTier('manesar', u.id).own);
-  check('criticality', 'it is its own label: no equipment changes criticality with it', V.equipment('manesar').map((e) => e.id + e.tier).join() === e0);
+  check('criticality', 'the type\'s own criticality is untouched by it', V.equipment('manesar').map((e) => e.id + e.typeTier).join() === e0);
   check('criticality', 'a piece of equipment knows the unit processes it takes part in', CR.upsOfEq('manesar', 'at2').length >= 1 && CR.setUpTier('manesar', u.id, null).ok && !CR.upTier('manesar', u.id).own);
   V.reset(); check('criticality', 'a reset puts all of it back', CR.lib('A').lead === CR.DEF.A.lead && !CR.plant('manesar', 'A').own && UA.alerts('BLW').length === 0); }
 
@@ -272,6 +272,17 @@ V.reset(); { const SV = g.V7SEV; const CAL = g.V7CAL; const C = g.CTL;
   const okP = CAL.setLib('BLW', bp.name, { n: 6, unit: 'month', flowId: 'f_probe_cal' }).ok; const after = V.libraryReview('manesar').reduce((n, r) => n + r.proposals.filter((p) => / calibration$/.test(p.name)).length, 0);
   check('calibration', 'calibration added to a reading that had none is offered to plants as a task', okP && CAL.lib('BLW', bp.name).n === 6 && after > before && V.libraryReview('manesar').some((r) => r.proposals.some((p) => p.name === bp.name + ' calibration')));
   check('calibration', 'switching it off takes the offer away again, and a reset puts everything back', CAL.setLib('BLW', bp.name, null).ok && CAL.lib('BLW', bp.name) === null && V.libraryReview('manesar').reduce((n, r) => n + r.proposals.filter((p) => / calibration$/.test(p.name)).length, 0) === before && (V.reset(), CAL.lib('OS_TANK_DF', 'Dissolved oxygen').n === 1)); }
+
+/* one worked-out criticality per piece of equipment */
+V.reset(); { const CR = g.V7CRIT; const k = 'manesar'; const st = V.structure(k); const grp = st.cgs.find((c) => c.memberIds.length > 1); const b1 = grp.memberIds[0]; const u = st.ups.find((x) => x.members.some((m) => m.eqId === b1));
+  const d0 = CR.derived(k, b1); const T = CR.TIERS; const down = (t, n) => T[Math.min(2, T.indexOf(t) + n)];
+  check('worked out', 'equipment with a standby is two below its unit process, and every screen reads that one value', !!u && d0.from === 'worked' && d0.role === 'standby' && d0.tier === down(CR.upTier(k, u.id).tier, 2) && V.equipment(k).find((e) => e.id === b1).tier === d0.tier && V.eq(k, b1).tier === d0.tier && V.eq(k, b1).typeTier === d0.typeTier);
+  check('worked out', 'the step itself carries its unit process\'s criticality', st.ups.filter((x) => V.equipment(k).some((e) => e.id === x.id)).every((x) => CR.derived(k, x.id).tier === CR.upTier(k, x.id).tier));
+  check('worked out', 'the role changes it: stops is the same, degraded one lower', CR.setRole(k, b1, 'stops').ok && CR.derived(k, b1).tier === CR.upTier(k, u.id).tier && CR.setRole(k, b1, 'degraded').ok && CR.derived(k, b1).tier === down(CR.upTier(k, u.id).tier, 1) && CR.role(k, b1).own && !CR.setRole(k, b1, 'never').ok);
+  check('worked out', 'the unit process changes every piece of equipment in it', CR.setUpTier(k, u.id, 'A').ok && CR.derived(k, b1).tier === 'B' && CR.derived(k, u.id).tier === 'A' && CR.setUpTier(k, u.id, null).ok && CR.setRole(k, b1, null).ok && CR.derived(k, b1).tier === d0.tier && !CR.role(k, b1).own);
+  const lone = V.equipment(k).find((e) => !CR.upsOfEq(k, e.id).length);
+  check('worked out', 'equipment in no unit process keeps its type\'s criticality', !lone || (CR.derived(k, lone.id).from === 'type' && lone.tier === lone.typeTier));
+  check('worked out', 'the timeline card counts equipment by the worked-out value, and a reset puts it back', V.equipment(k).every((e) => T.includes(e.tier)) && (V.reset(), CR.derived(k, b1).tier === d0.tier)); }
 
 const bad = results.filter((x) => !x).length;
 console.log(`v77.test · ${results.length - bad}/${results.length} checks pass · RESULT: ${bad ? 'FAIL' : 'PASS'}`);
