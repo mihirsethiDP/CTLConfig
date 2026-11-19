@@ -12,7 +12,7 @@ g.localStorage = { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem
 const el = () => ({ classList: { toggle() {}, add() {}, remove() {} }, setAttribute() {}, removeAttribute() {}, addEventListener() {}, appendChild() {}, remove() {}, querySelector: () => null, querySelectorAll: () => [], style: {}, dataset: {}, innerHTML: '' });
 g.document = { querySelector: () => null, querySelectorAll: () => [], createElement: el, body: el(), onkeydown: null };
 g.location = { hash: '#/plants', href: 'http://localhost/prototype.html#/plants' }; g.scrollTo = () => {}; g.Blob = g.Blob || function Blob() {}; if (!g.URL) g.URL = {};
-for (const f of ['data.js', 'layout-digitalpaani.js', 'catalogue.js', 'flows.js', 'rca.js', 'app.js', 'runtime.js', 'structure73.js', 'nodes73.js', 'core7.js', 'calls73.js', 'decisions7.js', 'shadow77.js', 'lang77.js', 'libadd78.js', 'libtrig78.js', 'libflow7.js', 'upalert78.js', 'crit78.js']) vm.runInThisContext(fs.readFileSync(path.join(A, f), 'utf8'), { filename: f });
+for (const f of ['data.js', 'layout-digitalpaani.js', 'catalogue.js', 'flows.js', 'rca.js', 'app.js', 'runtime.js', 'structure73.js', 'nodes73.js', 'core7.js', 'calls73.js', 'decisions7.js', 'shadow77.js', 'lang77.js', 'libadd78.js', 'libtrig78.js', 'libflow7.js', 'upalert78.js', 'crit78.js', 'dyn78.js']) vm.runInThisContext(fs.readFileSync(path.join(A, f), 'utf8'), { filename: f });
 const V = g.V7; const SH = g.V7SHADOW; const LG = g.V7LANG; V.boot();
 const results = [];
 function check(area, name, ok, detail) { results.push(!!ok); if (VERBOSE || !ok) console.log(`${ok ? '  ok  ' : '  FAIL'} [${area}] ${name}${detail ? ' — ' + detail : ''}`); }
@@ -179,7 +179,7 @@ V.reset(); { const UA = g.V7UPALERT; const mo = UA.offers('manesar'); const by =
   check('process', 'an alert whose kind of reading nothing in the unit process sends is skipped, and says which', ras.skipped && ras.missing.join() === 'Flow' && eq.skipped && eq.missing.join() === 'Motor current' && !UA.decide('manesar', ras.pid, 'applied').ok);
   check('process', 'whether it would fire is worked out on the latest readings', by('AT-2', /Low DO/).now.fires === true && by('AT-1', /Low DO/).now.fires === false && by('MGF-1', /choking/).now.fires === true);
   const a0 = V.activity({ plant: 'manesar' }).length;
-  check('process', 'a person applies it or leaves it out, and can undo', UA.decide('manesar', hdr.pid, 'applied').ok && UA.offer('manesar', hdr.pid).state === 'applied' && UA.decide('manesar', by('AT-1', /Low DO/).pid, 'left').ok && by('AT-1', /Low DO/).state === 'left' && UA.decide('manesar', by('AT-1', /Low DO/).pid, null).ok && by('AT-1', /Low DO/).state === null && V.activity({ plant: 'manesar' }).length === a0 + 3);
+  check('process', 'a person applies it or leaves it out, and can undo', !UA.decide('manesar', hdr.pid, 'applied').ok && UA.pick('manesar', hdr.pid, hdr.conds.findIndex((c) => c.found.length > 1), hdr.conds.find((c) => c.found.length > 1).found[0].id).ok && UA.offer('manesar', hdr.pid).conds.find((c) => c.found.length > 1).use.length === 1 && UA.decide('manesar', hdr.pid, 'applied').ok && UA.offer('manesar', hdr.pid).state === 'applied' && UA.decide('manesar', by('AT-1', /Low DO/).pid, 'left').ok && by('AT-1', /Low DO/).state === 'left' && UA.decide('manesar', by('AT-1', /Low DO/).pid, null).ok && by('AT-1', /Low DO/).state === null && V.activity({ plant: 'manesar' }).length === a0 + 4);
   const ve = UA.offers('vedanta').find((o) => o.upTag === 'EQ-1' && /Level high/.test(o.name)); const amps = ve.conds[1].found;
   check('process', 'the same kind of reading on several machines is found on each', amps.length === 3 && ve.conds[1].of === 'all');
   const e1 = UA.edit('vedanta', ve.pid, { match: 'all', band: 'major', hold: 10, when: [{ reading: 'Level', dir: 'above', limit: 80, of: 'any' }, { reading: 'Motor current', dir: 'below', limit: 1, of: 'all', use: amps.filter((x) => !/MX/.test(x.tag)).map((x) => x.id) }, { reading: 'pH', dir: 'above', limit: 9, of: 'any' }] });
@@ -214,6 +214,28 @@ V.reset(); { const UA = g.V7UPALERT; const CR = g.V7CRIT; const LA = g.V7LIBADD;
   check('criticality', 'it is its own label: no equipment changes criticality with it', V.equipment('manesar').map((e) => e.id + e.tier).join() === e0);
   check('criticality', 'a piece of equipment knows the unit processes it takes part in', CR.upsOfEq('manesar', 'at2').length >= 1 && CR.setUpTier('manesar', u.id, null).ok && !CR.upTier('manesar', u.id).own);
   V.reset(); check('criticality', 'a reset puts all of it back', CR.lib('A').lead === CR.DEF.A.lead && !CR.plant('manesar', 'A').own && UA.alerts('BLW').length === 0); }
+
+/* formulas at four levels, the sensor chosen at the plant, and calculated values */
+V.reset(); { const UA = g.V7UPALERT; const DY = g.V7DYN;
+  const ga = UA.saveAlert('@group', { name: 'Both of the set stopped', match: 'all', when: [{ reading: 'Trip contact', dir: 'above', limit: null, of: 'all' }], band: 'major', hold: 5, starts: { kind: 'issue' } });
+  const pa = UA.saveAlert('@plant', { name: 'Low pressure with a pump on', match: 'all', when: [{ reading: 'Line pressure', dir: 'below', limit: 1 }, { reading: 'Motor current', dir: 'above', limit: 1 }], band: 'major', hold: 5, starts: { kind: 'issue' } });
+  const go = UA.offers('manesar').filter((o) => o.sk === 'group'); const po = UA.offers('manesar').find((o) => o.sk === 'plant');
+  check('levels', 'an alert is written for every control group, and each reads only its own members', ga.ok && go.length === 1 && go[0].upTag === 'Air Blowers' && go[0].conds[0].found.length >= 1 && go[0].conds[0].found.every((x) => ['BL-1', 'BL-2'].includes(x.eqTag)));
+  check('levels', 'an alert is written for the plant as a whole, and may read any sensor there', pa.ok && !!po && po.conds[0].found.length >= 2 && po.conds[1].found.length >= 1);
+  check('levels', 'with several sensors of a kind it waits for a person to choose', po.choose && !UA.decide('manesar', po.pid, 'applied').ok && po.conds[0].choose);
+  po.conds.forEach((c, i) => { if (c.found.length > 1) UA.pick('manesar', po.pid, i, c.found[0].id); }); const po2 = UA.offer('manesar', po.pid);
+  check('levels', 'the exact sensor is chosen from that kind only, and then it can be applied', !po2.choose && po2.conds[0].use.length === 1 && po2.conds[0].use[0] === po.conds[0].found[0].id && !UA.pick('manesar', po.pid, 0, po.conds[1].found[0].id).ok && UA.decide('manesar', po.pid, 'applied').ok);
+  check('levels', 'any one, or every one, may be chosen instead of one sensor', UA.pick('manesar', po.pid, 0, 'all').ok && UA.offer('manesar', po.pid).conds[0].of === 'all' && UA.offer('manesar', po.pid).conds[0].use.length === po.conds[0].found.length);
+  check('calculated', 'a formula is read with letters, numbers and brackets, and a bad one is refused', DY.compile('(A − B) ÷ A × 100', 2).fn([10, 4]) === 60 && DY.compile('A + 2 * (B - 1)', 2).fn([1, 3]) === 5 && !!DY.compile('A + C', 2).error && !!DY.compile('A +', 1).error && !!DY.compile('alert(1)', 1).error);
+  const d1 = DY.saveDef('@plant', { name: 'Pressure gap', unit: 'bar', inputs: [{ reading: 'Line pressure', label: 'Upstream' }, { reading: 'Line pressure', label: 'Downstream' }], expr: 'A − B' });
+  check('calculated', 'the library defines one against kinds of reading, at any level; an equipment type only on its own readings', d1.ok && !DY.saveDef('@plant', { name: 'x', inputs: [{ reading: 'Level' }, { reading: 'pH' }], expr: 'A' }).ok && !DY.saveDef('BLW', { name: 'x', inputs: [{ reading: 'Dissolved oxygen' }], expr: 'A' }).ok && DY.saveDef('BLW', { name: 'Half load', unit: 'A', inputs: [{ reading: 'Motor current' }], expr: 'A / 2' }).ok);
+  const o1 = DY.offers('manesar').find((o) => o.def.id === d1.def.id);
+  check('calculated', 'the plant is offered it and must choose the exact sensor for each letter', !!o1 && o1.choose && o1.value === null && !DY.use('manesar', o1.pid, 'on').ok && o1.inputs.every((q) => q.found.length >= 2));
+  DY.pick('manesar', o1.pid, 0, o1.inputs[0].found[0].id); DY.pick('manesar', o1.pid, 1, o1.inputs[1].found[1].id); const o2 = DY.offer('manesar', o1.pid);
+  check('calculated', 'once chosen it is worked out on the latest readings, and using it is optional', !o2.choose && o2.value === Math.round((o1.inputs[0].found[0].v - o1.inputs[1].found[1].v) * 100) / 100 && DY.use('manesar', o1.pid, 'on').ok && DY.offer('manesar', o1.pid).state === 'on' && !DY.removeDef('@plant', d1.def.id).ok && DY.use('manesar', o1.pid, 'off').ok && DY.removeDef('@plant', d1.def.id).ok);
+  const bl = DY.offers('manesar').filter((o) => o.def.name === 'Half load');
+  check('calculated', 'an equipment type\'s value is offered per piece of equipment; one with a single sensor needs no choosing', bl.length === 2 && bl.some((o) => !o.choose && !o.missing.length && o.value != null));
+  V.reset(); check('calculated', 'a reset puts it back', UA.alerts('@group').length === 0 && UA.alerts('@plant').length === 0 && !DY.defs('@plant').some((d) => d.name === 'Pressure gap') && UA.offers('manesar').every((o) => !o.sk)); }
 
 const bad = results.filter((x) => !x).length;
 console.log(`v77.test · ${results.length - bad}/${results.length} checks pass · RESULT: ${bad ? 'FAIL' : 'PASS'}`);

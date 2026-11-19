@@ -1,0 +1,33 @@
+/* v7/7 and v7/8 · dyn78.css — calculated values, the two extra levels in the library, and the sensor drop-down at a plant */
+details.dy-card { margin: 0 0 16px; }
+.dy-body { border-top: 1px solid var(--line); padding: 4px 20px 14px; }
+.dy-body > .ua-up:first-child { margin-top: 10px; }
+.dy-lv { margin-top: 14px; }
+.dy-lvh { margin: 0 0 8px; font-size: 13px; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+.dy-lv > .ov-box + .ov-box { margin-top: 12px; }
+.dy-box { margin-top: 16px; }
+.dy-u { font-size: 12.5px; color: var(--ink-3); font-weight: 400; }
+.dy-f { font-family: var(--mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace); font-size: 13px; overflow-wrap: anywhere; }
+.dy-now { margin-left: 8px; padding: 2px 8px; border-radius: 999px; background: var(--info-tint, #eaf0f4); color: var(--ink); font-weight: 600; white-space: nowrap; }
+.dy-ins { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.dy-in b, .dy-let { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 4px; border-radius: 4px; background: var(--info-tint, #eaf0f4); color: var(--ink); font-size: 12px; font-weight: 700; }
+.dy-ed { display: grid; gap: 8px; }
+.dy-er { display: flex; gap: 8px; align-items: center; }
+.dy-er select { flex: 1 1 200px; min-width: 0; }
+.dy-er input { flex: 1 1 200px; min-width: 0; height: 36px; border: 1px solid var(--line-2); border-radius: var(--r-sm); padding: 0 10px; font: inherit; background: var(--surface); color: var(--ink); }
+.dy-er select { height: 36px; }
+input.dy-expr { font-family: var(--mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace); }
+/* which exact sensor: shown where several of a kind sit in the same level */
+.ua-picks { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 8px 0 2px; }
+.ua-pick { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-3); min-width: 0; max-width: 100%; }
+.ua-pick > span { white-space: nowrap; flex: 0 0 auto; }
+.ua-pick select { height: 32px; max-width: 100%; min-width: 0; border: 1px solid var(--line-2); border-radius: var(--r-sm); padding: 0 8px; font: inherit; font-size: 13px; background: var(--surface); color: var(--ink); }
+.ua-pick.is-todo select { border-color: var(--warn-ink, #8a5a00); box-shadow: 0 0 0 2px var(--warn-tint, #fbf0d9); }
+@media (max-width: 720px) {
+  .dy-body { padding: 4px 16px 14px; }
+  .dy-er { flex-wrap: wrap; }
+  .dy-er select, .dy-er input { flex: 1 1 100%; }
+  .ua-pick { flex-direction: column; align-items: flex-start; gap: 4px; width: 100%; }
+  .ua-pick select { width: 100%; }
+  .ua-pick > span { white-space: normal; }
+}

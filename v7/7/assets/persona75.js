@@ -51,10 +51,10 @@
     work: 'work:report work:report-eq work:report-go work:report-pick work:answer work:causes work:cause-go work:startfix work:fixstep work:return obj:report obj:rsave',
     approve: 'work:verify work:closenote work:close-go work:false work:false-go',
     people: 'p7:people-sample p7:usercenter work:usercenter',
-    tech: 'ct:open ct:save ct:reset ct:up-open ct:up-save ua:decide ua:apply-all ua:edit ua:reset p7:lib-accept p7:lib-accept-all p7:lib-accept-eq p7:lib-accept-group p7:lib-accept-type p7:lib-reject p7:lib-reject-confirm p7:lib-reject-group p7:lib-reject-group-confirm p7:limits '
+    tech: 'ua:pick dy:use dy:pick ct:open ct:save ct:reset ct:up-open ct:up-save ua:decide ua:apply-all ua:edit ua:reset p7:lib-accept p7:lib-accept-all p7:lib-accept-eq p7:lib-accept-group p7:lib-accept-type p7:lib-reject p7:lib-reject-confirm p7:lib-reject-group p7:lib-reject-group-confirm p7:limits '
       + 'obj:scada p7:scada-fix obj:ltrigback obj:astate obj:aoff obj:tier obj:tiersave lib:keep lib:keep-save lib:revert lib:revert-all lib:suggest lib:suggest-send obj:suggest obj:sgsave work:suggest work:cadence work:cadence-save work:lastdone',
     templates: 'p7:scada-accept p7:scada-accept-all st:confirm st:place st:up-new st:up-edit st:up-add st:up-save st:up-remove st:cg-new st:cg-edit st:cg-save st:cg-remove p7:worklevel p7:worklevel-keep '
-      + 'lib:field lib:discard lib:publish fl:new fl:edit fl:add fl:del fl:move fl:set fl:save fl:discard work:cadence-lib p7:golive p7:golive-confirm p7:return p7:return-confirm sh:reason sh:reason-save sh:fixed lang:generate lang:review la:open la:save la:remove lf:open lf:save lf:edit lf:new lf:edit-cancel obj:flow-new ua:flow-new ua:lib-open ua:lib-remove ct:lib-open ct:lib-save',
+      + 'lib:field lib:discard lib:publish fl:new fl:edit fl:add fl:del fl:move fl:set fl:save fl:discard work:cadence-lib p7:golive p7:golive-confirm p7:return p7:return-confirm sh:reason sh:reason-save sh:fixed lang:generate lang:review la:open la:save la:remove lf:open lf:save lf:edit lf:new lf:edit-cancel obj:flow-new ua:flow-new ua:lib-open ua:lib-remove ct:lib-open ct:lib-save dy:lib-open dy:lib-save dy:lib-remove dy:in-add dy:in-del',
   };
   const NEED = {}; Object.keys(ACTS).forEach((s) => ACTS[s].split(' ').forEach((a) => { NEED[a] = s; }));
   const BY_MODE = { 'obj:limits': 1, 'obj:timing': 1, 'obj:cadence': 1 };   /* the same editor serves a plant and a library type */
