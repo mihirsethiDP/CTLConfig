@@ -278,6 +278,34 @@
       action: editable ? btn(anyLimits ? 'Change limits' : 'Set limits', { act: 'obj:limits', data: { plant: key, sensor: s.id, dir: dir0 }, small: true, kind: anyLimits ? 'secondary' : 'primary' }) : '',
     };
   }
+  /* 19 Nov: under a reading's limits, what each range starts: the issue by name, or the task that takes its place */
+  function trigList(lt, r, d, alerts) {
+    const T = W.V7LIBTRIG ? safe(() => W.V7LIBTRIG.get(lt.code, r.name, d.dir, { draft: true }), {}) : {}; const set = BANDS.filter((b) => num((d.bands || {})[b]) != null); if (!set.length) return '';
+    const name = d.alertName || (arr(alerts)[0] || {}).name || null; const iss = set.filter((b) => !T[b]);
+    return `<ul class="lw-list o-trigs">${iss.length ? `<li>${iss.map((b) => sev(b)).join(' ')} <span class="lw-does">${iss.length === 1 ? 'opens' : 'open'} the issue</span> ${name ? `<b>“${esc(name)}”</b>` : '<span class="lw-does">named after the alert</span>'}</li>` : ''}${set.filter((b) => T[b]).map((b) => `<li>${sev(b)} <span class="lw-does">raises the task</span> <b>“${esc(T[b].name)}”</b> <span class="lw-does">instead of an issue</span>${T[b].draft ? ' ' + draftChip() : ''}</li>`).join('')}</ul>`;
+  }
+  /* 19 Nov: the Issues tab opens with every issue a reading opens by itself, and what drives each one */
+  function readingIssuesCard(lt) {
+    const unit = {}; const kind = {}; arr(lt.readings).forEach((r) => { unit[r.name] = r.unit; kind[r.name] = r.kind; });
+    const rows = arr(lt.alerts).filter((x) => !x.nextPhase).map((x) => {
+      const T = W.V7LIBTRIG ? safe(() => W.V7LIBTRIG.get(lt.code, x.reading, x.dir, { draft: true }), {}) : {}; const k = kind[x.reading]; const u = unit[x.reading] || '';
+      const set = BANDS.filter((b) => num((x.bands || {})[b]) != null); const iss = set.filter((b) => !T[b]); const tk = set.filter((b) => T[b]);
+      const fl = x.flowId ? safe(() => V().flowOf(x.flowId), null) : null;
+      const lim = (b) => `<span class="sev sev-${b}">${esc(bandName(b))}${k === 'status' ? '' : ` ${x.dir === 'below' ? '&lt;' : '&gt;'} ${esc(fv(x.bands[b], u, k))}`}</span>`;
+      const drive = `<b>${esc(x.reading)}</b> ${k === 'status' ? (x.dir === 'below' ? 'is OFF' : 'is ON') : x.dir === 'below' ? 'falls below a limit' : 'rises above a limit'}, and holds for ${esc(x.hold != null ? x.hold : 0)} min`;
+      return `<li class="ri-row${iss.length ? '' : ' is-none'}"><div class="ri-h"><span class="ri-n"><b>${esc(x.name)}</b></span><span class="ri-a">${btn('Limits', { act: 'obj:limits', data: { mode: 'type', code: lt.code, reading: x.reading, dir: x.dir }, small: true, kind: 'ghost', title: 'Change the limits, or what a range starts' })}</span></div>`
+        + `<dl class="ri-kv"><div><dt>Driven by</dt><dd>${drive}</dd></div><div><dt>Opens at</dt><dd>${iss.length ? `<span class="ov-sev">${iss.map(lim).join('')}</span>` : set.length ? '<span class="muted">No range opens it: each one raises a task instead</span>' : '<span class="lf-flag">No limits yet, so it never opens</span>'}</dd></div>`
+        + `${tk.length ? `<div><dt>A task instead</dt><dd>${tk.map((b) => `${lim(b)} raises “${esc(T[b].name)}”${T[b].draft ? ' ' + draftChip() : ''}`).join('<br>')}</dd></div>` : ''}<div><dt>Diagnostic flow</dt><dd>${fl ? a('#/flows/' + enc(fl.id), fl.name) : '<span class="lf-flag">None yet: the person says what they found</span>'}</dd></div></dl></li>`;
+    });
+    const UA = W.V7UPALERT; const cross = UA ? arr(safe(() => UA.alerts(lt.code), [])) : [];
+    const crossRows = cross.map((al) => { const st = al.starts || {}; const f = st.flowId ? safe(() => V().flowOf(st.flowId), null) : null; const calc = arr(al.when).some((c) => c.calc);
+      return `<li class="ri-row"><div class="ri-h"><span class="ri-n"><b>${esc(al.name)}</b> ${sev(al.band)} ${chip(calc ? 'Uses a calculated value' : arr(al.when).length > 1 ? 'Several readings' : 'One reading', { tone: 'muted' })}</span></div>`
+        + `<dl class="ri-kv"><div><dt>Driven by</dt><dd>${esc(cap(safe(() => UA.sentence(al), '')))}, for ${esc(al.hold != null ? al.hold : 0)} min</dd></div><div><dt>${st.kind === 'task' ? 'Raises the task' : 'Opens'}</dt><dd>${st.kind === 'task' ? `“${esc(st.name || al.name)}” instead of an issue` : `the issue “${esc(al.name)}”`}</dd></div>${st.kind === 'task' ? '' : `<div><dt>Diagnostic flow</dt><dd>${f ? a('#/flows/' + enc(f.id), f.name) : '<span class="lf-flag">None yet: the person says what they found</span>'}</dd></div>`}</dl></li>`; });
+    const n = rows.length + crossRows.length;
+    return card({ title: 'Issues opened by readings', sub: n ? `${plural(n, 'issue')} ${n === 1 ? 'opens' : 'open'} by ${n === 1 ? 'itself' : 'themselves'}, each named after its alert. With each: the reading that drives it, the ranges that open it, and the flow it starts.` : 'None yet. An issue opens by itself once a reading has an alert with limits.',
+      body: n ? `<ul class="ri-rows">${rows.join('')}${crossRows.join('')}</ul>` : empty('No reading opens an issue on this type yet.', arr(lt.readings).some((r) => r.kind !== 'meter') ? addBtn(lt, 'alert', 'Add an alert', true) : ''),
+      actions: [n && arr(lt.readings).some((r) => r.kind !== 'meter') ? addBtn(lt, 'alert', 'Add an alert') : ''] });
+  }
   function typeReadingModel(lt, r) {
     const dr = lt.draft || null;
     const s = { unit: r.unit, kind: r.kind, name: r.name };
@@ -295,7 +323,7 @@
         dir: d.dir, bands: d.bands,
         bar: r.kind === 'status' || !hasLimits(lim) ? '' : bandBar({ dir: d.dir, bands: d.bands, valid: validFor(r), unit: r.unit }),
         line: limitsLine(lim, s, 'type'),
-        after: `<p class="o-hint">${esc(atPlantsLine(lt.typeName, r.name, d.dir))}</p>`,
+        after: trigList(lt, r, d, alerts) + `<p class="o-hint">${esc(atPlantsLine(lt.typeName, r.name, d.dir))}</p>`,
         al,
       };
     });
@@ -563,7 +591,7 @@
     let body = '';
     if (tab === 'overview') body = typeOverview(lt);
     else if (tab === 'readings') body = typeReadingsTab(lt);
-    else if (tab === 'issues') body = issueTypesCard(lt.typeName, lt.issues, { lt, actions: [arr(lt.issues).length ? addBtn(lt, 'issue', 'Add a problem') : ''] });
+    else if (tab === 'issues') body = readingIssuesCard(lt) + issueTypesCard(lt.typeName, lt.issues, { lt, actions: [arr(lt.issues).length ? addBtn(lt, 'issue', 'Add a problem') : ''] });
     else if (tab === 'tasks') body = typeTasksTab(lt);
     else body = typeDetailsTab(lt);
     const used = arr(lt.plants);
@@ -1130,14 +1158,17 @@
   }
   function tbRow(st, b) {
     const on = st.vals[b] !== ''; const al = trigAlert(st);
+    /* 19 Nov: the same window says which issue a range opens, by name, and on a type the flow it starts */
+    const iname = st.mode === 'type' ? st.alertName : (al && al.name) || st.alertName; const ifl = st.mode === 'type' && st.alertFlow ? libFlows73().find((x) => x.id === st.alertFlow) : null;
+    const what = `<span class="lw-does o-trig-what">${iname ? `Opens the issue <b>“${esc(iname)}”</b>` : 'Opens an issue named after this alert'} on ${esc(st.mode === 'type' ? 'the equipment' : st.eqTag || 'this equipment')}${st.mode === 'type' ? ` · ${ifl ? `starts the flow ${esc(ifl.name)}` : 'no diagnostic flow yet'}` : ''}</span>`;
     const flow = st.mode === 'instance' ? `<label class="o-trig-l">Diagnostic flow ${flowSelect('diag', st, `data-dflow="1" aria-label="Diagnostic flow for ${esc(bandName(b))}"`, st.flowSel)}</label><span class="o-trig-how">${howHtml(st.flowSel)}</span>` : '';
     const told = b === 'caution' ? 'shown in the app and the morning email' : esc(String(sevClock(b)).toLowerCase());
     const where = [];   /* v7/3: the task sits on this reading's equipment, like the issue: nothing to choose */
     const whereSel = where.length > 1 ? `<select data-filed="${b}" aria-label="Where the task is filed">${where.map((x) => `<option value="${esc(x.id)}"${String(st.filedAt && st.filedAt[b] != null ? st.filedAt[b] : (where[0] || {}).id) === String(x.id) ? ' selected' : ''}>at ${esc(x.label)}</option>`).join('')}</select>` : '';
     let does;
-    if (b === 'emergency') does = `<div class="o-band-d"${on ? '' : ' hidden'}><span class="o-trig-k">Triggers</span><span class="lw-does"><b>An issue</b>, on the first reading; calls everyone and sounds the hooter</span><span class="o-trig-i">${flow}</span></div>`;
+    if (b === 'emergency') does = `<div class="o-band-d"${on ? '' : ' hidden'}><span class="o-trig-k">Triggers</span><span class="lw-does"><b>An issue</b>, on the first reading; calls everyone and sounds the hooter</span><span class="o-trig-i">${what}${flow}</span></div>`;
     else does = `<div class="o-band-d"${on ? '' : ' hidden'}><span class="o-trig-k">Triggers</span><select data-does="${b}" aria-label="What the ${esc(bandName(b))} range triggers"><option value="issue"${st.does[b] !== 'task' ? ' selected' : ''}>An issue</option><option value="task"${st.does[b] === 'task' ? ' selected' : ''}>A task</option></select>`
-      + `<span class="o-trig-i"${st.does[b] === 'task' ? ' hidden' : ''}>${flow}<span class="lw-does">Told: ${told}</span></span>`
+      + `<span class="o-trig-i"${st.does[b] === 'task' ? ' hidden' : ''}>${what}${flow}<span class="lw-does">Told: ${told}</span></span>`
       + `<span class="o-trig-t"${st.does[b] === 'task' ? '' : ' hidden'}><input type="text" data-taskname="${b}" value="${esc(st.taskName[b] || '')}" placeholder="Name the task, e.g. Clean the intake filters" aria-label="The task the ${esc(bandName(b))} range raises"><span class="lw-does">on ${esc(st.eqTag || 'this equipment')}</span>${whereSel}<label class="o-trig-l">Steps ${flowSelect('task', st, `data-tflow="${b}" aria-label="Task flow for ${esc(bandName(b))}"`, (st.taskFlow || {})[b] || '')}</label><span class="o-trig-tl" data-b="${b}">${taskFlowLinks((st.taskFlow || {})[b], b)}</span></span></div>`;
     const slot = st.mode === 'instance' || st.mode === 'type' ? `<div class="o-band-e"${on ? ' hidden' : ''}><span class="o-trig-k">Triggers</span><span class="muted">Nothing yet. Switch this range on to choose what it triggers.</span></div>` : '';
     return `<div class="o-band o-band-t" data-row="${b}"><div class="o-band-k"><button type="button" class="o-tog" role="switch" aria-checked="${on}" aria-label="${esc(bandName(b))} line" data-act="obj:ltog" data-band="${b}"><i></i></button>${sev(b)}</div>`
@@ -1205,6 +1236,7 @@
       mode: 'type', code, typeName: lt.typeName, reading: r.name, name: r.name, tag: r.tag, unit: r.unit, kind: r.kind, valid: validFor(r), manual: false,
       value: null, dir, dirs, perBand: d.perBand || {}, cur: {}, base: {}, lib: {}, form: {}, alertName: d.alertName,
       free: false, vals: {}, err: null, showWhy: false, version: lt.version,
+      alertFlow: (arr(lt.alerts).find((x) => x.name === d.alertName) || {}).flowId || null,
     };
     BANDS.forEach((b) => { const p = st.perBand[b] || {}; st.cur[b] = num(p.value); st.base[b] = num(p.libValue); st.lib[b] = st.base[b]; st.vals[b] = st.cur[b] == null ? '' : String(st.cur[b]); });
     st.other = otherSide(st); st.does = {}; st.taskName = {}; st.does0 = {}; st.taskName0 = {}; st.taskFlow = {}; st.taskFlow0 = {};

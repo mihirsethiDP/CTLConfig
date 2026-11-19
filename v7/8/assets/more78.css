@@ -1,0 +1,44 @@
+/* v7/7 and v7/8 · more78.css — severity timelines, the steps ahead of an open issue, calibration on a reading, issues opened by readings */
+details.sv-card { margin: 0 0 16px; }
+.sv-lines { margin: 0; display: grid; gap: 4px; }
+.sv-lines > div { display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 2px 12px; align-items: baseline; }
+.sv-lines dt { color: var(--ink-3); font-size: 13px; }
+.sv-lines dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 720px) { .sv-lines > div { grid-template-columns: minmax(0, 1fr); } }
+.sv-steps { list-style: none; margin: 0 0 10px; padding: 0; display: grid; gap: 10px; }
+.sv-st { display: grid; gap: 3px; padding-left: 12px; border-left: 3px solid var(--line-2); }
+.sv-st.is-past { border-left-color: var(--warn-ink, #8a5a00); }
+.sv-st.is-skip { border-left-color: var(--ok-ink, #1a7f4b); }
+.sv-sw { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; font-size: 13.5px; }
+.sv-sp { font-size: 13px; color: var(--ink-3); overflow-wrap: anywhere; }
+.sv-next .card-b, .sv-next > div { min-width: 0; }
+
+/* calibration, on a reading's card */
+.cal-line { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--line-2); font-size: 13.5px; }
+.cal-k { flex: 0 0 auto; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+.cal-v { flex: 1 1 260px; min-width: 0; overflow-wrap: anywhere; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; }
+.cal-a { flex: 0 0 auto; margin-left: auto; }
+.cal-at { color: var(--ink-3); font-size: 13px; }
+.cal-flag { color: var(--warn-ink, #8a5a00); }
+.cal-often { display: flex; gap: 8px; align-items: center; }
+.cal-often input { width: 88px; height: 36px; border: 1px solid var(--line-2); border-radius: var(--r-sm); padding: 0 10px; font: inherit; background: var(--surface); color: var(--ink); }
+.cal-often select { height: 36px; flex: 0 1 160px; min-width: 0; }
+
+/* what each range of a reading starts, under its limits */
+.o-trigs { margin: 8px 0 2px; }
+.o-trigs li { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; }
+.o-trig-what { flex: 1 1 100%; }
+.o-trig-what b { color: var(--ink); font-weight: 600; }
+
+/* issues opened by readings */
+.ri-rows { list-style: none; margin: 0; padding: 0; display: grid; }
+.ri-row { padding: 14px 0; border-top: 1px solid var(--line); display: grid; gap: 8px; min-width: 0; }
+.ri-rows > .ri-row:first-child { border-top: 0; padding-top: 2px; }
+.ri-h { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; justify-content: space-between; }
+.ri-n { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; min-width: 0; font-size: 14.5px; overflow-wrap: anywhere; }
+.ri-kv { margin: 0; display: grid; gap: 6px; }
+.ri-kv > div { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 4px 12px; align-items: baseline; font-size: 13.5px; }
+.ri-kv dt { color: var(--ink-3); font-size: 13px; }
+.ri-kv dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.ri-kv .ov-sev { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+@media (max-width: 720px) { .ri-kv > div { grid-template-columns: minmax(0, 1fr); gap: 1px; } .cal-a { margin-left: 0; } }

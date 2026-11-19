@@ -400,7 +400,7 @@ window.V7 = (function () {
     if (sc.subject.kind === 'eq') { const e = eqRaw(key, sc.subject.id); if (e) { if (useDraft) { const dr = draftOf(e.type); if (dr && dr.schedules[sc.name]) return dr.schedules[sc.name]; } x = libSchedFor(e.type, sc.name); } }
     else x = libRound(d.plant.type, sc.name);
     if (x) return libEveryOf(x);
-    if (sc.workType === 'calibration' && sc.probe) return { n: 1, unit: 'month' };   /* every probe on the equipment: calibrated monthly */
+    if (sc.workType === 'calibration' && sc.probe) return (window.V7CAL && window.V7CAL.everyFor(key, sc.probe)) || { n: 1, unit: 'month' };   /* every probe on the equipment: calibrated monthly */
     return null;
   }
   /* v7: a task the Visualization proposes (no library schedule of that name): its cadence is "From the Visualization" (rule 8: override → form → library) */

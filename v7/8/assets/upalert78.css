@@ -80,3 +80,19 @@
   .ua-er1 .btn { margin-left: 0; }
   .ua-use select { width: 100%; }
 }
+/* 19 Nov: the plant card folds, and each place inside it is one line that states what is left and what is wrong */
+details.ua-card { margin: 0 0 16px; }
+.ua-flags { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.ua-flags-c { margin-top: 8px; }
+.ua-body { border-top: 1px solid var(--line); padding: 0 20px 8px; }
+.ua-body > .ua-acc { padding: 0; border-top: 1px solid var(--line); }
+.ua-body > .ua-acc:first-child { border-top: 0; }
+summary.ua-uph { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; margin: 0; padding: 12px 0 12px 22px; cursor: pointer; list-style: none; position: relative; min-height: 44px; }
+summary.ua-uph::-webkit-details-marker { display: none; }
+summary.ua-uph::before { content: ''; position: absolute; left: 4px; top: 20px; width: 7px; height: 7px; border-right: 2px solid var(--ink-3); border-bottom: 2px solid var(--ink-3); transform: rotate(-45deg); transition: transform .12s; }
+.ua-acc[open] > summary.ua-uph::before { transform: rotate(45deg); top: 18px; }
+summary.ua-uph:hover .ua-upn b { text-decoration: underline; }
+summary.ua-uph:focus-visible { outline: 2px solid var(--focus, #1f6feb); outline-offset: 2px; border-radius: 4px; }
+.ua-upn { min-width: 0; overflow-wrap: anywhere; }
+.ua-acc > .ua-rows { padding: 0 0 8px 22px; }
+@media (max-width: 720px) { .ua-body { padding: 0 16px 8px; } .ua-acc > .ua-rows { padding-left: 0; } }
