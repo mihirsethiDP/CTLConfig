@@ -62,3 +62,10 @@ button.lw-flowbtn:hover { text-decoration-color: currentColor; }
 .ph-main, .ph-title, .ph-chips { min-width: 0; max-width: 100%; }
 .pg-main, .o-rds, .o-rds > .o-rd, .o-al, .o-al-r { min-width: 0; max-width: 100%; }
 .o-al-r > .inc { max-width: 100%; }
+/* design QA: on a narrow screen a long "Accept all for …" button drops under its group's title instead of squeezing the title to nothing */
+@media (max-width: 720px) {
+  .p7-fold-s { flex-wrap: wrap; row-gap: 10px; }
+  .p7-fold-m { flex: 1 1 0; }
+  .p7-fold-r { flex: 1 1 100%; min-width: 0; display: flex; justify-content: flex-end; }
+  .p7-fold-r > .btn { max-width: 100%; height: auto; min-height: 28px; white-space: normal; text-align: center; }
+}
