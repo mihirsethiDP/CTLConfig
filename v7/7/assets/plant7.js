@@ -716,7 +716,13 @@
       const order = arr(call(() => v.scadaReview(key).groups, [])).map((g) => g.typeName);
       const byType = new Map(); order.forEach((t) => byType.set(t, []));
       let plantRow = null;
-      lr.forEach((r) => { if (r.eqId === 'plant') { plantRow = r; return; } if (!byType.has(r.typeName)) byType.set(r.typeName, []); byType.get(r.typeName).push(r); });
+      /* 20 Nov: the page is grouped by unit process. A piece of equipment is listed under the first step it takes part in; a step it
+         also takes part in names it and says where it is listed. Equipment in no step is listed by type, as before. */
+      const UPS = arr(call(() => v.structure(key).ups, [])); const homeUp = new Map(); const upRows = new Map(); const alsoIn = new Map();
+      UPS.forEach((u) => { upRows.set(u.id, []); alsoIn.set(u.id, []); });
+      UPS.forEach((u) => { if (!homeUp.has(u.id)) homeUp.set(u.id, u); });   /* a step's own tank belongs to that step first */
+      UPS.forEach((u) => arr(u.members).forEach((m) => { if (!homeUp.has(m.eqId)) homeUp.set(m.eqId, u); else if (homeUp.get(m.eqId).id !== u.id) alsoIn.get(u.id).push(m.eqId); }));
+      lr.forEach((r) => { if (r.eqId === 'plant') { plantRow = r; return; } const hu = homeUp.get(r.eqId); if (hu) { upRows.get(hu.id).push(r); return; } if (!byType.has(r.typeName)) byType.set(r.typeName, []); byType.get(r.typeName).push(r); });
       const visibleEq = lr.filter((r) => visibleProps(r, show).length).length;
       const openAll = !!q.eq ? false : (show === 'undecided' && c.undecided <= 20) || visibleEq <= 3;
       const isOpen = (r) => (q.eq ? r.eqId === q.eq : openAll);
@@ -734,12 +740,27 @@
         const act = show === 'blocked' ? '' : undRows > 1 ? btn(`Accept all for ${countType(rows.length, typeName)}`, { act: 'p7:lib-accept-type', data: { plant: key, type: typeName }, kind: 'primary', small: true }) : tc.undecided ? '' : chip('All decided', { tone: 'ok' });
         folds.push({ proc: !!(code && W.CATALOGUE_BY_CODE && W.CATALOGUE_BY_CODE[code] && W.CATALOGUE_BY_CODE[code].library === 'process'), und: tc.undecided, n: rows.length, id: `lib:${key}:${show}:${typeName}`, hasEq: !!q.eq && rows.some((r) => r.eqId === q.eq), title: code ? `<a href="${esc(libHref(code))}" title="Look at this library type here">${esc(typeName)}</a>` : esc(typeName), sub, inner, act });
       });
+      const upFolds = []; const codeOfRow = (r) => call(() => v.eq(key, r.eqId).dbType, null);
+      UPS.forEach((u) => {
+        const rows = arr(upRows.get(u.id)); const centre = rows.find((r) => r.eqId === u.id) || null; const others = rows.filter((r) => r !== centre);
+        const groups = []; if (centre) groups.push({ head: 'The step itself', rows: [centre], code: null }); const tm = new Map(); others.forEach((r) => { if (!tm.has(r.typeName)) tm.set(r.typeName, []); tm.get(r.typeName).push(r); });
+        tm.forEach((rs, typeName) => groups.push({ head: `${typeName} · ${pieces(rs.length)} in this step`, rows: rs, code: codeOfRow(rs[0]), typeName }));
+        const parts2 = groups.map((g) => { const shared = sharedGroups(g.rows).map((x) => sharedBlock(key, x, show, false, alertIds)).filter(Boolean); const blocks = g.rows.map((r) => eqBlock(key, r, show, isOpen(r), alertIds)).filter(Boolean); if (!shared.length && !blocks.length) return '';
+          return `<h4 class="p7-shared-h p7-up-h">${g.code ? `<a href="${esc(libHref(g.code))}" title="Look at this library type">${esc(g.typeName)}</a> · ${esc(pieces(g.rows.length))} in this step` : esc(g.head)}</h4>${shared.join('')}${blocks.join('')}`; }).filter(Boolean);
+        if (!parts2.length) return;
+        const tc = libCounts(rows); const undRows = rows.filter((r) => arr(r.proposals).some((x) => !x.decided && !x.blockedBy)); const also = arr(alsoIn.get(u.id)).map((id) => { const e = call(() => v.eq(key, id), null); const hu = homeUp.get(id); return e && hu ? `${e.tag} (listed under ${hu.tag})` : null; }).filter(Boolean);
+        const sub = `${esc(u.typeName)} · the step${others.length ? ` and ${pieces(others.length)} that ${others.length === 1 ? 'takes' : 'take'} part in it` : also.length ? '' : ' on its own'}${also.length ? ` · ${pieces(also.length)} shared with another step, listed there` : ''}${show === 'blocked' ? ` · ${tc.blocked} can't be used yet` : `${tc.undecided ? ` · ${tc.undecided} to decide` : ' · all decided'}${tc.blocked ? ` · ${tc.blocked} can't be used yet` : ''}`}`;
+        const inner = parts2.join('') + (also.length ? `<p class="p7-up-also">Also takes part in this step: ${esc(also.join(', '))}.</p>` : '');
+        const act = show === 'blocked' ? '' : tc.undecided > 1 ? btn(`Accept all for ${u.tag}`, { act: 'p7:lib-accept-set', data: { plant: key, eqs: undRows.map((r) => r.eqId).join(','), label: u.tag }, kind: 'primary', small: true, title: `Accept everything left to decide for ${u.tag} and the equipment listed under it` }) : tc.undecided ? '' : chip('All decided', { tone: 'ok' });
+        upFolds.push({ proc: true, und: tc.undecided, n: rows.length, id: `lib:${key}:${show}:up:${u.id}`, hasEq: !!q.eq && rows.some((r) => r.eqId === q.eq), title: `<span class="mono p7-up-tag">${esc(u.tag)}</span> ${esc(u.name)}`, sub, inner, act });
+      });
       const K = W.V7KEEP || { open: (id, d) => (d ? ' open' : '') };
       /* 20 Nov: what you are configuring is named. Unit processes first, then equipment, then the plant itself */
-      const catHead = (id, title, what, fs0, undN) => `<div class="p7-cat" id="p7-cat-${id}"><h3 class="p7-cat-t">${esc(title)}</h3><span class="p7-cat-n">${fs0 != null ? `${pl(fs0, 'type')} · ` : ''}${undN ? `${undN} to decide` : 'all decided'}</span><p class="p7-cat-d">${esc(what)}</p></div>`;
-      [['process', 'Unit processes', 'A treatment step: the tank or reactor, with the equipment that takes part in it. What you accept here is about the step as a whole.', folds.filter((f) => f.proc)], ['equipment', 'Equipment', 'Single pieces of equipment: pumps, blowers, valves, tanks on their own. What you accept here is about that piece of equipment.', folds.filter((f) => !f.proc)]].forEach(([id, title, what, fs0]) => {
-        if (!fs0.length) return; cards.push(catHead(id, title, what, fs0.length, fs0.reduce((n, f) => n + (f.und || 0), 0)));
-        fs0.forEach((f) => cards.push(`<details class="card p7-type p7-fold" data-keep="${esc(f.id)}"${K.open(f.id, f.hasEq || folds.length <= 2)}><summary class="p7-fold-s"><span class="p7-fold-m"><span class="p7-fold-t">${f.title}</span><span class="p7-fold-d">${f.sub}</span></span><span class="p7-fold-r">${f.act}</span></summary><div class="p7-fold-b">${f.inner}</div></details>`));
+      const catHead = (id, title, what, fs0, undN) => `<div class="p7-cat" id="p7-cat-${id}"><h3 class="p7-cat-t">${esc(title)}</h3><span class="p7-cat-n">${fs0 != null ? `${typeof fs0 === 'string' ? esc(fs0) : pl(fs0, 'type')} · ` : ''}${undN ? `${undN} to decide` : 'all decided'}</span><p class="p7-cat-d">${esc(what)}</p></div>`;
+      const allFolds = upFolds.concat(folds);
+      [['process', 'Unit processes', 'One block per treatment step. Open a step to decide what belongs to the step itself and to each piece of equipment that takes part in it.', upFolds.concat(folds.filter((f) => f.proc)), (n) => `${n} ${n === 1 ? 'unit process' : 'unit processes'}`], ['equipment', 'Equipment in no unit process', 'Equipment that takes part in no treatment step, listed by type.', folds.filter((f) => !f.proc), (n) => pl(n, 'type')]].forEach(([id, title, what, fs0, cnt]) => {
+        if (!fs0.length) return; cards.push(catHead(id, title, what, cnt(fs0.length), fs0.reduce((n, f) => n + (f.und || 0), 0)));
+        fs0.forEach((f) => cards.push(`<details class="card p7-type p7-fold" data-keep="${esc(f.id)}"${K.open(f.id, f.hasEq || allFolds.length <= 2)}><summary class="p7-fold-s"><span class="p7-fold-m"><span class="p7-fold-t">${f.title}</span><span class="p7-fold-d">${f.sub}</span></span><span class="p7-fold-r">${f.act}</span></summary><div class="p7-fold-b">${f.inner}</div></details>`));
       });
       if (plantRow) {
         const blk = eqBlock(key, plantRow, show, isOpen(plantRow), alertIds);
@@ -752,7 +773,7 @@
       if (!cards.length) {
         const msg = { undecided: 'Nothing left to decide.', decided: 'Nothing decided yet.', blocked: 'Every proposal can be used.', all: 'The library proposes nothing for this plant.' }[show];
         parts.push(empty(msg, show !== 'all' ? btn('Show all', { href: qs('all') }) : ''));
-      } else parts.push(`${folds.length > 2 ? '<p class="p7-fold-hint">One line per type. Open a type to decide line by line, or click a tag to look at that equipment without leaving this page.</p>' : ''}<div class="p7-cards">${cards.join('')}</div>`);
+      } else parts.push(`${upFolds.length + folds.length > 2 ? '<p class="p7-fold-hint">One line per unit process. Open one to decide line by line, or click a tag to look at that equipment without leaving this page.</p>' : ''}<div class="p7-cards">${cards.join('')}</div>`);
       if (show === 'undecided' && c.blocked) parts.push(note(`${pl(c.blocked, 'more proposal')} can't be used yet: ${c.blocked === 1 ? 'it needs' : 'they need'} a reading the Visualization doesn't send, or a connection between equipment (next phase). They stay listed, greyed, under "Can't be used yet".`, 'quiet'));
       return frame(key, 'library', `<div class="p7-sec-h"><h2>Alerts &amp; Tasks for this plant</h2><p>${esc(sub)} ${U.term ? U.term('On trial', 'What On trial means') : ''}</p></div>` + workLevelCard(key) + parts.join(''));
     });
@@ -1047,6 +1068,11 @@
     const key = dget(el, 'plant'); const eq = dget(el, 'eq');
     const r = call(() => V().acceptAllFor(key, { eqId: eq }), { ok: false });
     say(r.ok ? `Accepted ${pl(r.count || 0, 'proposal')} for ${esc(eq === 'plant' ? 'the plant' : tagOf(key, eq))}; ${esc(acceptTail(r))}.${afterDecide(key)}` : 'That did not work.', { ms: 7000 });
+  });
+  U.on('p7:lib-accept-set', (el) => {
+    const key = dget(el, 'plant'); const ids = String(dget(el, 'eqs') || '').split(',').filter(Boolean); let n = 0; let last = null;
+    ids.forEach((id) => { const r = call(() => V().acceptAllFor(key, { eqId: id }), { ok: false }); if (r.ok) { n += r.count || 0; last = r; } });
+    say(n ? `Accepted ${pl(n, 'proposal')} for ${esc(dget(el, 'label') || 'the step')} and its equipment${last ? `; ${esc(acceptTail(last))}` : ''}.${afterDecide(key)}` : 'Nothing was left to accept there.', { ms: 7000 });
   });
   U.on('p7:lib-accept-type', (el) => {
     const key = dget(el, 'plant'); const type = dget(el, 'type');

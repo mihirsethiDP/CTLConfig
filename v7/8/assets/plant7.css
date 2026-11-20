@@ -135,3 +135,10 @@ details.p7-grp > summary:hover .p7-sum-t { color: var(--accent-strong); }
 .p7-jump button span { color: var(--ink-3); margin-left: 4px; }
 .p7-zone { margin-top: 28px; padding-top: 18px; border-top: 2px solid var(--line-2); scroll-margin-top: 110px; }
 .p7-zone > .p7-cat { margin: 0 0 10px; padding: 0; border: 0; }
+
+/* 20 Nov: one fold per unit process */
+.p7-up-tag { font-weight: 700; margin-right: 6px; }
+.p7-up-h { margin-top: 18px; }
+.p7-fold-b > .p7-up-h:first-child { margin-top: 4px; }
+.p7-up-h a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+.p7-up-also { margin: 14px 0 2px; padding-top: 10px; border-top: 1px dashed var(--line-2); font-size: 13px; color: var(--ink-3); overflow-wrap: anywhere; }

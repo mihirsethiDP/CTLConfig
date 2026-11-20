@@ -107,7 +107,7 @@
     if (body.querySelector('.p7-jump')) return; const head = body.querySelector('.p7-sec-h'); if (!head) return;
     const cnt = (id) => { const e = body.querySelector(`#p7-cat-${id} .p7-cat-n`); return e ? e.textContent : ''; };
     const link = (to, label, n) => (body.querySelector('#' + to) ? `<button type="button" data-act="ox:jump" data-to="${to}"><b>${esc(label)}</b>${n ? `<span>${esc(n)}</span>` : ''}</button>` : '');
-    const row = link('p7-cat-process', 'Unit processes', cnt('process')) + link('p7-cat-equipment', 'Equipment', cnt('equipment')) + link('p7-cat-plant', 'The whole plant', cnt('plant')) + link('p7-zone-across', 'Across more than one reading', '') + link('p7-zone-rules', 'Rules for the whole plant', '');
+    const row = link('p7-cat-process', 'Unit processes', cnt('process')) + link('p7-cat-equipment', 'Equipment in no unit process', cnt('equipment')) + link('p7-cat-plant', 'The whole plant', cnt('plant')) + link('p7-zone-across', 'Across more than one reading', '') + link('p7-zone-rules', 'Rules for the whole plant', '');
     if (row) head.insertAdjacentHTML('afterend', `<nav class="p7-jump" aria-label="On this page"><span>On this page</span>${row}</nav>`);
   }
   if (U.afterRender) U.afterRender((main, p0) => {
