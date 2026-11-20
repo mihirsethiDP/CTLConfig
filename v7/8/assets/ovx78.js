@@ -82,8 +82,24 @@
   /* a plant's Alerts & Tasks page, in the order a person configures: unit processes, equipment, the whole plant, alerts across
      readings, and last the rules that hold for the whole plant (timelines, calculated values) */
   U.on('ox:jump', (el) => { const t = document.getElementById(el.getAttribute('data-to')); if (t) { const d = t.tagName === 'DETAILS' ? t : t.id === 'p7-zone-across' ? t.querySelector('details.card') : null; if (d) d.open = true; t.scrollIntoView({ block: 'start' }); } return false; });
+  /* the summary cards above the types fold to one line each, so the types start higher. A fold keeps its title, its one-line
+     summary and its button; what was open stays open while you work on the page. */
+  const FOLD = {}; document.addEventListener('toggle', (ev) => { const d = ev.target; if (d && d.classList && d.classList.contains('p7-sum')) FOLD[d.getAttribute('data-sum')] = d.open; }, true);
+  function foldSummaries(body) {
+    const stop = body.querySelector('.filters') || body.querySelector('.p7-cards'); if (!stop) return; let i = 0;
+    Array.prototype.slice.call(body.children).forEach((c) => {
+      if (c.tagName !== 'SECTION' || !c.classList.contains('card') || !(c.compareDocumentPosition(stop) & Node.DOCUMENT_POSITION_FOLLOWING)) return;
+      const head = c.querySelector(':scope > .card-h'); const t = head && head.querySelector('.card-t'); if (!t) return; const sub = head.querySelector('.card-s'); const acts = head.querySelector('.card-a');
+      const id = `sum${i++}`; const d = document.createElement('details'); d.className = c.className + ' p7-fold p7-sum'; d.setAttribute('data-sum', id); if (FOLD[id]) d.open = true;
+      const sm = document.createElement('summary'); sm.className = 'p7-fold-s'; sm.innerHTML = `<span class="p7-fold-m"><span class="p7-fold-t">${t.innerHTML}</span>${sub ? `<span class="p7-fold-d">${sub.innerHTML}</span>` : ''}</span>${acts && acts.innerHTML.trim() ? `<span class="p7-fold-r">${acts.innerHTML}</span>` : ''}`;
+      const inner = document.createElement('div'); inner.className = 'p7-sum-b'; head.parentNode.removeChild(head); while (c.firstChild) inner.appendChild(c.firstChild);
+      if (!inner.textContent.trim() && !inner.querySelector('button, a, input')) { d.classList.add('is-flat'); }
+      d.appendChild(sm); d.appendChild(inner); c.parentNode.replaceChild(d, c);
+    });
+  }
   function arrange(main) {
     const body = main.querySelector('.pg-main'); const cards = main.querySelector('.p7-cards'); if (!body || body.querySelector('#p7-zone-rules')) return;
+    try { foldSummaries(body); } catch (e) { /* the cards stay open */ }
     const zone = (id, title, what) => { const z = document.createElement('section'); z.className = 'p7-zone'; z.id = id; z.innerHTML = `<div class="p7-cat"><h3 class="p7-cat-t">${esc(title)}</h3><p class="p7-cat-d">${esc(what)}</p></div>`; return z; };
     const ua = body.querySelector('#ua-card'); const rules = ['#ct-card', '#sv-card', '#dy-plant'].map((q) => body.querySelector(q)).filter(Boolean);
     if (ua) { const z = zone('p7-zone-across', 'Across more than one reading', 'Alerts that watch several readings together, on a piece of equipment, across a unit process, across a control group, or across the plant.'); body.appendChild(z); z.appendChild(ua); }
