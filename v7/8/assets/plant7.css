@@ -142,3 +142,12 @@ details.p7-grp > summary:hover .p7-sum-t { color: var(--accent-strong); }
 .p7-fold-b > .p7-up-h:first-child { margin-top: 4px; }
 .p7-up-h a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 .p7-up-also { margin: 14px 0 2px; padding-top: 10px; border-top: 1px dashed var(--line-2); font-size: 13px; color: var(--ink-3); overflow-wrap: anywhere; }
+
+/* 20 Nov: lines listed by kind inside a step and inside a piece of equipment */
+.p7-kind { display: flex; align-items: baseline; gap: 8px; margin: 14px 0 4px; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+.p7-grp-b > .p7-kind:first-child { margin-top: 4px; }
+.p7-kind-t { color: var(--ink-2); }
+.p7-kind-n { font-weight: 500; letter-spacing: 0; text-transform: none; font-size: 12.5px; }
+.p7-kinds { display: flex; flex-wrap: wrap; gap: 6px 8px; margin: 2px 0 10px; font-size: 13px; color: var(--ink-3); }
+.p7-kinds span { padding: 3px 10px; border-radius: 999px; background: var(--surface-2, #f3f5f7); white-space: nowrap; }
+.p7-kinds b { color: var(--ink); font-weight: 600; }

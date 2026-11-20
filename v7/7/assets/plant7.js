@@ -668,6 +668,19 @@
     else out = [parts.und, parts.sh, parts.acc, parts.rej, parts.bl];
     return out.filter(Boolean).join(' · ') || 'Nothing proposed';
   }
+  /* 20 Nov: inside a step or a piece of equipment, lines are listed by kind: alerts first, then each kind of task */
+  const KINDS = [['alert', 'Alerts'], ['pm', 'Preventive maintenance'], ['calibration', 'Calibration'], ['routine', 'Routine checks'], ['work', 'Routine work'], ['test', 'Manual testing'], ['other', 'Other tasks']];
+  const KIND_LABEL = {}; KINDS.forEach(([k, l]) => { KIND_LABEL[k] = l; }); const KIND_ORDER = KINDS.map((k) => k[0]);
+  const kindOf = (p) => (p.kind === 'alert' ? 'alert' : KIND_LABEL[p.workType] && p.workType !== 'alert' ? p.workType : 'other');
+  const kindHead = (k, n, tail) => `<h5 class="p7-kind"><span class="p7-kind-t">${esc(KIND_LABEL[k])}</span><span class="p7-kind-n">${n}${tail ? ` · ${esc(tail)}` : ''}</span></h5>`;
+  function kindGroups(ps, rowFn) {
+    const m = new Map(); arr(ps).forEach((p) => { const k = kindOf(p); if (!m.has(k)) m.set(k, []); m.get(k).push(p); });
+    return KIND_ORDER.filter((k) => m.has(k)).map((k) => `${kindHead(k, m.get(k).length)}<ul class="p7-props">${m.get(k).map(rowFn).join('')}</ul>`).join('');
+  }
+  function kindsLine(rows, show, extra) {
+    const c = { ...(extra || {}) }; arr(rows).forEach((r) => visibleProps(r, show).forEach((p) => { const k = kindOf(p); c[k] = (c[k] || 0) + 1; })); const ks = KIND_ORDER.filter((k) => c[k]); if (ks.length < 2) return '';
+    return `<p class="p7-kinds" aria-label="What is listed here, by kind">${ks.map((k) => `<span><b>${c[k]}</b> ${esc((c[k] === 1 ? ({ alert: 'alert', routine: 'routine check', other: 'other task' })[k] : null) || KIND_LABEL[k].toLowerCase())}</span>`).join('')}</p>`;
+  }
   function eqBlock(key, r, show, open, alertIds) {
     const ps = visibleProps(r, show); if (!ps.length) return '';
     const und = arr(r.proposals).filter((p) => !p.decided && !p.blockedBy).length;
@@ -675,7 +688,7 @@
     const act = und > 1 && show !== 'blocked' && show !== 'decided' ? btn(`Accept all ${und} for ${r.eqId === 'plant' ? 'the plant' : r.tag}`, { act: 'p7:lib-accept-eq', data: { plant: key, eq: r.eqId }, small: true, title: `Accept everything undecided for ${r.eqId === 'plant' ? 'the plant' : r.tag}, the tasks shared by its type included` }) : '';
     const sum = `<summary><span class="p7-sum-main">${label}<span class="p7-sum-s">${eqStatus(r, show, key)}</span></span><span class="p7-sum-r">${act}</span></summary>`;
     const link = r.eqId !== 'plant' ? `<p class="p7-more"><a href="${esc(eqHref(key, r.eqId))}">Open ${esc(r.tag)} →</a></p>` : '';
-    return `<details class="p7-grp p7-eq"${open ? ' open' : ''}>${sum}<div class="p7-grp-b"><ul class="p7-props">${ps.map((p) => propRow(key, p, alertIds)).join('')}</ul>${link}</div></details>`;
+    return `<details class="p7-grp p7-eq"${open ? ' open' : ''}>${sum}<div class="p7-grp-b">${kindGroups(ps, (p) => propRow(key, p, alertIds))}${link}</div></details>`;
   }
   function library(params) {
     return guard(params, (key, q) => {
@@ -727,8 +740,9 @@
       const openAll = !!q.eq ? false : (show === 'undecided' && c.undecided <= 20) || visibleEq <= 3;
       const isOpen = (r) => (q.eq ? r.eqId === q.eq : openAll);
       const cards = []; const folds = [];
+      const sharedList = (rows) => { let last = null; const kc = {}; const out = sharedGroups(rows).slice().sort((a, b) => KIND_ORDER.indexOf(kindOf({ kind: 'task', workType: a.workType })) - KIND_ORDER.indexOf(kindOf({ kind: 'task', workType: b.workType }))).map((x) => { const h = sharedBlock(key, x, show, false, alertIds); if (!h) return ''; const k = kindOf({ kind: 'task', workType: x.workType }); const head = k !== last ? kindHead(k, sharedGroups(rows).filter((y) => kindOf({ kind: 'task', workType: y.workType }) === k && sharedBlock(key, y, show, false, alertIds)).length, 'one line for the type') : ''; last = k; kc[k] = (kc[k] || 0) + 1; return head + h; }).filter(Boolean); out.kinds = kc; return out; };
       byType.forEach((rows, typeName) => {
-        const shared = sharedGroups(rows).map((g) => sharedBlock(key, g, show, false, alertIds)).filter(Boolean);
+        const shared = sharedList(rows);
         const blocks = rows.map((r) => eqBlock(key, r, show, isOpen(r), alertIds)).filter(Boolean);
         if (!blocks.length && !shared.length) return;
         const tc = libCounts(rows); const undRows = rows.filter((r) => arr(r.proposals).some((x) => !x.decided && !x.blockedBy)).length; const code = (rows[0] && call(() => v.eq(key, rows[0].eqId).dbType, null)) || null;
@@ -736,7 +750,7 @@
         const sub = show === 'blocked' ? `${pieces(rows.length)} · ${tc.blocked} can't be used yet, each with what it needs${tc.undecided ? `. <a href="${esc(qs('undecided'))}">${tc.undecided} more are waiting for a decision</a>` : ''}`
           : `${pieces(rows.length)}${tc.undecided ? ` · ${tc.undecided} to decide` : ' · all decided'}${tc.blocked ? ` · ${tc.blocked} can't be used yet` : ''}${undNames.length && show !== 'decided' ? `. To decide: ${shortList(undNames, 3)}` : ''}`;
         /* v7/4: a type is one line (what it is, how much is left to decide, one button for all of it); opening it shows its lines */
-        const inner = (shared.length ? `<h4 class="p7-shared-h">Shared by the type · one line each</h4>${shared.join('')}` : '') + (shared.length && blocks.length ? '<h4 class="p7-shared-h">On each piece of equipment</h4>' : '') + blocks.join('');
+        const inner = kindsLine(rows, show, shared.kinds) + (shared.length ? `<h4 class="p7-shared-h">Shared by the type · one line each</h4>${shared.join('')}` : '') + (shared.length && blocks.length ? '<h4 class="p7-shared-h">On each piece of equipment</h4>' : '') + blocks.join('');
         const act = show === 'blocked' ? '' : undRows > 1 ? btn(`Accept all for ${countType(rows.length, typeName)}`, { act: 'p7:lib-accept-type', data: { plant: key, type: typeName }, kind: 'primary', small: true }) : tc.undecided ? '' : chip('All decided', { tone: 'ok' });
         folds.push({ proc: !!(code && W.CATALOGUE_BY_CODE && W.CATALOGUE_BY_CODE[code] && W.CATALOGUE_BY_CODE[code].library === 'process'), und: tc.undecided, n: rows.length, id: `lib:${key}:${show}:${typeName}`, hasEq: !!q.eq && rows.some((r) => r.eqId === q.eq), title: code ? `<a href="${esc(libHref(code))}" title="Look at this library type here">${esc(typeName)}</a>` : esc(typeName), sub, inner, act });
       });
@@ -745,12 +759,12 @@
         const rows = arr(upRows.get(u.id)); const centre = rows.find((r) => r.eqId === u.id) || null; const others = rows.filter((r) => r !== centre);
         const groups = []; if (centre) groups.push({ head: 'The step itself', rows: [centre], code: null }); const tm = new Map(); others.forEach((r) => { if (!tm.has(r.typeName)) tm.set(r.typeName, []); tm.get(r.typeName).push(r); });
         tm.forEach((rs, typeName) => groups.push({ head: `${typeName} · ${pieces(rs.length)} in this step`, rows: rs, code: codeOfRow(rs[0]), typeName }));
-        const parts2 = groups.map((g) => { const shared = sharedGroups(g.rows).map((x) => sharedBlock(key, x, show, false, alertIds)).filter(Boolean); const blocks = g.rows.map((r) => eqBlock(key, r, show, isOpen(r), alertIds)).filter(Boolean); if (!shared.length && !blocks.length) return '';
+        const upK = {}; const parts2 = groups.map((g) => { const shared = sharedList(g.rows); Object.keys(shared.kinds || {}).forEach((k) => { upK[k] = (upK[k] || 0) + shared.kinds[k]; }); const blocks = g.rows.map((r) => eqBlock(key, r, show, isOpen(r), alertIds)).filter(Boolean); if (!shared.length && !blocks.length) return '';
           return `<h4 class="p7-shared-h p7-up-h">${g.code ? `<a href="${esc(libHref(g.code))}" title="Look at this library type">${esc(g.typeName)}</a> · ${esc(pieces(g.rows.length))} in this step` : esc(g.head)}</h4>${shared.join('')}${blocks.join('')}`; }).filter(Boolean);
         if (!parts2.length) return;
         const tc = libCounts(rows); const undRows = rows.filter((r) => arr(r.proposals).some((x) => !x.decided && !x.blockedBy)); const also = arr(alsoIn.get(u.id)).map((id) => { const e = call(() => v.eq(key, id), null); const hu = homeUp.get(id); return e && hu ? `${e.tag} (listed under ${hu.tag})` : null; }).filter(Boolean);
         const sub = `${esc(u.typeName)} · the step${others.length ? ` and ${pieces(others.length)} that ${others.length === 1 ? 'takes' : 'take'} part in it` : also.length ? '' : ' on its own'}${also.length ? ` · ${pieces(also.length)} shared with another step, listed there` : ''}${show === 'blocked' ? ` · ${tc.blocked} can't be used yet` : `${tc.undecided ? ` · ${tc.undecided} to decide` : ' · all decided'}${tc.blocked ? ` · ${tc.blocked} can't be used yet` : ''}`}`;
-        const inner = parts2.join('') + (also.length ? `<p class="p7-up-also">Also takes part in this step: ${esc(also.join(', '))}.</p>` : '');
+        const inner = kindsLine(rows, show, upK) + parts2.join('') + (also.length ? `<p class="p7-up-also">Also takes part in this step: ${esc(also.join(', '))}.</p>` : '');
         const act = show === 'blocked' ? '' : tc.undecided > 1 ? btn(`Accept all for ${u.tag}`, { act: 'p7:lib-accept-set', data: { plant: key, eqs: undRows.map((r) => r.eqId).join(','), label: u.tag }, kind: 'primary', small: true, title: `Accept everything left to decide for ${u.tag} and the equipment listed under it` }) : tc.undecided ? '' : chip('All decided', { tone: 'ok' });
         upFolds.push({ proc: true, und: tc.undecided, n: rows.length, id: `lib:${key}:${show}:up:${u.id}`, hasEq: !!q.eq && rows.some((r) => r.eqId === q.eq), title: `<span class="mono p7-up-tag">${esc(u.tag)}</span> ${esc(u.name)}`, sub, inner, act });
       });
