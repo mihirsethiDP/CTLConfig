@@ -81,7 +81,7 @@
     const ts = arr(safe(() => v.tasks(key, { eqId: id }), []));
     if (ts.length) parts.push(sec(`Tasks · ${ts.length}`, rows(ts.slice(0, 5).map((t) => ({ title: esc(t.name || ''), sub: esc(t.everyText || t.whenText || '') }))) + more(ts.length - 5, 'task', eqHref(key, id, 'tasks'))));
     if (!props.length && !als.length && !ts.length && setup) parts.push(`<p class="pk-quiet">The library proposes nothing for it.</p>`);
-    return { title: `<span class="mono">${esc(e.tag)}</span> ${esc(e.name || '')}`, sub: `${P.name || ''}${setup ? ' · being set up' : ''}`, body: parts.join(''), foot: `<a class="btn btn-primary pk-full" href="${esc(eqHref(key, id))}">Open the full page</a>` };
+    return { title: `<span class="mono">${esc(e.tag)}</span> ${esc(e.name || '')}`, sub: `${P.name || ''}${setup ? ' · being set up' : ''}`, body: (W.V7CRIT && W.V7CRIT.trail ? safe(() => W.V7CRIT.trail(key, { eqId: id }), '') : '') + parts.join(''), foot: `<a class="btn btn-primary pk-full" href="${esc(eqHref(key, id))}">Open the full page</a>` };
   }
 
   function typePanel(code) {
