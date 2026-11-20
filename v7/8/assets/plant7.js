@@ -737,14 +737,20 @@
         /* v7/4: a type is one line (what it is, how much is left to decide, one button for all of it); opening it shows its lines */
         const inner = (shared.length ? `<h4 class="p7-shared-h">Shared by the type · one line each</h4>${shared.join('')}` : '') + (shared.length && blocks.length ? '<h4 class="p7-shared-h">On each piece of equipment</h4>' : '') + blocks.join('');
         const act = show === 'blocked' ? '' : undRows > 1 ? btn(`Accept all for ${countType(rows.length, typeName)}`, { act: 'p7:lib-accept-type', data: { plant: key, type: typeName }, kind: 'primary', small: true }) : tc.undecided ? '' : chip('All decided', { tone: 'ok' });
-        folds.push({ id: `lib:${key}:${show}:${typeName}`, hasEq: !!q.eq && rows.some((r) => r.eqId === q.eq), title: code ? `<a href="${esc(libHref(code))}" title="Look at this library type here">${esc(typeName)}</a>` : esc(typeName), sub, inner, act });
+        folds.push({ proc: !!(code && W.CATALOGUE_BY_CODE && W.CATALOGUE_BY_CODE[code] && W.CATALOGUE_BY_CODE[code].library === 'process'), und: tc.undecided, n: rows.length, id: `lib:${key}:${show}:${typeName}`, hasEq: !!q.eq && rows.some((r) => r.eqId === q.eq), title: code ? `<a href="${esc(libHref(code))}" title="Look at this library type here">${esc(typeName)}</a>` : esc(typeName), sub, inner, act });
       });
       const K = W.V7KEEP || { open: (id, d) => (d ? ' open' : '') };
-      folds.forEach((f) => cards.push(`<details class="card p7-type p7-fold" data-keep="${esc(f.id)}"${K.open(f.id, f.hasEq || folds.length <= 2)}><summary class="p7-fold-s"><span class="p7-fold-m"><span class="p7-fold-t">${f.title}</span><span class="p7-fold-d">${f.sub}</span></span><span class="p7-fold-r">${f.act}</span></summary><div class="p7-fold-b">${f.inner}</div></details>`));
+      /* 20 Nov: what you are configuring is named. Unit processes first, then equipment, then the plant itself */
+      const catHead = (id, title, what, fs0, undN) => `<div class="p7-cat" id="p7-cat-${id}"><h3 class="p7-cat-t">${esc(title)}</h3><span class="p7-cat-n">${fs0 != null ? `${pl(fs0, 'type')} · ` : ''}${undN ? `${undN} to decide` : 'all decided'}</span><p class="p7-cat-d">${esc(what)}</p></div>`;
+      [['process', 'Unit processes', 'A treatment step: the tank or reactor, with the equipment that takes part in it. What you accept here is about the step as a whole.', folds.filter((f) => f.proc)], ['equipment', 'Equipment', 'Single pieces of equipment: pumps, blowers, valves, tanks on their own. What you accept here is about that piece of equipment.', folds.filter((f) => !f.proc)]].forEach(([id, title, what, fs0]) => {
+        if (!fs0.length) return; cards.push(catHead(id, title, what, fs0.length, fs0.reduce((n, f) => n + (f.und || 0), 0)));
+        fs0.forEach((f) => cards.push(`<details class="card p7-type p7-fold" data-keep="${esc(f.id)}"${K.open(f.id, f.hasEq || folds.length <= 2)}><summary class="p7-fold-s"><span class="p7-fold-m"><span class="p7-fold-t">${f.title}</span><span class="p7-fold-d">${f.sub}</span></span><span class="p7-fold-r">${f.act}</span></summary><div class="p7-fold-b">${f.inner}</div></details>`));
+      });
       if (plantRow) {
         const blk = eqBlock(key, plantRow, show, isOpen(plantRow), alertIds);
         if (blk) {
           const tc = libCounts([plantRow]);
+          cards.push(catHead('plant', 'The whole plant', 'Rounds and checks that belong to no single unit process or piece of equipment.', null, tc.undecided));
           cards.push(card({ title: 'The plant itself', sub: `Rounds and checks for ${p.name} as a whole${tc.undecided ? ` · ${tc.undecided} to decide` : ''}`, body: blk, actions: [tc.undecided > 1 ? btn('Accept all for the plant', { act: 'p7:lib-accept-eq', data: { plant: key, eq: 'plant' }, kind: 'primary' }) : tc.undecided ? '' : chip('All decided', { tone: 'ok' })], cls: 'p7-type' }));
         }
       }

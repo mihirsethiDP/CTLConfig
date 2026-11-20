@@ -96,3 +96,5 @@ summary.ua-uph:focus-visible { outline: 2px solid var(--focus, #1f6feb); outline
 .ua-upn { min-width: 0; overflow-wrap: anywhere; }
 .ua-acc > .ua-rows { padding: 0 0 8px 22px; }
 @media (max-width: 720px) { .ua-body { padding: 0 16px 8px; } .ua-acc > .ua-rows { padding-left: 0; } }
+.ua-kind { margin: 14px 0 0; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+.ua-body > .ua-kind + .ua-acc { border-top: 0; }

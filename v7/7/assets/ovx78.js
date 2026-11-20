@@ -79,9 +79,25 @@
   U.on('pd:discard', (el) => { const id = el.getAttribute('data-id'); discard(id || null); U.toast(id ? 'Dropped. The library keeps what it has.' : 'All of them dropped.'); return undefined; });
   U.on('pd:publish', () => { const n = document.getElementById('pd-note'); const r = publish(n ? n.value : NOTE); if (r.count) NOTE = ''; U.toast(r.ok ? `Published ${r.count} ${r.count === 1 ? 'change' : 'changes'}. Plants that follow the library have ${r.count === 1 ? 'it' : 'them'} now.` : r.error); return r.count ? undefined : false; });
 
+  /* a plant's Alerts & Tasks page, in the order a person configures: unit processes, equipment, the whole plant, alerts across
+     readings, and last the rules that hold for the whole plant (timelines, calculated values) */
+  U.on('ox:jump', (el) => { const t = document.getElementById(el.getAttribute('data-to')); if (t) { const d = t.tagName === 'DETAILS' ? t : t.id === 'p7-zone-across' ? t.querySelector('details.card') : null; if (d) d.open = true; t.scrollIntoView({ block: 'start' }); } return false; });
+  function arrange(main) {
+    const body = main.querySelector('.pg-main'); const cards = main.querySelector('.p7-cards'); if (!body || body.querySelector('#p7-zone-rules')) return;
+    const zone = (id, title, what) => { const z = document.createElement('section'); z.className = 'p7-zone'; z.id = id; z.innerHTML = `<div class="p7-cat"><h3 class="p7-cat-t">${esc(title)}</h3><p class="p7-cat-d">${esc(what)}</p></div>`; return z; };
+    const ua = body.querySelector('#ua-card'); const rules = ['#ct-card', '#sv-card', '#dy-plant'].map((q) => body.querySelector(q)).filter(Boolean);
+    if (ua) { const z = zone('p7-zone-across', 'Across more than one reading', 'Alerts that watch several readings together, on a piece of equipment, across a unit process, across a control group, or across the plant.'); body.appendChild(z); z.appendChild(ua); }
+    if (rules.length) { const z = zone('p7-zone-rules', 'Rules for the whole plant', 'Not tied to one type: how late tasks and open issues are chased here, and the calculated values this plant uses.'); body.appendChild(z); rules.forEach((c) => z.appendChild(c)); }
+    if (body.querySelector('.p7-jump')) return; const head = body.querySelector('.p7-sec-h'); if (!head) return;
+    const cnt = (id) => { const e = body.querySelector(`#p7-cat-${id} .p7-cat-n`); return e ? e.textContent : ''; };
+    const link = (to, label, n) => (body.querySelector('#' + to) ? `<button type="button" data-act="ox:jump" data-to="${to}"><b>${esc(label)}</b>${n ? `<span>${esc(n)}</span>` : ''}</button>` : '');
+    const row = link('p7-cat-process', 'Unit processes', cnt('process')) + link('p7-cat-equipment', 'Equipment', cnt('equipment')) + link('p7-cat-plant', 'The whole plant', cnt('plant')) + link('p7-zone-across', 'Across more than one reading', '') + link('p7-zone-rules', 'Rules for the whole plant', '');
+    if (row) head.insertAdjacentHTML('afterend', `<nav class="p7-jump" aria-label="On this page"><span>On this page</span>${row}</nav>`);
+  }
   if (U.afterRender) U.afterRender((main, p0) => {
     try {
       if (!main) return; const p = String(p0 || location.hash).replace(/^#?\/?/, '').split('?')[0];
+      if (/^p\/[^/]+\/library$/.test(p)) setTimeout(() => { try { arrange(main); } catch (e) { /* the page still shows, in its old order */ } }, 0);
       if (p === 'library') setTimeout(() => { try { if (main.querySelector('#pd-card')) return; const html = pendCard(); const body = main.querySelector('.pg-main'); if (html && body) body.insertAdjacentHTML('afterbegin', html); } catch (e) { /* the page still shows without it */ } }, 0);
       /* 4 · shipped examples are starter content */
       if (p === 'library' || /^library\/[^/]+(\/(readings|overview))?$/.test(p)) {
