@@ -669,6 +669,7 @@
     return out.filter(Boolean).join(' · ') || 'Nothing proposed';
   }
   /* 20 Nov: inside a step or a piece of equipment, lines are listed by kind: alerts first, then each kind of task */
+  let KIND_F = 'all';   /* the kind the page is filtered to, so a button accepts what is listed and nothing else */
   const KINDS = [['alert', 'Alerts'], ['pm', 'Preventive maintenance'], ['calibration', 'Calibration'], ['routine', 'Routine checks'], ['work', 'Routine work'], ['test', 'Manual testing'], ['other', 'Other tasks']];
   const KIND_LABEL = {}; KINDS.forEach(([k, l]) => { KIND_LABEL[k] = l; }); const KIND_ORDER = KINDS.map((k) => k[0]);
   const kindOf = (p) => (p.kind === 'alert' ? 'alert' : KIND_LABEL[p.workType] && p.workType !== 'alert' ? p.workType : 'other');
@@ -685,7 +686,8 @@
     const ps = visibleProps(r, show); if (!ps.length) return '';
     const und = arr(r.proposals).filter((p) => !p.decided && !p.blockedBy).length;
     const label = r.eqId === 'plant' ? '<span class="p7-sum-t">The plant itself</span>' : `<span class="p7-sum-t"><a class="mono p7-peek" href="${esc(eqHref(key, r.eqId))}" title="Look at ${esc(r.tag)} here, without leaving this page">${esc(r.tag)}</a> ${esc(r.name || '')}</span>`;
-    const act = und > 1 && show !== 'blocked' && show !== 'decided' ? btn(`Accept all ${und} for ${r.eqId === 'plant' ? 'the plant' : r.tag}`, { act: 'p7:lib-accept-eq', data: { plant: key, eq: r.eqId }, small: true, title: `Accept everything undecided for ${r.eqId === 'plant' ? 'the plant' : r.tag}, the tasks shared by its type included` }) : '';
+    const undPids = arr(r.proposals).filter((p) => !p.decided && !p.blockedBy).map((p) => p.pid).join(',');
+    const act = und > 1 && show !== 'blocked' && show !== 'decided' ? btn(`${KIND_F === 'all' ? 'Accept all' : 'Accept these'} ${und} for ${r.eqId === 'plant' ? 'the plant' : r.tag}`, { act: KIND_F === 'all' ? 'p7:lib-accept-eq' : 'p7:lib-accept-pids', data: { plant: key, eq: r.eqId, pids: KIND_F === 'all' ? '' : undPids, label: r.eqId === 'plant' ? 'the plant' : r.tag }, small: true, title: `Accept everything undecided for ${r.eqId === 'plant' ? 'the plant' : r.tag}, the tasks shared by its type included` }) : '';
     const sum = `<summary><span class="p7-sum-main">${label}<span class="p7-sum-s">${eqStatus(r, show, key)}</span></span><span class="p7-sum-r">${act}</span></summary>`;
     const link = r.eqId !== 'plant' ? `<p class="p7-more"><a href="${esc(eqHref(key, r.eqId))}">Open ${esc(r.tag)} →</a></p>` : '';
     return `<details class="p7-grp p7-eq"${open ? ' open' : ''}>${sum}<div class="p7-grp-b">${kindGroups(ps, (p) => propRow(key, p, alertIds))}${link}</div></details>`;
@@ -696,7 +698,7 @@
       const lr = arr(call(() => v.libraryReview(key), []));
       const c = libCounts(lr); const lc = lineCounts(lr);
       const show = SHOWS.includes(q.show) ? q.show : c.undecided ? 'undecided' : 'all';
-      const qs = (s) => `${b}/library?show=${s}`;
+      const kind = KIND_ORDER.includes(q.kind) ? q.kind : 'all'; KIND_F = kind; const qs = (s, k) => { const kk = k === undefined ? kind : k; return `${b}/library?show=${s}${kk !== 'all' ? `&kind=${kk}` : ''}`; };
       const alertIds = {}; arr(call(() => v.alerts(key), [])).forEach((a) => { alertIds[a.name] = a.id; });
       const trial = arr(call(() => v.alerts(key, { state: 'trial' }), [])).length;
       const parts = [];
@@ -725,6 +727,12 @@
         { label: "Can't be used yet", href: qs('blocked'), on: show === 'blocked', count: c.blocked },
         { label: 'All', href: qs('all'), on: show === 'all', count: lc.all },
       ]));
+      { const inShow = (p) => (show === 'undecided' ? !p.decided && !p.blockedBy : show === 'decided' ? !!p.decided && !p.blockedBy : show === 'blocked' ? !!p.blockedBy : true); const kc = {}; let all = 0; lr.forEach((r) => arr(r.proposals).filter(inShow).forEach((p) => { const k = kindOf(p); kc[k] = (kc[k] || 0) + 1; all++; }));
+        /* counted in lines, like the row above: a task shared by a type is one line */
+        if (show === 'undecided' || show === 'all') { const f = show === 'undecided' ? 'undecided' : 'all'; all = lineCounts(lr)[f]; Object.keys(kc).forEach((k) => { kc[k] = lineCounts(lr.map((r) => ({ ...r, proposals: arr(r.proposals).filter((p) => kindOf(p) === k) })))[f]; }); }
+        const ks = KIND_ORDER.filter((k) => kc[k] || k === kind);
+        if (ks.length > 1 || kind !== 'all') parts.push(`<div class="p7-fkind"><span class="p7-fkind-l">Kind</span>${filters([{ label: 'All kinds', href: qs(show, 'all'), on: kind === 'all', count: all }].concat(ks.map((k) => ({ label: KIND_LABEL[k], href: qs(show, k), on: kind === k, count: kc[k] || 0 }))))}</div>`); }
+      const lrK = kind === 'all' ? lr : lr.map((r) => ({ ...r, proposals: arr(r.proposals).filter((p) => kindOf(p) === kind) }));
       /* group equipment rows by stored type, in the order the Visualization groups them; the plant itself last */
       const order = arr(call(() => v.scadaReview(key).groups, [])).map((g) => g.typeName);
       const byType = new Map(); order.forEach((t) => byType.set(t, []));
@@ -735,8 +743,8 @@
       UPS.forEach((u) => { upRows.set(u.id, []); alsoIn.set(u.id, []); });
       UPS.forEach((u) => { if (!homeUp.has(u.id)) homeUp.set(u.id, u); });   /* a step's own tank belongs to that step first */
       UPS.forEach((u) => arr(u.members).forEach((m) => { if (!homeUp.has(m.eqId)) homeUp.set(m.eqId, u); else if (homeUp.get(m.eqId).id !== u.id) alsoIn.get(u.id).push(m.eqId); }));
-      lr.forEach((r) => { if (r.eqId === 'plant') { plantRow = r; return; } const hu = homeUp.get(r.eqId); if (hu) { upRows.get(hu.id).push(r); return; } if (!byType.has(r.typeName)) byType.set(r.typeName, []); byType.get(r.typeName).push(r); });
-      const visibleEq = lr.filter((r) => visibleProps(r, show).length).length;
+      lrK.forEach((r) => { if (r.eqId === 'plant') { plantRow = r; return; } const hu = homeUp.get(r.eqId); if (hu) { upRows.get(hu.id).push(r); return; } if (!byType.has(r.typeName)) byType.set(r.typeName, []); byType.get(r.typeName).push(r); });
+      const visibleEq = lrK.filter((r) => visibleProps(r, show).length).length;
       const openAll = !!q.eq ? false : (show === 'undecided' && c.undecided <= 20) || visibleEq <= 3;
       const isOpen = (r) => (q.eq ? r.eqId === q.eq : openAll);
       const cards = []; const folds = [];
@@ -751,7 +759,7 @@
           : `${pieces(rows.length)}${tc.undecided ? ` · ${tc.undecided} to decide` : ' · all decided'}${tc.blocked ? ` · ${tc.blocked} can't be used yet` : ''}${undNames.length && show !== 'decided' ? `. To decide: ${shortList(undNames, 3)}` : ''}`;
         /* v7/4: a type is one line (what it is, how much is left to decide, one button for all of it); opening it shows its lines */
         const inner = kindsLine(rows, show, shared.kinds) + (shared.length ? `<h4 class="p7-shared-h">Shared by the type · one line each</h4>${shared.join('')}` : '') + (shared.length && blocks.length ? '<h4 class="p7-shared-h">On each piece of equipment</h4>' : '') + blocks.join('');
-        const act = show === 'blocked' ? '' : undRows > 1 ? btn(`Accept all for ${countType(rows.length, typeName)}`, { act: 'p7:lib-accept-type', data: { plant: key, type: typeName }, kind: 'primary', small: true }) : tc.undecided ? '' : chip('All decided', { tone: 'ok' });
+        const act = show === 'blocked' ? '' : undRows > 1 ? btn(kind === 'all' ? `Accept all for ${countType(rows.length, typeName)}` : `Accept these ${tc.undecided} for ${countType(rows.length, typeName)}`, { act: kind === 'all' ? 'p7:lib-accept-type' : 'p7:lib-accept-pids', data: { plant: key, type: typeName, pids: kind === 'all' ? '' : [].concat(...rows.map((r) => arr(r.proposals).filter((p) => !p.decided && !p.blockedBy).map((p) => p.pid))).join(','), label: countType(rows.length, typeName) }, kind: 'primary', small: true }) : tc.undecided ? '' : chip('All decided', { tone: 'ok' });
         folds.push({ proc: !!(code && W.CATALOGUE_BY_CODE && W.CATALOGUE_BY_CODE[code] && W.CATALOGUE_BY_CODE[code].library === 'process'), und: tc.undecided, n: rows.length, id: `lib:${key}:${show}:${typeName}`, hasEq: !!q.eq && rows.some((r) => r.eqId === q.eq), title: code ? `<a href="${esc(libHref(code))}" title="Look at this library type here">${esc(typeName)}</a>` : esc(typeName), sub, inner, act });
       });
       const upFolds = []; const codeOfRow = (r) => call(() => v.eq(key, r.eqId).dbType, null);
@@ -765,7 +773,7 @@
         const tc = libCounts(rows); const undRows = rows.filter((r) => arr(r.proposals).some((x) => !x.decided && !x.blockedBy)); const also = arr(alsoIn.get(u.id)).map((id) => { const e = call(() => v.eq(key, id), null); const hu = homeUp.get(id); return e && hu ? `${e.tag} (listed under ${hu.tag})` : null; }).filter(Boolean);
         const sub = `${esc(u.typeName)} · the step${others.length ? ` and ${pieces(others.length)} that ${others.length === 1 ? 'takes' : 'take'} part in it` : also.length ? '' : ' on its own'}${also.length ? ` · ${pieces(also.length)} shared with another step, listed there` : ''}${show === 'blocked' ? ` · ${tc.blocked} can't be used yet` : `${tc.undecided ? ` · ${tc.undecided} to decide` : ' · all decided'}${tc.blocked ? ` · ${tc.blocked} can't be used yet` : ''}`}`;
         const inner = kindsLine(rows, show, upK) + parts2.join('') + (also.length ? `<p class="p7-up-also">Also takes part in this step: ${esc(also.join(', '))}.</p>` : '');
-        const act = show === 'blocked' ? '' : tc.undecided > 1 ? btn(`Accept all for ${u.tag}`, { act: 'p7:lib-accept-set', data: { plant: key, eqs: undRows.map((r) => r.eqId).join(','), label: u.tag }, kind: 'primary', small: true, title: `Accept everything left to decide for ${u.tag} and the equipment listed under it` }) : tc.undecided ? '' : chip('All decided', { tone: 'ok' });
+        const act = show === 'blocked' ? '' : tc.undecided > 1 ? btn(kind === 'all' ? `Accept all for ${u.tag}` : `Accept these ${tc.undecided} for ${u.tag}`, { act: kind === 'all' ? 'p7:lib-accept-set' : 'p7:lib-accept-pids', data: { plant: key, eqs: undRows.map((r) => r.eqId).join(','), pids: kind === 'all' ? '' : [].concat(...rows.map((r) => arr(r.proposals).filter((p) => !p.decided && !p.blockedBy).map((p) => p.pid))).join(','), label: u.tag }, kind: 'primary', small: true, title: `Accept everything left to decide for ${u.tag} and the equipment listed under it` }) : tc.undecided ? '' : chip('All decided', { tone: 'ok' });
         upFolds.push({ proc: true, und: tc.undecided, n: rows.length, id: `lib:${key}:${show}:up:${u.id}`, hasEq: !!q.eq && rows.some((r) => r.eqId === q.eq), title: `<span class="mono p7-up-tag">${esc(u.tag)}</span> ${esc(u.name)}`, sub, inner, act });
       });
       const K = W.V7KEEP || { open: (id, d) => (d ? ' open' : '') };
@@ -781,12 +789,12 @@
         if (blk) {
           const tc = libCounts([plantRow]);
           cards.push(catHead('plant', 'The whole plant', 'Rounds and checks that belong to no single unit process or piece of equipment.', null, tc.undecided));
-          cards.push(card({ title: 'The plant itself', sub: `Rounds and checks for ${p.name} as a whole${tc.undecided ? ` · ${tc.undecided} to decide` : ''}`, body: blk, actions: [tc.undecided > 1 ? btn('Accept all for the plant', { act: 'p7:lib-accept-eq', data: { plant: key, eq: 'plant' }, kind: 'primary' }) : tc.undecided ? '' : chip('All decided', { tone: 'ok' })], cls: 'p7-type' }));
+          cards.push(card({ title: 'The plant itself', sub: `Rounds and checks for ${p.name} as a whole${tc.undecided ? ` · ${tc.undecided} to decide` : ''}`, body: blk, actions: [tc.undecided > 1 && kind !== 'all' ? '' : tc.undecided > 1 ? btn('Accept all for the plant', { act: 'p7:lib-accept-eq', data: { plant: key, eq: 'plant' }, kind: 'primary' }) : tc.undecided ? '' : chip('All decided', { tone: 'ok' })], cls: 'p7-type' }));
         }
       }
       if (!cards.length) {
-        const msg = { undecided: 'Nothing left to decide.', decided: 'Nothing decided yet.', blocked: 'Every proposal can be used.', all: 'The library proposes nothing for this plant.' }[show];
-        parts.push(empty(msg, show !== 'all' ? btn('Show all', { href: qs('all') }) : ''));
+        const msg = kind !== 'all' ? `No ${KIND_LABEL[kind].toLowerCase()} under this filter.` : { undecided: 'Nothing left to decide.', decided: 'Nothing decided yet.', blocked: 'Every proposal can be used.', all: 'The library proposes nothing for this plant.' }[show];
+        parts.push(empty(msg, kind !== 'all' ? btn('All kinds', { href: qs(show, 'all') }) : show !== 'all' ? btn('Show all', { href: qs('all') }) : ''));
       } else parts.push(`${upFolds.length + folds.length > 2 ? '<p class="p7-fold-hint">One line per unit process. Open one to decide line by line, or click a tag to look at that equipment without leaving this page.</p>' : ''}<div class="p7-cards">${cards.join('')}</div>`);
       if (show === 'undecided' && c.blocked) parts.push(note(`${pl(c.blocked, 'more proposal')} can't be used yet: ${c.blocked === 1 ? 'it needs' : 'they need'} a reading the Visualization doesn't send, or a connection between equipment (next phase). They stay listed, greyed, under "Can't be used yet".`, 'quiet'));
       return frame(key, 'library', `<div class="p7-sec-h"><h2>Alerts &amp; Tasks for this plant</h2><p>${esc(sub)} ${U.term ? U.term('On trial', 'What On trial means') : ''}</p></div>` + workLevelCard(key) + parts.join(''));
@@ -1087,6 +1095,11 @@
     const key = dget(el, 'plant'); const ids = String(dget(el, 'eqs') || '').split(',').filter(Boolean); let n = 0; let last = null;
     ids.forEach((id) => { const r = call(() => V().acceptAllFor(key, { eqId: id }), { ok: false }); if (r.ok) { n += r.count || 0; last = r; } });
     say(n ? `Accepted ${pl(n, 'proposal')} for ${esc(dget(el, 'label') || 'the step')} and its equipment${last ? `; ${esc(acceptTail(last))}` : ''}.${afterDecide(key)}` : 'Nothing was left to accept there.', { ms: 7000 });
+  });
+  U.on('p7:lib-accept-pids', (el) => {
+    const key = dget(el, 'plant'); const pids = String(dget(el, 'pids') || '').split(',').filter(Boolean); let n = 0;
+    pids.forEach((pid) => { const r = call(() => V().decide(key, pid, 'accept'), { ok: false }); if (r.ok) n++; });
+    say(n ? `Accepted ${pl(n, 'line')} for ${esc(dget(el, 'label') || 'this plant')}${KIND_F !== 'all' ? `: ${esc(KIND_LABEL[KIND_F].toLowerCase())} only` : ''}${V().state(key) === 'live' ? '' : '. Tasks start at go live'}.${afterDecide(key)}` : 'Nothing was left to accept there.', { ms: 7000 });
   });
   U.on('p7:lib-accept-type', (el) => {
     const key = dget(el, 'plant'); const type = dget(el, 'type');

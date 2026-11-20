@@ -311,7 +311,7 @@ V.reset(); { const CR = g.V7CRIT; const SV = g.V7SEV; const CAL = g.V7CAL; const
   V.reset(); }
 
 /* every action that changes something is behind a permission */
-{ const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'assets', 'persona75.js'), 'utf8'); check('permissions', 'the new save actions need a grant', ['p7:lib-accept-set', 'pd:publish', 'pd:discard', 'ct:why-save', 'sv:save', 'sv:lib-save', 'cal:save', 'cal:lib-save', 'cal:off', 'cal:lib-off', 'ct:save', 'ct:lib-save', 'ct:up-save', 'ua:decide', 'dy:lib-save'].every((a) => (' ' + src.replace(/[^a-z0-9:-]+/g, ' ') + ' ').includes(' ' + a + ' '))); }
+{ const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'assets', 'persona75.js'), 'utf8'); check('permissions', 'the new save actions need a grant', ['p7:lib-accept-pids', 'p7:lib-accept-set', 'pd:publish', 'pd:discard', 'ct:why-save', 'sv:save', 'sv:lib-save', 'cal:save', 'cal:lib-save', 'cal:off', 'cal:lib-off', 'ct:save', 'ct:lib-save', 'ct:up-save', 'ua:decide', 'dy:lib-save'].every((a) => (' ' + src.replace(/[^a-z0-9:-]+/g, ' ') + ' ').includes(' ' + a + ' '))); }
 
 const bad = results.filter((x) => !x).length;
 console.log(`v77.test · ${results.length - bad}/${results.length} checks pass · RESULT: ${bad ? 'FAIL' : 'PASS'}`);
