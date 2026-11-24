@@ -1,0 +1,71 @@
+/* v7 · libflow7.css — the flow a problem or a task uses, shown where the problem or the task is listed */
+.lf { display: inline-flex; align-items: center; gap: 4px 8px; flex-wrap: wrap; min-width: 0; font-size: 13px; color: var(--ink-2); }
+.lf-k { color: var(--ink-3); }
+.lf-n { font-weight: 600; color: var(--accent-strong); min-width: 0; overflow-wrap: anywhere; }
+.lf-c { color: var(--ink-3); font-size: 12.5px; white-space: nowrap; }
+.lf.is-none .lf-0 { color: var(--warn-ink); }
+.lf.is-none .lf-0::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--warn); margin-right: 6px; vertical-align: 1px; }
+.lf-row { margin-top: 6px; }
+.lf-flag { color: var(--warn-ink); }
+.ov-prob { display: flex !important; align-items: center; justify-content: space-between; gap: 6px 14px; flex-wrap: wrap; }
+.ov-prob > b { flex: 1 1 180px; min-width: 0; }
+.lc-nf { color: var(--ink-2); }
+.lc-nf::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--ink-3); margin-right: 6px; vertical-align: 1px; }
+a.lc-nf:hover { text-decoration: underline; }
+/* the picker */
+#lf-sel { width: 100%; height: 38px; border: 1px solid var(--line-2); border-radius: 6px; padding: 0 10px; font: inherit; background: var(--surface); color: var(--ink); }
+.lf-prev { margin-top: 12px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2); font-size: 13px; color: var(--ink-2); }
+.lf-pk { font-weight: 600; color: var(--ink); margin: 0 0 6px; }
+.lf-ps { margin: 0; padding-left: 20px; display: grid; gap: 3px; }
+.lf-pm, .lf-p0 { margin: 6px 0 0; color: var(--ink-3); }
+.lf-p0:first-child { margin-top: 0; }
+.lf-pl { margin: 8px 0 0; }
+.lf-reach { margin: 12px 0 0; font-size: 13px; color: var(--ink-2); }
+.lf-new { margin: 10px 0 0; font-size: 13px; color: var(--ink-3); }
+/* the quick view of a flow */
+button.lf-view { border: 0; background: none; padding: 0; font: inherit; cursor: pointer; text-align: left; }
+button.lf-n { font-weight: 600; color: var(--accent-strong); text-decoration: underline; text-decoration-color: var(--line-2); text-underline-offset: 3px; }
+button.lf-n:hover, button.fl-fix:hover { text-decoration: underline; text-decoration-color: currentColor; }
+button.fl-fix { color: var(--accent-strong); font-size: 13.5px; }
+.lf-qv-n { margin: 0 0 14px; padding: 10px 12px; border-radius: 6px; background: var(--surface-2); color: var(--ink-2); font-size: 13px; }
+.lf-ps { max-height: 220px; overflow: auto; }
+/* the flow editor in the side panel */
+.lf-edit { display: grid; gap: 14px; }
+.lf-edit > .card { margin: 0; }
+.lf-edit .lf-qv-n { margin: 0; }
+.lf-todo { padding: 10px 12px; border-radius: 6px; background: var(--warn-tint); color: var(--warn-ink); font-size: 13px; }
+.lf-todo ul { margin: 6px 0 0; padding-left: 18px; }
+.lf-new { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+button.lw-flowbtn { border: 0; background: none; padding: 0; font: inherit; font-weight: 600; cursor: pointer; color: var(--accent-strong); text-decoration: underline; text-decoration-color: var(--line-2); text-underline-offset: 3px; }
+button.lw-flowbtn:hover { text-decoration-color: currentColor; }
+/* design QA: two-column form rows start level in every form */
+.la-2 { align-items: start; }
+.la-2 > .field, .la-2 > .field + .field { margin-top: 0; }
+/* design QA · the limits sheet: one block per range. The switch and severity lead, where the value comes from sits at the end of
+   that line, and what the range triggers is one panel underneath with its own lines */
+.o-band.o-band-t { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "k m" "d d" "l l" "h h"; align-items: center; gap: 8px 12px; padding: 12px 0; }
+.o-band-t .o-band-m { grid-area: m; justify-content: flex-end; }
+.o-band-t .o-band-d, .o-band-t .o-band-e { grid-area: d; padding: 10px 12px; background: var(--surface-2); border-radius: 8px; gap: 8px 10px; }
+.o-band-t .o-trig-land { grid-area: l; grid-column: 1 / -1; margin: 0; }
+.o-band-t .o-trig-land:empty { display: none; }
+.o-band-t .o-trig-t input[type="text"] { flex: 1 1 100%; }
+.o-band-t .o-trig-t > .lw-does { flex: 1 1 100%; margin-top: -2px; font-size: 12.5px; color: var(--ink-3); }
+.o-band-t .o-trig-l { flex: 1 1 220px; }
+.o-band-t .o-trig-l select { flex: 1 1 auto; max-width: none; width: auto; min-width: 0; }
+.o-band-t .o-trig-i > .lw-does { color: var(--ink-2); }
+/* the flow editor: the two fields of "About this flow" share a baseline */
+.lf-edit .fl-meta-e { align-items: end; }
+/* design QA: the "Incomplete" marker never pushes a page wider than the screen; its sentence is cut with an ellipsis and stays in the tooltip */
+.inc { max-width: 100%; min-width: 0; vertical-align: middle; }
+.inc-w { min-width: 0; white-space: nowrap; }
+.ph-chips > .inc, .ph-title > .inc { max-width: 100%; }
+.ph-main, .ph-title, .ph-chips { min-width: 0; max-width: 100%; }
+.pg-main, .o-rds, .o-rds > .o-rd, .o-al, .o-al-r { min-width: 0; max-width: 100%; }
+.o-al-r > .inc { max-width: 100%; }
+/* design QA: on a narrow screen a long "Accept all for …" button drops under its group's title instead of squeezing the title to nothing */
+@media (max-width: 720px) {
+  .p7-fold-s { flex-wrap: wrap; row-gap: 10px; }
+  .p7-fold-m { flex: 1 1 0; }
+  .p7-fold-r { flex: 1 1 100%; min-width: 0; display: flex; justify-content: flex-end; }
+  .p7-fold-r > .btn { max-width: 100%; height: auto; min-height: 28px; white-space: normal; text-align: center; }
+}

@@ -1,0 +1,63 @@
+/* v7/7 · v77.css — what v7/7 adds, loaded last.
+   Colour rules: no green on a chip or a value; an issue is coloured by its own severity (Major is not amber); amber is the
+   colour of a deviation from the library. */
+:root { --ok: #7d8985; --ok-ink: var(--ink-2); --ok-tint: var(--surface-2); }
+.chip-ok, .chip.st-live, .chip.st-on { border-color: var(--line-2); }
+.stat.tone-ok b { color: var(--ink); }
+.banner.tone-major { background: #f8e9dc; color: #7c4a22; }
+.stat.tone-major b { color: #7c4a22; }
+.card.tone-major { border-left-width: 3px; border-left-color: var(--sev-major); }
+.chip-changed { background: var(--warn-tint); border-color: #e2c98c; color: var(--warn-ink); }
+.prow-diff a, .tab .tab-n-diff { color: var(--warn-ink); }
+
+/* go live: the noisy alerts seen */
+.p7-ack { display: flex; gap: 8px; align-items: flex-start; margin: 12px 0; padding: 10px 12px; border: 1px solid #e2c98c; background: var(--warn-tint); border-radius: 8px; color: var(--warn-ink); }
+.p7-ack input { margin-top: 3px; flex: 0 0 auto; }
+
+/* the shadow run */
+.sh-card { margin-bottom: 14px; }
+.sh-gate { display: grid; gap: 12px; margin-bottom: 10px; }
+.sh-m-h { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 13.5px; }
+.sh-m-h span { color: var(--ink-3); }
+.sh-m-bar { height: 8px; border-radius: 4px; background: var(--surface-3); overflow: hidden; margin-top: 4px; }
+.sh-m-bar i { display: block; height: 100%; background: var(--warn); border-radius: 4px; }
+.sh-m.is-ok .sh-m-bar i { background: var(--accent); }
+.sh-cut { color: var(--ink-2); font-size: 13.5px; }
+.sh-rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px 24px; margin-bottom: 10px; }
+.sh-rules h3 { margin-bottom: 6px; }
+.sh-ul { list-style: none; display: grid; gap: 6px; }
+.sh-ul li { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 13.5px; }
+.sh-rs { display: grid; gap: 6px; margin: 12px 0; }
+.sh-r { display: flex; gap: 8px; align-items: baseline; }
+
+/* criticality: what the three words mean */
+.o-tier-m { display: grid; gap: 6px; margin: 10px 0 6px; }
+.o-tier-m div { display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 10px; font-size: 13.5px; }
+.o-tier-m dt { font-weight: 600; } .o-tier-m dd { margin: 0; color: var(--ink-2); }
+.o-tier-1 { color: var(--ink-2); font-size: 13.5px; margin-top: 4px; }
+/* the share that follows the library */
+.p7-follow { margin: 0 0 12px; color: var(--ink-2); }
+.p7-follow b { font-size: 18px; color: var(--ink); margin-right: 2px; }
+.p7-follow.is-low b { color: var(--warn-ink); }
+
+/* the language of the operator's text */
+.tb-lang { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-3); white-space: nowrap; margin-right: 6px; }
+.tb-lang select { border: 1px solid var(--line-2); background: var(--surface); color: var(--ink); padding: 5px 8px; border-radius: 8px; font: inherit; font-weight: 600; max-width: 150px; }
+body:not([data-lang="en"]) .tb-lang select { background: var(--info-tint); border-color: var(--info); }
+
+[data-lg="miss"] { text-decoration: underline dotted var(--warn); text-underline-offset: 3px; }
+[data-lg="miss"]::after { content: " EN"; font: 600 10px var(--mono); color: var(--warn-ink); vertical-align: 1px; }
+.lg-note { margin-bottom: 12px; }
+.lg-ul { list-style: none; display: grid; gap: 6px; }
+[lang="hi"], [lang="mr"] { font-family: var(--font), "Nirmala UI", "Noto Sans Devanagari", sans-serif; line-height: 1.7; }
+[lang="ta"] { font-family: var(--font), "Nirmala UI", "Noto Sans Tamil", sans-serif; line-height: 1.7; }
+
+/* an issue is coloured by its own severity */
+.row.tone-major { box-shadow: inset 3px 0 0 var(--sev-major); padding-left: 12px; }
+.o-ph-cta.tone-major, .note-major { background: #f8e9dc; color: #7c4a22; }
+.wk-st.tone-major, .wk-flow.tone-major { border-color: var(--sev-major); }
+.o-rd.tone-major { box-shadow: inset 3px 0 0 var(--sev-major), var(--shadow-sm); }
+.wk-issues .row.tone-major { margin-left: -18px; padding-left: 18px; }
+@media (max-width: 720px) { .wk-issues .row.tone-major { margin-left: -14px; padding-left: 14px; } }
+@media (max-width: 1300px) { .tb-lang span { display: none; } }
+.tb-lang { margin-left: 10px; }

@@ -1,0 +1,47 @@
+/* v7/7 and v7/8 · crit78.css — criticality timelines, the unit-process label, and the three labels side by side */
+details.ct-card { margin: 0 0 16px; }
+.ct-lead { margin: 0; padding: 12px 20px; font-size: 13.5px; color: var(--ink-3); border-top: 1px solid var(--line); }
+.ct-rows { list-style: none; margin: 0; padding: 0; }
+.ct-row { display: grid; grid-template-columns: 190px minmax(0, 1fr) auto; gap: 6px 16px; align-items: center; padding: 12px 20px; border-top: 1px solid var(--line); }
+.ct-rl { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; min-width: 0; }
+.ct-n { font-size: 12.5px; color: var(--ink-3); }
+.ct-rm { font-size: 14px; color: var(--ink); min-width: 0; }
+.ct-ra { display: flex; gap: 8px; align-items: center; justify-content: flex-end; flex-wrap: wrap; }
+.ct-ups { border-top: 1px solid var(--line); padding: 10px 20px 14px; }
+.ct-ups > summary { cursor: pointer; font-size: 13.5px; font-weight: 600; color: var(--accent-strong); padding: 4px 0; }
+.ct-upn { margin: 6px 0 8px; font-size: 13px; color: var(--ink-3); }
+.ct-upl { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 6px 20px; }
+.ct-upl > li { display: flex; gap: 8px; align-items: center; min-width: 0; font-size: 13.5px; }
+.ct-ut { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1 1 auto; }
+.ct-chipb { border: 0; background: none; padding: 0; margin: 0; font: inherit; cursor: pointer; border-radius: 999px; line-height: 1; }
+.ct-chipb:hover { filter: brightness(.96); }
+.ct-chipb:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: 2px; }
+/* the three labels, side by side, under a page's title */
+.ct-trail { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0 0 16px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.ct-st { display: inline-flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ct-k { font-size: 11.5px; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-3); }
+.ct-v { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 14px; min-width: 0; }
+.ct-none { color: var(--ink-3); }
+.ct-sep { color: var(--ink-3); font-size: 16px; }
+.ct-more, .ct-upto { font-size: 12.5px; color: var(--ink-3); }
+.ct-note { flex: 1 1 100%; font-size: 12.5px; color: var(--ink-3); }
+.ct-mini { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 4px; font-size: 12.5px; color: var(--ink-3); }
+.ct-mini b { color: var(--ink); }
+@media (max-width: 720px) {
+  .ct-row { grid-template-columns: minmax(0, 1fr); padding: 12px 16px; }
+  .ct-rl { flex-direction: row; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .ct-ra { justify-content: flex-start; }
+  .ct-ups { padding: 10px 16px 14px; }
+  .ct-lead { padding: 12px 16px; }
+  .ct-sep { display: none; }
+  .ct-trail { flex-direction: column; align-items: flex-start; }
+}
+
+/* 19 Nov: one worked-out criticality */
+.ct-one { align-items: center; }
+.ct-why { color: var(--ink-3); font-size: 13px; overflow-wrap: anywhere; }
+.ct-one .ct-v { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; min-width: 0; }
+.ct-go { margin-left: auto; }
+@media (max-width: 720px) { .ct-go { margin-left: 0; } }
+/* the criticality chip in a page header wraps on a phone instead of pushing the page wider */
+@media (max-width: 720px) { .ph .chip-btn { max-width: 100%; height: auto; white-space: normal; text-align: left; } .ph .chip-why { white-space: normal; overflow-wrap: anywhere; } }
