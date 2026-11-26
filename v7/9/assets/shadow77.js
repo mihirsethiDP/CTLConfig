@@ -52,7 +52,7 @@
   const NO_RULE = /Sludge blanket|Chemical tank/i;
   const UNMAPPED = [
     { id: 'u1', rule: 'MCC panel door open', eqTag: 'MCC', reading: 'Door switch', why: 'No reading for it comes from the Visualization' },
-    { id: 'u2', rule: 'Inlet flow totaliser not counting', eqTag: 'Inlet', reading: 'Flow totaliser', why: 'Reads a connection, not a piece of equipment: next phase' },
+    { id: 'u2', rule: 'Inlet flow totaliser not counting', eqTag: 'Inlet', reading: 'Flow totaliser', why: 'Reads a pipe, not a piece of equipment: it belongs to the unit process' },
   ];
   function rules(key) {
     const al = arr(safe(() => V().alerts(key), [])).filter((a) => a.state !== 'draft');

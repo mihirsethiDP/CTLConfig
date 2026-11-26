@@ -682,7 +682,7 @@ window.V7 = (function () {
     if (cur === state) return { ok: true, state };
     if (!(ALLOWED[cur] || []).includes(state)) return { ok: false, error: `An alert that is ${LABELS.alertState[cur]} cannot go straight to ${LABELS.alertState[state]}.` };
     if (state === 'on' && !live) return { ok: false, error: 'Alerts go On when the plant goes live. Until then they run On trial.' };
-    const s = sensorRaw(key, a.sensor); if (s && s.nextPhase) return { ok: false, error: `${s.name} is read on a connection: next phase.` };
+    const s = sensorRaw(key, a.sensor); if (s && s.nextPhase) return { ok: false, error: `${s.name} sits on a pipe. It takes part in its unit process: set its alert there, under Alerts across the unit process.` };
     putAlertState(key, alertId, state);
     const e = alertEq(key, a); const fromLib = !!(e && s && libAlertFor(e.type, s.name, alertDir(key, a)));
     const ov = ovOnOff(key, { alertId });
@@ -1556,7 +1556,7 @@ window.V7 = (function () {
     return null;
   }
   function setLimits(key, sensorId, dir, bands, opts) {
-    const o = opts || {}; const s = sensorRaw(key, sensorId); if (!s) return { ok: false, error: 'No such reading.' }; if (s.nextPhase) return { ok: false, error: `${s.name} is read on a connection: next phase.` };
+    const o = opts || {}; const s = sensorRaw(key, sensorId); if (!s) return { ok: false, error: 'No such reading.' }; if (s.nextPhase) return { ok: false, error: `${s.name} sits on a pipe. It takes part in its unit process: set its alert there, under Alerts across the unit process.` };
     const next = norm4(bands); const D2 = dir || primaryDir(key, sensorId); const err = validateBands(next, D2, s); if (err) return { ok: false, error: err };
     const orphan = lineWorkOn(key, sensorId, D2).find((lw) => next[lw.band] == null);   /* v7: a line that raises a task cannot be removed under it */
     if (orphan) return { ok: false, error: `The ${BAND_LABEL[orphan.band]} line raises the task "${orphan.name}". Stop it raising the task before you remove the line.` };
