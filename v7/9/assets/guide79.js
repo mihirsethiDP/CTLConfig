@@ -1,18 +1,19 @@
 /* v7/9 · guide79.js — Alerts & Tasks while a plant is being set up, one part at a time.
    The page used to show everything at once: three summary cards, two rows of filters, every unit process, the equipment outside
    them, the plant's rounds, alerts across readings, timelines, calculated values and the plant's own additions.
-   Here it is four parts, in the order a person works, and only one is on screen:
-     1 Unit processes · 2 Other equipment and the plant · 3 Alerts across readings · 4 Review and plant rules
+   Here it is three parts, in the order a person works, and only one is on screen:
+     1 Unit processes · 2 Other equipment and the plant · 3 Review and plant rules
+   27 Nov: alerts across readings are no longer a part of their own. Each is listed where it belongs: inside its unit process,
+   on its equipment, on its control group or on the plant.
    Nothing is removed: the summaries and the optional rules sit in the last part. A Live plant keeps the page it had.
-   window.V7GUIDE = { parts, progress(key) → { process, other, across: { total, done, left } }, step(key), go(key, i) } */
+   window.V7GUIDE = { parts, progress(key) → { process, other: { total, done, left } }, step(key), go(key, i) } */
 (function () {
   'use strict';
   const W = window; const V = () => W.V7; const arr = (x) => (Array.isArray(x) ? x : []);
   const safe = (fn, d) => { try { const r = fn(); return r == null ? d : r; } catch (e) { return d; } };
   const PARTS = [
-    { id: 'process', label: 'Unit processes', intro: 'One line per treatment step. Accept what the library drafted for it, or open it to go line by line.' },
-    { id: 'other', label: 'Other equipment and the plant', intro: 'Equipment that sits in no unit process, and the rounds for the plant as a whole.' },
-    { id: 'across', label: 'Alerts across readings', intro: 'Alerts that watch more than one reading. Apply the ones that fit. Some ask which sensor to read.' },
+    { id: 'process', label: 'Unit processes', intro: 'One line per treatment step, with everything that belongs to it: its equipment, its tasks, and the alerts that read across it. Accept what the library drafted, or open the step to go line by line.' },
+    { id: 'other', label: 'Other equipment and the plant', intro: 'Equipment that sits in no unit process, control groups, and the rounds and alerts for the plant as a whole.' },
     { id: 'review', label: 'Review and plant rules', intro: 'What this plant takes from the library. The rules below follow the library already: change one only where this plant differs.' },
   ];
   /* how far each part is, counted in whole unit processes, types and alerts: a person finishes those, not single lines */
@@ -23,29 +24,30 @@
     lr.forEach((r) => { const ps = arr(r.proposals).filter((p) => !p.blockedBy); if (!ps.length) return; const up = r.eqId === 'plant' ? null : home.get(r.eqId) || null;
       const m = up ? g1 : g2; const k = up || (r.eqId === 'plant' ? '@plant' : 't:' + r.typeName); const c = m.get(k) || { und: 0 }; c.und += ps.filter((p) => !p.decided).length; m.set(k, c); });
     const tally = (m) => { const a = [...m.values()]; return { total: a.length, done: a.filter((c) => !c.und).length, left: a.reduce((s, c) => s + c.und, 0) }; };
-    const of = arr(safe(() => W.V7UPALERT.offers(key), [])).filter((o) => !o.skipped);
-    return { process: tally(g1), other: tally(g2), across: { total: of.length, done: of.filter((o) => o.state).length, left: of.filter((o) => !o.state).length } };
+    /* an alert across readings counts with the place it belongs to */
+    const eqs = {}; arr(safe(() => v.equipment(key), [])).forEach((e) => { eqs[e.id] = e; });
+    arr(safe(() => W.V7UPALERT.offers(key), [])).filter((o) => !o.skipped).forEach((o) => { const up = home.get(o.upId) || null; const m = up ? g1 : g2; const k = up || (o.sk === 'eq' && eqs[o.upId] ? 't:' + eqs[o.upId].typeName : '@plant'); const c = m.get(k) || { und: 0 }; if (!o.state) c.und += 1; m.set(k, c); });
+    return { process: tally(g1), other: tally(g2) };
   }
   const STEP = {}; const LASTQ = {};
-  const first = (key) => { const p = progress(key); return p.process.left ? 0 : p.other.left ? 1 : p.across.left ? 2 : 3; };
-  const step = (key) => (STEP[key] == null ? first(key) : STEP[key]);
+  const first = (key) => { const p = progress(key); return p.process.left ? 0 : p.other.left ? 1 : 2; };
+  const step = (key) => Math.min(PARTS.length - 1, STEP[key] == null ? first(key) : STEP[key]);
   W.V7GUIDE = { parts: PARTS, progress, step, go: (key, i) => { STEP[key] = Math.max(0, Math.min(PARTS.length - 1, +i || 0)); return STEP[key]; } };
 
   /* ── on the page ───────────────────────────────────────────────────────────────────────────────────────── */
   const U = W.V7UI; if (!U || !U.on || typeof document === 'undefined') return;
   const esc = U.esc; const btn = U.btn;
-  const stateText = (i, pr) => { if (i === 3) return 'Optional'; const c = i === 0 ? pr.process : i === 1 ? pr.other : pr.across; return !c.total ? 'Nothing here' : c.done === c.total ? 'Done' : `${c.done} of ${c.total} done`; };
-  const isDone = (i, pr) => { if (i === 3) return false; const c = i === 0 ? pr.process : i === 1 ? pr.other : pr.across; return c.total > 0 && c.done === c.total; };
+  const stateText = (i, pr) => { if (i === 2) return 'Optional'; const c = i === 0 ? pr.process : pr.other; return !c.total ? 'Nothing here' : c.done === c.total ? 'Done' : `${c.done} of ${c.total} done`; };
+  const isDone = (i, pr) => { if (i === 2) return false; const c = i === 0 ? pr.process : pr.other; return c.total > 0 && c.done === c.total; };
 
   function show(body, key) {
     const i = step(key); const pr = progress(key);
     Array.prototype.forEach.call(body.querySelectorAll(':scope > .g9-p'), (p) => { p.hidden = +p.getAttribute('data-i') !== i; });
     Array.prototype.forEach.call(body.querySelectorAll('.g9-s'), (b) => { const k = +b.getAttribute('data-i'); b.classList.toggle('is-on', k === i); if (k === i) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current'); });
     const tools = body.querySelector('.g9-tools'); const slot = body.querySelector(`.g9-p[data-i="${i}"] .g9-slot`); if (tools) { if (slot) { slot.appendChild(tools); tools.hidden = false; } else tools.hidden = true; }
-    if (i === 2) { const d = body.querySelector('#ua-card'); if (d && !d.open) d.open = true; }
     const foot = body.querySelector('.g9-foot');
     if (foot) {
-      const left = i === 0 ? pr.process.left : i === 1 ? pr.other.left : i === 2 ? pr.across.left : 0; const b = `#/p/${encodeURIComponent(key)}`;
+      const left = i === 0 ? pr.process.left : i === 1 ? pr.other.left : 0; const b = `#/p/${encodeURIComponent(key)}`;
       const back = i > 0 ? btn(`Back: ${PARTS[i - 1].label}`, { act: 'g9:go', data: { plant: key, i: i - 1 }, kind: 'ghost' }) : '<span></span>';
       const next = i < PARTS.length - 1 ? btn(`Next: ${PARTS[i + 1].label}`, { act: 'g9:go', data: { plant: key, i: i + 1 }, kind: left ? 'secondary' : 'primary', title: left ? 'You can come back: what is undecided here waits for you' : '' }) : btn('Back to the set-up', { href: b, kind: 'primary' });
       foot.innerHTML = `${back}<span class="g9-foot-n">Part ${i + 1} of ${PARTS.length}</span>${next}`;
@@ -70,15 +72,15 @@
     if (cards) { let to = 0; Array.prototype.slice.call(cards.children).forEach((c) => { if (c.id === 'p7-cat-process') { to = 0; c.remove(); return; } if (c.id === 'p7-cat-equipment' || c.id === 'p7-cat-plant') to = 1; lists[to].appendChild(c); }); cards.remove(); }
     const none = (i) => { const c = i === 0 ? pr.process : pr.other; const filtered = q.kind || (q.show && q.show !== 'undecided'); return `<p class="g9-none">${!c.total ? 'The library has nothing to decide here for this plant.' : filtered ? 'Nothing here under this filter.' : 'Everything here is decided.'}</p>`; };
     /* how much routine work the site takes on is a choice to make before the lists; where there is nothing to choose it is a note for the review */
-    lvl.forEach((c) => (c.querySelector('.lvl') ? P[0] : P[3]).appendChild(c));
+    lvl.forEach((c) => (c.querySelector('.lvl') ? P[0] : P[2]).appendChild(c));
     [0, 1].forEach((i) => { if (lists[i].children.length) P[i].appendChild(lists[i]); else P[i].insertAdjacentHTML('beforeend', none(i)); });
     rest.forEach((c) => c.remove());
-    if (zAcross) P[2].appendChild(zAcross); else P[2].insertAdjacentHTML('beforeend', '<p class="g9-none">No alert across readings fits this plant.</p>');
+    if (zAcross) P[2].appendChild(zAcross);
     /* the review: what the plant takes from the library, open. The card that counts lines to decide belongs to the lists, so it
        shows here only once everything is decided, when it says so and leads back to the set-up */
-    sums.forEach((c) => { if (c.querySelector('[data-act="p7:lib-accept-all"]')) { c.remove(); return; } P[3].appendChild(c); }); if (sums[0] && sums[0].parentNode === P[3] && !sums[0].classList.contains('is-flat')) sums[0].open = true;
+    sums.forEach((c) => { if (c.querySelector('[data-act="p7:lib-accept-all"]')) { c.remove(); return; } P[2].appendChild(c); }); if (sums[0] && sums[0].parentNode === P[2] && !sums[0].classList.contains('is-flat')) sums[0].open = true;
     /* the plant's own rounds: one heading and one line, not a card around a line of the same name */
-    Array.prototype.forEach.call(lists[1].querySelectorAll(':scope > section.card.p7-type > .card-h'), (h) => h.remove()); [zRules, zOwn].forEach((z) => { if (z) P[3].appendChild(z); });
+    Array.prototype.forEach.call(lists[1].querySelectorAll(':scope > section.card.p7-type > .card-h'), (h) => h.remove()); [zRules, zOwn].forEach((z) => { if (z) P[2].appendChild(z); });
     /* the filters: one quiet row, with the kinds of work behind a fold */
     const tools = document.createElement('div'); tools.className = 'g9-tools'; if (filt) tools.appendChild(filt);
     if (fk) { const d = document.createElement('details'); d.className = 'g9-kind'; if (q.kind) d.open = true; d.innerHTML = `<summary>${q.kind ? 'Filtered by kind of work' : 'Filter by kind of work'}</summary>`; d.appendChild(fk); tools.appendChild(d); }

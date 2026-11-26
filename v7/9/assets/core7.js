@@ -204,7 +204,7 @@ window.V7 = (function () {
     band: BAND_LABEL,
     alertState: { draft: 'Draft', trial: 'On trial', on: 'On', off: 'Off' },
     plantState: { commissioning: 'Commissioning', live: 'Live' },
-    chip: { lib: 'Follows the library', form: 'From the Visualization', changed: 'Plant’s own value', libchanged: 'Library changed since', none: 'No limits yet', next: 'Next phase' },
+    chip: { lib: 'Follows the library', form: 'From the Visualization', changed: 'Plant’s own value', libchanged: 'Library changed since', none: 'No limits yet', next: 'On a pipe' },
     reason: { tuned: 'Tuned for this plant', fornow: 'For now, until …', unrecorded: 'Not recorded (changed before reasons were kept)', notinlib: 'Not in the library' },
     overrideState: { ok: 'OK', same: 'Now the same as the library', libchanged: 'Library changed since', review: 'Review due', ended: 'Ended' },
     issueStatus: { open: 'Open', diagnosing: 'Diagnosing', fixing: 'Fixing', verifying: 'Verifying', closed: 'Closed' },
@@ -712,7 +712,7 @@ window.V7 = (function () {
   const eq = (key, id) => { const e = eqRaw(key, id); return e ? eqView(key, e) : null; };
   function sensorView(key, s) {
     const e = homeOf(key, s); let dirs = s.kind === 'meter' ? [] : dirsOf(key, s.id); if (s.kind === 'status' && !dirs.some((dr) => hasAny(bandsInfo(key, s.id, dr).bands))) dirs = []; const np = s.nextPhase ? withPlant(key, () => (C.nextPhaseOf(e) || []).find((x) => x.sensor === s.id)) : null;
-    return { id: s.id, name: s.name, tag: s.tag, unit: s.unit, kind: s.kind, valid: s.valid.slice(), reportEvery: s.reportEvery || Math.round(POLL / MIN), eqId: e ? e.id : null, eqTag: e ? e.tag : null, nextPhase: !!s.nextPhase, nextPhaseNote: s.nextPhase ? ((np && np.note) || 'on a connection: next phase') : null, dirs, primaryDir: s.nextPhase || !dirs.length ? null : primaryDir(key, s.id), takesLimits: !s.nextPhase && s.kind !== 'meter', alertIds: dOf(key).alerts.filter((a) => a.sensor === s.id).map((a) => a.id), source: 'Visualization', latest: latest(key, s.id), sample: true };
+    return { id: s.id, name: s.name, tag: s.tag, unit: s.unit, kind: s.kind, valid: s.valid.slice(), reportEvery: s.reportEvery || Math.round(POLL / MIN), eqId: e ? e.id : null, eqTag: e ? e.tag : null, nextPhase: !!s.nextPhase, nextPhaseNote: s.nextPhase ? ((np && np.note) || 'on a pipe: read by the alerts across its unit process') : null, dirs, primaryDir: s.nextPhase || !dirs.length ? null : primaryDir(key, s.id), takesLimits: !s.nextPhase && s.kind !== 'meter', alertIds: dOf(key).alerts.filter((a) => a.sensor === s.id).map((a) => a.id), source: 'Visualization', latest: latest(key, s.id), sample: true };
   }
   const sensors = (key, eqId) => cached(`sens:${key}:${eqId || ''}`, () => (dOf(key) ? dOf(key).sensors.filter((s) => !eqId || s.on === 'eq:' + eqId).map((s) => sensorView(key, s)) : []));
   function readings(key, opts) {
@@ -1295,13 +1295,36 @@ window.V7 = (function () {
   function libraryReview(key) {
     return cached(`libreview:${key}`, () => { const d = dOf(key); return [...d.equipment.map((e) => reviewRow(key, e.id)), reviewRow(key, 'plant')]; });
   }
+  /* 27 Nov: calibrating flow meters, pressure gauges and level sensors is not a round of the whole plant. It belongs to the unit process
+     that holds them: flow meters and pressure gauges on its pipes, level sensors on its tanks. Equipment in no unit process keeps its own. */
+  const isPipeCal = (name) => /Calibration of flow meter, level sensors and pressure gauges/i.test(String(name || ''));
+  function upHomes(key) {
+    return cached(`uphomes:${key}`, () => { let ups = []; try { ups = structOf(key).ups || []; } catch (e) { ups = []; } const home = {}; const scope = {};
+      ups.forEach((u) => { if (!home[u.id]) home[u.id] = u.id; }); ups.forEach((u) => (u.members || []).forEach((m) => { if (!home[m.eqId]) home[m.eqId] = u.id; }));
+      ups.forEach((u) => { scope[u.id] = [u.id].concat((u.members || []).map((m) => m.eqId)); }); return { home, scope }; });
+  }
+  function pipeCalMap(key) {
+    return cached(`pipecal:${key}`, () => { const d = dOf(key); const H = upHomes(key); const out = {};
+      d.sensors.forEach((x) => { const eid = String(x.on || '').replace(/^eq:/, ''); if (!eid || !d.equipment.some((e) => e.id === eid)) return; const R = (window.READINGS || {})[x.name] || {}; const pipe = !!x.nextPhase || R.where === 'connection';
+        const what = pipe && /flow|pressure|throughput/i.test(x.name) ? 'flow' : !pipe && /level/i.test(x.name) && x.kind !== 'status' ? 'level' : null; if (!what) return;
+        const t = H.home[eid] || eid; (out[t] = out[t] || { flow: [], level: [] })[what].push(x.tag); });
+      return out; });
+  }
+  /* 27 Nov: a manual test is not offered where a sensor of the same purpose is installed in the unit process: the sensor already gives the reading */
+  const TEST_READS = [[/dissolved oxygen|\bDO\b/i, /^dissolved oxygen$/i, 'dissolved oxygen'], [/\bpH\b/i, /^pH$/i, 'pH'], [/temperature/i, /^temperature$/i, 'temperature'], [/\bCOD\b/, /\bCOD\b/, 'COD'], [/\bBOD\b/, /\bBOD\b/, 'BOD'], [/ammonia|NH3/i, /ammonia/i, 'ammonia'], [/\bMLSS\b/, /^MLSS$/, 'MLSS'], [/turbidity/i, /turbidity/i, 'turbidity'], [/\bTSS\b/, /\bTSS\b|suspended solids/i, 'TSS'], [/chlorine/i, /chlorine(?! leak)/i, 'chlorine'], [/hardness/i, /hardness/i, 'hardness'], [/conductivity/i, /conductivity/i, 'conductivity'], [/\bORP\b/, /^ORP$/, 'ORP'], [/nitrate/i, /nitrate/i, 'nitrate']];
+  const manualTestSensor = (name) => { const n = String(name || '').replace(/^Manual testing\s*-\s*/i, ''); const hit = TEST_READS.find(([t]) => t.test(n)); return hit ? hit[2] : null; };
+  const testPurpose = (name) => { const n = String(name || '').replace(/^Manual testing\s*-\s*/i, ''); const hit = TEST_READS.find(([t]) => t.test(n)); return hit ? hit[1] : null; };
+  function testCover(key, eqId, name) {
+    const rx = testPurpose(name); if (!rx) return null; const d = dOf(key); const H = upHomes(key); const ids = H.scope[H.home[eqId]] || [eqId];
+    const x = d.sensors.find((y) => y.kind !== 'manual' && ids.includes(String(y.on || '').replace(/^eq:/, '')) && rx.test(y.name)); return x ? { tag: x.tag, reading: x.name } : null;
+  }
   function reviewRow(key, eqId) {
     return cached(`librow:${key}:${eqId}`, () => {
       const d = dOf(key); const P = PS(key); let row = null;
       withPlant(key, () => {
         if (eqId === 'plant') {
           const prof = C.plantProfile(); row = { eqId: 'plant', tag: d.plant.name, name: d.plant.name, typeName: `${d.plant.type} plant`, plantLevel: true, proposals: [] };
-          (prof.rounds || []).filter((r) => C.cadenceOf(r) && !subDaily(r)).forEach((r) => { const pid = `plant|task|${r.name}`; const sc = d.schedules.find((x) => x.subject.kind === 'plant' && x.name === r.name); row.proposals.push({ pid, kind: 'task', name: r.name, eqId: 'plant', tag: d.plant.name, typeName: row.typeName, every: C.cadenceOf(r), workType: r.workType, detail: `${cap(everyText(C.cadenceOf(r)))} · ${C.WT_LABEL[r.workType] || r.workType}`, decided: sc ? itemDecided(key, { type: 'schedule', obj: sc }) : null, reason: (P.decisions[pid] || {}).reason || null }); });
+          (prof.rounds || []).filter((r) => C.cadenceOf(r) && !subDaily(r) && !isPipeCal(r.name)).forEach((r) => { const pid = `plant|task|${r.name}`; const sc = d.schedules.find((x) => x.subject.kind === 'plant' && x.name === r.name); row.proposals.push({ pid, kind: 'task', name: r.name, eqId: 'plant', tag: d.plant.name, typeName: row.typeName, every: C.cadenceOf(r), workType: r.workType, detail: `${cap(everyText(C.cadenceOf(r)))} · ${C.WT_LABEL[r.workType] || r.workType}`, decided: sc ? itemDecided(key, { type: 'schedule', obj: sc }) : null, reason: (P.decisions[pid] || {}).reason || null }); });
           return;
         }
         const e = d.equipment.find((x) => x.id === eqId); if (!e) return;
@@ -1330,11 +1353,14 @@ window.V7 = (function () {
             if (!x.ok) p.blockedBy = `Needs a ${(x.why.match(/needs an? (.+?) reading/) || [])[1] || 'reading'} reading the Visualization doesn't send`;
             else p.decided = itemDecided(key, findItem(key, e.id, kind, x.name));
             if (kind === 'task' && p.basis === 'calendar' && everyH(p.every) != null && everyH(p.every) < 24) return;   /* v7/4: nothing more often than daily */
+            if (kind === 'task' && p.workType === 'test' && p.decided !== 'accepted') { const cv = testCover(key, e.id, x.name); if (cv) { (row.covered = row.covered || []).push({ name: x.name, tag: cv.tag, reading: cv.reading }); return; } }
             row.proposals.push(p);
           });
           /* v7: a next-phase item set by a form answer ("Discharge pressure limits from the Maximum Head answer") is limits or a setting,
              not a task: kind 'condition' with its own label, so it never reads as work the plant will get */
-          if (it) (it.next || []).filter((n) => n.kind === 'alert' || n.kind === 'work').forEach((n) => { const fromAnswer = n.kind === 'work' && /\banswer\b/i.test(`${n.name} ${n.note || ''}`); row.proposals.push({ pid: `${e.id}|${n.kind === 'alert' ? 'alert' : 'task'}|${n.name}`, kind: n.kind === 'alert' ? 'alert' : fromAnswer ? 'condition' : 'task', kindLabel: fromAnswer ? (/\blimits\b/i.test(n.name) ? 'Limits' : 'Setting') : null, name: n.name, eqId: e.id, tag: e.tag, typeName: e.type, decided: null, detail: n.note || 'Reads a connection', blockedBy: 'Next phase', nextPhase: true }); });
+          if (it) (it.next || []).filter((n) => n.kind === 'alert' || n.kind === 'work').forEach((n) => { const fromAnswer = n.kind === 'work' && /\banswer\b/i.test(`${n.name} ${n.note || ''}`); row.proposals.push({ pid: `${e.id}|${n.kind === 'alert' ? 'alert' : 'task'}|${n.name}`, kind: n.kind === 'alert' ? 'alert' : fromAnswer ? 'condition' : 'task', kindLabel: fromAnswer ? (/\blimits\b/i.test(n.name) ? 'Limits' : 'Setting') : null, name: n.name, eqId: e.id, tag: e.tag, typeName: e.type, decided: null, detail: n.note || 'Reads a connection', blockedBy: 'Reads a pipe', nextPhase: true }); });
+          { const pc = pipeCalMap(key)[e.id]; if (pc) { const prof = C.plantProfile(); (prof.rounds || []).filter((r) => isPipeCal(r.name) && C.cadenceOf(r)).forEach((r) => { const tags = /Level sensors\s*$/i.test(r.name) ? pc.level : pc.flow; if (!tags.length) return; const pid = `${e.id}|task|${r.name}`; const sc = d.schedules.find((x) => x.subject && x.subject.id === e.id && x.name === r.name);
+            row.proposals.push({ pid, kind: 'task', name: r.name, eqId: e.id, tag: e.tag, typeName: e.type, every: C.cadenceOf(r), workType: r.workType, basis: 'calendar', everyText: everyText(C.cadenceOf(r)), detail: `${cap(everyText(C.cadenceOf(r)))} · ${C.WT_LABEL[r.workType] || r.workType} · for ${tags.join(', ')}`, decided: sc ? itemDecided(key, { type: 'schedule', obj: sc }) : null, reason: (P.decisions[pid] || {}).reason || null, pipeCal: true, forTags: tags }); }); } }
         }
       });
       return row;
@@ -1357,7 +1383,9 @@ window.V7 = (function () {
     if (!p) return { ok: false, error: 'No such proposal.' }; if (p.blockedBy) return { ok: false, error: p.blockedBy };
     if (verdict !== 'accept' && verdict !== 'reject') return { ok: false, error: 'Accept or reject.' };
     const t = o.at != null ? o.at : now();
-    materialize(key, eqId, t); const it = findItem(key, eqId, kind, name); if (!it) return { ok: false, error: 'The library item could not be found on this equipment.' };
+    materialize(key, eqId, t); let it = findItem(key, eqId, kind, name);
+    if (!it && p.pipeCal) { const d9 = dOf(key); const r = libRound(d9.plant.type, name) || libRound('STP', name); if (r) { d9.schedules.push({ id: `s_pc_${eqId}_${d9.schedules.length + 1}`, name: r.name, subject: { kind: 'eq', id: eqId }, workType: r.workType, probe: null, flow: r.flow || null, basis: 'calendar', every: { ...C.cadenceOf(r) }, meter: null, anchor: 'fixed', nextDue: '2026-10-06', performedBy: 'in_house', statutory: !!r.statutory, verify: !!r.verify, status: 'draft', open: 0, source: 'library', hours: r.hours || null, parts: r.parts || '' }); it = findItem(key, eqId, kind, name); } }
+    if (!it) return { ok: false, error: 'The library item could not be found on this equipment.' };
     if (verdict === 'accept') {
       if (it.type === 'alert') { if (alertState(key, it.obj.id) !== 'trial' && alertState(key, it.obj.id) !== 'on') putAlertState(key, it.obj.id, 'trial', t); }
       else it.obj.status = 'active';
@@ -2114,7 +2142,7 @@ window.V7 = (function () {
     alertState, setAlertState,
     limitsOf, dirs: dirsOf, libLimits, sourceOf, setLimits, setAlertTiming, setCadence, setTier,
     overrides, revert, revertAll, revertPreview, keep, suggest, suggestions,
-    scadaReview, acceptScadaGroup, acceptAllScada, autoSetup, libraryReview, decide, acceptAllFor, acceptAllPreview,
+    scadaReview, acceptScadaGroup, acceptAllScada, autoSetup, libraryReview, manualTestSensor, decide, acceptAllFor, acceptAllPreview,
     checklist, noLimitsYet, eachOf, goLivePreview, goLive, returnToCommissioning,
     issues, issue, tasks, task, report, answer, chooseCause, diagStep, startFix, fixStep, verify, close, startTask, doTaskStep, doneTask, setLastDone,
     flowOf, diagFor, causeOf, fixFlowFor, linkedTask, taskForGeneral, issueTypes, issueTerms, reportSensorFault, causesFor,

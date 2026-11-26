@@ -272,7 +272,7 @@
     let blocked = 0; let np = 0; arr(lb.items).forEach((r) => arr(r.proposals).forEach((p) => { if (p.blockedBy) blocked++; if (p.nextPhase) np++; }));
     const libCard = trackCard({
       title: 'Alerts & Tasks', done: lb.done, total: lb.total, progText: `${lb.done} of ${pl(lb.total, 'proposal')} decided`,
-      lines: [trial ? `${pl(trial, 'alert')} On trial` : 'No alert On trial yet', blocked ? `<span class="muted">${blocked} more can't be used yet: ${np === blocked ? 'they read a connection (next phase)' : np ? "they need a reading the Visualization doesn't send, or a connection (next phase)" : "they need a reading the Visualization doesn't send"}</span>` : ''],
+      lines: [trial ? `${pl(trial, 'alert')} On trial` : 'No alert On trial yet', blocked ? `<span class="muted">${blocked} more can't be used yet: ${np === blocked ? 'they read a sensor on a pipe, which an alert across the unit process watches' : np ? "they need a reading the Visualization doesn't send, or they read a pipe, which an alert across the unit process watches" : "they need a reading the Visualization doesn't send"}</span>` : ''],
       action: lb.done < lb.total ? btn(lb.next || 'Decide', { href: `${b}/library`, kind: 'primary' }) : btn('Open', { href: `${b}/library`, kind: 'ghost' }),
     });
     const pe = t.people || { done: 0, total: 2 };
@@ -514,7 +514,7 @@
       _href: eqHref(key, e.eqId),
       tag: `<a class="mono" href="${esc(eqHref(key, e.eqId))}">${esc(e.tag)}</a>`, name: e.name,
       drawn: e.typeDiffers ? chip(`Drawn as ${e.drawn}`, { tone: 'warn', title: `Stored as ${e.stored}: fix the drawing in the Visualization` }) : `<span class="muted">${esc(e.drawn || g.typeName)}</span>`,
-      readings: `${e.readings || 0}${e.nextPhaseReadings ? ` <span class="muted">+ ${e.nextPhaseReadings} next phase</span>` : ''}`,
+      readings: `${e.readings || 0}${e.nextPhaseReadings ? ` <span class="muted">+ ${e.nextPhaseReadings} on pipes</span>` : ''}`,
       form: e.form ? formText(e.form) : '<span class="muted">—</span>',
     }));
     const tbl = table({ cols: [{ label: 'Tag', key: 'tag' }, { label: 'Name', key: 'name' }, { label: 'Drawn as', key: 'drawn' }, { label: 'Readings', key: 'readings' }, { label: 'Visualization', key: 'form' }], rows });
@@ -530,7 +530,7 @@
       const nEq = groups.reduce((n, g) => n + (g.count || 0), 0); const nRead = groups.reduce((n, g) => n + arr(g.equipment).reduce((m, e) => m + (e.readings || 0), 0), 0);
       const nNext = arr(sr.nextPhase).length;
       const parts = [];
-      const sub = `Read from the Visualization ${fmt(sr.readAt)}: ${pieces(nEq)} of ${pl(groups.length, 'database type')}, with ${pl(nRead, 'reading')}${nNext ? `, plus ${nNext} on pipes between equipment (next phase)` : ''}. To change anything here, fix it in the Visualization and read again.`;
+      const sub = `Read from the Visualization ${fmt(sr.readAt)}: ${pieces(nEq)} of ${pl(groups.length, 'database type')}, with ${pl(nRead, 'reading')}${nNext ? `, plus ${nNext} on pipes between equipment` : ''}. To change anything here, fix it in the Visualization and read again.`;
       if (arr(sr.notInDb).length) {
         const items = sr.notInDb.map((e) => ({ title: `<span class="mono">${esc(e.tag)}</span> ${esc(e.name)}`, sub: `Stored as "${e.stored || e.code || 'nothing'}", which the database doesn't have`, tone: 'bad' }));
         parts.push(card({ title: `${pieces(sr.notInDb.length)} with a type the database doesn't have`, sub: 'This blocks go live. Give each one a database type in the Visualization, then read again.', body: list(items), actions: [btn('Fix it in the Visualization', { act: 'p7:scada-fix', kind: 'primary' })], tone: 'bad' }));
@@ -551,7 +551,7 @@
         body: groups.length ? groups.map((g) => scadaGroup(key, g, few || q.type === g.typeName)).join('') : empty('the Visualization sent no equipment for this plant.'),
       }));
       if (arr(sr.nextPhase).length) {
-        parts.push(note(`<b>Next phase:</b> readings on pipes between equipment are not used yet. The Visualization sends ${pl(sr.nextPhase.length, 'of them', 'of them')}: ${esc(shortList(sr.nextPhase.map((s) => `${s.name}${s.tag ? ` (${s.tag})` : ''}${s.eqTag ? ` near ${s.eqTag}` : ''}`), 5))}.`, 'next'));
+        parts.push(note(`<b>On pipes:</b> readings on pipes between equipment are read by alerts across a unit process, not by an alert on one piece of equipment. The Visualization sends ${pl(sr.nextPhase.length, 'of them', 'of them')}: ${esc(shortList(sr.nextPhase.map((s) => `${s.name}${s.tag ? ` (${s.tag})` : ''}${s.eqTag ? ` near ${s.eqTag}` : ''}`), 5))}.`, 'next'));
       }
       if (!live) {
         /* v7/5: everything that was read, on one screen: the equipment by type, then how it is grouped */
@@ -582,7 +582,7 @@
   function propRow(key, p, alertIds) {
     const d = { plant: key, pid: p.pid };
     let right; let cls = 'p7-prop';
-    if (p.blockedBy) { cls += ' is-blocked'; right = p.nextPhase ? chip('Next phase', { tone: 'next', title: 'Reads a connection between equipment: next phase' }) : `<span class="p7-blocked">${esc(p.blockedBy)}</span>`; }
+    if (p.blockedBy) { cls += ' is-blocked'; right = p.nextPhase ? chip('Reads a pipe', { tone: 'next', title: 'It reads a sensor on a pipe. An alert on a piece of equipment reads only that equipment: set it as an alert across the unit process' }) : `<span class="p7-blocked">${esc(p.blockedBy)}</span>`; }
     else if (p.decided === 'accepted') {
       const id = p.kind === 'alert' ? alertIds[`${p.name} — ${p.tag}`] : null; const st = id ? call(() => V().alertState(key, id), null) : null;
       right = `${st ? (id ? `<a href="${esc(alertHref(key, id))}">${U.stateChip(st)}</a>` : U.stateChip(st)) : chip('Accepted', { tone: 'ok' })}${btn('Not for this plant', { act: 'p7:lib-reject', data: d, small: true, kind: 'ghost' })}`;
@@ -637,7 +637,7 @@
       row(c.accepted || 0, 'Inherited', 'Accepted here; they follow the library until someone changes a value.', qs('decided'), 'ok'),
       row(c.undecided, 'Could be inherited: waiting for a decision', c.undecided ? 'Nobody has accepted them or left them out yet.' : '', qs('undecided'), c.undecided ? 'warn' : ''),
       row(needList.reduce((s, x) => s + x[1], 0), 'Not inherited: the reading is missing', needList.length ? `The Visualization has no ${esc(needList.slice(0, 6).map(([k, n]) => `${k} (${n})`).join(', '))}${needList.length > 6 ? ` and ${needList.length - 6} more` : ''} reading on that equipment. Add the sensor in the Visualization and they can be accepted.` : '', qs('blocked'), ''),
-      row(next, 'Not inherited: reads a connection between equipment', next ? 'This phase reads sensors on the equipment only. These arrive in the next phase.' : '', qs('blocked'), ''),
+      row(next, 'Not inherited: reads a pipe between equipment', next ? 'An alert on a piece of equipment reads only that equipment. A reading on a pipe is watched by an alert across the unit process.' : '', qs('blocked'), ''),
       row(left.length, 'Not inherited: left out at this plant', left.length ? esc(Object.entries(whyLeft).slice(0, 4).map(([k, n]) => `“${k}” (${n})`).join(', ')) : 'Nothing has been left out on purpose.', qs('decided'), ''),
     ];
     return card({ title: `What ${p ? p.name : 'this plant'} inherits from the library`, sub: 'Every alert and task the library has for this plant\'s equipment, by what happened to it. Nothing is inherited without its reading.', body: `<ul class="inh-list">${rows.join('')}</ul>` });
@@ -670,9 +670,9 @@
   }
   /* 20 Nov: inside a step or a piece of equipment, lines are listed by kind: alerts first, then each kind of task */
   let KIND_F = 'all';   /* the kind the page is filtered to, so a button accepts what is listed and nothing else */
-  const KINDS = [['alert', 'Alerts'], ['pm', 'Preventive maintenance'], ['calibration', 'Calibration'], ['routine', 'Routine checks'], ['work', 'Routine work'], ['test', 'Manual testing'], ['other', 'Other tasks']];
+  const KINDS = [['alert', 'Alerts'], ['across', 'Alerts across readings'], ['condition', 'Condition-based tasks'], ['pm', 'Preventive maintenance'], ['calibration', 'Calibration'], ['routine', 'Routine checks'], ['work', 'Routine work'], ['test', 'Manual testing'], ['other', 'Other tasks']];
   const KIND_LABEL = {}; KINDS.forEach(([k, l]) => { KIND_LABEL[k] = l; }); const KIND_ORDER = KINDS.map((k) => k[0]);
-  const kindOf = (p) => (p.kind === 'alert' ? 'alert' : KIND_LABEL[p.workType] && p.workType !== 'alert' ? p.workType : 'other');
+  const kindOf = (p) => (p.kind === 'alert' ? 'alert' : p.kind === 'condition' && !p.kindLabel ? 'condition' : KIND_LABEL[p.workType] && p.workType !== 'alert' ? p.workType : 'other');
   const kindHead = (k, n, tail) => `<h5 class="p7-kind" data-kind="${k}"><span class="p7-kind-t">${esc(KIND_LABEL[k])}</span><span class="p7-kind-n">${n}${tail ? ` · ${esc(tail)}` : ''}</span></h5>`;
   function kindGroups(ps, rowFn) {
     const m = new Map(); arr(ps).forEach((p) => { const k = kindOf(p); if (!m.has(k)) m.set(k, []); m.get(k).push(p); });
@@ -681,17 +681,17 @@
   function kindsLine(rows, show, extra) {
     const c = { ...(extra || {}) }; arr(rows).forEach((r) => visibleProps(r, show).forEach((p) => { const k = kindOf(p); c[k] = (c[k] || 0) + 1; })); const ks = KIND_ORDER.filter((k) => c[k]); if (ks.length < 2) return '';
     /* 26 Nov: each count is a button: it shows where those lines are, opening what holds them */
-    return `<p class="p7-kinds" aria-label="What is listed here, by kind. Choose one to see where its lines are">${ks.map((k) => `<button type="button" class="p7-kinds-b" data-act="p7:kind-hit" data-kind="${k}" aria-pressed="false" title="Show where these are"><b>${c[k]}</b> ${esc((c[k] === 1 ? ({ alert: 'alert', routine: 'routine check', other: 'other task' })[k] : null) || KIND_LABEL[k].toLowerCase())}</button>`).join('')}</p>`;
+    return `<p class="p7-kinds" aria-label="What is listed here, by kind. Choose one to see where its lines are">${ks.map((k) => `<button type="button" class="p7-kinds-b" data-act="p7:kind-hit" data-kind="${k}" aria-pressed="false" title="Show where these are"><b>${c[k]}</b> ${esc((c[k] === 1 ? ({ alert: 'alert', across: 'alert across readings', condition: 'condition-based task', routine: 'routine check', other: 'other task' })[k] : null) || KIND_LABEL[k].toLowerCase())}</button>`).join('')}</p>`;
   }
-  function eqBlock(key, r, show, open, alertIds) {
-    const ps = visibleProps(r, show); if (!ps.length) return '';
+  function eqBlock(key, r, show, open, alertIds, more) {
+    const ps = visibleProps(r, show); if (!ps.length && !more) return '';
     const und = arr(r.proposals).filter((p) => !p.decided && !p.blockedBy).length;
     const label = r.eqId === 'plant' ? '<span class="p7-sum-t">The plant itself</span>' : `<span class="p7-sum-t"><a class="mono p7-peek" href="${esc(eqHref(key, r.eqId))}" title="Look at ${esc(r.tag)} here, without leaving this page">${esc(r.tag)}</a> ${esc(r.name || '')}</span>`;
     const undPids = arr(r.proposals).filter((p) => !p.decided && !p.blockedBy).map((p) => p.pid).join(',');
     const act = und > 1 && show !== 'blocked' && show !== 'decided' ? btn(`${KIND_F === 'all' ? 'Accept all' : 'Accept these'} ${und} for ${r.eqId === 'plant' ? 'the plant' : r.tag}`, { act: KIND_F === 'all' ? 'p7:lib-accept-eq' : 'p7:lib-accept-pids', data: { plant: key, eq: r.eqId, pids: KIND_F === 'all' ? '' : undPids, label: r.eqId === 'plant' ? 'the plant' : r.tag }, small: true, title: `Accept everything undecided for ${r.eqId === 'plant' ? 'the plant' : r.tag}, the tasks shared by its type included` }) : '';
     const sum = `<summary><span class="p7-sum-main">${label}<span class="p7-sum-s">${eqStatus(r, show, key)}</span></span><span class="p7-sum-r">${act}</span></summary>`;
     const link = r.eqId !== 'plant' ? `<p class="p7-more"><a href="${esc(eqHref(key, r.eqId))}">Open ${esc(r.tag)} →</a></p>` : '';
-    return `<details class="p7-grp p7-eq" data-eq="${esc(r.eqId)}"${open ? ' open' : ''}>${sum}<div class="p7-grp-b">${kindGroups(ps, (p) => propRow(key, p, alertIds))}${link}</div></details>`;
+    return `<details class="p7-grp p7-eq" data-eq="${esc(r.eqId)}"${open ? ' open' : ''}>${sum}<div class="p7-grp-b">${kindGroups(ps, (p) => propRow(key, p, alertIds))}${more || ''}${link}</div></details>`;
   }
   function library(params) {
     return guard(params, (key, q) => {
@@ -749,17 +749,25 @@
       const openAll = !!q.eq ? false : (show === 'undecided' && c.undecided <= 20) || visibleEq <= 3;
       const isOpen = (r) => (q.eq ? r.eqId === q.eq : openAll);
       const cards = []; const folds = [];
+      /* 27 Nov: an alert across readings is listed where it belongs: in its unit process, on its equipment, on its control group or on
+         the plant. One that raises a task is a condition-based task there. There is no separate part of the page for them. */
+      const UA = W.V7UPALERT && W.V7UPALERT.block ? W.V7UPALERT : null;
+      const NOUA = { und: 0, html: '', kinds: {} };
+      const acrossOf = (id, reads) => { if (!UA || kind !== 'all') return NOUA; const b = call(() => UA.block(key, id, show), null); if (!b) return NOUA; if (!b.n) return { und: b.und, html: '', kinds: {} };
+        const kinds = {}; if (b.alerts) kinds.across = b.alerts; if (b.tasks) kinds.condition = b.tasks;
+        return { und: b.und, kinds, html: `<div class="p7-ua">${b.alerts ? kindHead('across', b.alerts, `they read ${reads}`) + b.alertsHtml : ''}${b.tasks ? kindHead('condition', b.tasks, 'raised when a condition holds, not on a date') + b.tasksHtml : ''}</div>` }; };
+      const coveredNote = (rows) => { const cv = [].concat(...rows.map((r) => arr(r.covered))); if (!cv.length || show === 'decided' || show === 'blocked') return ''; return `<p class="p7-covered"><b>Not offered here: ${pl(cv.length, 'manual test')}.</b> A sensor already gives the reading: ${cv.map((x) => `${esc(String(x.name).replace(/^Manual testing\s*-\s*/i, ''))} (${esc(x.tag)} reads ${esc(x.reading)})`).join('; ')}.</p>`; };
       const sharedList = (rows) => { let last = null; const kc = {}; const out = sharedGroups(rows).slice().sort((a, b) => KIND_ORDER.indexOf(kindOf({ kind: 'task', workType: a.workType })) - KIND_ORDER.indexOf(kindOf({ kind: 'task', workType: b.workType }))).map((x) => { const h = sharedBlock(key, x, show, false, alertIds); if (!h) return ''; const k = kindOf({ kind: 'task', workType: x.workType }); const head = k !== last ? kindHead(k, sharedGroups(rows).filter((y) => kindOf({ kind: 'task', workType: y.workType }) === k && sharedBlock(key, y, show, false, alertIds)).length, 'one line for the type') : ''; last = k; kc[k] = (kc[k] || 0) + 1; return head + h; }).filter(Boolean); out.kinds = kc; return out; };
       byType.forEach((rows, typeName) => {
-        const shared = sharedList(rows);
-        const blocks = rows.map((r) => eqBlock(key, r, show, isOpen(r), alertIds)).filter(Boolean);
+        const shared = sharedList(rows); let uaUnd = 0; const uaK = {};
+        const blocks = rows.map((r) => { const ab = acrossOf(r.eqId, `only the sensors on ${r.tag}`); uaUnd += ab.und; Object.keys(ab.kinds).forEach((k) => { uaK[k] = (uaK[k] || 0) + ab.kinds[k]; }); return eqBlock(key, r, show, isOpen(r) || (!!ab.html && rows.length === 1), alertIds, ab.html); }).filter(Boolean);
         if (!blocks.length && !shared.length) return;
-        const tc = libCounts(rows); const undRows = rows.filter((r) => arr(r.proposals).some((x) => !x.decided && !x.blockedBy)).length; const code = (rows[0] && call(() => v.eq(key, rows[0].eqId).dbType, null)) || null;
+        const tc = libCounts(rows); tc.undecided += uaUnd; const undRows = rows.filter((r) => arr(r.proposals).some((x) => !x.decided && !x.blockedBy)).length; const code = (rows[0] && call(() => v.eq(key, rows[0].eqId).dbType, null)) || null;
         const undNames = uniq([].concat(...rows.map((r) => arr(r.proposals).filter((x) => !x.decided && !x.blockedBy).map((x) => x.name))));
         const sub = show === 'blocked' ? `${pieces(rows.length)} · ${tc.blocked} can't be used yet, each with what it needs${tc.undecided ? `. <a href="${esc(qs('undecided'))}">${tc.undecided} more are waiting for a decision</a>` : ''}`
           : `${pieces(rows.length)}${tc.undecided ? ` · ${tc.undecided} to decide` : ' · all decided'}`;
         /* v7/4: a type is one line (what it is, how much is left to decide, one button for all of it); opening it shows its lines */
-        const inner = kindsLine(rows, show, shared.kinds) + (shared.length ? `<h4 class="p7-shared-h">Shared by the type · one line each</h4>${shared.join('')}` : '') + (shared.length && blocks.length ? '<h4 class="p7-shared-h">On each piece of equipment</h4>' : '') + blocks.join('');
+        const inner = kindsLine(rows, show, { ...(shared.kinds || {}), ...uaK }) + (shared.length ? `<h4 class="p7-shared-h">Shared by the type · one line each</h4>${shared.join('')}` : '') + (shared.length && blocks.length ? '<h4 class="p7-shared-h">On each piece of equipment</h4>' : '') + blocks.join('') + coveredNote(rows);
         const act = show === 'blocked' ? '' : undRows > 1 ? btn(kind === 'all' ? `Accept all for ${countType(rows.length, typeName)}` : `Accept these ${tc.undecided} for ${countType(rows.length, typeName)}`, { act: kind === 'all' ? 'p7:lib-accept-type' : 'p7:lib-accept-pids', data: { plant: key, type: typeName, pids: kind === 'all' ? '' : [].concat(...rows.map((r) => arr(r.proposals).filter((p) => !p.decided && !p.blockedBy).map((p) => p.pid))).join(','), label: countType(rows.length, typeName) }, kind: 'primary', small: true }) : tc.undecided ? '' : chip('All decided', { tone: 'ok' });
         folds.push({ proc: !!(code && W.CATALOGUE_BY_CODE && W.CATALOGUE_BY_CODE[code] && W.CATALOGUE_BY_CODE[code].library === 'process'), und: tc.undecided, n: rows.length, id: `lib:${key}:${show}:${typeName}`, hasEq: !!q.eq && rows.some((r) => r.eqId === q.eq), title: code ? `<a href="${esc(libHref(code))}" title="Look at this library type here">${esc(typeName)}</a>` : esc(typeName), sub, inner, act });
       });
@@ -770,8 +778,9 @@
         tm.forEach((rs, typeName) => groups.push({ head: `${typeName} · ${pieces(rs.length)} in this step`, rows: rs, code: codeOfRow(rs[0]), typeName }));
         const upK = {}; const parts2 = groups.map((g) => { const shared = sharedList(g.rows); Object.keys(shared.kinds || {}).forEach((k) => { upK[k] = (upK[k] || 0) + shared.kinds[k]; }); const blocks = g.rows.map((r) => eqBlock(key, r, show, isOpen(r), alertIds)).filter(Boolean); if (!shared.length && !blocks.length) return '';
           return `<h4 class="p7-shared-h p7-up-h">${g.code ? `<a href="${esc(libHref(g.code))}" title="Look at this library type">${esc(g.typeName)}</a> · ${esc(pieces(g.rows.length))} in this step` : esc(g.head)}</h4>${shared.join('')}${blocks.join('')}`; }).filter(Boolean);
-        if (!parts2.length) return;
-        const tc = libCounts(rows); const undRows = rows.filter((r) => arr(r.proposals).some((x) => !x.decided && !x.blockedBy)); const also = arr(alsoIn.get(u.id)).map((id) => { const e = call(() => v.eq(key, id), null); const hu = homeUp.get(id); return e && hu ? `${e.tag} (listed under ${hu.tag})` : null; }).filter(Boolean);
+        const ab = acrossOf(u.id, `the sensors in ${u.tag}, on equipment or on a pipe`);
+        if (!parts2.length && !ab.html) return;
+        const tc = libCounts(rows); const propUnd = tc.undecided; tc.undecided += ab.und; Object.keys(ab.kinds).forEach((k) => { upK[k] = (upK[k] || 0) + ab.kinds[k]; }); const undRows = rows.filter((r) => arr(r.proposals).some((x) => !x.decided && !x.blockedBy)); const also = arr(alsoIn.get(u.id)).map((id) => { const e = call(() => v.eq(key, id), null); const hu = homeUp.get(id); return e && hu ? `${e.tag} (listed under ${hu.tag})` : null; }).filter(Boolean);
         /* 26 Nov: the line says what it is, what comes with it and how much is left; the rest is inside */
         const sub = `${esc(u.typeName)}${others.length ? ` · with ${pieces(others.length)}` : ''}${show === 'blocked' ? ` · ${tc.blocked} can't be used yet` : tc.undecided ? ` · ${tc.undecided} to decide` : ' · all decided'}`;
         /* 26 Nov: what takes part in the step, drawn: the step, then each piece of equipment. A tile shows where that equipment's lines are */
@@ -779,8 +788,8 @@
         const tile = (id) => { const e = call(() => v.eq(key, id), null); const isStep = id === u.id; if (!e && !isStep) return ''; const hu = homeUp.get(id); const here = isStep || !hu || hu.id === u.id; const r = rows.find((x) => x.eqId === id); const und = r ? arr(r.proposals).filter((x) => !x.decided && !x.blockedBy).length : 0;
           return `<button type="button" class="p7-upmap-t${isStep ? ' is-step' : ''}${here ? '' : ' is-else'}" data-act="p7:eq-hit" data-eq="${esc(id)}" aria-pressed="false" title="${here ? 'Show its lines' : `It also takes part in ${esc(hu.tag)}, and its lines are listed there`}"><b class="mono">${esc(e ? e.tag : u.tag)}</b><span class="p7-upmap-k">${esc(isStep ? 'The step itself' : (e && e.typeName) || '')}</span><span class="p7-upmap-n${here && und ? ' is-und' : ''}">${here ? (und ? `${und} to decide` : r ? 'decided' : 'nothing to decide') : `listed under ${esc(hu.tag)}`}</span></button>`; };
         const upMap = mem.length ? `<div class="p7-upmap"><span class="p7-upmap-l">In this unit process</span><div class="p7-upmap-r">${tile(u.id)}<span class="p7-upmap-j" aria-hidden="true"></span><div class="p7-upmap-m">${mem.map(tile).join('')}</div></div></div>` : '';
-        const inner = upMap + kindsLine(rows, show, upK) + parts2.join('') + (also.length ? `<p class="p7-up-also">Also takes part in this step: ${esc(also.join(', '))}.</p>` : '');
-        const act = show === 'blocked' ? '' : tc.undecided ? btn(kind === 'all' ? `Accept all for ${u.tag}` : `Accept these ${tc.undecided} for ${u.tag}`, { act: kind === 'all' ? 'p7:lib-accept-set' : 'p7:lib-accept-pids', data: { plant: key, eqs: undRows.map((r) => r.eqId).join(','), pids: kind === 'all' ? '' : [].concat(...rows.map((r) => arr(r.proposals).filter((p) => !p.decided && !p.blockedBy).map((p) => p.pid))).join(','), label: u.tag }, kind: 'primary', small: true, title: `Accept everything left to decide for ${u.tag} and the equipment listed under it` }) : tc.undecided ? '' : chip('All decided', { tone: 'ok' });
+        const inner = upMap + kindsLine(rows, show, upK) + parts2.join('') + (ab.html ? `<h4 class="p7-shared-h p7-up-h">Across ${esc(u.tag)}</h4>${ab.html}` : '') + coveredNote(rows) + (also.length ? `<p class="p7-up-also">Also takes part in this step: ${esc(also.join(', '))}.</p>` : '');
+        const act = show === 'blocked' ? '' : propUnd ? btn(kind === 'all' ? `Accept all for ${u.tag}` : `Accept these ${propUnd} for ${u.tag}`, { act: kind === 'all' ? 'p7:lib-accept-set' : 'p7:lib-accept-pids', data: { plant: key, eqs: undRows.map((r) => r.eqId).join(','), pids: kind === 'all' ? '' : [].concat(...rows.map((r) => arr(r.proposals).filter((p) => !p.decided && !p.blockedBy).map((p) => p.pid))).join(','), label: u.tag }, kind: 'primary', small: true, title: `Accept the alerts and tasks drafted for ${u.tag} and the equipment listed under it. Alerts across readings are applied one by one, inside` }) : tc.undecided ? chip(`${tc.undecided} to apply inside`, { tone: 'info', title: 'Alerts across readings and condition-based tasks are applied one by one' }) : chip('All decided', { tone: 'ok' });
         upFolds.push({ proc: true, und: tc.undecided, n: rows.length, id: `lib:${key}:${show}:up:${u.id}`, hasEq: !!q.eq && rows.some((r) => r.eqId === q.eq), title: `<span class="mono p7-up-tag">${esc(u.tag)}</span> ${esc(u.name)}`, sub, inner, act });
       });
       const K = W.V7KEEP || { open: (id, d) => (d ? ' open' : '') };
@@ -791,19 +800,22 @@
         if (!fs0.length) return; cards.push(catHead(id, title, what, cnt(fs0.length), fs0.reduce((n, f) => n + (f.und || 0), 0)));
         fs0.forEach((f) => cards.push(`<details class="card p7-type p7-fold" data-keep="${esc(f.id)}"${K.open(f.id, f.hasEq || allFolds.length <= 2)}><summary class="p7-fold-s"><span class="p7-fold-m"><span class="p7-fold-t">${f.title}</span><span class="p7-fold-d">${f.sub}</span></span><span class="p7-fold-r">${f.act}</span></summary><div class="p7-fold-b">${f.inner}</div></details>`));
       });
-      if (plantRow) {
-        const blk = eqBlock(key, plantRow, show, isOpen(plantRow), alertIds);
-        if (blk) {
-          const tc = libCounts([plantRow]);
-          cards.push(catHead('plant', 'The whole plant', 'Rounds and checks that belong to no single unit process or piece of equipment.', null, tc.undecided));
-          cards.push(card({ title: 'The plant itself', sub: `Rounds and checks for ${p.name} as a whole${tc.undecided ? ` · ${tc.undecided} to decide` : ''}`, body: blk, actions: [tc.undecided > 1 && kind !== 'all' ? '' : tc.undecided > 1 ? btn('Accept all for the plant', { act: 'p7:lib-accept-eq', data: { plant: key, eq: 'plant' }, kind: 'primary' }) : tc.undecided ? '' : chip('All decided', { tone: 'ok' })], cls: 'p7-type' }));
+      {
+        const pb = acrossOf('@plant', 'any sensor at the plant'); const cgB = arr(call(() => v.structure(key).cgs, [])).map((g) => ({ g, b: acrossOf(g.id, 'the members of the group') })).filter((x) => x.b.html);
+        const blk = plantRow ? eqBlock(key, plantRow, show, isOpen(plantRow), alertIds) : '';
+        if (blk || pb.html || cgB.length) {
+          const tc = plantRow ? libCounts([plantRow]) : { undecided: 0 }; const propUnd = tc.undecided; const allUnd = tc.undecided + pb.und + cgB.reduce((n, x) => n + x.b.und, 0);
+          cards.push(catHead('plant', 'The whole plant', 'Rounds, checks and alerts that belong to no single unit process or piece of equipment.', null, allUnd));
+          cgB.forEach((x) => cards.push(card({ title: `Control group: ${x.g.name}`, sub: `Alerts that read across its members${x.b.und ? ` · ${x.b.und} to decide` : ''}`, body: x.b.html, cls: 'p7-type p7-cg' })));
+          tc.undecided = propUnd;
+          cards.push(card({ title: 'The plant itself', sub: `Rounds, checks and alerts for ${p.name} as a whole${propUnd + pb.und ? ` · ${propUnd + pb.und} to decide` : ''}`, body: (blk || '') + pb.html, actions: [tc.undecided > 1 && kind !== 'all' ? '' : tc.undecided > 1 ? btn('Accept all for the plant', { act: 'p7:lib-accept-eq', data: { plant: key, eq: 'plant' }, kind: 'primary' }) : tc.undecided ? '' : chip('All decided', { tone: 'ok' })], cls: 'p7-type' }));
         }
       }
       if (!cards.length) {
         const msg = kind !== 'all' ? `No ${KIND_LABEL[kind].toLowerCase()} under this filter.` : { undecided: 'Nothing left to decide.', decided: 'Nothing decided yet.', blocked: 'Every proposal can be used.', all: 'The library proposes nothing for this plant.' }[show];
         parts.push(empty(msg, kind !== 'all' ? btn('All kinds', { href: qs(show, 'all') }) : show !== 'all' ? btn('Show all', { href: qs('all') }) : ''));
-      } else parts.push(`${upFolds.length + folds.length > 2 ? '<p class="p7-fold-hint">One line per unit process. Open one to decide line by line, or click a tag to look at that equipment without leaving this page.</p>' : ''}<div class="p7-cards">${cards.join('')}</div>`);
-      if (show === 'undecided' && c.blocked) parts.push(note(`${pl(c.blocked, 'more proposal')} can't be used yet: ${c.blocked === 1 ? 'it needs' : 'they need'} a reading the Visualization doesn't send, or a connection between equipment (next phase). They stay listed, greyed, under "Can't be used yet".`, 'quiet'));
+      } else parts.push(`${UA ? '<span data-ua-in hidden></span>' : ''}${upFolds.length + folds.length > 2 ? '<p class="p7-fold-hint">One line per unit process. Open one to decide line by line, or click a tag to look at that equipment without leaving this page.</p>' : ''}<div class="p7-cards">${cards.join('')}</div>`);
+      if (show === 'undecided' && c.blocked) parts.push(note(`${pl(c.blocked, 'more proposal')} can't be used yet: ${c.blocked === 1 ? 'it needs' : 'they need'} a reading the Visualization doesn't send, or a sensor on a pipe, which an alert across the unit process watches. They stay listed, greyed, under "Can't be used yet".`, 'quiet'));
       return frame(key, 'library', `<div class="p7-sec-h"><h2>Alerts &amp; Tasks for this plant</h2><p>${esc(sub)} ${U.term ? U.term('On trial', 'What On trial means') : ''}</p></div>` + workLevelCard(key) + parts.join(''));
     });
   }
@@ -861,7 +873,7 @@
   /* ── Readings (every reading, both states, grouped by equipment) ─────────────────────────────────────── */
   function readingLimits(key, r) {
     const v = V();
-    if (r.nextPhase) return { html: `${chip('Next phase', { tone: 'next' })} <span class="p7-sub">On a connection between equipment</span>`, chips: '', none: false };
+    if (r.nextPhase) return { html: `${chip('On a pipe', { tone: 'next' })} <span class="p7-sub">Read by alerts across its unit process</span>`, chips: '', none: false };
     if (!r.takesLimits) return { html: '<span class="muted">A counter: no limits</span>', chips: '', none: false };
     const dirs = arr(r.dirs);
     if (!dirs.length) return { html: `<span class="muted">${r.kind === 'status' ? 'ON or OFF: no limits needed' : 'No limits'}</span>`, chips: '', none: false };
@@ -940,8 +952,8 @@
       const n = (f) => rs.filter(f).length;
       const nScada = n((r) => r.kind !== 'manual' && !r.nextPhase); const nMan = n((r) => r.kind === 'manual'); const nNext = n((r) => r.nextPhase);
       const parts = [];
-      parts.push(`<p class="lead">${pl(nScada, 'reading')} from the Visualization${nNext ? `, plus ${nNext} on pipes between equipment (next phase)` : ''}${nMan ? `${nNext ? ',' : ''} and ${nMan} manual or lab ${nMan === 1 ? 'reading' : 'readings'}` : ''}, grouped by equipment.</p>`);
-      parts.push(`<div class="p7-tools">${filters([{ label: 'All', href: `${b}/readings`, on: show === 'all', count: rs.length }, { label: 'No limits yet', href: `${b}/readings?show=nolimits`, on: show === 'nolimits', count: noLim.size }, { label: 'Manual and lab', href: `${b}/readings?show=manual`, on: show === 'manual', count: nMan }, { label: 'Next phase', href: `${b}/readings?show=next`, on: show === 'next', count: n((r) => r.nextPhase) }].filter((f) => f.on || f.count || f.label === 'All'))}${searchBox('readings', key, 'Find by reading, tag or equipment')}</div>`);
+      parts.push(`<p class="lead">${pl(nScada, 'reading')} from the Visualization${nNext ? `, plus ${nNext} on pipes between equipment` : ''}${nMan ? `${nNext ? ',' : ''} and ${nMan} manual or lab ${nMan === 1 ? 'reading' : 'readings'}` : ''}, grouped by equipment.</p>`);
+      parts.push(`<div class="p7-tools">${filters([{ label: 'All', href: `${b}/readings`, on: show === 'all', count: rs.length }, { label: 'No limits yet', href: `${b}/readings?show=nolimits`, on: show === 'nolimits', count: noLim.size }, { label: 'Manual and lab', href: `${b}/readings?show=manual`, on: show === 'manual', count: nMan }, { label: 'On pipes', href: `${b}/readings?show=next`, on: show === 'next', count: n((r) => r.nextPhase) }].filter((f) => f.on || f.count || f.label === 'All'))}${searchBox('readings', key, 'Find by reading, tag or equipment')}</div>`);
       parts.push(blocks.length ? card({ body: blocks.join(''), actions: [U.sampleTag()], title: 'Every reading', sub: setup ? 'One line per piece of equipment, the ones that still need limits first. Open a line for its readings. Values under "Now" are sample readings.' : 'Values under "Now" are sample readings.' }) : empty(query ? H(`Nothing matches "${esc(query)}".`) : show === 'nolimits' ? 'Every reading that takes limits has them.' : 'No readings here.', show !== 'all' ? btn('Show all', { href: `${b}/readings` }) : ''));
       return frame(key, 'readings', parts.join(''));
     });

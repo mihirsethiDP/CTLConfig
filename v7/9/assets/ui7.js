@@ -146,7 +146,7 @@
 
   const SRC = {
     lib: ['Follows the library', 'lib'], form: ['From the Visualization', 'form'], changed: ['Plant’s own value', 'changed'],
-    libchanged: ['Library changed since', 'libchanged'], none: ['No limits yet', 'none'], next: ['Next phase', 'next'],
+    libchanged: ['Library changed since', 'libchanged'], none: ['No limits yet', 'none'], next: ['On a pipe', 'next'],
     notinlib: ['Not in the library', 'changed'],   /* v7: a task neither the library nor the Visualization has, with no difference recorded */
   };
   const SRC_ALIAS = { library: 'lib', fromlibrary: 'lib', scada: 'form', override: 'changed', here: 'changed', moved: 'libchanged', gap: 'none', nolimits: 'none', nextphase: 'next' };
@@ -160,7 +160,7 @@
     if (/scada form/.test(k)) return 'form';
     if (/changed here/.test(k)) return 'changed';
     if (/no limits/.test(k)) return 'none';
-    if (/next phase/.test(k)) return 'next';
+    if (/next phase|on a pipe|on pipes|reads a pipe/.test(k)) return 'next';
     return null;
   }
   function sourceChip(pb) {
@@ -894,7 +894,7 @@
       text: ['On a Live plant, Home becomes Coverage: how often each alert fires, how many were false alarms, and how long issues take to close.', 'Blind spots are issues only a person can find, shown with or without a task that looks for them.'],
       go: () => '#/p/manesar' },
     { n: 10, title: 'A library change', dec: ['D11', 'D17', 'D19', 'D23'],
-      text: ['Edit a limit on a type and the draft shows where it lands, counted over the four plants: values that change, plants that keep their own, open issues that keep their terms, tasks that would fall due.', 'Try MLSS low on Diffuser Tank: on MLSS, use Change limits under "Falls below" and change Minor from 2000 to 2200 mg/L. Manesar\'s AT-2 follows the library; AT-1 keeps its own 2500 mg/L. Publishing writes a dated note to each plant it reaches (here Manesar), and AT-1 then shows "Library changed since".'],
+      text: ['Edit a limit on a type and the draft shows where it lands, counted over the four plants: values that change, plants that keep their own, open issues that keep their terms, tasks that would fall due.', 'Try MLSS low on Diffuser Tank: on MLSS, use Change limits and times under "Falls below" and change Minor from 2000 to 2200 mg/L. Manesar\'s AT-2 follows the library; AT-1 keeps its own 2500 mg/L. Publishing writes a dated note to each plant it reaches (here Manesar), and AT-1 then shows "Library changed since".'],
       go: (c) => c.diffuser, also: (c) => [{ label: `Open Skeleton Tank${c.tankPlants ? ': used at ' + plural(c.tankPlants, 'plant') : ''}`, href: c.tank }] },
     { n: 11, title: 'Deviations from the library', dec: ['D6', 'D11', 'D25'],
       text: ['Every value a plant changed is listed with its reason, who changed it, the library value it started from and when to review it.', 'Send it back to the library, keep it, or suggest it for the library. Manesar\'s older changes say their reason was not recorded.'],

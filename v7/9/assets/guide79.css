@@ -2,7 +2,7 @@
 .g9 [hidden] { display: none !important; }
 .g9 > .p7-sec-h { margin-bottom: 12px; }
 .g9-steps { margin: 0 0 20px; }
-.g9-steps ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.g9-steps ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .g9-s { width: 100%; height: 100%; display: flex; align-items: center; gap: 10px; text-align: left; padding: 10px 12px; min-height: 56px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--surface); color: var(--ink-2); font: inherit; cursor: pointer; }
 .g9-s:hover { border-color: var(--ink-3); }
 .g9-s:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -28,9 +28,9 @@
 /* the lists say less */
 .g9 .p7-cards > .p7-cat:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
 .g9 .p7-cat-d { display: none; }
-.g9 .g9-p[data-i="2"] .p7-zone > .p7-cat { display: none; }
-.g9 .g9-p[data-i="3"] .p7-zone { margin-top: 24px; }
-.g9 .g9-p[data-i="3"] .p7-zone > .p7-cat .p7-cat-d { display: block; }
+
+.g9 .g9-p[data-i="2"] .p7-zone { margin-top: 24px; }
+.g9 .g9-p[data-i="2"] .p7-zone > .p7-cat .p7-cat-d { display: block; }
 .g9 .p7-prop { grid-template-columns: minmax(0, 1fr) auto; }
 .g9 .p7-prop-k { display: none; }
 .g9 .p7-prop-d .chip-lib { display: none; }
@@ -38,11 +38,11 @@
 .g9 .p7-prop .hp:not([open]) > summary { padding: 2px 0; font-size: 12.5px; font-weight: 400; gap: 6px; }
 .g9 .p7-prop .hp:not([open]) .hp-q { width: 15px; height: 15px; font-size: 10px; }
 @media (max-width: 760px) {
-  .g9-steps ol { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .g9-steps ol { grid-template-columns: 1fr; }
   .g9 .p7-prop { grid-template-columns: 1fr; }
 }
-.g9 .g9-p[data-i="2"] .p7-zone { margin: 0; padding: 0; border: 0; }
-.g9 .g9-p[data-i="2"] #ua-card > summary .p7-fold-d { display: none; }
+
+
 /* 26 Nov: the counts by kind are buttons, and a unit process shows what takes part in it */
 .p7-kinds-b { font: inherit; font-size: 13px; color: var(--ink-3); padding: 4px 11px; min-height: 28px; border-radius: 999px; border: 1px solid transparent; background: var(--surface-2, #f3f5f3); white-space: nowrap; cursor: pointer; }
 .p7-kinds-b:hover { border-color: var(--ink-3); }
@@ -69,3 +69,61 @@
 details.p7-eq.is-hit { background: var(--accent-tint); box-shadow: inset 3px 0 0 var(--accent); border-radius: 6px; padding-left: 12px; padding-right: 10px; }
 @media (max-width: 760px) { .p7-upmap-r { flex-direction: column; align-items: stretch; } .p7-upmap-j { width: 2px; height: 12px; flex-basis: 12px; margin-left: 20px; } .p7-upmap-m { padding: 0; border: 0; } .p7-upmap-t { max-width: none; } }
 details.p7-eq { scroll-margin-top: 90px; }
+/* 27 Nov: alerts across readings and condition-based tasks sit inside the place they belong to */
+.p7-ua { margin: 4px 0 10px; }
+.p7-ua .ua-rows { list-style: none; margin: 0; padding: 0; }
+.p7-ua .ua-row { padding: 12px 0; border-top: 1px solid var(--line); }
+.p7-ua .ua-row:first-child { border-top: 0; }
+.p7-covered { margin: 12px 0 4px; padding: 10px 12px; border-radius: 8px; background: var(--surface-2, #f3f5f3); color: var(--ink-2); font-size: 13px; }
+.p7-covered b { color: var(--ink); }
+/* ticking the sensors an alert reads */
+.ua-pickset { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 6px 0; }
+.ua-pickset .ua-pick-l { color: var(--ink-2); font-size: 13px; }
+.ua-pick-b { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.ua-pk { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 3px 10px 3px 8px; border: 1px solid var(--line-2); border-radius: 999px; background: var(--surface); font-size: 13px; cursor: pointer; }
+.ua-pk:hover { border-color: var(--ink-3); }
+.ua-pk.is-on { border-color: var(--accent); background: var(--accent-tint); }
+.ua-pk input { margin: 0; accent-color: var(--accent); }
+.ua-pk:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ua-pick-r { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.ua-pick-r select { min-height: 30px; }
+.ua-pick-all { font: inherit; font-size: 13px; color: var(--accent-strong); background: none; border: 0; padding: 4px 2px; cursor: pointer; text-decoration: underline; }
+.ua-pick-h { font-size: 12.5px; color: var(--warn-ink); font-weight: 600; }
+.ua-pickset.is-todo .ua-pk { border-style: dashed; }
+.ua-use-l { font-size: 12px; font-weight: 600; color: var(--ink-3); margin-right: 4px; }
+.ua-how { margin: 0 0 8px; }
+/* 27 Nov: what a flow is, in a line and a picture (aid79.js) */
+.fa-b { font: inherit; font-size: 12.5px; color: var(--accent-strong); background: none; border: 1px solid var(--line-2); border-radius: 999px; padding: 2px 10px; min-height: 24px; cursor: pointer; white-space: nowrap; }
+.fa-b:hover { border-color: var(--accent); }
+.fa-b:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.fa-b[aria-expanded="true"] { background: var(--accent-tint); border-color: var(--accent); }
+.fa-line { margin: 4px 0 2px; font-size: 13px; color: var(--ink-2); display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.fa-line b { color: var(--ink); font-weight: 600; }
+.fa-lc { color: var(--ink-3); font-size: 12.5px; }
+.fa-pop { margin: 8px 0 12px; }
+.fa-box { max-width: 640px; padding: 14px 16px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--surface); box-shadow: 0 1px 2px rgba(0, 0, 0, .04); }
+.fa-h { margin: 0 0 4px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; font-size: 14px; }
+.fa-k { font-size: 11.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-3); }
+.fa-d { margin: 0 0 10px; color: var(--ink-2); font-size: 13px; }
+.fa-chain { list-style: none; margin: 0; padding: 0; position: relative; }
+.fa-st { position: relative; display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 10px; padding: 0 0 12px; }
+.fa-st::before { content: ""; position: absolute; left: 12px; top: 24px; bottom: 0; width: 2px; background: var(--line-2); }
+.fa-st:last-child { padding-bottom: 0; }
+.fa-st:last-child::before { display: none; }
+.fa-n { width: 26px; height: 26px; border-radius: 50%; display: inline-grid; place-items: center; font-size: 12px; font-weight: 600; border: 1.5px solid var(--accent); color: var(--accent-strong); background: var(--surface); position: relative; z-index: 1; }
+.fa-chain.is-diag .fa-n { border-radius: 6px; transform: rotate(45deg); } .fa-chain.is-diag .fa-n { font-size: 0; } .fa-chain.is-diag .fa-n::after { content: "?"; font-size: 12px; transform: rotate(-45deg); }
+.fa-more .fa-n { border-style: dashed; color: var(--ink-3); border-color: var(--line-2); transform: none !important; font-size: 12px !important; } .fa-more .fa-n::after { content: none !important; }
+.fa-x { display: grid; gap: 4px; padding-top: 3px; min-width: 0; }
+.fa-t { font-size: 13px; color: var(--ink); }
+.fa-ty { justify-self: start; font-size: 11.5px; color: var(--ink-3); border: 1px solid var(--line-2); border-radius: 4px; padding: 0 6px; }
+.fa-as { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12.5px; color: var(--ink-2); }
+.fa-a { display: inline-flex; align-items: center; gap: 5px; }
+.fa-to.is-cause { color: var(--warn-ink); font-weight: 600; }
+.fa-f { margin: 10px 0 0; font-size: 13px; }
+.fa-skip { margin-top: 4px; font-size: 12.5px; color: var(--ink-3); max-width: 46ch; }
+.fa-cond { margin-top: 16px; }
+input.is-fromflow { background: var(--surface-2, #f3f5f3); color: var(--ink-2); }
+.fa-cond { padding: 18px 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.fa-cond > header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 6px; }
+.fa-cond > header h3 { margin: 0; font-size: 16px; }
+.fa-cond > header .ov-hb { margin-left: auto; }

@@ -189,7 +189,7 @@
       tools,
       `<div class="lib-fams">${famHtml}</div>`,
       publishedSection(),
-      note('Readings on pipes between equipment — next phase.', 'next'),
+      note('Readings on pipes between equipment: alerts across a unit process read them.', 'next'),
     ].filter(Boolean).join('');
     return page({
       title: 'Library',
@@ -233,7 +233,7 @@
         return card({ title: `${r.name} · ${d.dir === 'below' ? 'falls below' : 'rises above'}`, sub: words, body: UI.bandBar({ dir: d.dir, bands, valid: r.valid, unit: r.unit }) + `<p class="small muted mt">Must hold for ${esc(d.hold != null ? d.hold : '—')} min · must clear for ${esc(d.clear != null ? d.clear : '—')} min</p>`, actions: [chip(d.draftBands ? 'Draft' : 'Follows the library', { tone: d.draftBands ? 'warn' : 'lib' })] });
       }).join('')).join('') || empty('This type has no readings in the library.');
       const np = arr(t.nextPhase && t.nextPhase.readings);
-      if (np.length) body += note(`Next phase: connections — ${np.map((x) => x.name + (x.note ? ` (${x.note})` : '')).join(', ')}.`, 'next');
+      if (np.length) body += note(`On pipes — ${np.map((x) => x.name + (x.note ? ` (${x.note})` : '')).join(', ')}. Alerts across the unit process read them.`, 'next');
     } else if (tab === 'issues') {
       body = list(arr(t.issues).map((i) => ({ title: i.name, sub: arr(i.detection).map((d) => d && d.kind === 'sensor' ? 'Found by a reading' : d && d.kind === 'lab' ? 'Found by a lab test' : 'Found by a person').filter((x, k, a) => a.indexOf(x) === k).join(' · ') }))) || empty('No workbook issues for this type.');
     } else if (tab === 'tasks') {

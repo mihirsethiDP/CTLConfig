@@ -45,7 +45,7 @@
   function addReading(code, name) {
     const c = cat(code); if (!c) return { ok: false, error: 'No such type.' }; if (!(W.READINGS || {})[name]) return { ok: false, error: 'Choose a reading.' };
     if (c.sensors.some((s) => s.name === name)) return { ok: false, error: `${c.type} already has ${name}.` };
-    if (!onEq(name) || arr(c.nextPhase && c.nextPhase.readings).some((x) => x.name === name)) return { ok: false, error: `${name} is read on a pipe at this type: it arrives in the next phase.` };
+    if (!onEq(name) || arr(c.nextPhase && c.nextPhase.readings).some((x) => x.name === name)) return { ok: false, error: `${name} is read on a pipe at this type: the unit process watches it, not the equipment.` };
     const o = { kind: 'reading', code, name }; ops().push(o); apply(o); return done(code, `Added to ${c.type}: the reading ${name}. It has no alert yet`);
   }
   function addAlert(code, a) {
@@ -121,7 +121,7 @@
     if (kind === 'reading') {
       const rs = readingsFor(code); if (!rs.length) { U.toast(`${c.type} already has every reading the database knows.`); return; }
       const KW = { process: 'measured', analytical: 'measured', status: 'on or off', meter: 'counts up', manual: 'entered by hand' };
-      U.modal({ title: `Add a reading to ${c.type}`, body: U.field({ label: 'Reading', hint: 'Readings taken on the equipment itself. Readings on pipes arrive in the next phase. The unit and range come with it.', html: `<select id="la-reading"><option value="">Choose…</option>${rs.map((r) => `<option value="${esc(r.name)}">${esc(r.name)}${r.unit ? ` (${esc(r.unit)})` : ''} · ${esc(KW[r.kind] || r.kind)}</option>`).join('')}</select>` }) + '<p class="la-n">A reading on its own does nothing. Add an alert on it next, or use it for a task that runs on its hours.</p>', foot: foot('reading', code) });
+      U.modal({ title: `Add a reading to ${c.type}`, body: U.field({ label: 'Reading', hint: 'Readings taken on the equipment itself. A reading on a pipe is watched by the unit process, not by the equipment. The unit and range come with it.', html: `<select id="la-reading"><option value="">Choose…</option>${rs.map((r) => `<option value="${esc(r.name)}">${esc(r.name)}${r.unit ? ` (${esc(r.unit)})` : ''} · ${esc(KW[r.kind] || r.kind)}</option>`).join('')}</select>` }) + '<p class="la-n">A reading on its own does nothing. Add an alert on it next, or use it for a task that runs on its hours.</p>', foot: foot('reading', code) });
       return;
     }
     if (kind === 'alert') {
@@ -145,9 +145,11 @@
       const sel = document.getElementById('la-iknown'); const box = document.getElementById('la-inew'); if (sel && box) sel.addEventListener('change', () => { box.hidden = !!sel.value; });
       return;
     }
-    const WT = (C() && C().WT_LABEL) || {};
-    U.modal({ title: `Add a task to ${c.type}`, body: U.field({ label: 'Name', html: '<input type="text" id="la-tname" placeholder="For example: Check the belt guard">' })
-      + `<div class="la-2">${U.field({ label: 'Kind of work', html: `<select id="la-wt">${Object.keys(WT).filter((k) => k !== 'condition').map((k) => `<option value="${esc(k)}"${k === 'pm' ? ' selected' : ''}>${esc(WT[k])}</option>`).join('')}</select>` })}${U.field({ label: 'Every', hint: 'Nothing comes round more often than once a day.', html: '<span class="la-ev"><input type="number" min="1" step="1" id="la-n" value="1"><select id="la-unit"><option value="day">days</option><option value="week">weeks</option><option value="month" selected>months</option><option value="year">years</option></select></span>' })}</div>` + lands, foot: foot('task', code) });
+    const WT = (C() && C().WT_LABEL) || {}; const LF = W.V7LIBFLOW; const fo = LF && LF.options ? LF.options('task', code) : { near: [], rest: [] }; const fopt = (f) => `<option value="${esc(f.id)}">${esc(f.name)}</option>`;
+    /* 27 Nov: a task is named after the flow it follows, and a task may come on a condition instead of a date */
+    U.modal({ title: `Add a task to ${c.type}`, body: U.field({ label: 'Flow it follows', hint: 'The steps a person works through. The task takes its name from the flow.', html: `<select id="la-tflow"><option value="">No flow yet: I will name the task</option>${fo.near.length ? `<optgroup label="For ${esc(c.type)}">${fo.near.map(fopt).join('')}</optgroup>` : ''}${fo.rest.length ? `<optgroup label="Other task flows">${fo.rest.map(fopt).join('')}</optgroup>` : ''}</select>` })
+      + U.field({ label: 'Name', html: '<input type="text" id="la-tname" placeholder="For example: Check the belt guard">' })
+      + `<div class="la-2">${U.field({ label: 'Kind of work', hint: 'Condition-based: it comes when a condition holds, not on a date.', html: `<select id="la-wt" data-act="la:wt" data-code="${esc(code)}">${Object.keys(WT).filter((k) => k !== 'condition').map((k) => `<option value="${esc(k)}"${k === 'pm' ? ' selected' : ''}>${esc(WT[k])}</option>`).join('')}<option value="condition">Condition-based task</option></select>` })}${U.field({ label: 'Every', hint: 'Nothing comes round more often than once a day.', html: '<span class="la-ev"><input type="number" min="1" step="1" id="la-n" value="1"><select id="la-unit"><option value="day">days</option><option value="week">weeks</option><option value="month" selected>months</option><option value="year">years</option></select></span>' })}</div>` + lands, foot: foot('task', code) });
   }
   const val = (id) => { const e = document.getElementById(id); return e ? e.value : ''; };
   U.on('la:open', (el) => { openForm(el.getAttribute('data-kind'), el.getAttribute('data-code'), el.getAttribute('data-reading')); return false; });
@@ -156,9 +158,11 @@
     if (kind === 'reading') r = addReading(code, val('la-reading'));
     else if (kind === 'alert') { const lim = {}; BANDS.forEach((b) => { lim[b] = val('la-' + b); }); const rd = val('la-areading'); const dir = val('la-dir'); r = addAlert(code, { reading: rd, dir, name: val('la-aname') || `${rd} ${dir === 'below' ? 'low' : 'high'}`, limits: lim, hold: val('la-hold'), clear: val('la-clear') }); }
     else if (kind === 'issue') r = val('la-iknown') ? addIssue(code, { existingId: val('la-iknown') }) : addIssue(code, { name: val('la-iname'), foundBy: val('la-ifound'), alert: val('la-ialert'), flowId: val('la-iflow') });
-    else r = addTask(code, { name: val('la-tname'), workType: val('la-wt'), every: { n: val('la-n'), unit: val('la-unit') } });
+    else { const fid = val('la-tflow'); const nm = String(val('la-tname') || '').trim(); r = addTask(code, { name: nm, workType: val('la-wt'), every: { n: val('la-n'), unit: val('la-unit') } }); if (r.ok && fid && W.V7LIBFLOW && W.V7LIBFLOW.set) { try { W.V7LIBFLOW.set('task', code, nm, fid); } catch (e) { /* it keeps no flow */ } } }
     if (!r.ok) { U.toast(r.error); return false; }
     U.closeModal(true); U.toast(kind === 'reading' ? 'Reading added. Add an alert on it to make it do something.' : kind === 'issue' ? 'Problem added. People can now report it on this type of equipment.' : `Added. Plants with this type now see it as a proposal.`); return undefined;
   });
+  /* a condition-based task is written as its condition: the same form as an alert, leading to a task */
+  U.on('la:wt', (el) => { if (el.value !== 'condition') return false; const code = el.getAttribute('data-code'); U.closeModal(true); const b = document.createElement('button'); b.type = 'button'; b.hidden = true; b.setAttribute('data-act', 'ua:lib-open'); b.setAttribute('data-code', code); b.setAttribute('data-starts', 'task'); document.body.appendChild(b); b.click(); b.remove(); return false; });
   U.on('la:remove', (el) => { const r = remove(el.getAttribute('data-code'), el.getAttribute('data-kind'), el.getAttribute('data-name')); U.toast(r.ok ? 'Removed from the type.' : r.error); return undefined; });
 })();

@@ -31,7 +31,7 @@
 
   function limitsOfReading(key, r) {
     const v = V();
-    if (r.nextPhase) return { text: 'On a connection between equipment', chip: chip('Next phase', { tone: 'next' }) };
+    if (r.nextPhase) return { text: 'On a connection between equipment', chip: chip('On a pipe', { tone: 'next' }) };
     if (!r.takesLimits) return { text: 'A counter: no limits', chip: '' };
     const dirs = arr(r.dirs); if (!dirs.length) return { text: r.kind === 'status' ? 'ON or OFF: no limits needed' : 'No limits', chip: '' };
     const texts = dirs.map((dir) => { const L = safe(() => v.limitsOf(key, r.id, dir), null); const has = L && UI.BANDS.some((b) => L.bands && L.bands[b] != null); return has ? v.limitsText(L.bands, dir, L.unit || r.unit, L.kind || r.kind) : ''; }).filter(Boolean);
@@ -100,7 +100,7 @@
     const sc = arr(t.schedules);
     if (sc.length) parts.push(sec(`Tasks · ${sc.length}`, rows(sc.slice(0, 6).map((s) => ({ title: esc(s.name), sub: esc(`${s.workLabel || ''}${s.everyText ? ' · ' + s.everyText : ''}`) }))) + more(sc.length - 6, 'task', libHref(code, 'tasks'))));
     const np = t.nextPhase || {}; const nNext = arr(np.readings).length + arr(np.alerts).length;
-    if (nNext) parts.push(`<p class="pk-tail">${chip('Next phase', { tone: 'next' })} ${plural(nNext, 'item')} that read a connection between equipment.</p>`);
+    if (nNext) parts.push(`<p class="pk-tail">${chip('On a pipe', { tone: 'next' })} ${plural(nNext, 'item')} that read a connection between equipment.</p>`);
     if (t.confirm) parts.push(note(`To confirm: ${t.confirm}`, 'warn'));
     return { title: esc(t.typeName), sub: `Library · ${t.family || ''}`, body: parts.join(''), foot: `<a class="btn btn-primary pk-full" href="${esc(libHref(code))}">Open the full page</a>` };
   }
