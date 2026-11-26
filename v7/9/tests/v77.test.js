@@ -12,7 +12,7 @@ g.localStorage = { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem
 const el = () => ({ classList: { toggle() {}, add() {}, remove() {} }, setAttribute() {}, removeAttribute() {}, addEventListener() {}, appendChild() {}, remove() {}, querySelector: () => null, querySelectorAll: () => [], style: {}, dataset: {}, innerHTML: '' });
 g.document = { querySelector: () => null, querySelectorAll: () => [], createElement: el, body: el(), onkeydown: null };
 g.location = { hash: '#/plants', href: 'http://localhost/prototype.html#/plants' }; g.scrollTo = () => {}; g.Blob = g.Blob || function Blob() {}; if (!g.URL) g.URL = {};
-for (const f of ['data.js', 'layout-digitalpaani.js', 'catalogue.js', 'flows.js', 'rca.js', 'app.js', 'runtime.js', 'structure73.js', 'nodes73.js', 'uplib79.js', 'core7.js', 'calls73.js', 'decisions7.js', 'shadow77.js', 'lang77.js', 'libadd78.js', 'libtrig78.js', 'libflow7.js', 'ovx78.js', 'upalert78.js', 'crit78.js', 'dyn78.js', 'sev78.js', 'own79.js', 'cal78.js', 'guide79.js', 'aid79.js', 'plantlib79.js']) vm.runInThisContext(fs.readFileSync(path.join(A, f), 'utf8'), { filename: f });
+for (const f of ['data.js', 'layout-digitalpaani.js', 'catalogue.js', 'flows.js', 'rca.js', 'app.js', 'runtime.js', 'structure73.js', 'nodes73.js', 'uplib79.js', 'names79.js', 'core7.js', 'calls73.js', 'decisions7.js', 'shadow77.js', 'lang77.js', 'libadd78.js', 'libtrig78.js', 'libflow7.js', 'ovx78.js', 'upalert78.js', 'crit78.js', 'dyn78.js', 'sev78.js', 'own79.js', 'cal78.js', 'guide79.js', 'aid79.js', 'plantlib79.js']) vm.runInThisContext(fs.readFileSync(path.join(A, f), 'utf8'), { filename: f });
 const V = g.V7; const SH = g.V7SHADOW; const LG = g.V7LANG; V.boot();
 const results = [];
 function check(area, name, ok, detail) { results.push(!!ok); if (VERBOSE || !ok) console.log(`${ok ? '  ok  ' : '  FAIL'} [${area}] ${name}${detail ? ' — ' + detail : ''}`); }
@@ -154,21 +154,21 @@ V.reset();
 
 /* which flow a problem or a task uses, chosen on the library type */
 V.reset(); { const LF = g.V7LIBFLOW; const bl = V.libType('BLW'); const is0 = bl.issues[0]; const diag0 = is0.flowId;
-  const o = LF.options('task', 'BLW'); const od = LF.options('issue', 'BLW'); const other = o.rest[0]; const was = LF.flowOf('task', 'BLW', 'Bearing service');
+  const o = LF.options('task', 'BLW'); const od = LF.options('issue', 'BLW'); const other = o.rest[0]; const was = LF.flowOf('task', 'BLW', 'Blower bearing and belt service');
   check('flow', 'a task says which flow it follows, a problem which diagnostic it starts', !!was && was.id === 'f_blower_pm' && LF.flowOf('issue', 'BLW', is0.id).id === diag0);
   check('flow', 'the choices are task flows for a task and diagnostic flows for a problem, the type\'s own first', o.near.length > 0 && o.near.every((f) => f.forTypes.includes('Blower')) && o.near.concat(o.rest).every((f) => f.kind !== 'diagnostic' && f.use !== 'fix') && od.near.concat(od.rest).every((f) => f.kind === 'diagnostic'));
-  check('flow', 'a task cannot take a diagnostic flow, nor a problem a task flow', !LF.set('task', 'BLW', 'Bearing service', diag0).ok && !LF.set('issue', 'BLW', is0.id, other.id).ok && LF.flowOf('task', 'BLW', 'Bearing service').id === was.id);
-  const a0 = V.activity({ plant: 'manesar', kind: 'library' }).length; const r = LF.set('task', 'BLW', 'Bearing service', other.id);
-  check('flow', 'choosing a flow for a task changes the type, and the plants that followed follow', r.ok && r.changed && r.plants.includes('manesar') && V.libType('BLW').schedules.find((x) => x.name === 'Bearing service').flowId === other.id && V.tasks('manesar').filter((t) => t.name === 'Bearing service').every((t) => t.flowId === other.id) && V.tasks('manesar').some((t) => t.name === 'Bearing service'));
-  check('flow', 'each plant it reached has a note in its Activity', V.activity({ plant: 'manesar', kind: 'library' }).length === a0 + 1 && /Bearing service.*now follows the flow/.test(V.activity({ plant: 'manesar', kind: 'library', limit: 1 })[0].text));
-  check('flow', 'choosing the same flow again changes nothing', LF.set('task', 'BLW', 'Bearing service', other.id).changed === false);
+  check('flow', 'a task cannot take a diagnostic flow, nor a problem a task flow', !LF.set('task', 'BLW', 'Blower bearing and belt service', diag0).ok && !LF.set('issue', 'BLW', is0.id, other.id).ok && LF.flowOf('task', 'BLW', 'Blower bearing and belt service').id === was.id);
+  const a0 = V.activity({ plant: 'manesar', kind: 'library' }).length; const r = LF.set('task', 'BLW', 'Blower bearing and belt service', other.id);
+  check('flow', 'choosing a flow for a task changes the type, and the plants that followed follow', r.ok && r.changed && r.plants.includes('manesar') && V.libType('BLW').schedules.find((x) => x.name === 'Blower bearing and belt service').flowId === other.id && V.tasks('manesar').filter((t) => t.name === 'Blower bearing and belt service').every((t) => t.flowId === other.id) && V.tasks('manesar').some((t) => t.name === 'Blower bearing and belt service'));
+  check('flow', 'each plant it reached has a note in its Activity', V.activity({ plant: 'manesar', kind: 'library' }).length === a0 + 1 && /Blower bearing and belt service.*now follows the flow/.test(V.activity({ plant: 'manesar', kind: 'library', limit: 1 })[0].text));
+  check('flow', 'choosing the same flow again changes nothing', LF.set('task', 'BLW', 'Blower bearing and belt service', other.id).changed === false);
   check('flow', 'a task that came with its steps cannot be left with none', (() => { const x = V.libType('BLW').schedules.find((y) => y.generalTaskId); return !!x && !LF.set('task', 'BLW', x.name, null).ok; })());
   const m0 = LF.missing('BLW').n; const ri = LF.set('issue', 'BLW', is0.id, null);
   check('flow', 'a problem can be left without a diagnostic, and the type then says what is missing', ri.ok && V.libType('BLW').issues[0].flowId == null && LF.missing('BLW').n === m0 + 1 && LF.missing('BLW').issues[0] === is0.name);
   check('flow', 'a problem takes another diagnostic', LF.set('issue', 'BLW', is0.id, od.rest[0].id).ok && V.libType('BLW').issues[0].flowId === od.rest[0].id && LF.missing('BLW').n === m0);
   check('flow', 'some types have a task without a flow, and the count is per type', V.libTypes().filter((t) => LF.missing(t.code).n > 0).length > 0 && LF.missing('BLW').tasks.length === 0);
   V.reset();
-  check('flow', 'a reset puts every flow back', LF.flowOf('task', 'BLW', 'Bearing service').id === 'f_blower_pm' && V.libType('BLW').issues[0].flowId === diag0 && V.tasks('manesar').filter((t) => t.name === 'Bearing service').every((t) => t.flowId === 'f_blower_pm')); }
+  check('flow', 'a reset puts every flow back', LF.flowOf('task', 'BLW', 'Blower bearing and belt service').id === 'f_blower_pm' && V.libType('BLW').issues[0].flowId === diag0 && V.tasks('manesar').filter((t) => t.name === 'Blower bearing and belt service').every((t) => t.flowId === 'f_blower_pm')); }
 
 /* alerts across a unit process: kinds of reading wherever they sit, clubbed, offered at each plant */
 V.reset(); { const UA = g.V7UPALERT; const mo = UA.offers('manesar'); const by = (tag, re) => UA.offers('manesar').find((o) => o.upTag === tag && re.test(o.name));
@@ -411,6 +411,27 @@ V.reset(); { const PL = g.V7PLANTLIB; const UA = g.V7UPALERT; const DY = g.V7DYN
   const ok = V.plants().every((p) => { const row = V.libraryReview(p.key).find((r) => r.eqId === 'plant'); return !!row && names.every((n) => row.proposals.some((x) => x.name === n)); });
   const wk = V.plants().find((p) => { const row = V.libraryReview(p.key).find((r) => r.eqId === 'plant'); return row.proposals.some((x) => !x.decided); }); const row = wk ? V.libraryReview(wk.key).find((r) => r.eqId === 'plant') : null; const p0 = row ? row.proposals.find((x) => !x.decided) : null;
   check('plant library', 'every plant is offered the generic tasks under the plant itself, and one is accepted like any other', ok && (!p0 || (V.decide(wk.key, p0.pid, 'accept').ok && V.libraryReview(wk.key).find((r) => r.eqId === 'plant').proposals.find((x) => x.pid === p0.pid).decided === 'accepted'))); }
+V.reset();
+
+/* 28 Nov: the two decisions, built. A sensor on a pipe takes limits directly; a task takes its flow's name */
+V.reset(); { const UL = g.V7UPLIB; const N = g.V7NAMES; const UA = g.V7UPALERT; const C9 = g.CTL;
+  const lt = V.libType('activated_sludge'); const lp = lt.readings.find((r) => r.name === 'Line pressure');
+  check('pipe limits', 'a unit-process type lists its pipe sensors as readings, each with where it sits, and they carry limits', !!lp && lp.pipe && /air header/.test(lp.pipeNote) && lt.alerts.some((a) => a.reading === 'Line pressure' && a.bands.minor != null) && UL.isPipe('activated_sludge', 'Line pressure') && !UL.isPipe('activated_sludge', 'Dissolved oxygen'));
+  const ss = V.sensors('manesar').filter((s) => s.onPipe);
+  check('pipe limits', 'at a plant a sensor on a pipe is an ordinary reading: it takes limits, follows the library, and nothing is held back', ss.length >= 5 && ss.every((s) => !s.nextPhase && s.takesLimits) && ss.filter((s) => { const l = V.limitsOf('manesar', s.id, s.dirs[0]); return !!l && Object.values(l.bands).some((v) => v != null) && l.perBand.minor.chip !== 'next'; }).length >= 5);
+  const all = [].concat(...V.libraryReview('manesar').map((r) => r.proposals)); const pp = all.find((p) => p.kind === 'alert' && !p.decided && !p.blockedBy && ss.some((x) => x.id === p.sensorId));
+  check('pipe limits', 'its alert is offered like any other and goes On trial when accepted', !!pp && V.decide('manesar', pp.pid, 'accept').ok && V.alerts('manesar', { sensorId: pp.sensorId }).some((a) => ['trial', 'on'].includes(a.state)));
+  const s1 = ss.find((s) => s.id !== (pp && pp.sensorId) && V.limitsOf('manesar', s.id, s.dirs[0]).bands.minor != null); const d1 = s1.dirs[0]; const b0 = V.limitsOf('manesar', s1.id, d1).bands; const mine = { ...b0, minor: Math.round(b0.minor * (d1 === 'above' ? 0.95 : 1.05) * 1000) / 1000 };
+  const r0 = V.setLimits('manesar', s1.id, d1, mine); const r1 = V.setLimits('manesar', s1.id, d1, mine, { reason: 'tuned', note: 'the gauge sits after the bend' });
+  check('pipe limits', 'a plant can keep its own limit on a pipe sensor, and is asked why', !r0.ok && !!r0.needsReason && r1.ok && V.limitsOf('manesar', s1.id, d1).bands.minor === mine.minor && V.limitsOf('manesar', s1.id, d1).perBand.minor.chip === 'changed');
+  check('pipe limits', 'nothing at any plant is listed as waiting on a pipe', V.plants().every((p) => [].concat(...V.libraryReview(p.key).map((r) => r.proposals)).every((x) => !x.nextPhase && !/Reads a pipe/.test(x.blockedBy || ''))));
+  check('pipe limits', 'a condition across readings on an equipment type still reads only what sits on the equipment', !UA.saveAlert('BLW', { name: 'x9', when: [{ reading: 'Line pressure', dir: 'above', limit: 1 }], band: 'minor', starts: { kind: 'issue' } }).ok);
+  const flowName = (id) => (C9.S.lib.flows.find((f) => f.id === id) || {}).name;
+  check('names', 'every library task that has a flow carries that flow\'s name', N.check().length === 0 && C9.S.lib.standardSets.every((t) => t.schedules.every((s) => !s.flow || flowName(s.flow) === s.name)));
+  check('names', '64 tasks took their flow\'s name, and 25 that shared a flow got one of their own, named after them', N.renamed.length === 64 && N.split.length === 25 && N.split.every((x) => flowName(x.flow) === x.task) && N.renamed.every((r) => r.from !== r.to));
+  const bl = V.libraryReview('manesar').find((r) => r.tag === 'BL-1');
+  check('names', 'a plant that already had the task keeps it, under the new name', bl.proposals.some((p) => p.name === 'Blower bearing and belt service' && p.decided === 'accepted') && !bl.proposals.some((p) => p.name === 'Bearing service') && !V.libType('BLW').schedules.some((s) => s.name === 'Bearing service'));
+}
 V.reset();
 
 const bad = results.filter((x) => !x).length;

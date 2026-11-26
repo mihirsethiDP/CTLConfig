@@ -124,7 +124,7 @@
   /* "Blower · Critical" is two things said together: each part is looked up on its own */
   function t(text, lang) {
     const l = lang || cur(); if (l === 'en') return null; const s = String(text == null ? '' : text).replace(/\s+/g, ' ').trim(); if (!s) return null;
-    const whole = one(s, l); if (whole != null) return whole;
+    let whole = one(s, l); if (whole == null && window.V7NAMES && window.V7NAMES.was && window.V7NAMES.was(s)) whole = one(window.V7NAMES.was(s), l); if (whole != null) return whole;
     if (s.indexOf(' · ') < 0) return null;
     const parts = s.split(' · '); let hit = 0; const out = parts.map((p) => { const x = one(p, l); if (x != null) { hit++; return x; } return p; });
     return hit ? out.join(' · ') : null;
