@@ -95,6 +95,25 @@
     show(body, key);
   }
   U.on('g9:go', (el) => { const key = el.getAttribute('data-plant'); W.V7GUIDE.go(key, el.getAttribute('data-i')); const body = document.querySelector('.pg-main.g9'); if (body) { show(body, key); const n = body.querySelector('.g9-steps'); if (n && n.scrollIntoView) n.scrollIntoView({ block: 'start' }); } return false; });
+  /* a count of a kind of work shows where those lines are: it opens what holds them, marks them and dims the rest.
+     It stays while you work in that unit process, and a second press clears it. */
+  const HIT = {}; const each = (list, fn) => Array.prototype.forEach.call(list, fn);
+  function markKind(fold, k, scroll) {
+    each(fold.querySelectorAll('.is-hit[data-kind]'), (e) => e.classList.remove('is-hit')); each(fold.querySelectorAll('.p7-kinds-b'), (b) => b.setAttribute('aria-pressed', b.getAttribute('data-kind') === k ? 'true' : 'false')); fold.classList.toggle('has-kind', !!k); if (!k) return 0;
+    const hits = Array.prototype.filter.call(fold.querySelectorAll('[data-kind]'), (e) => e.getAttribute('data-kind') === k && !e.classList.contains('p7-kinds-b'));
+    hits.forEach((e) => { e.classList.add('is-hit'); let d = e.parentNode; while (d && d !== fold) { if (d.tagName === 'DETAILS' && !d.open) d.open = true; d = d.parentNode; } });
+    if (scroll && hits[0] && hits[0].scrollIntoView) hits[0].scrollIntoView({ block: 'center' }); return hits.length;
+  }
+  U.on('p7:kind-hit', (el) => { const fold = el.closest('details.p7-type, section.card'); if (!fold) return false; const k = el.getAttribute('aria-pressed') === 'true' ? null : el.getAttribute('data-kind'); const id = fold.getAttribute('data-keep'); if (id) { if (k) HIT[id] = k; else delete HIT[id]; } markKind(fold, k, true); return false; });
+  /* a tile of the unit process shows where that piece of equipment's lines are */
+  let EQ = null;
+  function markEq(id, scroll) {
+    each(document.querySelectorAll('details.p7-eq.is-hit'), (e) => e.classList.remove('is-hit')); each(document.querySelectorAll('.p7-upmap-t'), (b) => b.setAttribute('aria-pressed', id && b.getAttribute('data-eq') === id ? 'true' : 'false')); if (!id) return true;
+    const t = Array.prototype.find.call(document.querySelectorAll('details.p7-eq'), (e) => e.getAttribute('data-eq') === id); if (!t) return false;
+    let d = t.parentNode; while (d && d.tagName !== 'MAIN') { if (d.tagName === 'DETAILS' && !d.open) d.open = true; d = d.parentNode; } t.open = true; t.classList.add('is-hit'); if (scroll && t.scrollIntoView) t.scrollIntoView({ block: 'start' }); return true;
+  }
+  U.on('p7:eq-hit', (el) => { const id = el.getAttribute('data-eq'); if (el.getAttribute('aria-pressed') === 'true') { EQ = null; markEq(null); return false; } if (!markEq(id, true)) { EQ = null; markEq(null); U.toast('Nothing is listed for it under this filter. Choose All to see every line.'); return false; } EQ = id; return false; });
+  if (U.afterRender) U.afterRender((main) => { setTimeout(() => { try { each(main.querySelectorAll('details.p7-type[data-keep]'), (f) => { const k = HIT[f.getAttribute('data-keep')]; if (k && f.open) markKind(f, k, false); }); if (EQ && !markEq(EQ, false)) EQ = null; } catch (e) { /* nothing is marked */ } }, 0); });
   if (U.afterRender) U.afterRender((main, p0) => {
     try {
       if (!main) return; const m = /^p\/([^/?]+)\/library$/.exec(String(p0 || location.hash).replace(/^#?\/?/, '').split('?')[0]); if (!m) return; const key = decodeURIComponent(m[1]);

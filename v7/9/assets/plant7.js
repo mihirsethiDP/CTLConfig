@@ -623,7 +623,7 @@
     const acts = st.und ? btn(st.und === 1 ? 'Accept' : `Accept for all ${st.und}`, { act: 'p7:lib-accept-group', data: { plant: key, pids }, small: true, title: 'One task for the type at this plant, with a line per piece of equipment' }) + btn('Not for this plant', { act: 'p7:lib-reject-group', data: { plant: key, pids, name: g.name }, small: true, kind: 'ghost' }) : '';
     const label = `<span class="p7-sum-t">${esc(g.name)} <span class="muted">· ${esc(countType(g.props.length, g.typeName))}</span></span>`;
     const sum = `<summary><span class="p7-sum-main">${label}<span class="p7-sum-s">${esc(C_WT(g.workType))} · ${status}</span></span><span class="p7-sum-r">${acts}</span></summary>`;
-    return `<details class="p7-grp p7-shared"${open ? ' open' : ''}>${sum}<div class="p7-grp-b"><p class="p7-more">One task for the type at this plant, with a line per piece of equipment. Leave one out below, with a reason.</p><ul class="p7-props">${g.props.map((x) => propRow(key, { ...x, name: `${x.tag}${x.eqName ? ' ' + x.eqName : ''}` }, alertIds)).join('')}</ul></div></details>`;
+    return `<details class="p7-grp p7-shared" data-kind="${kindOf({ kind: 'task', workType: g.workType })}"${open ? ' open' : ''}>${sum}<div class="p7-grp-b"><p class="p7-more">One task for the type at this plant, with a line per piece of equipment. Leave one out below, with a reason.</p><ul class="p7-props">${g.props.map((x) => propRow(key, { ...x, name: `${x.tag}${x.eqName ? ' ' + x.eqName : ''}` }, alertIds)).join('')}</ul></div></details>`;
   }
   const C_WT = (w) => ({ routine: 'Routine check', work: 'Routine work', test: 'Manual testing' }[w] || 'Task');
   /* v7/3: what this plant inherits from the library, what it could but does not, and why */
@@ -673,14 +673,15 @@
   const KINDS = [['alert', 'Alerts'], ['pm', 'Preventive maintenance'], ['calibration', 'Calibration'], ['routine', 'Routine checks'], ['work', 'Routine work'], ['test', 'Manual testing'], ['other', 'Other tasks']];
   const KIND_LABEL = {}; KINDS.forEach(([k, l]) => { KIND_LABEL[k] = l; }); const KIND_ORDER = KINDS.map((k) => k[0]);
   const kindOf = (p) => (p.kind === 'alert' ? 'alert' : KIND_LABEL[p.workType] && p.workType !== 'alert' ? p.workType : 'other');
-  const kindHead = (k, n, tail) => `<h5 class="p7-kind"><span class="p7-kind-t">${esc(KIND_LABEL[k])}</span><span class="p7-kind-n">${n}${tail ? ` · ${esc(tail)}` : ''}</span></h5>`;
+  const kindHead = (k, n, tail) => `<h5 class="p7-kind" data-kind="${k}"><span class="p7-kind-t">${esc(KIND_LABEL[k])}</span><span class="p7-kind-n">${n}${tail ? ` · ${esc(tail)}` : ''}</span></h5>`;
   function kindGroups(ps, rowFn) {
     const m = new Map(); arr(ps).forEach((p) => { const k = kindOf(p); if (!m.has(k)) m.set(k, []); m.get(k).push(p); });
-    return KIND_ORDER.filter((k) => m.has(k)).map((k) => `${kindHead(k, m.get(k).length)}<ul class="p7-props">${m.get(k).map(rowFn).join('')}</ul>`).join('');
+    return KIND_ORDER.filter((k) => m.has(k)).map((k) => `${kindHead(k, m.get(k).length)}<ul class="p7-props" data-kind="${k}">${m.get(k).map(rowFn).join('')}</ul>`).join('');
   }
   function kindsLine(rows, show, extra) {
     const c = { ...(extra || {}) }; arr(rows).forEach((r) => visibleProps(r, show).forEach((p) => { const k = kindOf(p); c[k] = (c[k] || 0) + 1; })); const ks = KIND_ORDER.filter((k) => c[k]); if (ks.length < 2) return '';
-    return `<p class="p7-kinds" aria-label="What is listed here, by kind">${ks.map((k) => `<span><b>${c[k]}</b> ${esc((c[k] === 1 ? ({ alert: 'alert', routine: 'routine check', other: 'other task' })[k] : null) || KIND_LABEL[k].toLowerCase())}</span>`).join('')}</p>`;
+    /* 26 Nov: each count is a button: it shows where those lines are, opening what holds them */
+    return `<p class="p7-kinds" aria-label="What is listed here, by kind. Choose one to see where its lines are">${ks.map((k) => `<button type="button" class="p7-kinds-b" data-act="p7:kind-hit" data-kind="${k}" aria-pressed="false" title="Show where these are"><b>${c[k]}</b> ${esc((c[k] === 1 ? ({ alert: 'alert', routine: 'routine check', other: 'other task' })[k] : null) || KIND_LABEL[k].toLowerCase())}</button>`).join('')}</p>`;
   }
   function eqBlock(key, r, show, open, alertIds) {
     const ps = visibleProps(r, show); if (!ps.length) return '';
@@ -690,7 +691,7 @@
     const act = und > 1 && show !== 'blocked' && show !== 'decided' ? btn(`${KIND_F === 'all' ? 'Accept all' : 'Accept these'} ${und} for ${r.eqId === 'plant' ? 'the plant' : r.tag}`, { act: KIND_F === 'all' ? 'p7:lib-accept-eq' : 'p7:lib-accept-pids', data: { plant: key, eq: r.eqId, pids: KIND_F === 'all' ? '' : undPids, label: r.eqId === 'plant' ? 'the plant' : r.tag }, small: true, title: `Accept everything undecided for ${r.eqId === 'plant' ? 'the plant' : r.tag}, the tasks shared by its type included` }) : '';
     const sum = `<summary><span class="p7-sum-main">${label}<span class="p7-sum-s">${eqStatus(r, show, key)}</span></span><span class="p7-sum-r">${act}</span></summary>`;
     const link = r.eqId !== 'plant' ? `<p class="p7-more"><a href="${esc(eqHref(key, r.eqId))}">Open ${esc(r.tag)} →</a></p>` : '';
-    return `<details class="p7-grp p7-eq"${open ? ' open' : ''}>${sum}<div class="p7-grp-b">${kindGroups(ps, (p) => propRow(key, p, alertIds))}${link}</div></details>`;
+    return `<details class="p7-grp p7-eq" data-eq="${esc(r.eqId)}"${open ? ' open' : ''}>${sum}<div class="p7-grp-b">${kindGroups(ps, (p) => propRow(key, p, alertIds))}${link}</div></details>`;
   }
   function library(params) {
     return guard(params, (key, q) => {
@@ -773,7 +774,12 @@
         const tc = libCounts(rows); const undRows = rows.filter((r) => arr(r.proposals).some((x) => !x.decided && !x.blockedBy)); const also = arr(alsoIn.get(u.id)).map((id) => { const e = call(() => v.eq(key, id), null); const hu = homeUp.get(id); return e && hu ? `${e.tag} (listed under ${hu.tag})` : null; }).filter(Boolean);
         /* 26 Nov: the line says what it is, what comes with it and how much is left; the rest is inside */
         const sub = `${esc(u.typeName)}${others.length ? ` · with ${pieces(others.length)}` : ''}${show === 'blocked' ? ` · ${tc.blocked} can't be used yet` : tc.undecided ? ` · ${tc.undecided} to decide` : ' · all decided'}`;
-        const inner = kindsLine(rows, show, upK) + parts2.join('') + (also.length ? `<p class="p7-up-also">Also takes part in this step: ${esc(also.join(', '))}.</p>` : '');
+        /* 26 Nov: what takes part in the step, drawn: the step, then each piece of equipment. A tile shows where that equipment's lines are */
+        const mem = uniq(arr(u.members).map((m) => m.eqId)).filter((id) => id !== u.id);
+        const tile = (id) => { const e = call(() => v.eq(key, id), null); const isStep = id === u.id; if (!e && !isStep) return ''; const hu = homeUp.get(id); const here = isStep || !hu || hu.id === u.id; const r = rows.find((x) => x.eqId === id); const und = r ? arr(r.proposals).filter((x) => !x.decided && !x.blockedBy).length : 0;
+          return `<button type="button" class="p7-upmap-t${isStep ? ' is-step' : ''}${here ? '' : ' is-else'}" data-act="p7:eq-hit" data-eq="${esc(id)}" aria-pressed="false" title="${here ? 'Show its lines' : `It also takes part in ${esc(hu.tag)}, and its lines are listed there`}"><b class="mono">${esc(e ? e.tag : u.tag)}</b><span class="p7-upmap-k">${esc(isStep ? 'The step itself' : (e && e.typeName) || '')}</span><span class="p7-upmap-n${here && und ? ' is-und' : ''}">${here ? (und ? `${und} to decide` : r ? 'decided' : 'nothing to decide') : `listed under ${esc(hu.tag)}`}</span></button>`; };
+        const upMap = mem.length ? `<div class="p7-upmap"><span class="p7-upmap-l">In this unit process</span><div class="p7-upmap-r">${tile(u.id)}<span class="p7-upmap-j" aria-hidden="true"></span><div class="p7-upmap-m">${mem.map(tile).join('')}</div></div></div>` : '';
+        const inner = upMap + kindsLine(rows, show, upK) + parts2.join('') + (also.length ? `<p class="p7-up-also">Also takes part in this step: ${esc(also.join(', '))}.</p>` : '');
         const act = show === 'blocked' ? '' : tc.undecided ? btn(kind === 'all' ? `Accept all for ${u.tag}` : `Accept these ${tc.undecided} for ${u.tag}`, { act: kind === 'all' ? 'p7:lib-accept-set' : 'p7:lib-accept-pids', data: { plant: key, eqs: undRows.map((r) => r.eqId).join(','), pids: kind === 'all' ? '' : [].concat(...rows.map((r) => arr(r.proposals).filter((p) => !p.decided && !p.blockedBy).map((p) => p.pid))).join(','), label: u.tag }, kind: 'primary', small: true, title: `Accept everything left to decide for ${u.tag} and the equipment listed under it` }) : tc.undecided ? '' : chip('All decided', { tone: 'ok' });
         upFolds.push({ proc: true, und: tc.undecided, n: rows.length, id: `lib:${key}:${show}:up:${u.id}`, hasEq: !!q.eq && rows.some((r) => r.eqId === q.eq), title: `<span class="mono p7-up-tag">${esc(u.tag)}</span> ${esc(u.name)}`, sub, inner, act });
       });
