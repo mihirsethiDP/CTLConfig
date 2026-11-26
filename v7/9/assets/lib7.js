@@ -162,12 +162,14 @@
     const v = V(); const every = arr(safe(() => v.libTypes(), []));
     const q = (params && params._q) || {};
     /* v7/3: two libraries. Equipment: a pump, a valve or a tank on its own. Unit processes: one treatment step. */
-    const lib = q.lib === 'process' ? 'process' : 'equipment'; const nProc = every.filter((t) => t.library === 'process').length;
+    const lib = q.lib === 'process' ? 'process' : q.lib === 'plant' && W.V7PLANTLIB ? 'plant' : 'equipment'; const nProc = every.filter((t) => t.library === 'process').length;
     const types = every.filter((t) => (t.library || 'equipment') === lib);
     const show = SHOW_LIB.some((s) => s[0] === q.show) ? q.show : 'all';
     const view = q.view === 'table' ? 'table' : 'cards';
-    const libTabs = nProc ? `<div class="lib-two">${filters([{ label: 'Equipment types', href: '#/library' + (view === 'table' ? '?view=table' : ''), on: lib === 'equipment', count: every.length - nProc }, { label: 'Unit processes', href: '#/library?lib=process' + (view === 'table' ? '&view=table' : ''), on: lib === 'process', count: nProc }])}<p class="lib-two-s">${lib === 'process' ? 'One treatment step each. Control groups are set at each plant.' : 'A pump, a blower, a valve, or a tank on its own.'} <a href="#/library-structure">How it is decided</a></p></div>` : '';
+    const libTabs = nProc ? `<div class="lib-two">${filters([{ label: 'Equipment types', href: '#/library' + (view === 'table' ? '?view=table' : ''), on: lib === 'equipment', count: every.length - nProc }, { label: 'Unit processes', href: '#/library?lib=process' + (view === 'table' ? '&view=table' : ''), on: lib === 'process', count: nProc }].concat(W.V7PLANTLIB ? [{ label: 'Every plant', href: '#/library?lib=plant', on: lib === 'plant' }] : []))}<p class="lib-two-s">${lib === 'plant' ? 'One generic library for all plants: the tasks, alerts and calculated values that belong to the plant as a whole.' : lib === 'process' ? 'One treatment step each. Control groups are set at each plant.' : 'A pump, a blower, a valve, or a tank on its own.'} <a href="#/library-structure">How it is decided</a></p></div>` : '';
 
+    /* 27 Nov: the plant library is one generic entry, not a list of types. plantlib79.js fills it */
+    if (lib === 'plant') return page({ title: 'Library', sub: `Three libraries: ${every.length - nProc} equipment types, ${nProc} unit-process types, and what every plant carries.`, body: libTabs + '<div id="pl-lib"></div>', cls: 'pg-lib' });
     const needle = ST.q.trim().toLowerCase();
     const counts = {}; SHOW_LIB.forEach(([id]) => { counts[id] = types.filter((t) => libShowOk(t, id)).length; });
     const shown = types.filter((t) => libShowOk(t, show) && (!needle || hay(t).includes(needle)));
@@ -193,7 +195,7 @@
     ].filter(Boolean).join('');
     return page({
       title: 'Library',
-      sub: nProc ? `Two libraries: ${every.length - nProc} equipment types and ${nProc} unit-process types. Plants follow them unless they changed a value.` : `The ${types.length || 56} equipment types the database stores, under their stored names. Each carries its readings and their limits, its alerts and its tasks. Plants follow the library unless they changed a value.`,
+      sub: nProc ? `${W.V7PLANTLIB ? 'Three libraries' : 'Two libraries'}: ${every.length - nProc} equipment types${W.V7PLANTLIB ? ',' : ' and'} ${nProc} unit-process types${W.V7PLANTLIB ? ', and what every plant carries' : ''}. Plants follow them unless they changed a value.` : `The ${types.length || 56} equipment types the database stores, under their stored names. Each carries its readings and their limits, its alerts and its tasks. Plants follow the library unless they changed a value.`,
       body: body, cls: 'pg-lib',
     });
   }

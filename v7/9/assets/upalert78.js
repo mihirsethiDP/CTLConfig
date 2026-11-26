@@ -172,8 +172,11 @@
     '@group': [
       A('ua_cg_none', 'Every one of the set is stopped', 'all', [OFF('Run status', 'all')], 'major', 5, 'issue', null),
       A('ua_cg_both', 'Every one of the set is running', 'all', [ON('Run status', 'all')], 'minor', 30, 'issue', null)],
-    /* 27 Nov: the whole plant watches every flooding sensor it has, wherever it sits */
+    /* 27 Nov: the plant library: generic, for every plant whatever it treats. A first draft: any line can be dropped */
     '@plant': [A('ua_pl_flood', 'Flooding sensor', 'all', [w('Sump flood switch', 'above', null, 'any')], 'emergency', 0, 'issue', 'f_sump_flood'),
+      A('ua_pl_gas', 'Chlorine leak anywhere at the plant', 'all', [ON('Chlorine leak')], 'emergency', 0, 'issue', null),
+      A('ua_pl_h2s', 'H2S high anywhere at the plant', 'all', [w('H2S', 'above', 10)], 'major', 5, 'issue', null),
+      A('ua_pl_dark', 'Nothing at the plant is running', 'all', [OFF('Run status', 'all')], 'major', 5, 'issue', null),
       { id: 'ua_pl_balance', name: 'Much less water leaves than comes in', match: 'all', when: [{ reading: 'Treated share of the inflow', calc: 'dy_share', cunit: '%', dir: 'below', limit: 70, of: 'any' }], band: 'minor', hold: 120, starts: { kind: 'issue', flowId: null } }],
   };
   const isProcess = (code) => { const c = cat(code); return !!c && c.library === 'process'; };

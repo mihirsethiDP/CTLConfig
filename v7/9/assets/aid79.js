@@ -88,7 +88,7 @@
   if (U.afterRender) U.afterRender((main, p0) => {
     try { if (!main) return; const path = String(p0 || location.hash).replace(/^#?\/?/, '').split('?')[0]; Object.keys(memo).forEach((k) => delete memo[k]);
       const lt = /^library\/([^/]+)\/tasks$/.exec(path); if (lt) libTasks(main, decodeURIComponent(lt[1]));
-      if (/^library\//.test(path) || /^p\/[^/]+\/library$/.test(path)) setTimeout(() => { try { decorate(main, path); } catch (e) { /* the page shows without the helpers */ } }, 30);
+      if (/^library(\/|$)/.test(path) || /^p\/[^/]+\/library$/.test(path)) setTimeout(() => { try { decorate(main, path); } catch (e) { /* the page shows without the helpers */ } }, 30);
     } catch (e) { /* the page shows without the helpers */ }
   });
 

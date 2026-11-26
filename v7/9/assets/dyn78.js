@@ -195,7 +195,7 @@
     try {
       if (!main) return; const p = String(path || location.hash).replace(/^#?\/?/, '').split('?')[0]; let m; const body = main.querySelector('.pg-main'); if (!body) return;
       const after = (html) => { const ct = main.querySelector('#ct-card'); if (ct) ct.insertAdjacentHTML('afterend', html); else body.insertAdjacentHTML('afterbegin', html); };
-      if (p === 'library') { if (!main.querySelector('#dy-levels')) after(levelsCard()); return; }
+      if (p === 'library') { if (!W.V7PLANTLIB && !main.querySelector('#dy-levels')) after(levelsCard()); return; }
       if ((m = /^p\/([^/]+)\/library$/.exec(p))) { if (!main.querySelector('#dy-plant')) { const html = plantCard(decodeURIComponent(m[1])); if (html) after(html); } return; }
       if ((m = /^library\/([^/]+)(\/(readings|overview))?$/.exec(p))) { if (main.querySelector('.dy-box')) return; const html = libBox(decodeURIComponent(m[1])); if (!html) return; const ub = main.querySelector('.ua-box'); if (ub) ub.insertAdjacentHTML('afterend', html); else body.insertAdjacentHTML('beforeend', html); }
     } catch (e) { /* the page still shows without it */ }

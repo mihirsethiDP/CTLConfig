@@ -12,7 +12,7 @@ g.localStorage = { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem
 const el = () => ({ classList: { toggle() {}, add() {}, remove() {} }, setAttribute() {}, removeAttribute() {}, addEventListener() {}, appendChild() {}, remove() {}, querySelector: () => null, querySelectorAll: () => [], style: {}, dataset: {}, innerHTML: '' });
 g.document = { querySelector: () => null, querySelectorAll: () => [], createElement: el, body: el(), onkeydown: null };
 g.location = { hash: '#/plants', href: 'http://localhost/prototype.html#/plants' }; g.scrollTo = () => {}; g.Blob = g.Blob || function Blob() {}; if (!g.URL) g.URL = {};
-for (const f of ['data.js', 'layout-digitalpaani.js', 'catalogue.js', 'flows.js', 'rca.js', 'app.js', 'runtime.js', 'structure73.js', 'nodes73.js', 'uplib79.js', 'core7.js', 'calls73.js', 'decisions7.js', 'shadow77.js', 'lang77.js', 'libadd78.js', 'libtrig78.js', 'libflow7.js', 'ovx78.js', 'upalert78.js', 'crit78.js', 'dyn78.js', 'sev78.js', 'own79.js', 'cal78.js', 'guide79.js', 'aid79.js']) vm.runInThisContext(fs.readFileSync(path.join(A, f), 'utf8'), { filename: f });
+for (const f of ['data.js', 'layout-digitalpaani.js', 'catalogue.js', 'flows.js', 'rca.js', 'app.js', 'runtime.js', 'structure73.js', 'nodes73.js', 'uplib79.js', 'core7.js', 'calls73.js', 'decisions7.js', 'shadow77.js', 'lang77.js', 'libadd78.js', 'libtrig78.js', 'libflow7.js', 'ovx78.js', 'upalert78.js', 'crit78.js', 'dyn78.js', 'sev78.js', 'own79.js', 'cal78.js', 'guide79.js', 'aid79.js', 'plantlib79.js']) vm.runInThisContext(fs.readFileSync(path.join(A, f), 'utf8'), { filename: f });
 const V = g.V7; const SH = g.V7SHADOW; const LG = g.V7LANG; V.boot();
 const results = [];
 function check(area, name, ok, detail) { results.push(!!ok); if (VERBOSE || !ok) console.log(`${ok ? '  ok  ' : '  FAIL'} [${area}] ${name}${detail ? ' — ' + detail : ''}`); }
@@ -239,7 +239,7 @@ V.reset(); { const UA = g.V7UPALERT; const DY = g.V7DYN;
   check('calculated', 'once chosen it is worked out on the latest readings, and it is in use only while an alert watches it', !o2.choose && o2.value === Math.round((o1.inputs[0].found[0].v - o1.inputs[1].found[1].v) * 100) / 100 && (() => { const w = UA.saveOwn('manesar', '@plant', { name: 'Gap too wide', when: [{ calc: d1.def.id, dir: 'above', limit: 1e9 }], band: 'minor', hold: 5, starts: { kind: 'issue', flowId: null }, why: 'test' }); const seen = w.ok && DY.watchersOf(UA.offers('manesar'), DY.offer('manesar', o1.pid)).length === 1; return seen && !DY.removeDef('@plant', d1.def.id).ok && UA.removeOwn('manesar', w.pid).ok && DY.watchersOf(UA.offers('manesar'), DY.offer('manesar', o1.pid)).length === 0 && DY.removeDef('@plant', d1.def.id).ok; })());
   const bl = DY.offers('manesar').filter((o) => o.def.name === 'Half load');
   check('calculated', 'an equipment type\'s value is offered per piece of equipment; one with a single sensor needs no choosing', bl.length === 2 && bl.some((o) => !o.choose && !o.missing.length && o.value != null));
-  V.reset(); check('calculated', 'a reset puts it back', UA.alerts('@group').every((a) => /^ua_cg_/.test(a.id)) && UA.alerts('@plant').length === 2 && UA.alerts('@plant')[0].id === 'ua_pl_flood' && !DY.defs('@plant').some((d) => d.name === 'Pressure gap') && UA.offers('manesar').every((o) => !o.sk || /^ua_(pl|cg)_/.test(o.alert.id))); }
+  V.reset(); check('calculated', 'a reset puts it back', UA.alerts('@group').every((a) => /^ua_cg_/.test(a.id)) && UA.alerts('@plant').every((a) => /^ua_pl_/.test(a.id)) && UA.alerts('@plant')[0].id === 'ua_pl_flood' && !DY.defs('@plant').some((d) => d.name === 'Pressure gap') && UA.offers('manesar').every((o) => !o.sk || /^ua_(pl|cg)_/.test(o.alert.id))); }
 
 /* a calculated value inside an alert's condition */
 V.reset(); { const UA = g.V7UPALERT; const DY = g.V7DYN;
@@ -401,6 +401,16 @@ V.reset(); { const UA = g.V7UPALERT; const DY = g.V7DYN; const R = g.READINGS; c
   const UL = g.V7UPLIB; check('enrich', 'each unit-process type names the sensors on pipes that take part in it, and every pipe purpose an alert reads is named on its type', !!UL && UL.pipes('equalization').some((x) => x.name === 'Flow') && UL.pipes('mbbr').some((x) => x.name === 'Line pressure') && all.every(({ c, a }) => c[0] === '@' || a.when.every((w) => w.calc || !R[w.reading] || R[w.reading].where !== 'connection' || UL.pipes(c).some((x) => x.name === w.reading))));
   const mo = UA.offers('manesar'); check('enrich', 'at a plant the new alerts are offered where the sensors are, and skipped with the missing reading named where they are not', mo.some((o) => /^ua_(noflow|dry|eq_block)/.test(o.alert.id)) && mo.filter((o) => o.skipped).every((o) => o.missing.length > 0) && mo.some((o) => !o.skipped && o.onPipe));
 }
+V.reset();
+
+/* 27 Nov: the plant library: one generic set for every plant */
+V.reset(); { const PL = g.V7PLANTLIB; const UA = g.V7UPALERT; const DY = g.V7DYN; const names = PL.tasks().map((r) => r.name);
+  check('plant library', 'six tasks are generic: every kind of plant carries each of them, with a flow', names.length === 6 && Object.keys(g.PLANT_PROFILES).every((k) => names.every((n) => g.PLANT_PROFILES[k].rounds.some((r) => r.name === n))) && PL.tasks().every((r) => !!r.flow && g.CTL.S.lib.flows.some((f) => f.id === r.flow)));
+  check('plant library', 'what only one kind of plant needs is listed apart, and the instrument calibration moved to unit processes is not in it', PL.extras().some((x) => x.type === 'WTP' && x.tasks.some((r) => /bacteriological/.test(r.name))) && PL.extras().every((x) => x.tasks.every((r) => !/Calibration of flow meter/.test(r.name) && !names.includes(r.name))));
+  check('plant library', 'it ships alerts across the plant, calculated values and control-group alerts, the flooding sensor among them', UA.alerts('@plant').length >= 5 && UA.alerts('@plant').some((a) => a.id === 'ua_pl_flood') && DY.defs('@plant').length >= 2 && UA.alerts('@group').length >= 2);
+  const ok = V.plants().every((p) => { const row = V.libraryReview(p.key).find((r) => r.eqId === 'plant'); return !!row && names.every((n) => row.proposals.some((x) => x.name === n)); });
+  const wk = V.plants().find((p) => { const row = V.libraryReview(p.key).find((r) => r.eqId === 'plant'); return row.proposals.some((x) => !x.decided); }); const row = wk ? V.libraryReview(wk.key).find((r) => r.eqId === 'plant') : null; const p0 = row ? row.proposals.find((x) => !x.decided) : null;
+  check('plant library', 'every plant is offered the generic tasks under the plant itself, and one is accepted like any other', ok && (!p0 || (V.decide(wk.key, p0.pid, 'accept').ok && V.libraryReview(wk.key).find((r) => r.eqId === 'plant').proposals.find((x) => x.pid === p0.pid).decided === 'accepted'))); }
 V.reset();
 
 const bad = results.filter((x) => !x).length;

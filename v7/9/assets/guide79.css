@@ -127,3 +127,12 @@ input.is-fromflow { background: var(--surface-2, #f3f5f3); color: var(--ink-2); 
 .fa-cond > header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 6px; }
 .fa-cond > header h3 { margin: 0; font-size: 16px; }
 .fa-cond > header .ov-hb { margin-left: auto; }
+/* 27 Nov: the plant library tab */
+.pl-h { margin: 28px 0 4px; font-size: 16px; font-weight: 600; display: flex; align-items: baseline; gap: 8px; }
+.pl-h:first-child { margin-top: 0; }
+.pl-h span { font-size: 13px; font-weight: 400; color: var(--ink-3); }
+.pl-h4 { margin: 18px 0 6px; font-size: 14px; font-weight: 600; color: var(--ink-2); }
+.pl-s { margin: 0 0 10px; color: var(--ink-2); max-width: 72ch; }
+.pl-tbl td, .pl-tbl th { vertical-align: top; }
+.pl-tbl th { text-align: left; }
+.pl-tbl td:nth-child(2) { white-space: nowrap; }
