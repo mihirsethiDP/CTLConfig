@@ -1318,6 +1318,13 @@ window.V7 = (function () {
     const rx = testPurpose(name); if (!rx) return null; const d = dOf(key); const H = upHomes(key); const ids = H.scope[H.home[eqId]] || [eqId];
     const x = d.sensors.find((y) => y.kind !== 'manual' && ids.includes(String(y.on || '').replace(/^eq:/, '')) && rx.test(y.name)); return x ? { tag: x.tag, reading: x.name } : null;
   }
+  /* QA 27 Nov: a unit process also takes the tasks of its own library type (Tube settling), not only those of its tank's equipment type
+     (Tube settler). They are offered on the step itself, once: a task both types carry is listed one time. */
+  function upTypeSet(key, eqId) {
+    const H = upHomes(key); if (H.home[eqId] !== eqId) return null; let u = null; try { u = (structOf(key).ups || []).find((x) => x.id === eqId) || null; } catch (e) { u = null; }
+    const c = u && window.CATALOGUE_BY_CODE ? window.CATALOGUE_BY_CODE[u.typeId] : null; if (!c) return null;
+    const st = ((C.S && C.S.lib && C.S.lib.standardSets) || []).find((t) => t.type === c.type) || null; return st ? { type: c.type, code: u.typeId, set: st } : null;
+  }
   function reviewRow(key, eqId) {
     return cached(`librow:${key}:${eqId}`, () => {
       const d = dOf(key); const P = PS(key); let row = null;
@@ -1359,6 +1366,11 @@ window.V7 = (function () {
           /* v7: a next-phase item set by a form answer ("Discharge pressure limits from the Maximum Head answer") is limits or a setting,
              not a task: kind 'condition' with its own label, so it never reads as work the plant will get */
           if (it) (it.next || []).filter((n) => n.kind === 'alert' || n.kind === 'work').forEach((n) => { const fromAnswer = n.kind === 'work' && /\banswer\b/i.test(`${n.name} ${n.note || ''}`); row.proposals.push({ pid: `${e.id}|${n.kind === 'alert' ? 'alert' : 'task'}|${n.name}`, kind: n.kind === 'alert' ? 'alert' : fromAnswer ? 'condition' : 'task', kindLabel: fromAnswer ? (/\blimits\b/i.test(n.name) ? 'Limits' : 'Setting') : null, name: n.name, eqId: e.id, tag: e.tag, typeName: e.type, decided: null, detail: n.note || 'Reads a connection', blockedBy: 'Reads a pipe', nextPhase: true }); });
+          { const ut = upTypeSet(key, e.id); if (ut && ut.type !== e.type) (ut.set.schedules || []).filter((x) => x.workType !== 'condition' && C.cadenceOf(x) && !row.proposals.some((p) => p.name === x.name)).forEach((x) => {
+              const every = C.cadenceOf(x); if (everyH(every) != null && everyH(every) < 24) return; const pid = `${e.id}|task|${x.name}`;
+              if (x.workType === 'test') { const cv = testCover(key, e.id, x.name); if (cv) { if (!(row.covered || []).some((q) => q.name === x.name)) (row.covered = row.covered || []).push({ name: x.name, tag: cv.tag, reading: cv.reading }); return; } }
+              const sc = d.schedules.find((y) => y.subject && y.subject.id === e.id && y.name === x.name);
+              row.proposals.push({ pid, kind: 'task', name: x.name, eqId: e.id, tag: e.tag, typeName: e.type, every, workType: x.workType, basis: 'calendar', everyText: everyText(every), detail: `${cap(everyText(every))} · ${C.WT_LABEL[x.workType] || 'Task'}`, decided: sc ? itemDecided(key, { type: 'schedule', obj: sc }) : null, reason: (P.decisions[pid] || {}).reason || null, upTask: true, upType: ut.type, upCode: ut.code }); }); }
           { const pc = pipeCalMap(key)[e.id]; if (pc) { const prof = C.plantProfile(); (prof.rounds || []).filter((r) => isPipeCal(r.name) && C.cadenceOf(r)).forEach((r) => { const tags = /Level sensors\s*$/i.test(r.name) ? pc.level : pc.flow; if (!tags.length) return; const pid = `${e.id}|task|${r.name}`; const sc = d.schedules.find((x) => x.subject && x.subject.id === e.id && x.name === r.name);
             row.proposals.push({ pid, kind: 'task', name: r.name, eqId: e.id, tag: e.tag, typeName: e.type, every: C.cadenceOf(r), workType: r.workType, basis: 'calendar', everyText: everyText(C.cadenceOf(r)), detail: `${cap(everyText(C.cadenceOf(r)))} · ${C.WT_LABEL[r.workType] || r.workType} · for ${tags.join(', ')}`, decided: sc ? itemDecided(key, { type: 'schedule', obj: sc }) : null, reason: (P.decisions[pid] || {}).reason || null, pipeCal: true, forTags: tags }); }); } }
         }
@@ -1384,6 +1396,7 @@ window.V7 = (function () {
     if (verdict !== 'accept' && verdict !== 'reject') return { ok: false, error: 'Accept or reject.' };
     const t = o.at != null ? o.at : now();
     materialize(key, eqId, t); let it = findItem(key, eqId, kind, name);
+    if (!it && p.upTask) { const d9 = dOf(key); const ut = upTypeSet(key, eqId); const r = ut ? (ut.set.schedules || []).find((x) => x.name === name) : null; if (r) { d9.schedules.push({ id: `s_up_${eqId}_${d9.schedules.length + 1}`, name: r.name, subject: { kind: 'eq', id: eqId }, workType: r.workType, probe: null, flow: r.flow || null, basis: 'calendar', every: { ...C.cadenceOf(r) }, meter: null, anchor: 'fixed', nextDue: '2026-10-06', performedBy: 'in_house', statutory: !!r.statutory, verify: !!r.verify, status: 'draft', open: 0, source: 'library', hours: r.hours || null, parts: r.parts || '' }); it = findItem(key, eqId, kind, name); } }
     if (!it && p.pipeCal) { const d9 = dOf(key); const r = libRound(d9.plant.type, name) || libRound('STP', name); if (r) { d9.schedules.push({ id: `s_pc_${eqId}_${d9.schedules.length + 1}`, name: r.name, subject: { kind: 'eq', id: eqId }, workType: r.workType, probe: null, flow: r.flow || null, basis: 'calendar', every: { ...C.cadenceOf(r) }, meter: null, anchor: 'fixed', nextDue: '2026-10-06', performedBy: 'in_house', statutory: !!r.statutory, verify: !!r.verify, status: 'draft', open: 0, source: 'library', hours: r.hours || null, parts: r.parts || '' }); it = findItem(key, eqId, kind, name); } }
     if (!it) return { ok: false, error: 'The library item could not be found on this equipment.' };
     if (verdict === 'accept') {

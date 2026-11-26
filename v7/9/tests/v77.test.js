@@ -374,6 +374,14 @@ V.reset(); { const UA = g.V7UPALERT; const C9 = g.CTL; const FA = g.V7FLOWAID;
 }
 V.reset();
 
+/* QA 27 Nov: a unit-process type's own tasks reach the plant */
+V.reset(); { const LA = g.V7LIBADD; const r = LA.addTask('tube_settling', { name: 'QA step task', workType: 'pm', every: { n: 1, unit: 'month' } });
+  const lr = V.libraryReview('digitalpaani'); const rows = lr.filter((x) => x.proposals.some((p) => p.name === 'QA step task')); const p0 = rows[0] ? rows[0].proposals.find((p) => p.name === 'QA step task') : null;
+  const names = lr.map((x) => x.proposals.map((p) => p.name)); const dup = names.some((ns) => new Set(ns).size !== ns.length);
+  check('qa', 'a task added to a unit-process type is offered on each such unit process at a plant, once, and no line is listed twice', r.ok && rows.length >= 1 && rows.every((x) => /^TS-/.test(x.tag)) && !!p0 && p0.upTask && !dup);
+  check('qa', 'it is accepted like any other task', !!p0 && V.decide('digitalpaani', p0.pid, 'accept').ok && V.libraryReview('digitalpaani').find((x) => x.eqId === rows[0].eqId).proposals.find((p) => p.pid === p0.pid).decided === 'accepted'); }
+V.reset();
+
 const bad = results.filter((x) => !x).length;
 console.log(`v77.test · ${results.length - bad}/${results.length} checks pass · RESULT: ${bad ? 'FAIL' : 'PASS'}`);
 process.exit(bad ? 1 : 0);

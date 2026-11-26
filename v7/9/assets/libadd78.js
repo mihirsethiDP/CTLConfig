@@ -145,7 +145,7 @@
       const sel = document.getElementById('la-iknown'); const box = document.getElementById('la-inew'); if (sel && box) sel.addEventListener('change', () => { box.hidden = !!sel.value; });
       return;
     }
-    const WT = (C() && C().WT_LABEL) || {}; const LF = W.V7LIBFLOW; const fo = LF && LF.options ? LF.options('task', code) : { near: [], rest: [] }; const fopt = (f) => `<option value="${esc(f.id)}">${esc(f.name)}</option>`;
+    const WT = (C() && C().WT_LABEL) || {}; const LF = W.V7LIBFLOW; const fo = LF && LF.options ? LF.options('task', code) : { near: [], rest: [] }; const have = new Set(arr((setOf(c.type) || {}).schedules).map((x) => x.name)); const fopt = (f) => `<option value="${esc(f.id)}"${have.has(f.name) ? ' disabled' : ''}>${esc(f.name)}${have.has(f.name) ? ' (already a task here)' : ''}</option>`;
     /* 27 Nov: a task is named after the flow it follows, and a task may come on a condition instead of a date */
     U.modal({ title: `Add a task to ${c.type}`, body: U.field({ label: 'Flow it follows', hint: 'The steps a person works through. The task takes its name from the flow.', html: `<select id="la-tflow"><option value="">No flow yet: I will name the task</option>${fo.near.length ? `<optgroup label="For ${esc(c.type)}">${fo.near.map(fopt).join('')}</optgroup>` : ''}${fo.rest.length ? `<optgroup label="Other task flows">${fo.rest.map(fopt).join('')}</optgroup>` : ''}</select>` })
       + U.field({ label: 'Name', html: '<input type="text" id="la-tname" placeholder="For example: Check the belt guard">' })

@@ -55,7 +55,7 @@
     if (eqId === 'plant' || /Calibration of flow meter, level sensors and pressure gauges/i.test(name)) { const d = safe(() => V().plant(key), null); const pt = (d && d.type) || 'STP'; const prof = (W.PLANT_PROFILES || {})[pt] || (W.PLANT_PROFILES || {}).STP; const r = prof ? arr(prof.rounds).find((x) => x.name === name) : null; id = r && r.flow ? r.flow : null; }
     else { const e = safe(() => V().eq(key, eqId), null); const code = e ? e.code || e.dbType : null; const lt = code ? safe(() => V().libType(code), null) : null;
       if (kind === 'alert') { const a = lt ? arr(lt.alerts).find((x) => x.name === name) : null; id = a ? a.flowId || null : null; }
-      else if (code && W.V7LIBFLOW) { const f = safe(() => W.V7LIBFLOW.flowOf('task', code, name), null); id = f ? f.id : null; } }
+      else if (code && W.V7LIBFLOW) { let f = safe(() => W.V7LIBFLOW.flowOf('task', code, name), null); if (!f) { const u = arr(safe(() => V().structure(key).ups, [])).find((x) => x.id === eqId); if (u) f = safe(() => W.V7LIBFLOW.flowOf('task', u.typeId, name), null); } id = f ? f.id : null; } }
     memo[k] = id && flowById(id) ? id : null; return memo[k];
   }
   W.V7FLOWAID.flowFor = flowFor;
