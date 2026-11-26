@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>User screens · CloseTheLoop v7/9</title>
+<meta name="description" content="What a plant's people see on the phone, drawn from what the configuration console set up.">
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="user.css?v=4">
+</head>
+<body>
+
+<header class="pg-top"><div class="pg-wrap">
+  <div class="pg-eyebrow">CloseTheLoop · v7/9 · User screens</div>
+  <h1>What the plant's people see.</h1>
+  <p class="pg-sub">The configuration console decides what a plant watches and what work it runs. These are the screens that set-up turns into, on the phone of the Operator who does the work and of the Lead who is told when it slips. Nothing on them is typed in for the screen: each one is drawn from the plant's set-up.</p>
+  <div class="pg-cta">
+    <a class="p" href="#live">Start the walk-through</a>
+    <a href="../prototype.html#/p/digitalpaani">Open DigitalPaani in the console</a>
+    <a href="../index.html">Back to v7/9</a>
+  </div>
+</div></header>
+
+<main class="pg-wrap">
+
+<section class="pg-how" id="how" aria-labelledby="how-h">
+  <h2 id="how-h">How to review</h2>
+  <p>Six stops, in the order a day runs. Each opens the screens for that stop, and says which console setting drives them. The phone at the top is live: tap through it, or jump it to any stop.</p>
+  <ol>
+    <li><a href="#s-today"><b>Today at the plant</b><span>Driven by the structure (unit processes and their equipment) and each one's criticality.</span></a></li>
+    <li><a href="#s-task"><b>A task and its flow</b><span>Driven by the task lines the plant accepted and the flow linked to each task in the library.</span></a></li>
+    <li><a href="#s-issue"><b>An alert becomes an issue</b><span>Driven by the limits and times on a reading, and the severity of the limit crossed.</span></a></li>
+    <li><a href="#s-fix"><b>The fix flow</b><span>Driven by the root causes of the issue and the fix flow each cause carries.</span></a></li>
+    <li><a href="#s-lead"><b>What the Lead sees</b><span>Driven by the criticality timelines (late tasks) and the severity timelines (issues not started).</span></a></li>
+    <li><a href="#s-lang"><b>Language</b><span>Driven by the operator text kept per language: English, Hindi, Marathi, Tamil.</span></a></li>
+  </ol>
+</section>
+
+<div class="pg-state" id="us-state" aria-live="polite"></div>
+<div class="pg-changed" id="us-changed" hidden><span>The plant's set-up changed in the console since this page was drawn.</span><button type="button" class="pg-btn" onclick="location.reload()">Draw it again</button></div>
+
+<div id="us-root">
+<section class="pg-live" id="live" aria-label="The live phone">
+  <div class="us-ph"><div class="us-app" id="us-live"></div></div>
+  <div class="pg-side">
+    <h2>The live phone</h2>
+    <p>Tap through it as the Operator would: open a task and do its steps, open an issue, pick what you found and follow the fix. What you do here stays on this page; it is not written to the plant.</p>
+    <div class="pg-card">
+      <div class="pg-ctl">
+        <div class="pg-f"><span>Signed in as</span><span class="pg-seg" role="group" aria-label="Signed in as"><button type="button" data-role="op" aria-pressed="true">Operator</button><button type="button" data-role="lead" aria-pressed="false">Lead</button></span></div>
+        <label>Language<select id="us-lang" aria-label="Language of the screens"></select></label>
+      </div>
+    </div>
+    <div class="pg-card">
+      <span class="pg-k">Jump the phone to</span>
+      <div class="pg-jumps">
+        <button type="button" class="pg-btn" data-jump="today">1 · Today</button>
+        <button type="button" class="pg-btn" data-jump="taskStart">2 · A task and its flow</button>
+        <button type="button" class="pg-btn" data-jump="issueOpen">3 · An alert becomes an issue</button>
+        <button type="button" class="pg-btn" data-jump="fixStep">4 · The fix flow</button>
+        <button type="button" class="pg-btn" data-jump="lead">5 · What the Lead sees</button>
+        <button type="button" class="pg-btn" data-jump="lang">6 · Language</button>
+        <button type="button" class="pg-btn q" data-reset="1">Start again</button>
+      </div>
+    </div>
+    <div class="pg-card">
+      <span class="pg-k">What drives this screen</span>
+      <div id="us-drives"></div>
+    </div>
+  </div>
+</section>
+
+<div id="us-gallery"></div>
+</div>
+
+<section class="pg-notes" aria-label="Notes for the reviewer">
+  <div class="pg-card">
+    <h2>Words changed from the search and navigation design</h2>
+    <dl>
+      <div><dt>The row label "Stage" in search results</dt><dd>Unit process</dd></div>
+      <div><dt>"5 stages in flow order" on the plant page</dt><dd>"… unit processes in flow order", counted from the plant's structure</dd></div>
+      <div><dt>"Search plant, stage or equipment"</dt><dd>Plant, unit process or equipment</dd></div>
+      <div><dt>"has no stage or equipment called …"</dt><dd>Nothing matches "…"</dd></div>
+      <div><dt>Names such as Preliminary, Secondary treatment, Aeration</dt><dd>The plant's own unit processes, by tag and library type</dd></div>
+    </dl>
+  </div>
+  <div class="pg-card">
+    <h2>Kept from that design</h2>
+    <ul>
+      <li>Search looks inside the plant you are in, and says so in a strip under the field.</li>
+      <li>A result shows the match plus one level below it, and each item once.</li>
+      <li>Typed letters are marked in the rows that matched. Two letters is the least.</li>
+      <li>The bar at the bottom: Overview, Issues, Tasks, Report.</li>
+      <li>Back is an arrow at the top left, 44 px.</li>
+    </ul>
+  </div>
+  <div class="pg-card">
+    <h2>Added, because the console now sets it</h2>
+    <ul>
+      <li>Criticality beside every unit process, piece of equipment, task and issue. Severity stays a separate label.</li>
+      <li>Sensors on a pipe are listed with the unit process they take part in.</li>
+      <li>A task's kind: routine check, routine work, manual testing, preventive maintenance, calibration, condition-based.</li>
+      <li>The step-by-step screen, shared by a task's flow and an issue's fix flow.</li>
+      <li>The Lead's view of what is late, with the times that got it there.</li>
+    </ul>
+  </div>
+  <div class="pg-card">
+    <h2>Not rebuilt here</h2>
+    <ul>
+      <li>The list of all plants and its filter chips, for people with several plants.</li>
+      <li>Voice search, the sheet that changes where search looks, loading and no-signal states.</li>
+      <li>Diagnostic flows: this build has the person pick the cause, then follow its fix flow.</li>
+      <li>Sign-in and who may see what: that comes with the roles work.</li>
+    </ul>
+    <p style="margin:10px 0 0;color:var(--ink-2)">Their wording follows the same one change: a unit process is never called a stage.</p>
+  </div>
+</section>
+
+<footer class="pg-foot">
+  <p>User screens for review, drawn from the v7/9 configuration prototype. Translations are first drafts and have not been read by a native speaker. <span id="us-loaded"></span></p>
+</footer>
+</main>
+
+<script>window.V7_NO_V6_SHELL = true; window.V7_VARIANT = '1'; window.V7_BUILD = '3';</script>
+<script src="loader.js?v=7"></script>
+</body>
+</html>
