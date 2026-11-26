@@ -29,27 +29,152 @@
   const flowFits = (kind, f) => !!f && (kind === 'issue' ? f.kind === 'diagnostic' : kind === 'calibration' ? isCal(f) : f.kind !== 'diagnostic' && f.use !== 'fix');
   const w = (reading, dir, limit, of) => ({ reading, dir, limit, of: of || 'any' });
   const A = (id, name, match, when, band, hold, kind, flowId) => ({ id, name, match, when, band, hold, starts: { kind, flowId: flowId || null } });
-  /* what the library ships with: a first draft, to confirm */
+  /* what the library ships with: a first draft, to confirm.
+     27 Nov: enriched now that a sensor on a pipe takes part in its unit process. Most conditions below read a flow meter, a pressure
+     gauge or an analyser on a pipe together with a reading on the equipment. Three outcomes: an issue, a task, a calibration. */
+  const ON = (reading, of) => w(reading, 'above', null, of); const OFF = (reading, of) => w(reading, 'below', null, of);
   const AERATED = [
     A('ua_lowdo_air', 'Low DO while a blower is drawing current', 'all', [w('Dissolved oxygen', 'below', 1.5), w('Motor current', 'above', 5)], 'major', 10, 'issue', 'f_lowdo'),
     A('ua_header', 'Air header pressure low with DO falling', 'all', [w('Line pressure', 'below', 0.3), w('Dissolved oxygen', 'below', 2)], 'major', 10, 'issue', 'f_lowdo'),
     A('ua_do_drift', 'DO reads high while MLSS is low', 'all', [w('Dissolved oxygen', 'above', 4), w('MLSS', 'below', 2000)], 'minor', 30, 'calibration', 'f_do_cal'),
     A('ua_ras', 'Return flow low with MLSS falling', 'all', [w('Flow', 'below', 10), w('MLSS', 'below', 2500)], 'minor', 30, 'issue', 'f_mlss'),
   ];
+  const AIR_MORE = [
+    A('ua_diffuser', 'Air header pressure high with DO low', 'all', [w('Line pressure', 'above', 0.7), w('Dissolved oxygen', 'below', 1.5)], 'minor', 30, 'task', 'f_diffuser_clean'),
+    A('ua_waste', 'MLSS high with DO falling', 'all', [w('MLSS', 'above', 4500), w('Dissolved oxygen', 'below', 2)], 'minor', 60, 'task', 'f_sludge'),
+  ];
+  /* a tank that is pumped out: the pump, the level and the flow meter on its outlet say more together than each alone */
+  const PUMPED = [
+    A('ua_noflow', 'A pump runs but nothing flows out', 'all', [ON('Run status'), w('Flow', 'below', 1)], 'major', 5, 'issue', 'f_pump_fail'),
+    A('ua_dry', 'Level low while a pump is still running', 'all', [w('Level', 'below', 15), ON('Run status')], 'major', 5, 'issue', 'f_pump_fail'),
+    A('ua_full', 'Level high while no pump runs', 'all', [w('Level', 'above', 85), OFF('Run status', 'all')], 'major', 10, 'issue', 'f_pump_fail'),
+  ];
+  const MEMBRANE = [
+    A('ua_m_cip', 'Trans-membrane pressure high with recovery falling', 'all', [w('Trans-membrane pressure', 'above', 0.6), w('Recovery', 'below', 80)], 'major', 20, 'task', 'f_uf_cip'),
+    A('ua_m_breach', 'Outlet turbidity high with trans-membrane pressure low', 'all', [w('Outlet turbidity', 'above', 2), w('Trans-membrane pressure', 'below', 0.1)], 'major', 10, 'issue', null),
+    A('ua_m_feed', 'Inlet pressure low with the feed pump running', 'all', [w('Inlet pressure', 'below', 0.5), ON('Run status')], 'major', 5, 'issue', 'f_pump_fail'),
+  ];
+  const SALT = [
+    A('ua_ro_scale', 'Permeate conductivity rising with recovery high', 'all', [w('Permeate conductivity', 'above', 300), w('Recovery', 'above', 80)], 'major', 30, 'issue', null),
+    A('ua_ro_cip', 'Pressure drop high with permeate flow falling', 'all', [w('Differential pressure', 'above', 1.5), w('Flow', 'below', 5)], 'major', 30, 'task', 'f_ro_cip'),
+    A('ua_ro_cart', 'Feed pressure low with the pump running', 'all', [w('Inlet pressure', 'below', 6), ON('Run status')], 'minor', 15, 'task', 'f_cartridge_replace'),
+  ];
+  const PRESS = [A('ua_cloth', 'Feed pressure high while the press runs', 'all', [w('Inlet pressure', 'above', 8), ON('Run status')], 'minor', 15, 'task', 'f_cloth_change')];
+  const SPIN = [
+    A('ua_cf_vib', 'Vibration high while running under load', 'all', [w('Vibration', 'above', 7), w('Motor current', 'above', 20)], 'major', 5, 'issue', null),
+    A('ua_cf_empty', 'Running with no feed', 'all', [ON('Run status'), w('Flow', 'below', 0.5)], 'minor', 15, 'issue', null),
+  ];
+  const DIGEST = [
+    A('ua_dg_cold', 'pH falling while the digester is cold', 'all', [w('pH', 'below', 6.8), w('Temperature', 'below', 30)], 'major', 60, 'issue', 'f_anaerobic'),
+    A('ua_dg_feed', 'pH low while the feed continues', 'all', [w('pH', 'below', 6.8), w('Flow', 'above', 1)], 'major', 30, 'issue', 'f_anaerobic'),
+  ];
+  const BLANKET = A('ua_blanket', 'Sludge blanket rising', 'all', [w('Sludge blanket', 'above', 1.2)], 'minor', 30, 'issue', 'f_blanket');
   const SHIPPED = {
-    activated_sludge: AERATED, sbr: AERATED.slice(0, 3),
+    /* preliminary */
+    screening: [
+      A('ua_sc_rake', 'Level difference across the screen high', 'all', [w('Level differential', 'above', 150)], 'minor', 10, 'task', 'f_task_bs_raking'),
+      A('ua_sc_over', 'Level difference very high with flow still coming', 'all', [w('Level differential', 'above', 250), w('Flow', 'above', 5)], 'major', 5, 'issue', 'd_bs_overflow'),
+      A('ua_sc_odour', 'H2S high while the flow is low', 'all', [w('H2S', 'above', 10), w('Flow', 'below', 2)], 'minor', 30, 'issue', 'd_bs_odour')],
+    mechanical_screening: [
+      A('ua_ms_stop', 'Level difference high while the screen is stopped', 'all', [w('Level differential', 'above', 150), OFF('Run status')], 'major', 5, 'issue', 'd_bs_rake'),
+      A('ua_ms_run', 'Level difference stays high while the screen runs', 'all', [w('Level differential', 'above', 150), ON('Run status')], 'major', 15, 'issue', 'd_bs_overflow'),
+      A('ua_ms_idle', 'Screen runs with no level difference', 'all', [ON('Run status'), w('Level differential', 'below', 10)], 'minor', 120, 'task', 'f_task_bs_function'),
+      A('ua_sc_odour', 'H2S high while the flow is low', 'all', [w('H2S', 'above', 10), w('Flow', 'below', 2)], 'minor', 30, 'issue', 'd_bs_odour')],
+    rotary_drum_screening: [
+      A('ua_rd_stop', 'Level difference high while the drum is stopped', 'all', [w('Level differential', 'above', 150), OFF('Run status')], 'major', 5, 'issue', 'f_screen_trip'),
+      A('ua_rd_run', 'Level difference stays high while the drum runs', 'all', [w('Level differential', 'above', 150), ON('Run status')], 'minor', 15, 'task', 'f_screen_inspect')],
+    oil_grease_removal: [A('ua_og_full', 'Level high with flow still coming', 'all', [w('Level', 'above', 85), w('Flow', 'above', 5)], 'major', 10, 'issue', 'f_eq_level')],
+    hydrocyclone_separation: [A('ua_hc_wear', 'Inlet pressure low with flow coming', 'all', [w('Inlet pressure', 'below', 0.8), w('Flow', 'above', 5)], 'minor', 15, 'task', 'f_cyclone_check')],
+    /* primary */
+    flash_mixing: [
+      A('ua_fm_stop', 'Water flowing with the mixer stopped', 'all', [w('Flow', 'above', 5), OFF('Run status')], 'major', 5, 'issue', 'f_rotating_current'),
+      A('ua_fm_dose', 'pH low while the dosing flow runs', 'all', [w('pH', 'below', 6), w('Flow', 'above', 5)], 'minor', 15, 'calibration', 'f_dose_cal')],
+    flocculation: [A('ua_fl_stop', 'Water flowing with the flocculator stopped', 'all', [w('Flow', 'above', 5), OFF('Run status')], 'major', 5, 'issue', 'f_rotating_current')],
+    dissolved_air_flotation: [
+      A('ua_daf_air', 'Saturator pressure low while the unit runs', 'all', [w('Line pressure', 'below', 3.5), ON('Run status')], 'major', 10, 'issue', 'f_daf'),
+      A('ua_daf_carry', 'Outlet turbidity high with saturator pressure low', 'all', [w('Outlet turbidity', 'above', 30), w('Line pressure', 'below', 3.5)], 'major', 15, 'issue', 'f_daf'),
+      A('ua_daf_pm', 'Outlet turbidity high with saturator pressure normal', 'all', [w('Outlet turbidity', 'above', 30), w('Line pressure', 'above', 4)], 'minor', 30, 'task', 'f_daf_pm')],
+    tube_settling: [BLANKET,
+      A('ua_ts_pump', 'Blanket rising with the sludge pump stopped', 'all', [w('Sludge blanket', 'above', 1), OFF('Run status', 'all')], 'major', 15, 'issue', 'd_ts_pump'),
+      A('ua_ts_carry', 'Outlet turbidity high with the blanket high', 'all', [w('Outlet turbidity', 'above', 20), w('Sludge blanket', 'above', 1.2)], 'major', 15, 'issue', 'd_ts_overflow'),
+      A('ua_ts_line', 'Sludge pump runs with no sludge flow', 'all', [ON('Run status'), w('Flow', 'below', 1)], 'minor', 10, 'issue', 'd_ts_line'),
+      A('ua_ts_clean', 'Outlet turbidity rising with the blanket normal', 'all', [w('Outlet turbidity', 'above', 15), w('Sludge blanket', 'below', 0.8)], 'minor', 60, 'task', 'f_tube_clean')],
+    /* secondary */
+    anoxic_treatment: [A('ua_ax_air', 'DO and ORP both high in the anoxic tank', 'all', [w('Dissolved oxygen', 'above', 0.5), w('ORP', 'above', 50)], 'minor', 30, 'issue', null)],
+    activated_sludge: AERATED.concat(AIR_MORE, [A('ua_as_nh3', 'Outlet ammonia high while DO is low', 'all', [w('Online ammonia', 'above', 10), w('Dissolved oxygen', 'below', 1.5)], 'major', 30, 'issue', 'f_lowdo')]),
+    sbr: AERATED.slice(0, 3).concat(AIR_MORE), cass: AERATED.slice(0, 3).concat(AIR_MORE),
     mbbr: [A('ua_mbbr_air', 'Low DO with a blower running', 'all', [w('Dissolved oxygen', 'below', 2), w('Run status', 'above', null)], 'major', 10, 'issue', 'f_mbbr'),
-      A('ua_mbbr_noair', 'No blower running', 'all', [w('Run status', 'below', null, 'all')], 'emergency', 5, 'issue', 'f_blower_trip')],
-    equalization: [A('ua_eq_level', 'Level high while no pump draws current', 'all', [w('Level', 'above', 85), w('Motor current', 'below', 1, 'all')], 'major', 10, 'issue', 'f_eq_level')],
-    /* 26 Nov: no "pH out of range" here. pH high or low is one reading on both sides, and that is the reading's own limits
+      A('ua_mbbr_noair', 'No blower running', 'all', [w('Run status', 'below', null, 'all')], 'emergency', 5, 'issue', 'f_blower_trip'),
+      A('ua_mb_header', 'Air header pressure low with DO falling', 'all', [w('Line pressure', 'below', 0.3), w('Dissolved oxygen', 'below', 2)], 'major', 10, 'issue', 'd_mb_low_do'),
+      A('ua_mb_uneven', 'Air header pressure high with DO low', 'all', [w('Line pressure', 'above', 0.7), w('Dissolved oxygen', 'below', 2)], 'minor', 30, 'issue', 'd_mb_uneven_air'),
+      A('ua_mb_cod', 'Outlet COD high while DO is low', 'all', [w('Online COD', 'above', 250), w('Dissolved oxygen', 'below', 2)], 'major', 30, 'issue', 'd_mb_bod'),
+      A('ua_mb_nh3', 'Outlet ammonia high while pH is low', 'all', [w('Online ammonia', 'above', 10), w('pH', 'below', 6.5)], 'major', 30, 'issue', 'd_mb_ammonia'),
+      A('ua_mb_under', 'DO high while the feed flow is low', 'all', [w('Dissolved oxygen', 'above', 5), w('Flow', 'below', 5)], 'minor', 30, 'issue', 'd_mb_high_do'),
+      A('ua_mb_sieve', 'Tank level high with the feed still flowing', 'all', [w('Level', 'above', 90), w('Flow', 'above', 5)], 'minor', 15, 'task', 'f_task_mb_sieve_clean'),
+      A('ua_mb_probe', 'DO reads high with no blower running', 'all', [w('Dissolved oxygen', 'above', 5.5), OFF('Run status', 'all')], 'minor', 30, 'calibration', 'f_task_mb_sensor_cal'),
+      { id: 'ua_mb_removal', name: 'COD removal low', match: 'all', when: [{ reading: 'COD removed', calc: 'dy_mb_removal', cunit: '%', dir: 'below', limit: 70, of: 'any' }], band: 'major', hold: 60, starts: { kind: 'issue', flowId: 'd_mb_bod' } }],
+    mbr: [A('ua_mbr_foul', 'Permeability falling with turbidity rising', 'all', [w('Permeability', 'below', 80), w('Outlet turbidity', 'above', 5)], 'major', 20, 'issue', null),
+      A('ua_mbr_cip', 'Trans-membrane pressure high with permeate flow falling', 'all', [w('Trans-membrane pressure', 'above', 0.4), w('Flow', 'below', 5)], 'major', 15, 'task', 'f_cip'),
+      A('ua_mbr_scour', 'Air scour pressure low while filtering', 'all', [w('Line pressure', 'below', 0.2), w('Flow', 'above', 5)], 'major', 10, 'issue', null),
+      A('ua_mbr_breach', 'Outlet turbidity high with trans-membrane pressure low', 'all', [w('Outlet turbidity', 'above', 2), w('Trans-membrane pressure', 'below', 0.1)], 'major', 10, 'issue', null),
+      A('ua_mbr_solids', 'DO low with MLSS high', 'all', [w('Dissolved oxygen', 'below', 1), w('MLSS', 'above', 10000)], 'major', 20, 'issue', 'f_mlss')],
+    membrane_filtration: [A('ua_m_cip', 'Trans-membrane pressure high with flow falling', 'all', [w('Trans-membrane pressure', 'above', 0.6), w('Flow', 'below', 5)], 'major', 20, 'task', 'f_uf_cip')],
+    cascade_aeration: [A('ua_ca_clean', 'DO low with water flowing', 'all', [w('Dissolved oxygen', 'below', 4), w('Flow', 'above', 1)], 'minor', 60, 'task', 'f_cascade_clean')],
+    anaerobic_treatment: DIGEST,
+    /* tertiary */
+    /* 26 Nov: no "pH out of range" on Equalization. pH high or low is one reading on both sides, and that is the reading's own limits
        (Equalization has pH high and pH low). The same kind twice belongs here only where a step holds several sensors of it. */
-    ultrafiltration: [A('ua_uf_foul', 'Inlet pressure high with recovery falling', 'all', [w('Inlet pressure', 'above', 3), w('Recovery', 'below', 75)], 'minor', 20, 'task', 'f_backwash')],
-    media_filtration: [A('ua_mf_choke', 'Filter choking', 'all', [w('Differential pressure', 'above', 0.8)], 'minor', 15, 'task', 'f_backwash')],
-    mbr: [A('ua_mbr_foul', 'Permeability falling with turbidity rising', 'all', [w('Permeability', 'below', 80), w('Outlet turbidity', 'above', 5)], 'major', 20, 'issue', null)],
-    clarification: [A('ua_blanket', 'Sludge blanket rising', 'all', [w('Sludge blanket', 'above', 1.2)], 'minor', 30, 'issue', 'f_blanket')],
-    tube_settling: [A('ua_blanket', 'Sludge blanket rising', 'all', [w('Sludge blanket', 'above', 1.2)], 'minor', 30, 'issue', 'f_blanket')],
+    media_filtration: [A('ua_mf_choke', 'Filter choking', 'all', [w('Differential pressure', 'above', 0.8)], 'minor', 15, 'task', 'f_backwash'),
+      A('ua_mf_media', 'Outlet turbidity high with pressure drop low', 'all', [w('Outlet turbidity', 'above', 5), w('Differential pressure', 'below', 0.2)], 'major', 15, 'task', 'f_media_inspect'),
+      A('ua_mf_block', 'Pressure drop high with flow low', 'all', [w('Differential pressure', 'above', 1), w('Flow', 'below', 5)], 'major', 10, 'issue', null),
+      { id: 'ua_mf_gauges', name: 'Filter choking, by its two gauges', match: 'all', when: [{ reading: 'Pressure drop across the filter', calc: 'dy_mf_drop', cunit: 'bar', dir: 'above', limit: 0.8, of: 'any' }], band: 'minor', hold: 15, starts: { kind: 'task', flowId: 'f_backwash' } }],
+    microfiltration: MEMBRANE,
+    ultrafiltration: [A('ua_uf_foul', 'Inlet pressure high with recovery falling', 'all', [w('Inlet pressure', 'above', 3), w('Recovery', 'below', 75)], 'minor', 20, 'task', 'f_backwash')].concat(MEMBRANE),
+    nanofiltration: SALT, ro_desalination: SALT,
+    uv_disinfection: [
+      A('ua_uv_off', 'Water flowing with the UV off', 'all', [w('Flow', 'above', 1), OFF('Run status')], 'major', 5, 'issue', 'f_uv'),
+      A('ua_uv_sleeve', 'UV intensity low with turbidity normal', 'all', [w('UV intensity', 'below', 70), w('Outlet turbidity', 'below', 5)], 'minor', 30, 'task', 'f_uv_lamp'),
+      A('ua_uv_dirty', 'UV intensity low with turbidity high', 'all', [w('UV intensity', 'below', 70), w('Outlet turbidity', 'above', 10)], 'major', 15, 'issue', 'f_uv')],
+    chlorination: [
+      A('ua_cl_low', 'Residual chlorine low with water flowing', 'all', [w('Residual chlorine', 'below', 0.2), w('Flow', 'above', 1)], 'major', 15, 'issue', null),
+      A('ua_cl_over', 'Residual chlorine high while the flow is low', 'all', [w('Residual chlorine', 'above', 2), w('Flow', 'below', 5)], 'minor', 15, 'calibration', 'f_dose_cal')],
+    dechlorination: [
+      A('ua_dc_stop', 'Residual chlorine high with the doser stopped', 'all', [w('Residual chlorine', 'above', 0.1), OFF('Run status')], 'major', 5, 'issue', null),
+      A('ua_dc_dose', 'Residual chlorine high with the doser running', 'all', [w('Residual chlorine', 'above', 0.1), ON('Run status')], 'minor', 15, 'calibration', 'f_dose_cal')],
+    softening: [A('ua_sf_hard', 'Outlet hardness high with water flowing', 'all', [w('Outlet hardness', 'above', 50), w('Flow', 'above', 1)], 'minor', 15, 'task', 'f_brine_topup')],
+    cooling: [
+      A('ua_ct_hot', 'Cooling water hot while the tower runs', 'all', [w('Cooling water temperature', 'above', 38), ON('Run status')], 'minor', 30, 'task', 'f_ct_clean'),
+      A('ua_ct_stop', 'Cooling water hot with the tower stopped', 'all', [w('Cooling water temperature', 'above', 38), OFF('Run status')], 'major', 10, 'issue', null)],
+    /* tanks along the flow path */
+    equalization: [A('ua_eq_level', 'Level high while no pump draws current', 'all', [w('Level', 'above', 85), w('Motor current', 'below', 1, 'all')], 'major', 10, 'issue', 'f_eq_level'),
+      PUMPED[0], PUMPED[1],
+      A('ua_eq_block', 'Discharge pressure high with flow low', 'all', [w('Discharge pressure', 'above', 4), w('Flow', 'below', 5)], 'major', 10, 'issue', 'f_pump_fail'),
+      A('ua_eq_acid', 'Low pH being sent forward', 'all', [w('pH', 'below', 6), w('Flow', 'above', 5)], 'major', 10, 'issue', 'f_ph'),
+      A('ua_eq_alk', 'High pH being sent forward', 'all', [w('pH', 'above', 9), w('Flow', 'above', 5)], 'major', 10, 'issue', 'f_ph')],
+    collection: PUMPED.concat([A('ua_co_flood', 'Flood switch on while a pump runs', 'all', [ON('Sump flood switch'), ON('Run status')], 'emergency', 0, 'issue', 'f_sump_flood')]),
+    filter_feed: PUMPED, filtered_water: PUMPED.slice(0, 2), recirculation_holding: PUMPED, sludge_holding: PUMPED,
+    treated_water: PUMPED.slice(0, 2).concat([A('ua_tw_frc', 'Residual chlorine low in the water going out', 'all', [w('Residual chlorine', 'below', 0.2), w('Flow', 'above', 1)], 'major', 15, 'task', 'f_frc_round')]),
+    /* sludge */
+    clarification: [BLANKET,
+      A('ua_cl_scraper', 'Blanket rising with the scraper stopped', 'all', [w('Sludge blanket', 'above', 1), OFF('Run status')], 'major', 10, 'issue', 'f_blanket'),
+      A('ua_cl_carry', 'Outlet turbidity high with the blanket high', 'all', [w('Outlet turbidity', 'above', 20), w('Sludge blanket', 'above', 1.2)], 'major', 15, 'issue', 'f_blanket'),
+      A('ua_cl_ras', 'Blanket rising with return flow low', 'all', [w('Sludge blanket', 'above', 1), w('Flow', 'below', 10)], 'major', 20, 'issue', 'f_blanket'),
+      A('ua_cl_waste', 'Blanket high with return flow normal', 'all', [w('Sludge blanket', 'above', 1.2), w('Flow', 'above', 10)], 'minor', 30, 'task', 'f_sludge')],
+    gravity_thickening: [A('ua_gt_scraper', 'Blanket high with the scraper stopped', 'all', [w('Sludge blanket', 'above', 1.5), OFF('Run status')], 'major', 15, 'issue', null)],
+    daf_thickening: [A('ua_daf_air', 'Saturator pressure low while the unit runs', 'all', [w('Line pressure', 'below', 3.5), ON('Run status')], 'major', 10, 'issue', 'f_daf')],
+    belt_filter_press_dewatering: PRESS, plate_frame_filtration: PRESS,
+    centrifuge_thickening: SPIN, centrifuge_dewatering: SPIN,
+    screw_press_dewatering: [
+      A('ua_sp_wash', 'Motor current high with feed flow normal', 'all', [w('Motor current', 'above', 12), w('Flow', 'above', 1)], 'minor', 15, 'task', 'f_press_wash'),
+      A('ua_sp_empty', 'Press runs with no feed', 'all', [ON('Run status'), w('Flow', 'below', 0.5)], 'minor', 10, 'issue', 'f_press')],
+    sludge_digestion: DIGEST,
+    /* every control group: a duty and standby set */
+    '@group': [
+      A('ua_cg_none', 'Every one of the set is stopped', 'all', [OFF('Run status', 'all')], 'major', 5, 'issue', null),
+      A('ua_cg_both', 'Every one of the set is running', 'all', [ON('Run status', 'all')], 'minor', 30, 'issue', null)],
     /* 27 Nov: the whole plant watches every flooding sensor it has, wherever it sits */
-    '@plant': [A('ua_pl_flood', 'Flooding sensor', 'all', [w('Sump flood switch', 'above', null, 'any')], 'emergency', 0, 'issue', 'f_sump_flood')],
+    '@plant': [A('ua_pl_flood', 'Flooding sensor', 'all', [w('Sump flood switch', 'above', null, 'any')], 'emergency', 0, 'issue', 'f_sump_flood'),
+      { id: 'ua_pl_balance', name: 'Much less water leaves than comes in', match: 'all', when: [{ reading: 'Treated share of the inflow', calc: 'dy_share', cunit: '%', dir: 'below', limit: 70, of: 'any' }], band: 'minor', hold: 120, starts: { kind: 'issue', flowId: null } }],
   };
   const isProcess = (code) => { const c = cat(code); return !!c && c.library === 'process'; };
   /* an equipment type reads only what sits on it: its own readings, never a pipe's */

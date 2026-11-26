@@ -32,9 +32,15 @@
   const D = (id, name, unit, inputs, expr) => ({ id, name, unit, inputs: inputs.map(([reading, label]) => ({ reading, label: label || '' })), expr });
   /* what the library ships with: a first draft, to confirm */
   const SHIPPED = {
-    '@plant': [D('dy_share', 'Treated share of the inflow', '%', [['Flow', 'Flow in'], ['Flow', 'Flow out']], 'B / A × 100')],
+    '@plant': [D('dy_share', 'Treated share of the inflow', '%', [['Flow', 'Flow in'], ['Flow', 'Flow out']], 'B / A × 100'), D('dy_lost', 'Water not accounted for', 'm³/h', [['Flow', 'Flow in'], ['Flow', 'Flow out']], 'A − B')],
     '@group': [D('dy_amps', 'Combined motor current', 'A', [['Motor current', 'First'], ['Motor current', 'Second']], 'A + B')],
     equalization: [D('dy_spare', 'Spare room in the tank', '%', [['Level', '']], '100 − A')],
+    /* 27 Nov: values that need two sensors on pipes of the same unit process */
+    media_filtration: [D('dy_mf_drop', 'Pressure drop across the filter', 'bar', [['Inlet pressure', 'Before the filter'], ['Line pressure', 'After the filter']], 'A − B')],
+    ultrafiltration: [D('dy_uf_drop', 'Pressure drop across the skid', 'bar', [['Inlet pressure', 'Feed'], ['Line pressure', 'Permeate']], 'A − B')],
+    mbbr: [D('dy_mb_removal', 'COD removed', '%', [['Online COD', 'Inlet'], ['Online COD', 'Outlet']], '(A − B) / A × 100')],
+    activated_sludge: [D('dy_as_return', 'Return sludge ratio', '%', [['Flow', 'Return sludge'], ['Flow', 'Inflow']], 'A / B × 100')],
+    clarification: [D('dy_cl_return', 'Return sludge ratio', '%', [['Flow', 'Return sludge'], ['Flow', 'Inflow']], 'A / B × 100')],
   };
   function libStore() { const L = V().S.lib; if (!L.dyn || typeof L.dyn !== 'object') L.dyn = {}; return L.dyn; }
   const defs = (code) => clone(libStore()[code] || SHIPPED[code] || []);

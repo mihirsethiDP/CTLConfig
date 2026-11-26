@@ -344,10 +344,10 @@
     };
   }
   function nextPhaseBox(readings, alerts) {
-    const items = arr(readings).map((x) => `<li><span>${esc(x.name)}</span>${x.tag ? `<span class="mono">${esc(x.tag)}</span>` : ''}<span class="muted">${esc(x.note || 'on a connection')}</span></li>`)
-      .concat(arr(alerts).map((x) => `<li><span>Alert: ${esc(x.name)}</span><span class="muted">${esc(x.note || 'reads a connection')}</span></li>`));
+    const items = arr(readings).map((x) => `<li><span>${esc(x.name)}</span>${x.tag ? `<span class="mono">${esc(x.tag)}</span>` : ''}<span class="muted">${esc(x.note || 'on a pipe')}</span></li>`)
+      .concat(arr(alerts).map((x) => `<li><span>Alert: ${esc(x.name)}</span><span class="muted">${esc(x.note || 'reads a pipe')}</span></li>`));
     if (!items.length) return '';
-    return card({ title: H(`On pipes ${chipNamed('next')}`), sub: 'Readings on pipes and lines between equipment. An alert on this equipment does not read them: an alert across the unit process does.', body: `<ul class="o-np">${items.join('')}</ul>`, tone: 'quiet' });
+    return card({ title: H(`Sensors on pipes ${chipNamed('next')}`), sub: 'Flow meters, pressure gauges and analysers on pipes. They take part in the unit process: alerts across it, calculated values, condition-based tasks and calibration read them. An alert on one piece of equipment does not.', body: `<ul class="o-np">${items.join('')}</ul>`, tone: 'quiet' });
   }
 
   /* ── the object page ─────────────────────────────────────────────────────────────────────────────────── */

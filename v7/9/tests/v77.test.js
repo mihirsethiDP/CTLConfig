@@ -12,7 +12,7 @@ g.localStorage = { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem
 const el = () => ({ classList: { toggle() {}, add() {}, remove() {} }, setAttribute() {}, removeAttribute() {}, addEventListener() {}, appendChild() {}, remove() {}, querySelector: () => null, querySelectorAll: () => [], style: {}, dataset: {}, innerHTML: '' });
 g.document = { querySelector: () => null, querySelectorAll: () => [], createElement: el, body: el(), onkeydown: null };
 g.location = { hash: '#/plants', href: 'http://localhost/prototype.html#/plants' }; g.scrollTo = () => {}; g.Blob = g.Blob || function Blob() {}; if (!g.URL) g.URL = {};
-for (const f of ['data.js', 'layout-digitalpaani.js', 'catalogue.js', 'flows.js', 'rca.js', 'app.js', 'runtime.js', 'structure73.js', 'nodes73.js', 'core7.js', 'calls73.js', 'decisions7.js', 'shadow77.js', 'lang77.js', 'libadd78.js', 'libtrig78.js', 'libflow7.js', 'ovx78.js', 'upalert78.js', 'crit78.js', 'dyn78.js', 'sev78.js', 'own79.js', 'cal78.js', 'guide79.js', 'aid79.js']) vm.runInThisContext(fs.readFileSync(path.join(A, f), 'utf8'), { filename: f });
+for (const f of ['data.js', 'layout-digitalpaani.js', 'catalogue.js', 'flows.js', 'rca.js', 'app.js', 'runtime.js', 'structure73.js', 'nodes73.js', 'uplib79.js', 'core7.js', 'calls73.js', 'decisions7.js', 'shadow77.js', 'lang77.js', 'libadd78.js', 'libtrig78.js', 'libflow7.js', 'ovx78.js', 'upalert78.js', 'crit78.js', 'dyn78.js', 'sev78.js', 'own79.js', 'cal78.js', 'guide79.js', 'aid79.js']) vm.runInThisContext(fs.readFileSync(path.join(A, f), 'utf8'), { filename: f });
 const V = g.V7; const SH = g.V7SHADOW; const LG = g.V7LANG; V.boot();
 const results = [];
 function check(area, name, ok, detail) { results.push(!!ok); if (VERBOSE || !ok) console.log(`${ok ? '  ok  ' : '  FAIL'} [${area}] ${name}${detail ? ' — ' + detail : ''}`); }
@@ -187,7 +187,7 @@ V.reset(); { const UA = g.V7UPALERT; const mo = UA.offers('manesar'); const by =
   { const G = global.V7GUIDE; const gk = V.plants().find((p) => V.state(p.key) !== 'live').key; const g0 = G.progress(gk); const lr0 = V.libraryReview(gk); const und0 = lr0.reduce((n, r) => n + r.proposals.filter((p) => !p.blockedBy && !p.decided).length, 0);
     const ua0 = UA.offers(gk).filter((o) => !o.skipped && !o.state).length;
     check('guide', 'Alerts & Tasks in three parts: every undecided line and every undecided alert across readings belongs to exactly one of the first two parts', G.parts.length === 3 && g0.process.left + g0.other.left === und0 + ua0 && g0.process.total >= g0.process.done && !('across' in g0) && G.step(gk) === (g0.process.left ? 0 : g0.other.left ? 1 : 2) && G.go(gk, 9) === 2 && G.go(gk, -2) === 0); }
-  check('process', 'no starter alert across a unit process reads one kind of reading on two lines: high and low on one reading are its own limits', V.libTypes().every((t) => UA.alerts(t.code).every((a) => new Set(a.when.map((c) => c.calc || c.reading)).size === a.when.length)) && !UA.alerts('equalization').some((a) => /pH/.test(a.name)) && V.libType('equalization').alerts.filter((a) => a.reading === 'pH').length === 2);
+  check('process', 'no starter alert across a unit process reads one kind of reading on two lines: high and low on one reading are its own limits', V.libTypes().every((t) => UA.alerts(t.code).every((a) => new Set(a.when.map((c) => c.calc || c.reading)).size === a.when.length)) && !UA.alerts('equalization').some((a) => a.when.filter((c) => c.reading === 'pH').length > 1) && V.libType('equalization').alerts.filter((a) => a.reading === 'pH').length === 2);
   check('process', 'at the plant its limit is changed, its sensors are chosen, and another reading from the unit process is added', e1.ok && ve2.own && ve2.conds.length === 3 && ve2.conds[0].limit === 80 && ve2.conds[1].use.length === 2 && UA.alerts('equalization')[0].when[0].limit === 85 && UA.alerts('equalization')[0].when.length === 2);
   check('process', 'a reading the unit process does not send cannot be added there, and a limit must fit the reading', !UA.edit('vedanta', ve.pid, { when: [{ reading: 'Flow', dir: 'below', limit: 5 }] }).ok && !UA.edit('vedanta', ve.pid, { when: [{ reading: 'Level', dir: 'above', limit: 400 }] }).ok);
   check('process', "it can go back to the library's", UA.edit('vedanta', ve.pid, null).ok && !UA.offer('vedanta', ve.pid).own && UA.offer('vedanta', ve.pid).conds.length === 2);
@@ -223,7 +223,7 @@ V.reset(); { const UA = g.V7UPALERT; const CR = g.V7CRIT; const LA = g.V7LIBADD;
 V.reset(); { const UA = g.V7UPALERT; const DY = g.V7DYN;
   const ga = UA.saveAlert('@group', { name: 'Both of the set stopped', match: 'all', when: [{ reading: 'Trip contact', dir: 'above', limit: null, of: 'all' }], band: 'major', hold: 5, starts: { kind: 'issue' } });
   const pa = UA.saveAlert('@plant', { name: 'Low pressure with a pump on', match: 'all', when: [{ reading: 'Line pressure', dir: 'below', limit: 1 }, { reading: 'Motor current', dir: 'above', limit: 1 }], band: 'major', hold: 5, starts: { kind: 'issue' } });
-  const go = UA.offers('manesar').filter((o) => o.sk === 'group'); const po = UA.offers('manesar').find((o) => o.sk === 'plant' && o.name === 'Low pressure with a pump on');
+  const go = UA.offers('manesar').filter((o) => o.sk === 'group' && o.name === 'Both of the set stopped'); const po = UA.offers('manesar').find((o) => o.sk === 'plant' && o.name === 'Low pressure with a pump on');
   check('levels', 'an alert is written for every control group, and each reads only its own members', ga.ok && go.length === 1 && go[0].upTag === 'Air Blowers' && go[0].conds[0].found.length >= 1 && go[0].conds[0].found.every((x) => ['BL-1', 'BL-2'].includes(x.eqTag)));
   check('levels', 'an alert is written for the plant as a whole, and may read any sensor there', pa.ok && !!po && po.conds[0].found.length >= 2 && po.conds[1].found.length >= 1);
   check('levels', 'with several sensors of a kind it waits for a person to choose', po.choose && !UA.decide('manesar', po.pid, 'applied').ok && po.conds[0].choose);
@@ -239,7 +239,7 @@ V.reset(); { const UA = g.V7UPALERT; const DY = g.V7DYN;
   check('calculated', 'once chosen it is worked out on the latest readings, and it is in use only while an alert watches it', !o2.choose && o2.value === Math.round((o1.inputs[0].found[0].v - o1.inputs[1].found[1].v) * 100) / 100 && (() => { const w = UA.saveOwn('manesar', '@plant', { name: 'Gap too wide', when: [{ calc: d1.def.id, dir: 'above', limit: 1e9 }], band: 'minor', hold: 5, starts: { kind: 'issue', flowId: null }, why: 'test' }); const seen = w.ok && DY.watchersOf(UA.offers('manesar'), DY.offer('manesar', o1.pid)).length === 1; return seen && !DY.removeDef('@plant', d1.def.id).ok && UA.removeOwn('manesar', w.pid).ok && DY.watchersOf(UA.offers('manesar'), DY.offer('manesar', o1.pid)).length === 0 && DY.removeDef('@plant', d1.def.id).ok; })());
   const bl = DY.offers('manesar').filter((o) => o.def.name === 'Half load');
   check('calculated', 'an equipment type\'s value is offered per piece of equipment; one with a single sensor needs no choosing', bl.length === 2 && bl.some((o) => !o.choose && !o.missing.length && o.value != null));
-  V.reset(); check('calculated', 'a reset puts it back', UA.alerts('@group').length === 0 && UA.alerts('@plant').length === 1 && UA.alerts('@plant')[0].id === 'ua_pl_flood' && !DY.defs('@plant').some((d) => d.name === 'Pressure gap') && UA.offers('manesar').every((o) => !o.sk || o.alert.id === 'ua_pl_flood')); }
+  V.reset(); check('calculated', 'a reset puts it back', UA.alerts('@group').every((a) => /^ua_cg_/.test(a.id)) && UA.alerts('@plant').length === 2 && UA.alerts('@plant')[0].id === 'ua_pl_flood' && !DY.defs('@plant').some((d) => d.name === 'Pressure gap') && UA.offers('manesar').every((o) => !o.sk || /^ua_(pl|cg)_/.test(o.alert.id))); }
 
 /* a calculated value inside an alert's condition */
 V.reset(); { const UA = g.V7UPALERT; const DY = g.V7DYN;
@@ -380,6 +380,27 @@ V.reset(); { const LA = g.V7LIBADD; const r = LA.addTask('tube_settling', { name
   const names = lr.map((x) => x.proposals.map((p) => p.name)); const dup = names.some((ns) => new Set(ns).size !== ns.length);
   check('qa', 'a task added to a unit-process type is offered on each such unit process at a plant, once, and no line is listed twice', r.ok && rows.length >= 1 && rows.every((x) => /^TS-/.test(x.tag)) && !!p0 && p0.upTask && !dup);
   check('qa', 'it is accepted like any other task', !!p0 && V.decide('digitalpaani', p0.pid, 'accept').ok && V.libraryReview('digitalpaani').find((x) => x.eqId === rows[0].eqId).proposals.find((p) => p.pid === p0.pid).decided === 'accepted'); }
+V.reset();
+
+/* 27 Nov: the unit-process library, enriched now that a sensor on a pipe takes part in its unit process */
+V.reset(); { const UA = g.V7UPALERT; const DY = g.V7DYN; const R = g.READINGS; const flows = g.CTL.S.lib.flows; const procs = V.libTypes().filter((t) => t.library !== 'equipment').map((t) => t.code).concat(['@group', '@plant']);
+  const all = [].concat(...procs.map((c) => UA.alerts(c).map((a) => ({ c, a })))); const bad = [];
+  all.forEach(({ c, a }) => { const f = a.starts.flowId ? flows.find((x) => x.id === a.starts.flowId) : null;
+    if (a.starts.kind !== 'issue' && !UA.flowFits(a.starts.kind, f)) bad.push(`${c}/${a.id}: no flow for its ${a.starts.kind}`);
+    if (a.starts.kind === 'issue' && a.starts.flowId && !UA.flowFits('issue', f)) bad.push(`${c}/${a.id}: not a diagnostic`);
+    if (a.band === 'emergency' && a.starts.kind !== 'issue') bad.push(`${c}/${a.id}: an Emergency that is not an issue`);
+    a.when.forEach((w) => { if (w.calc) { if (!DY.defs(c).some((d) => d.id === w.calc)) bad.push(`${c}/${a.id}: no such calculated value`); return; } const r = R[w.reading]; if (!r) { bad.push(`${c}/${a.id}: no reading ${w.reading}`); return; } if (r.kind === 'meter') bad.push(`${c}/${a.id}: a counter`); if (r.kind !== 'status' && !(w.limit >= r.valid[0] && w.limit <= r.valid[1])) bad.push(`${c}/${a.id}: ${w.reading} ${w.limit} is outside its range`); }); });
+  if (bad.length) console.log('   ' + bad.join('\n   '));
+  const ids = procs.every((c) => new Set(UA.alerts(c).map((a) => a.id)).size === UA.alerts(c).length && new Set(UA.alerts(c).map((a) => a.name)).size === UA.alerts(c).length);
+  const withAny = procs.filter((c) => UA.alerts(c).length).length; const onPipe = all.filter(({ a }) => a.when.some((w) => !w.calc && R[w.reading] && R[w.reading].where === 'connection')).length;
+  const kinds = { issue: 0, task: 0, calibration: 0 }; all.forEach(({ a }) => { kinds[a.starts.kind]++; });
+  check('enrich', 'every starter alert across readings is sound: its readings exist, its limits are in range, a task or calibration has a flow that fits, an Emergency opens an issue', bad.length === 0 && ids);
+  check('enrich', 'the unit-process library is rich: most types carry alerts, most alerts read a sensor on a pipe, and all three outcomes are used', withAny >= 38 && all.length >= 85 && onPipe >= 60 && kinds.issue >= 40 && kinds.task >= 20 && kinds.calibration >= 5);
+  const dOk = procs.every((c) => DY.defs(c).every((d) => !DY.compile(d.expr, d.inputs.length).error && d.inputs.every((q) => !!R[q.reading])));
+  check('enrich', 'calculated values that need two sensors of one purpose are shipped and compile', dOk && DY.defs('mbbr').some((d) => d.inputs.length === 2 && d.inputs[0].reading === d.inputs[1].reading) && DY.defs('media_filtration').length === 1);
+  const UL = g.V7UPLIB; check('enrich', 'each unit-process type names the sensors on pipes that take part in it, and every pipe purpose an alert reads is named on its type', !!UL && UL.pipes('equalization').some((x) => x.name === 'Flow') && UL.pipes('mbbr').some((x) => x.name === 'Line pressure') && all.every(({ c, a }) => c[0] === '@' || a.when.every((w) => w.calc || !R[w.reading] || R[w.reading].where !== 'connection' || UL.pipes(c).some((x) => x.name === w.reading))));
+  const mo = UA.offers('manesar'); check('enrich', 'at a plant the new alerts are offered where the sensors are, and skipped with the missing reading named where they are not', mo.some((o) => /^ua_(noflow|dry|eq_block)/.test(o.alert.id)) && mo.filter((o) => o.skipped).every((o) => o.missing.length > 0) && mo.some((o) => !o.skipped && o.onPipe));
+}
 V.reset();
 
 const bad = results.filter((x) => !x).length;
