@@ -1,8 +1,11 @@
-/* v7/9 · uplib79.js — the sensors on pipes that take part in each unit-process type.
+/* v7/9 · uplib79.js — the sensors on pipes that take part in each type, as readings of that type.
    27 Nov. A flow meter, a pressure gauge or an analyser on a pipe is not on any piece of equipment, but it takes part in the unit
    process the pipe belongs to. The library names them per type, so alerts across the unit process, calculated values, condition-based
    tasks and calibration can be written with them before any plant exists. Each plant then puts its own sensor tags to them.
-   window.V7UPLIB = { pipes(code) → [{ name, note }], all() } */
+   28 Nov (decided): a sensor on a pipe takes limits and times directly, like a sensor on equipment. So a pipe sensor is a reading of
+   its type with its own limits sheet; the limits a type had "waiting" for its pipes are now real limits; and a plant's pipe sensor
+   is an ordinary reading that carries "On a pipe". A condition across the unit process is for what needs more than one sensor.
+   window.V7UPLIB = { pipes(code) → [{ name, note }], isPipe(code, reading), added } */
 (function () {
   'use strict';
   const W = window; const BY = W.CATALOGUE_BY_CODE || {}; const R = W.READINGS || {};
@@ -33,6 +36,35 @@
   let n = 0;
   Object.keys(P).forEach((code) => { const c = BY[code]; if (!c) return; c.nextPhase = c.nextPhase || { readings: [], alerts: [], work: [] }; c.nextPhase.readings = c.nextPhase.readings || [];
     P[code].forEach(([name, note]) => { if (!R[name] || c.nextPhase.readings.some((x) => x.name === name)) return; c.nextPhase.readings.push({ name, note }); n++; }); });
-  const pipes = (code) => { const c = BY[code]; return c && c.nextPhase ? (c.nextPhase.readings || []).map((x) => ({ name: x.name, note: x.note || '' })) : []; };
-  W.V7UPLIB = { pipes, added: n };
+
+  /* 28 Nov: every type's pipe sensors become readings of the type, and the limits it had waiting for them become its limits */
+  const sets = (W.SEED && W.SEED.standardSets) || []; const PIPES = {};
+  const lim = (name, sensorKind, direction, limits) => ({ name, sensorKind, direction, limits, pipe: true });
+  /* starter limits for pipe sensors of unit-process types: a first draft, to confirm */
+  const START = {
+    activated_sludge: [lim('Air header pressure low', 'Line pressure', 'below', { minor: 0.3, major: 0.2 })], sbr: [lim('Air header pressure low', 'Line pressure', 'below', { minor: 0.3, major: 0.2 })],
+    cass: [lim('Air header pressure low', 'Line pressure', 'below', { minor: 0.3, major: 0.2 })], mbbr: [lim('Air header pressure low', 'Line pressure', 'below', { minor: 0.3, major: 0.2 })],
+    equalization: [lim('Discharge pressure high', 'Discharge pressure', 'above', { minor: 4, major: 5 })], collection: [lim('Discharge pressure high', 'Discharge pressure', 'above', { minor: 4, major: 5 })],
+    filter_feed: [lim('Discharge pressure high', 'Discharge pressure', 'above', { minor: 4, major: 5 })],
+    media_filtration: [lim('Pressure drop high', 'Differential pressure', 'above', { minor: 0.8, major: 1.2 })],
+    mbr: [lim('Trans-membrane pressure high', 'Trans-membrane pressure', 'above', { minor: 0.4, major: 0.6 })], membrane_filtration: [lim('Trans-membrane pressure high', 'Trans-membrane pressure', 'above', { minor: 0.4, major: 0.6 })],
+    microfiltration: [lim('Trans-membrane pressure high', 'Trans-membrane pressure', 'above', { minor: 0.6, major: 0.8 })], ultrafiltration: [lim('Trans-membrane pressure high', 'Trans-membrane pressure', 'above', { minor: 0.6, major: 0.8 })],
+    nanofiltration: [lim('Permeate conductivity high', 'Permeate conductivity', 'above', { minor: 300, major: 500 })], ro_desalination: [lim('Permeate conductivity high', 'Permeate conductivity', 'above', { minor: 300, major: 500 })],
+    treated_water: [lim('Residual chlorine low', 'Residual chlorine', 'below', { minor: 0.2 })],
+    dissolved_air_flotation: [lim('Saturator pressure low', 'Line pressure', 'below', { minor: 4, major: 3.5 })], daf_thickening: [lim('Saturator pressure low', 'Line pressure', 'below', { minor: 4, major: 3.5 })],
+    softening: [lim('Outlet hardness high', 'Outlet hardness', 'above', { minor: 50, major: 100 })], cooling: [lim('Cooling water hot', 'Cooling water temperature', 'above', { minor: 35, major: 40 })],
+  };
+  let promoted = 0; let limits = 0;
+  Object.keys(BY).forEach((code) => { const c = BY[code]; const np = c && c.nextPhase; if (!np || !Array.isArray(c.sensors)) return;
+    const list = (np.readings || []).filter((x) => R[x.name]); PIPES[code] = list.map((x) => ({ name: x.name, note: x.note || 'on a pipe' }));
+    list.forEach((x) => { const r = R[x.name]; if (c.sensors.some((s) => s.name === x.name)) return; c.sensors.push({ name: x.name, tag: r.tag, unit: r.unit, kind: r.kind, valid: (r.valid || [0, 1]).slice(), direction: r.direction || null, reading: r.valid ? (r.valid[0] + r.valid[1]) / 2 : 0, pipe: true, note: x.note || 'on a pipe' }); promoted++; });
+    np.readings = (np.readings || []).filter((x) => !R[x.name]);
+    const st = sets.find((t) => t.type === c.type); if (!st) return; const has = (k, d) => st.alerts.some((a) => a.sensorKind === k && a.direction === d);
+    const keep = []; (np.alerts || []).forEach((a) => { if (a.limits && a.direction && c.sensors.some((s) => s.name === a.reading) && !has(a.reading, a.direction)) { st.alerts.push({ name: a.name, sensorKind: a.reading, direction: a.direction, limits: { ...a.limits }, pipe: true, ...(a.flow ? { flow: a.flow } : {}), ...(a.cause ? { cause: a.cause } : {}) }); limits++; } else if (!(a.limits && a.direction && has(a.reading, a.direction))) keep.push(a); }); np.alerts = keep;
+    (START[code] || []).forEach((a) => { if (c.sensors.some((s) => s.name === a.sensorKind) && !has(a.sensorKind, a.direction) && !st.alerts.some((y) => y.name === a.name)) { st.alerts.push({ ...a, limits: { ...a.limits } }); limits++; } }); });
+  /* the sample plants: a sensor marked as waiting on a pipe is an ordinary reading that sits on a pipe */
+  (function walk(o, d) { if (!o || typeof o !== 'object' || d > 6) return; if (Array.isArray(o)) { o.forEach((x) => walk(x, d + 1)); return; } if (o.nextPhase === true && typeof o.on === 'string' && R[o.name] && R[o.name].where === 'connection') { o.onPipe = true; delete o.nextPhase; } Object.keys(o).forEach((k) => { if (k !== 'standardSets' && k !== 'flows' && k !== 'causes') walk(o[k], d + 1); }); })(W.SEED, 0);
+  const pipes = (code) => (PIPES[code] || []).slice();
+  const isPipe = (code, reading) => (PIPES[code] || []).some((x) => x.name === reading);
+  W.V7UPLIB = { pipes, isPipe, added: n, promoted, limits };
 })();

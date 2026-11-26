@@ -181,7 +181,7 @@
   };
   const isProcess = (code) => { const c = cat(code); return !!c && c.library === 'process'; };
   /* an equipment type reads only what sits on it: its own readings, never a pipe's */
-  const ownReadings = (code) => arr((cat(code) || {}).sensors).filter((s) => s.kind !== 'meter' && RD(s.name) && RD(s.name).kind !== 'meter').map((s) => s.name);
+  const ownReadings = (code) => arr((cat(code) || {}).sensors).filter((s) => !s.pipe && s.kind !== 'meter' && RD(s.name) && RD(s.name).kind !== 'meter').map((s) => s.name);
   function libStore() { const L = V().S.lib; if (!L.upAlerts || typeof L.upAlerts !== 'object') L.upAlerts = {}; return L.upAlerts; }
   function alerts(code) { const st = libStore(); const list = clone(st[code] || arr(SHIPPED[code]).map((a) => ({ ...a, starts: { kind: a.starts.kind, flowId: flowById(a.starts.flowId) ? a.starts.flowId : null } })));
     if (list.some((a) => a.when.some((c) => c.calc))) { const ds = calcsOf(code); list.forEach((a) => a.when.forEach((c) => { const d = c.calc ? ds.find((q) => q.id === c.calc) : null; if (d) { c.reading = d.name; c.cunit = d.unit || ''; } })); }
@@ -235,9 +235,9 @@
   const subjTypes = (key, id) => { const u = upOf(key, id); const e = eqsOf(key).find((x) => x.id === id); return [u && u.typeId, e && e.code, cgs(key).some((c) => c.id === id) && '@group', id === '@plant' && '@plant'].filter(Boolean); };
   /* one piece of equipment: the sensors on it, never one on a pipe */
   function scopeEq(key, eqId) { let ss = []; try { ss = arr(V().sensors(key)); } catch (e) { ss = []; }
-    return ss.filter((s) => s.eqId === eqId && !s.nextPhase && (RD(s.name) || {}).where !== 'connection').map((s) => ({ id: s.id, name: s.name, tag: s.tag, eqTag: s.eqTag, unit: s.unit, kind: s.kind, onPipe: false, where: '', v: s.latest ? s.latest.v : null })); }
+    return ss.filter((s) => s.eqId === eqId && !s.nextPhase && !s.onPipe && (RD(s.name) || {}).where !== 'connection').map((s) => ({ id: s.id, name: s.name, tag: s.tag, eqTag: s.eqTag, unit: s.unit, kind: s.kind, onPipe: false, where: '', v: s.latest ? s.latest.v : null })); }
   const cgs = (key) => { try { return arr(V().structure(key).cgs); } catch (e) { return []; } };
-  const sMap = (s) => ({ id: s.id, name: s.name, tag: s.tag, eqTag: s.eqTag, unit: s.unit, kind: s.kind, onPipe: !!s.nextPhase || (RD(s.name) || {}).where === 'connection', where: s.nextPhaseNote || '', v: s.latest ? s.latest.v : null });
+  const sMap = (s) => ({ id: s.id, name: s.name, tag: s.tag, eqTag: s.eqTag, unit: s.unit, kind: s.kind, onPipe: !!s.onPipe || !!s.nextPhase || (RD(s.name) || {}).where === 'connection', where: s.pipeNote || s.nextPhaseNote || '', v: s.latest ? s.latest.v : null });
   /* the sensors a level may read: only the ones inside it. sk: undefined = unit process, 'eq', 'group', 'plant' */
   function scopeAny(key, id, sk) { if (sk === 'eq') return scopeEq(key, id); if (!sk) return scope(key, id); let ss = []; try { ss = arr(V().sensors(key)); } catch (e) { ss = []; } if (sk === 'plant') return ss.map(sMap); const c = cgs(key).find((x) => x.id === id); return c ? ss.filter((x) => c.memberIds.includes(x.eqId)).map(sMap) : []; }
   function subjects(key) {
@@ -248,7 +248,7 @@
   }
   function scope(key, upId) {
     const u = upOf(key, upId); if (!u) return []; const ids = [u.id].concat(arr(u.members).map((m) => m.eqId)); let ss = []; try { ss = arr(V().sensors(key)); } catch (e) { ss = []; }
-    return ss.filter((s) => ids.includes(s.eqId)).map((s) => ({ id: s.id, name: s.name, tag: s.tag, eqTag: s.eqTag, unit: s.unit, kind: s.kind, onPipe: !!s.nextPhase || (RD(s.name) || {}).where === 'connection', where: s.nextPhaseNote || '', v: s.latest ? s.latest.v : null }));
+    return ss.filter((s) => ids.includes(s.eqId)).map((s) => ({ id: s.id, name: s.name, tag: s.tag, eqTag: s.eqTag, unit: s.unit, kind: s.kind, onPipe: !!s.onPipe || !!s.nextPhase || (RD(s.name) || {}).where === 'connection', where: s.pipeNote || s.nextPhaseNote || '', v: s.latest ? s.latest.v : null }));
   }
   const passes = (v, c) => (v == null ? false : (RD(c.reading) || {}).kind === 'status' ? (c.dir === 'below' ? +v === 0 : +v === 1) : c.dir === 'below' ? v < c.limit : v > c.limit);
   function offerOf(key, u, al, sc) {

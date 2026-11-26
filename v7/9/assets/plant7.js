@@ -551,7 +551,7 @@
         body: groups.length ? groups.map((g) => scadaGroup(key, g, few || q.type === g.typeName)).join('') : empty('the Visualization sent no equipment for this plant.'),
       }));
       if (arr(sr.nextPhase).length) {
-        parts.push(note(`<b>On pipes:</b> readings on pipes between equipment are read by alerts across a unit process, not by an alert on one piece of equipment. The Visualization sends ${pl(sr.nextPhase.length, 'of them', 'of them')}: ${esc(shortList(sr.nextPhase.map((s) => `${s.name}${s.tag ? ` (${s.tag})` : ''}${s.eqTag ? ` near ${s.eqTag}` : ''}`), 5))}.`, 'next'));
+        parts.push(note(`<b>On pipes:</b> a sensor on a pipe takes limits like any other reading, and takes part in its unit process. The Visualization sends ${pl(sr.nextPhase.length, 'of them', 'of them')}: ${esc(shortList(sr.nextPhase.map((s) => `${s.name}${s.tag ? ` (${s.tag})` : ''}${s.eqTag ? ` near ${s.eqTag}` : ''}`), 5))}.`, 'next'));
       }
       if (!live) {
         /* v7/5: everything that was read, on one screen: the equipment by type, then how it is grouped */
@@ -905,7 +905,7 @@
       /* v7: the chip, this filter and the Readiness gap all use core's one test (manual and lab readings included) */
       const noLim = new Set(v.noLimitsYet ? rs.filter((r) => v.noLimitsYet(key, r)).map((r) => r.id) : arr((arr(cl.gaps).find((g) => g.id === 'nolimits') || {}).items).map((x) => x.sensorId));
       const show = ['all', 'nolimits', 'manual', 'next'].includes(q.show) ? q.show : 'all';
-      const keep = { all: () => true, nolimits: (r) => noLim.has(r.id), manual: (r) => r.kind === 'manual', next: (r) => r.nextPhase };
+      const keep = { all: () => true, nolimits: (r) => noLim.has(r.id), manual: (r) => r.kind === 'manual', next: (r) => r.nextPhase || r.onPipe };
       const query = SEARCH[`readings:${key}`] || '';
       const eqById = {}; eqs.forEach((e) => { eqById[e.id] = e; });
       const order = eqs.map((e) => e.id).concat([null]);
@@ -926,7 +926,7 @@
             _href: href,
             name: `${href ? `<a href="${esc(href)}">${esc(r.name)}</a>` : esc(r.name)}${r.tag ? `<div class="p7-sub mono">${esc(r.tag)}</div>` : ''}`,
             kind, now: nowV,
-            limits: H(`${lim.html || ''}${limitsBtn(key, r, lim)}` || '<span class="muted">—</span>'),
+            limits: H(`${r.onPipe ? `<div class="p7-pipe">${chip('On a pipe', { tone: 'next', title: r.pipeNote ? `It sits ${r.pipeNote}. It takes limits like any other reading` : 'It sits on a pipe, not on the equipment. It takes limits like any other reading' })}${r.pipeNote ? ` <span class="p7-sub">${esc(r.pipeNote)}</span>` : ''}</div>` : ''}${lim.html || ''}${limitsBtn(key, r, lim)}` || '<span class="muted">—</span>'),
             src: (v.noLimitsYet ? v.noLimitsYet(key, r) : lim.none) ? chip('No limits yet', { tone: 'none' }) : lim.chips || '<span class="muted">—</span>',
             alert: r.nextPhase || !r.takesLimits ? '<span class="muted">—</span>' : alertHtml,
             _cls: r.nextPhase ? 'p7-quiet' : '',
@@ -950,10 +950,10 @@
         if (idle.length) { const kid = `rdq:${key}`; blocks.push(act.length || idle.length > 3 ? `<details class="p7-rquiet" data-keep="${esc(kid)}"${KP.open(kid, false)}><summary>${pieces(idle.length)} with nothing to set: ON or OFF readings and counters</summary>${idle.map((g) => g.html(false)).join('')}</details>` : idle.map((g) => g.html(true)).join('')); }
       }
       const n = (f) => rs.filter(f).length;
-      const nScada = n((r) => r.kind !== 'manual' && !r.nextPhase); const nMan = n((r) => r.kind === 'manual'); const nNext = n((r) => r.nextPhase);
+      const nScada = n((r) => r.kind !== 'manual' && !r.nextPhase); const nMan = n((r) => r.kind === 'manual'); const nNext = n((r) => r.onPipe);
       const parts = [];
-      parts.push(`<p class="lead">${pl(nScada, 'reading')} from the Visualization${nNext ? `, plus ${nNext} on pipes between equipment` : ''}${nMan ? `${nNext ? ',' : ''} and ${nMan} manual or lab ${nMan === 1 ? 'reading' : 'readings'}` : ''}, grouped by equipment.</p>`);
-      parts.push(`<div class="p7-tools">${filters([{ label: 'All', href: `${b}/readings`, on: show === 'all', count: rs.length }, { label: 'No limits yet', href: `${b}/readings?show=nolimits`, on: show === 'nolimits', count: noLim.size }, { label: 'Manual and lab', href: `${b}/readings?show=manual`, on: show === 'manual', count: nMan }, { label: 'On pipes', href: `${b}/readings?show=next`, on: show === 'next', count: n((r) => r.nextPhase) }].filter((f) => f.on || f.count || f.label === 'All'))}${searchBox('readings', key, 'Find by reading, tag or equipment')}</div>`);
+      parts.push(`<p class="lead">${pl(nScada, 'reading')} from the Visualization${nNext ? `, ${nNext} of them on pipes` : ''}${nMan ? `${nNext ? ',' : ''} and ${nMan} manual or lab ${nMan === 1 ? 'reading' : 'readings'}` : ''}, grouped by equipment.</p>`);
+      parts.push(`<div class="p7-tools">${filters([{ label: 'All', href: `${b}/readings`, on: show === 'all', count: rs.length }, { label: 'No limits yet', href: `${b}/readings?show=nolimits`, on: show === 'nolimits', count: noLim.size }, { label: 'Manual and lab', href: `${b}/readings?show=manual`, on: show === 'manual', count: nMan }, { label: 'On pipes', href: `${b}/readings?show=next`, on: show === 'next', count: n((r) => r.nextPhase || r.onPipe) }].filter((f) => f.on || f.count || f.label === 'All'))}${searchBox('readings', key, 'Find by reading, tag or equipment')}</div>`);
       parts.push(blocks.length ? card({ body: blocks.join(''), actions: [U.sampleTag()], title: 'Every reading', sub: setup ? 'One line per piece of equipment, the ones that still need limits first. Open a line for its readings. Values under "Now" are sample readings.' : 'Values under "Now" are sample readings.' }) : empty(query ? H(`Nothing matches "${esc(query)}".`) : show === 'nolimits' ? 'Every reading that takes limits has them.' : 'No readings here.', show !== 'all' ? btn('Show all', { href: `${b}/readings` }) : ''));
       return frame(key, 'readings', parts.join(''));
     });

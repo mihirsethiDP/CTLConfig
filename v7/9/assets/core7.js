@@ -712,7 +712,7 @@ window.V7 = (function () {
   const eq = (key, id) => { const e = eqRaw(key, id); return e ? eqView(key, e) : null; };
   function sensorView(key, s) {
     const e = homeOf(key, s); let dirs = s.kind === 'meter' ? [] : dirsOf(key, s.id); if (s.kind === 'status' && !dirs.some((dr) => hasAny(bandsInfo(key, s.id, dr).bands))) dirs = []; const np = s.nextPhase ? withPlant(key, () => (C.nextPhaseOf(e) || []).find((x) => x.sensor === s.id)) : null;
-    return { id: s.id, name: s.name, tag: s.tag, unit: s.unit, kind: s.kind, valid: s.valid.slice(), reportEvery: s.reportEvery || Math.round(POLL / MIN), eqId: e ? e.id : null, eqTag: e ? e.tag : null, nextPhase: !!s.nextPhase, nextPhaseNote: s.nextPhase ? ((np && np.note) || 'on a pipe: read by the alerts across its unit process') : null, dirs, primaryDir: s.nextPhase || !dirs.length ? null : primaryDir(key, s.id), takesLimits: !s.nextPhase && s.kind !== 'meter', alertIds: dOf(key).alerts.filter((a) => a.sensor === s.id).map((a) => a.id), source: 'Visualization', latest: latest(key, s.id), sample: true };
+    return { id: s.id, name: s.name, tag: s.tag, unit: s.unit, kind: s.kind, valid: s.valid.slice(), reportEvery: s.reportEvery || Math.round(POLL / MIN), eqId: e ? e.id : null, eqTag: e ? e.tag : null, onPipe: !!s.onPipe || (!s.nextPhase && ((window.READINGS || {})[s.name] || {}).where === 'connection'), pipeNote: (() => { const c9 = e ? catByType(e.type) : null; const x9 = c9 ? (c9.sensors || []).find((q) => q.name === s.name && q.pipe) : null; return x9 ? x9.note : ''; })(), nextPhase: !!s.nextPhase, nextPhaseNote: s.nextPhase ? ((np && np.note) || 'on a pipe: read by the alerts across its unit process') : null, dirs, primaryDir: s.nextPhase || !dirs.length ? null : primaryDir(key, s.id), takesLimits: !s.nextPhase && s.kind !== 'meter', alertIds: dOf(key).alerts.filter((a) => a.sensor === s.id).map((a) => a.id), source: 'Visualization', latest: latest(key, s.id), sample: true };
   }
   const sensors = (key, eqId) => cached(`sens:${key}:${eqId || ''}`, () => (dOf(key) ? dOf(key).sensors.filter((s) => !eqId || s.on === 'eq:' + eqId).map((s) => sensorView(key, s)) : []));
   function readings(key, opts) {
@@ -1253,7 +1253,7 @@ window.V7 = (function () {
         groups: groups.map((g) => ({ typeName: g.type, code: g.code, count: g.eqs.length, accepted: !!P.scada.accepted[g.type], acceptedAt: P.scada.accepted[g.type] || null, inDb: !!g.entry && !g.eqs.some((e) => e.notInDb), equipment: g.eqs.map(view) })),
         notInDb: d.equipment.filter((e) => e.notInDb).map((e) => ({ eqId: e.id, tag: e.tag, name: e.name, code: e.code, stored: e.dbType })),
         typeDiffers: d.equipment.filter((e) => e.code && e.dbType && e.code !== e.dbType && !e.offer && !e.subtype).map((e) => ({ eqId: e.id, tag: e.tag, name: e.name, drawn: C.dbName(e.code), stored: e.type })),
-        nextPhase: d.sensors.filter((s) => s.nextPhase).map((s) => { const e = homeOf(key, s); return { sensorId: s.id, name: s.name, tag: s.tag, eqId: e ? e.id : null, eqTag: e ? e.tag : null }; }),
+        nextPhase: d.sensors.filter((s) => s.nextPhase || s.onPipe).map((s) => { const e = homeOf(key, s); return { sensorId: s.id, name: s.name, tag: s.tag, eqId: e ? e.id : null, eqTag: e ? e.tag : null }; }),
         elements: withPlant(key, () => C.drawingElements()).reduce((n, g) => n + g.count, 0),
       };
     });
@@ -1305,7 +1305,7 @@ window.V7 = (function () {
   }
   function pipeCalMap(key) {
     return cached(`pipecal:${key}`, () => { const d = dOf(key); const H = upHomes(key); const out = {};
-      d.sensors.forEach((x) => { const eid = String(x.on || '').replace(/^eq:/, ''); if (!eid || !d.equipment.some((e) => e.id === eid)) return; const R = (window.READINGS || {})[x.name] || {}; const pipe = !!x.nextPhase || R.where === 'connection';
+      d.sensors.forEach((x) => { const eid = String(x.on || '').replace(/^eq:/, ''); if (!eid || !d.equipment.some((e) => e.id === eid)) return; const R = (window.READINGS || {})[x.name] || {}; const pipe = !!x.onPipe || !!x.nextPhase || R.where === 'connection';
         const what = pipe && /flow|pressure|throughput/i.test(x.name) ? 'flow' : !pipe && /level/i.test(x.name) && x.kind !== 'status' ? 'level' : null; if (!what) return;
         const t = H.home[eid] || eid; (out[t] = out[t] || { flow: [], level: [] })[what].push(x.tag); });
       return out; });
@@ -1365,7 +1365,8 @@ window.V7 = (function () {
           });
           /* v7: a next-phase item set by a form answer ("Discharge pressure limits from the Maximum Head answer") is limits or a setting,
              not a task: kind 'condition' with its own label, so it never reads as work the plant will get */
-          if (it) (it.next || []).filter((n) => n.kind === 'alert' || n.kind === 'work').forEach((n) => { const fromAnswer = n.kind === 'work' && /\banswer\b/i.test(`${n.name} ${n.note || ''}`); row.proposals.push({ pid: `${e.id}|${n.kind === 'alert' ? 'alert' : 'task'}|${n.name}`, kind: n.kind === 'alert' ? 'alert' : fromAnswer ? 'condition' : 'task', kindLabel: fromAnswer ? (/\blimits\b/i.test(n.name) ? 'Limits' : 'Setting') : null, name: n.name, eqId: e.id, tag: e.tag, typeName: e.type, decided: null, detail: n.note || 'Reads a connection', blockedBy: 'Reads a pipe', nextPhase: true }); });
+          /* 28 Nov: a sensor on a pipe takes limits directly. What a type names for a pipe but gives no limits is listed only where the plant has no such sensor; where it has one, the reading itself shows "No limits yet" */
+          if (it) (it.next || []).filter((n) => (n.kind === 'alert' || n.kind === 'work') && !(n.reading && d.sensors.some((y) => y.on === 'eq:' + e.id && y.name === n.reading))).forEach((n) => { const fromAnswer = n.kind === 'work' && /\banswer\b/i.test(`${n.name} ${n.note || ''}`); row.proposals.push({ pid: `${e.id}|${n.kind === 'alert' ? 'alert' : 'task'}|${n.name}`, kind: n.kind === 'alert' ? 'alert' : fromAnswer ? 'condition' : 'task', kindLabel: fromAnswer ? (/\blimits\b/i.test(n.name) ? 'Limits' : 'Setting') : null, name: n.name, eqId: e.id, tag: e.tag, typeName: e.type, decided: null, detail: n.note || 'Reads a sensor on a pipe', blockedBy: `Needs a ${n.reading || 'pipe'} reading the Visualization doesn't send` }); });
           { const ut = upTypeSet(key, e.id); if (ut && ut.type !== e.type) (ut.set.schedules || []).filter((x) => x.workType !== 'condition' && C.cadenceOf(x) && !row.proposals.some((p) => p.name === x.name)).forEach((x) => {
               const every = C.cadenceOf(x); if (everyH(every) != null && everyH(every) < 24) return; const pid = `${e.id}|task|${x.name}`;
               if (x.workType === 'test') { const cv = testCover(key, e.id, x.name); if (cv) { if (!(row.covered || []).some((q) => q.name === x.name)) (row.covered = row.covered || []).push({ name: x.name, tag: cv.tag, reading: cv.reading }); return; } }
@@ -1805,7 +1806,7 @@ window.V7 = (function () {
   }
   function libType(code) {
     const cat = catByCode(code); if (!cat) return null; const t = setOf(cat.type) || { alerts: [], schedules: [] }; const dr = S.lib.drafts[code] || null;
-    const readingsL = cat.sensors.map((s) => { const dirs = [...new Set(t.alerts.filter((a) => a.sensorKind === s.name).map((a) => a.direction))]; if (!dirs.length) dirs.push(s.direction || 'above'); return { name: s.name, tag: s.tag, unit: s.unit, kind: s.kind, valid: s.valid, dirs: dirs.map((dir) => libLimits(cat.type, s.name, dir, { draft: !!dr })) }; });
+    const readingsL = cat.sensors.map((s) => { const dirs = [...new Set(t.alerts.filter((a) => a.sensorKind === s.name).map((a) => a.direction))]; if (!dirs.length) dirs.push(s.direction || 'above'); return { pipe: !!s.pipe, pipeNote: s.pipe ? s.note || 'on a pipe' : '', name: s.name, tag: s.tag, unit: s.unit, kind: s.kind, valid: s.valid, dirs: dirs.map((dir) => libLimits(cat.type, s.name, dir, { draft: !!dr })) }; });
     return { code, typeName: cat.type, family: familyOf(cat), archetype: cat.archetype, tier: cat.tier, version: libVersion(code), draft: dr ? libDraft(code) : null, readings: readingsL,
       alerts: t.alerts.map((a) => ({ name: a.name, reading: a.sensorKind, dir: a.direction, bands: norm4(a.limits), hold: libTiming(cat.type, a.sensorKind, a.direction, 'hold'), clear: libTiming(cat.type, a.sensorKind, a.direction, 'clear'), flowId: a.flow || null, issueTypeId: a.issue || null, nextPhase: C.onConnection(a.sensorKind) })),
       schedules: t.schedules.filter((x) => x.workType !== 'condition' && !subDaily(x)).map((x) => ({ name: x.name, workType: x.workType, workLabel: C.WT_LABEL[x.workType] || x.workType, every: libEveryOf(x), everyText: x.workType === 'condition' ? `when ${x.sensorKind} passes ${x.doWhen}` : C.every(x), draftEvery: dr && dr.schedules[x.name] ? dr.schedules[x.name] : null, draftEveryText: dr && dr.schedules[x.name] ? everyWith(x, dr.schedules[x.name]) : null, generalTaskId: x.task || null, flowId: x.flow || null })),

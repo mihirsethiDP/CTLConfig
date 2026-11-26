@@ -20,7 +20,7 @@
   function ops() { const L = V().S.lib; if (!Array.isArray(L.added)) L.added = []; return L.added; }
   function apply(o) {
     const c = cat(o.code); if (!c) return;
-    if (o.kind === 'reading') { const R = (W.READINGS || {})[o.name]; if (R && !c.sensors.some((s) => s.name === o.name)) c.sensors.push({ name: o.name, tag: R.tag, unit: R.unit, kind: R.kind, valid: arr(R.valid).slice(), direction: R.direction || null, reading: R.valid ? (R.valid[0] + R.valid[1]) / 2 : 0, added: true }); return; }
+    if (o.kind === 'reading') { const R = (W.READINGS || {})[o.name]; if (R && !c.sensors.some((s) => s.name === o.name)) c.sensors.push({ name: o.name, tag: R.tag, unit: R.unit, kind: R.kind, valid: arr(R.valid).slice(), direction: R.direction || null, reading: R.valid ? (R.valid[0] + R.valid[1]) / 2 : 0, added: true, ...(R.where === 'connection' ? { pipe: true, note: 'on a pipe' } : {}) }); return; }
     if (o.kind === 'issue') {
       const L = W.ISSUES || (W.ISSUES = []);
       if (o.existingId) { const it = L.find((i) => i.id === o.existingId); if (it && !arr(it.homeTypes).includes(c.type)) { it.homeTypes = arr(it.homeTypes).concat([c.type]); it._addedTypes = arr(it._addedTypes).concat([c.type]); } return; }
@@ -41,11 +41,11 @@
   const isAdded = (code, kind, name) => ops().some((o) => o.code === code && o.kind === kind && o.name === name);
   /* this phase: alerts read what sits on the equipment. A reading taken on a pipe or a line is not offered */
   const onEq = (n) => { const R = (W.READINGS || {})[n]; return !!R && (R.where == null || R.where === 'equipment'); };
-  function readingsFor(code) { const c = cat(code); if (!c) return []; const pipe = new Set(arr(c.nextPhase && c.nextPhase.readings).map((x) => x.name)); return Object.keys(W.READINGS || {}).filter((n) => !c.sensors.some((s) => s.name === n) && !pipe.has(n) && onEq(n)).map((n) => ({ name: n, unit: W.READINGS[n].unit, kind: W.READINGS[n].kind })).sort((a, b) => a.name.localeCompare(b.name)); }
+  function readingsFor(code) { const c = cat(code); if (!c) return []; const proc = c.library === 'process'; const pipe = new Set(arr(c.nextPhase && c.nextPhase.readings).map((x) => x.name)); return Object.keys(W.READINGS || {}).filter((n) => !c.sensors.some((s) => s.name === n) && !pipe.has(n) && (proc || onEq(n))).map((n) => ({ name: n, unit: W.READINGS[n].unit, kind: W.READINGS[n].kind })).sort((a, b) => a.name.localeCompare(b.name)); }
   function addReading(code, name) {
     const c = cat(code); if (!c) return { ok: false, error: 'No such type.' }; if (!(W.READINGS || {})[name]) return { ok: false, error: 'Choose a reading.' };
     if (c.sensors.some((s) => s.name === name)) return { ok: false, error: `${c.type} already has ${name}.` };
-    if (!onEq(name) || arr(c.nextPhase && c.nextPhase.readings).some((x) => x.name === name)) return { ok: false, error: `${name} is read on a pipe at this type: the unit process watches it, not the equipment.` };
+    if (c.library !== 'process' && (!onEq(name) || arr(c.nextPhase && c.nextPhase.readings).some((x) => x.name === name))) return { ok: false, error: `${name} is read on a pipe. Add it to the unit process the pipe belongs to.` };
     const o = { kind: 'reading', code, name }; ops().push(o); apply(o); return done(code, `Added to ${c.type}: the reading ${name}. It has no alert yet`);
   }
   function addAlert(code, a) {
@@ -121,7 +121,7 @@
     if (kind === 'reading') {
       const rs = readingsFor(code); if (!rs.length) { U.toast(`${c.type} already has every reading the database knows.`); return; }
       const KW = { process: 'measured', analytical: 'measured', status: 'on or off', meter: 'counts up', manual: 'entered by hand' };
-      U.modal({ title: `Add a reading to ${c.type}`, body: U.field({ label: 'Reading', hint: 'Readings taken on the equipment itself. A reading on a pipe is watched by the unit process, not by the equipment. The unit and range come with it.', html: `<select id="la-reading"><option value="">Choose…</option>${rs.map((r) => `<option value="${esc(r.name)}">${esc(r.name)}${r.unit ? ` (${esc(r.unit)})` : ''} · ${esc(KW[r.kind] || r.kind)}</option>`).join('')}</select>` }) + '<p class="la-n">A reading on its own does nothing. Add an alert on it next, or use it for a task that runs on its hours.</p>', foot: foot('reading', code) });
+      U.modal({ title: `Add a reading to ${c.type}`, body: U.field({ label: 'Reading', hint: c.library === 'process' ? 'A reading on the tank or the equipment of this step, or a sensor on one of its pipes. The unit and range come with it.' : 'Readings taken on the equipment itself. A sensor on a pipe is added to the unit process the pipe belongs to. The unit and range come with it.', html: `<select id="la-reading"><option value="">Choose…</option>${rs.map((r) => `<option value="${esc(r.name)}">${esc(r.name)}${r.unit ? ` (${esc(r.unit)})` : ''} · ${esc(KW[r.kind] || r.kind)}${(W.READINGS[r.name] || {}).where === 'connection' ? ' · on a pipe' : ''}</option>`).join('')}</select>` }) + '<p class="la-n">A reading on its own does nothing. Add an alert on it next, or use it for a task that runs on its hours.</p>', foot: foot('reading', code) });
       return;
     }
     if (kind === 'alert') {

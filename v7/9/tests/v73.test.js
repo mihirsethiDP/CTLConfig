@@ -59,7 +59,7 @@ const cg = V.tasks('vedanta').filter((t) => t.cg);
 check('D7', 'Vedanta: the blower changeover came round every few hours, so it is no longer a task: nothing is done more often than once a day', cg.length === 0 && V.tasks('vedanta').every((t) => t.kind === 'line' || t.intervalH >= 24), cg.map((t) => t.line).join(' | '));
 
 /* D3: nothing sent on a new plant */
-check('D3', 'Vedanta (a new plant): its pH Emergency on Wed 28 Oct opened no issue and is kept as a trial firing', V.issues('vedanta').length === 0 && V.trialStats('vedanta', 'a_3f').recorded.firings.some((f) => f.band === 'emergency' && V.fmt(f.start) === 'Wed 28 Oct, 15:10'));
+check('D3', 'Vedanta (a new plant): its pH Emergency on Wed 28 Oct opened no issue and is kept as a trial firing', V.issues('vedanta').length === 0 && V.alerts('vedanta').filter((a) => a.sensorName === 'pH').some((a) => { const ts = V.trialStats('vedanta', a.id); return !!ts && ts.recorded.firings.some((f) => f.band === 'emergency' && V.fmt(f.start) === 'Wed 28 Oct, 15:10'); }));
 check('D3', 'Manesar (Live) still opens issues', V.issues('manesar').length > 0);
 
 /* D28: a task a reading triggers sits on that reading's equipment, like the issue */

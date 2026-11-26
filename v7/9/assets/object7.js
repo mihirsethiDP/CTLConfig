@@ -336,7 +336,7 @@
     const fend = (x) => (UI.numEnd ? UI.numEnd(x, r.unit) : fv(x, r.unit, r.kind));
     const range = validFor(r) && !status && !counter ? ` · reads ${esc(fend(r.valid[0]))} to ${esc(fend(r.valid[1]))}` : '';
     return {
-      id: 'r-' + r.name, name: r.name, tag: r.tag, sub: `${status ? 'ON or OFF' : cap(r.kind || 'reading')}${unitBit}${range}`,
+      id: 'r-' + r.name, name: r.name, tag: r.tag, sub: `${status ? 'ON or OFF' : cap(r.kind || 'reading')}${unitBit}${range}${r.pipe ? ` · on a pipe${r.pipeNote && r.pipeNote !== 'on a pipe' ? ': ' + esc(r.pipeNote) : ''}` : ''}`,
       dirs: noRules || counter ? [] : dirs.map((d) => ({ dir: d.dir, bar: d.bar, line: d.line, after: d.after, act: btn(hasLimits({ bands: d.bands }) ? 'Change limits and times' : 'Set limits', { act: 'obj:limits', data: { mode: 'type', code: lt.code, reading: r.name, dir: d.dir }, small: true, kind: 'ghost', title: `Change the limits for ${r.name} ${dirWord(d.dir)}` }) })),
       extra: counter ? '<p class="o-hint">Counts up. Run-hours tasks use it; it has no limits.</p>' : noRules ? '<p class="o-hint">Reads ON or OFF and shows whether the equipment is running. It has no limits.</p>' : '',
       alerts: [].concat(...dirs.map((d) => d.al)),
@@ -347,7 +347,7 @@
     const items = arr(readings).map((x) => `<li><span>${esc(x.name)}</span>${x.tag ? `<span class="mono">${esc(x.tag)}</span>` : ''}<span class="muted">${esc(x.note || 'on a pipe')}</span></li>`)
       .concat(arr(alerts).map((x) => `<li><span>Alert: ${esc(x.name)}</span><span class="muted">${esc(x.note || 'reads a pipe')}</span></li>`));
     if (!items.length) return '';
-    return card({ title: H(`Sensors on pipes ${chipNamed('next')}`), sub: 'Flow meters, pressure gauges and analysers on pipes. They take part in the unit process: alerts across it, calculated values, condition-based tasks and calibration read them. An alert on one piece of equipment does not.', body: `<ul class="o-np">${items.join('')}</ul>`, tone: 'quiet' });
+    return card({ title: H(`On pipes, without limits yet ${chipNamed('next')}`), sub: 'Named for this type, with no limits in the library yet. A sensor on a pipe takes limits like any other reading: add an alert on it above and it works the same way.', body: `<ul class="o-np">${items.join('')}</ul>`, tone: 'quiet' });
   }
 
   /* ── the object page ─────────────────────────────────────────────────────────────────────────────────── */
