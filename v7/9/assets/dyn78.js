@@ -70,7 +70,8 @@
   function ownStore(key) { const P = V().S.plants[key]; if (!P) return {}; if (!P.ownDyn || typeof P.ownDyn !== 'object') P.ownDyn = {}; return P.ownDyn; }
   const ownDefs = (key, subjId) => arr(ownStore(key)[subjId]).map((d) => ({ ...clone(d), plantOwn: true }));
   const defsAt = (key, subjId, typeId) => defs(typeId).concat(ownDefs(key, subjId));
-  const ownPlaces = (key) => (UA() && UA().subjects ? UA().subjects(key).filter((u) => UA().scopeAny(key, u.id, u.sk).some((q) => RD(q.name))) : []);
+  const twin = (key, u) => u.sk === 'eq' && !!(UA() && UA().isTwin && UA().isTwin(key, u.id));
+  const ownPlaces = (key) => (UA() && UA().subjects ? UA().subjects(key).filter((u) => !twin(key, u) && UA().scopeAny(key, u.id, u.sk).some((q) => RD(q.name))) : []);
   function saveOwn(key, subjId, x) {
     const u = UA() && UA().subjects ? UA().subjects(key).find((q) => q.id === subjId) : null; if (!u) return { ok: false, error: 'Choose where it sits.' }; const sc = UA().scopeAny(key, u.id, u.sk); x = x || {};
     const name = String(x.name || '').trim(); if (!name) return { ok: false, error: 'Give it a name.' };
@@ -93,7 +94,7 @@
   }
   function offers(key) {
     const out = []; if (!UA() || !UA().subjects) return out;
-    UA().subjects(key).forEach((u) => { const list = defsAt(key, u.id, u.typeId); if (!list.length) return; const sc = UA().scopeAny(key, u.id, u.sk);
+    UA().subjects(key).forEach((u) => { const list = twin(key, u) ? defs(u.typeId) : defsAt(key, u.id, u.typeId); if (!list.length) return; const sc = UA().scopeAny(key, u.id, u.sk);
       list.forEach((def) => { const pid = `${u.id}|${def.id}`; const rec = plantStore(key)[pid] || {}; const picks = rec.pick || {}; const taken = new Set();
         const inputs = def.inputs.map((q, i) => { const found = sc.filter((s) => s.name === q.reading); let pk = picks[i] && found.some((s) => s.id === picks[i]) ? picks[i] : null; if (!pk && found.length === 1) pk = found[0].id; if (pk) taken.add(pk); return { letter: LET[i], reading: q.reading, label: q.label, found, pick: pk, choose: found.length > 1 && !pk }; });
         const need = {}; inputs.forEach((q) => { need[q.reading] = (need[q.reading] || 0) + 1; });

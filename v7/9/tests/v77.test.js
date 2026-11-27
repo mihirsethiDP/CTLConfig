@@ -440,6 +440,12 @@ V.reset(); { const N6 = g.V7NODES; const want = ['Preliminary', 'Primary', 'Seco
   const fams = [...new Set(V.libTypes().filter((t) => g.V7NODES.upByKey[t.code]).map((t) => t.family))];
   check('stages', 'the library lists its unit-process types under those six headings and no other, and a plant\'s unit processes carry them', fams.length === 6 && fams.every((f) => want.includes(f)) && g.V7_STAGES.filter((x) => x.key).length === 6 && Object.values(g.V7_STRUCTURE).every((st) => st.ups.every((u) => !u.stage || want.includes(u.stageLabel))));
 }
+/* 27 Nov: what a plant adds at a unit process is listed once, also where the unit process carries its tank's id */
+V.reset(); { const UA9 = g.V7UPALERT; const DY9 = g.V7DYN; const up = V.structure('vedanta').ups.find((u) => u.tag === 'EQ-1'); const places = UA9.ownPlaces('vedanta');
+  check('own', 'a place is offered once to put an alert of the plant\'s own, though its tank is also a piece of equipment', UA9.isTwin('vedanta', up.id) && places.filter((x) => x.id === up.id).length === 1 && DY9.ownPlaces('vedanta').filter((x) => x.id === up.id).length === 1);
+  const amp = UA9.scopeAny('vedanta', up.id).filter((q) => q.name === 'Motor current'); const r = UA9.saveOwn('vedanta', up.id, { name: 'Both sump pumps drawing high current', when: [{ reading: 'Motor current', dir: 'above', limit: 30, of: 'all', use: amp.slice(0, 2).map((q) => q.id) }], band: 'major', hold: 10, starts: { kind: 'issue' }, why: 'the rising main chokes here' });
+  check('own', 'one alert added there is one alert, applied, and it reads only the sensors ticked', amp.length >= 2 && r.ok && UA9.offers('vedanta').filter((o) => o.pid === r.pid).length === 1 && UA9.offer('vedanta', r.pid).state === 'applied' && UA9.offer('vedanta', r.pid).conds[0].use.length === 2 && !UA9.saveOwn('vedanta', up.id, { name: 'No reason given', when: [{ reading: 'Motor current', dir: 'above', limit: 30 }], band: 'minor', hold: 5, starts: { kind: 'issue' } }).ok);
+}
 V.reset();
 
 const bad = results.filter((x) => !x).length;

@@ -79,8 +79,8 @@
     /* the review: what the plant takes from the library, open. The card that counts lines to decide belongs to the lists, so it
        shows here only once everything is decided, when it says so and leads back to the set-up */
     sums.forEach((c) => { if (c.querySelector('[data-act="p7:lib-accept-all"]')) { c.remove(); return; } P[2].appendChild(c); }); if (sums[0] && sums[0].parentNode === P[2] && !sums[0].classList.contains('is-flat')) sums[0].open = true;
-    /* the plant's own rounds: one heading and one line, not a card around a line of the same name */
-    Array.prototype.forEach.call(lists[1].querySelectorAll(':scope > section.card.p7-type > .card-h'), (h) => h.remove()); [zRules, zOwn].forEach((z) => { if (z) P[2].appendChild(z); });
+    /* the plant's own rounds: one heading and one line, not a card around a line of the same name. A control group keeps its heading: it is the only place its name is said */
+    Array.prototype.forEach.call(lists[1].querySelectorAll(':scope > section.card.p7-type:not(.p7-cg) > .card-h'), (h) => h.remove()); [zRules, zOwn].forEach((z) => { if (z) P[2].appendChild(z); });
     /* the filters: one quiet row, with the kinds of work behind a fold */
     const tools = document.createElement('div'); tools.className = 'g9-tools'; if (filt) tools.appendChild(filt);
     if (fk) { const d = document.createElement('details'); d.className = 'g9-kind'; if (q.kind) d.open = true; d.innerHTML = `<summary>${q.kind ? 'Filtered by kind of work' : 'Filter by kind of work'}</summary>`; d.appendChild(fk); tools.appendChild(d); }

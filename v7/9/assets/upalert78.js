@@ -231,6 +231,8 @@
   const calcsAt = (key, subjId, typeId) => (W.V7DYN && W.V7DYN.defsAt ? arr(W.V7DYN.defsAt(key, subjId, typeId)) : calcsOf(typeId));
   const ups = (key) => { try { return arr(V().structure(key).ups); } catch (e) { return []; } };
   const upOf = (key, upId) => ups(key).find((u) => u.id === upId) || null;
+  /* a tank that is the centre of a unit process shares the unit process's id: what a plant adds there belongs to the unit process, once */
+  const isTwin = (key, id) => ups(key).some((u) => u.id === id);
   const eqsOf = (key) => { try { return arr(V().equipment(key)); } catch (e) { return []; } };
   const subjTypes = (key, id) => { const u = upOf(key, id); const e = eqsOf(key).find((x) => x.id === id); return [u && u.typeId, e && e.code, cgs(key).some((c) => c.id === id) && '@group', id === '@plant' && '@plant'].filter(Boolean); };
   /* one piece of equipment: the sensors on it, never one on a pipe */
@@ -269,7 +271,7 @@
   }
   function offers(key, o) {
     const out = []; ups(key).forEach((u) => { if (o && o.upId && o.upId !== u.id) return; const list = alerts(u.typeId).concat(ownOf(key, u.id)); if (!list.length) return; const sc = scope(key, u.id); list.forEach((al) => out.push(offerOf(key, u, al, sc))); });
-    eqsOf(key).forEach((e) => { if (o && o.upId && o.upId !== e.id) return; if (!e.code || isProcess(e.code)) return; const list = alerts(e.code).concat(ownOf(key, e.id)); if (!list.length) return; const sc = scopeEq(key, e.id); const u = { id: e.id, tag: e.tag, name: e.name, typeId: e.code, typeName: e.typeName }; list.forEach((al) => out.push({ ...offerOf(key, u, al, sc), eq: true, sk: 'eq' })); });
+    eqsOf(key).forEach((e) => { if (o && o.upId && o.upId !== e.id) return; if (!e.code || isProcess(e.code)) return; const list = alerts(e.code).concat(isTwin(key, e.id) ? [] : ownOf(key, e.id)); if (!list.length) return; const sc = scopeEq(key, e.id); const u = { id: e.id, tag: e.tag, name: e.name, typeId: e.code, typeName: e.typeName }; list.forEach((al) => out.push({ ...offerOf(key, u, al, sc), eq: true, sk: 'eq' })); });
     subjects(key).filter((u) => u.sk === 'group' || u.sk === 'plant').forEach((u) => { if (o && o.upId && o.upId !== u.id) return; const list = alerts(u.typeId).concat(ownOf(key, u.id)); if (!list.length) return; const sc = scopeAny(key, u.id, u.sk); list.forEach((al) => out.push({ ...offerOf(key, u, al, sc), sk: u.sk })); });
     return out;
   }
@@ -314,7 +316,7 @@
   /* an applied alert at a Live plant opens an issue when its condition holds. One at a time: it does not open again until the
      condition has cleared once. A task as the outcome is not raised here yet. */
   /* v7/9: where a plant may put an alert of its own: any place that has a reading to watch */
-  const ownPlaces = (key) => subjects(key).filter((u) => scopeAny(key, u.id, u.sk).some((s) => RD(s.name) && RD(s.name).kind !== 'meter'));
+  const ownPlaces = (key) => subjects(key).filter((u) => !(u.sk === 'eq' && isTwin(key, u.id)) && scopeAny(key, u.id, u.sk).some((s) => RD(s.name) && RD(s.name).kind !== 'meter'));
   function saveOwn(key, subjId, x) {
     const u = subjects(key).find((q) => q.id === subjId); if (!u) return { ok: false, error: 'Choose where it sits.' }; const sc = scopeAny(key, u.id, u.sk);
     const k = clean(x, (r) => sc.some((q) => q.name === r), null, calcsAt(key, u.id, u.typeId)); if (k.error) return { ok: false, error: k.error };
@@ -355,7 +357,7 @@
     if (n) { if (V().touch) V().touch(); if (V().persist) V().persist(); } return n;
   }
   const issLink = (key, o) => { const i = o.state === 'applied' ? openIssue(key, o.pid) : null; return i ? ` · <a href="#/p/${encodeURIComponent(key)}/issue/${encodeURIComponent(i.id)}">Its issue is open →</a>` : ''; };
-  W.V7UPALERT = { saveOwn, removeOwn, ownPlaces, run, isLive, alerts, saveAlert, removeAlert, offers, offer, decide, edit, pick, pickSet, subjects, scopeAny, typeOf: cat, scope, sentence, isProcess, flowFits, libBox: () => '', plantCard: () => '' };
+  W.V7UPALERT = { isTwin, saveOwn, removeOwn, ownPlaces, run, isLive, alerts, saveAlert, removeAlert, offers, offer, decide, edit, pick, pickSet, subjects, scopeAny, typeOf: cat, scope, sentence, isProcess, flowFits, libBox: () => '', plantCard: () => '' };
 
   /* ── on the page ───────────────────────────────────────────────────────────────────────────────────────── */
   const U = W.V7UI; if (!U || !U.on || typeof document === 'undefined') return;
