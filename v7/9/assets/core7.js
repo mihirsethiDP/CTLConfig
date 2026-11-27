@@ -287,6 +287,8 @@ window.V7 = (function () {
   const hasAny = (lim) => !!lim && BANDS.some((b) => lim[b] != null);
   const same = (a, b) => (a == null && b == null) || (a != null && b != null && Math.abs(a - b) < 1e-9);
   const sameEvery = (a, b) => (!a && !b) || (!!a && !!b && a.n === b.n && a.unit === b.unit);
+  /* v7/9: the name an alert takes when a reading gets its first limits. An ON/OFF tag is named after the state that fires it */
+  const newAlertName = (reading, dir) => { const r = (C.readingOf && C.readingOf(reading)) || {}; return r.kind === 'status' ? `${reading} ${dir === 'below' ? 'OFF' : 'ON'}` : `${reading === 'Dissolved oxygen' ? 'DO' : reading} ${dir === 'below' ? 'low' : 'high'}`; };
   const libAlertFor = (typeName, reading, dir) => { const t = setOf(typeName); return t ? t.alerts.find((a) => a.sensorKind === reading && a.direction === dir) || null : null; };
   const draftOf = (typeName) => { const code = codeOfType(typeName); return code && S ? S.lib.drafts[code] || null : null; };
   function libBands(typeName, reading, dir, useDraft) {
@@ -1810,7 +1812,7 @@ window.V7 = (function () {
   }
   function libType(code) {
     const cat = catByCode(code); if (!cat) return null; const t = setOf(cat.type) || { alerts: [], schedules: [] }; const dr = S.lib.drafts[code] || null;
-    const readingsL = cat.sensors.map((s) => { const dirs = [...new Set(t.alerts.filter((a) => a.sensorKind === s.name).map((a) => a.direction))]; if (!dirs.length) dirs.push(s.direction || 'above'); return { pipe: !!s.pipe, pipeNote: s.pipe ? s.note || 'on a pipe' : '', name: s.name, tag: s.tag, unit: s.unit, kind: s.kind, valid: s.valid, dirs: dirs.map((dir) => libLimits(cat.type, s.name, dir, { draft: !!dr })) }; });
+    const readingsL = cat.sensors.map((s) => { const dirs = [...new Set(t.alerts.filter((a) => a.sensorKind === s.name).map((a) => a.direction).concat(dr ? Object.keys(dr.limits || {}).filter((k) => k.lastIndexOf('|') === s.name.length && k.indexOf(s.name + '|') === 0).map((k) => k.slice(s.name.length + 1)) : []))]; if (!dirs.length) dirs.push(s.direction || 'above'); return { pipe: !!s.pipe, pipeNote: s.pipe ? s.note || 'on a pipe' : '', name: s.name, tag: s.tag, unit: s.unit, kind: s.kind, valid: s.valid, dirs: dirs.map((dir) => libLimits(cat.type, s.name, dir, { draft: !!dr })) }; });
     return { code, typeName: cat.type, family: familyOf(cat), archetype: cat.archetype, tier: cat.tier, version: libVersion(code), draft: dr ? libDraft(code) : null, readings: readingsL,
       alerts: t.alerts.map((a) => ({ name: a.name, reading: a.sensorKind, dir: a.direction, bands: norm4(a.limits), hold: libTiming(cat.type, a.sensorKind, a.direction, 'hold'), clear: libTiming(cat.type, a.sensorKind, a.direction, 'clear'), flowId: a.flow || null, issueTypeId: a.issue || null, nextPhase: C.onConnection(a.sensorKind) })),
       schedules: t.schedules.filter((x) => x.workType !== 'condition' && !subDaily(x)).map((x) => ({ name: x.name, workType: x.workType, workLabel: C.WT_LABEL[x.workType] || x.workType, every: libEveryOf(x), everyText: x.workType === 'condition' ? `when ${x.sensorKind} passes ${x.doWhen}` : C.every(x), draftEvery: dr && dr.schedules[x.name] ? dr.schedules[x.name] : null, draftEveryText: dr && dr.schedules[x.name] ? everyWith(x, dr.schedules[x.name]) : null, generalTaskId: x.task || null, flowId: x.flow || null })),
@@ -1819,13 +1821,13 @@ window.V7 = (function () {
   }
   function draftDiffs(dr) {
     const out = []; if (!dr) return out;
-    Object.keys(dr.limits).forEach((k) => { const [reading, dir] = k.split('|'); const cur = libBands(dr.typeName, reading, dir, false) || norm4(null); const nx = norm4(dr.limits[k]); const unit = (C.readingOf(reading) || {}).unit || ''; BANDS.forEach((b) => { if (!same(cur[b], nx[b])) out.push({ kind: 'limit', reading, dir, band: b, from: cur[b], to: nx[b], what: `${reading} · ${BAND_LABEL[b]} ${dirWord(dir)}`, text: `${reading} ${dirWord(dir)}: ${bandChange(b, cur[b], nx[b], unit, (C.readingOf(reading) || {}).kind)}`, safety: b === 'emergency' }); }); });
+    Object.keys(dr.limits).forEach((k) => { const [reading, dir] = k.split('|'); const cur = libBands(dr.typeName, reading, dir, false) || norm4(null); const nx = norm4(dr.limits[k]); const unit = (C.readingOf(reading) || {}).unit || ''; BANDS.forEach((b) => { if (same(cur[b], nx[b])) return; const onoff = (C.readingOf(reading) || {}).kind === 'status' ? (dir === 'below' ? 'OFF' : 'ON') : null; out.push({ kind: 'limit', reading, dir, band: b, from: cur[b], to: nx[b], what: onoff ? `${reading} · ${BAND_LABEL[b]} when ${onoff}` : `${reading} · ${BAND_LABEL[b]} ${dirWord(dir)}`, text: onoff ? `${reading}: ${BAND_LABEL[b]} ${nx[b] == null ? `no longer fires when ${onoff}` : `fires when ${onoff}`}` : `${reading} ${dirWord(dir)}: ${bandChange(b, cur[b], nx[b], unit, (C.readingOf(reading) || {}).kind)}`, safety: b === 'emergency' }); }); });
     Object.keys(dr.schedules).forEach((name) => { const ts = libSchedFor(dr.typeName, name); out.push({ kind: 'cadence', schedule: name, from: libEveryOf(ts), to: dr.schedules[name], what: `${name} · how often`, text: `${name}: ${ts ? C.every(ts) : everyText(libEveryOf(ts))} → ${everyWith(ts, dr.schedules[name])}` }); });
     /* v7/8: what a range triggers, an issue or a task, is a library value too */
     { const LT = window.V7LIBTRIG; Object.keys(dr.triggers || {}).forEach((k) => { const i = k.lastIndexOf('|'); const reading = k.slice(0, i); const dir = k.slice(i + 1); const cur = LT ? LT.get(dr.code, reading, dir) : {};
       BANDS.forEach((b) => { if (!(b in dr.triggers[k])) return; const nx = dr.triggers[k][b]; const was = cur[b] || null; if ((was ? was.name : null) === (nx ? nx.name : null) && (was ? was.flowId || null : null) === (nx ? nx.flowId || null : null)) return;
         out.push({ kind: 'trigger', reading, dir, band: b, from: was ? was.name : null, to: nx ? nx.name : null, flowId: nx ? nx.flowId || null : null, what: `${reading} · ${BAND_LABEL[b]} ${dirWord(dir)} triggers`, text: `${reading} ${dirWord(dir)}: the ${BAND_LABEL[b]} range ${nx ? `raises the task "${nx.name}"` : 'opens an issue again'}` }); }); }); }
-    Object.keys(dr.alerts).forEach((name) => { const ta = (setOf(dr.typeName) || { alerts: [] }).alerts.find((a) => a.name === name); ['hold', 'clear'].forEach((w) => { if (dr.alerts[name][w] == null) return; const cur = ta ? libTiming(dr.typeName, ta.sensorKind, ta.direction, w) : null; if (!same(cur, dr.alerts[name][w])) out.push({ kind: w, alert: name, from: cur, to: dr.alerts[name][w], what: `${name} · must ${w} for`, text: `${name}: must ${w} for ${cur} → ${dr.alerts[name][w]} min` }); }); });
+    Object.keys(dr.alerts).forEach((name) => { const ta = (setOf(dr.typeName) || { alerts: [] }).alerts.find((a) => a.name === name); ['hold', 'clear'].forEach((w) => { if (dr.alerts[name][w] == null) return; const cur = ta ? libTiming(dr.typeName, ta.sensorKind, ta.direction, w) : null; if (!same(cur, dr.alerts[name][w])) out.push({ kind: w, alert: name, from: cur, to: dr.alerts[name][w], what: `${name} · must ${w} for`, text: cur == null ? `${name}: must ${w} for ${dr.alerts[name][w]} min` : `${name}: must ${w} for ${cur} → ${dr.alerts[name][w]} min` }); }); });
     return out;
   }
   function libDraft(code) { const dr = S && S.lib.drafts[code]; if (!dr) return null; const diffs = draftDiffs(dr); return { ...clone(dr), diffs, kind: diffs.some((x) => x.safety) ? 'safety' : 'normal', version: libVersion(code), nextVersion: libVersion(code) + 1 }; }
@@ -1837,9 +1839,13 @@ window.V7 = (function () {
       const err = validateBands(nx, dir, r.valid ? { kind: r.kind, valid: r.valid, unit: r.unit, name: c.reading } : null); if (err) return { ok: false, error: err };
       const cur = libBands(cat.type, c.reading, dir, false) || norm4(null); const k = `${c.reading}|${dir}`;
       if (BANDS.every((b) => same(cur[b], nx[b]))) delete dr.limits[k]; else dr.limits[k] = nx;
+      if (!dr.limits[k] && !libAlertFor(cat.type, c.reading, dir)) delete dr.alerts[newAlertName(c.reading, dir)];   /* no limits left in the draft, so no alert to carry times */
     }
     if (c.schedule) { const ts = libSchedFor(cat.type, c.schedule); if (!ts) return { ok: false, error: 'No such task in the library for this type.' }; const ev = c.every && c.every.n ? { n: Math.round(+c.every.n), unit: c.every.unit } : null; if (!ev || !C.UNIT_HOURS[ev.unit]) return { ok: false, error: 'Give how often: a number and a unit.' }; if (sameEvery(libEveryOf(ts), ev)) delete dr.schedules[c.schedule]; else dr.schedules[c.schedule] = ev; }
-    if (c.alert) { const ta = (setOf(cat.type) || { alerts: [] }).alerts.find((a) => a.name === c.alert); if (!ta) return { ok: false, error: 'No such alert in the library for this type.' }; const x = dr.alerts[c.alert] || {}; ['hold', 'clear'].forEach((w) => { if (c[w] == null) return; const n = Math.round(+c[w]); if (same(n, libTiming(cat.type, ta.sensorKind, ta.direction, w))) delete x[w]; else x[w] = n; }); if (Object.keys(x).length) dr.alerts[c.alert] = x; else delete dr.alerts[c.alert]; }
+    if (c.alert) { const ta = (setOf(cat.type) || { alerts: [] }).alerts.find((a) => a.name === c.alert);
+      /* v7/9: a reading whose first limits are still in the draft has no alert yet. Its times wait in the draft under the name the alert takes when it is published */
+      const fk = !ta && c.fresh ? `${c.fresh.reading}|${c.fresh.dir || 'above'}` : null; const fresh = fk && dr.limits[fk] && c.alert === newAlertName(c.fresh.reading, c.fresh.dir || 'above') ? { hold: dr.limits[fk].emergency != null ? 0 : 5, clear: 10 } : null;
+      if (!ta && !fresh) return { ok: false, error: c.fresh ? 'Set a limit first: the times belong to the alert the limit makes.' : 'No such alert in the library for this type.' }; const x = dr.alerts[c.alert] || {}; ['hold', 'clear'].forEach((w) => { if (c[w] == null) return; const n = Math.round(+c[w]); if (same(n, ta ? libTiming(cat.type, ta.sensorKind, ta.direction, w) : fresh[w])) delete x[w]; else x[w] = n; }); if (Object.keys(x).length) dr.alerts[c.alert] = x; else delete dr.alerts[c.alert]; }
     if (c.trigger) {
       const x = c.trigger; const LT = window.V7LIBTRIG; if (!LT) return { ok: false, error: 'Triggers are not available here.' }; if (!BANDS.includes(x.band)) return { ok: false, error: 'Pick a range.' };
       const name = x.name == null ? '' : String(x.name).trim(); if (x.band === 'emergency' && name) return { ok: false, error: 'Emergency always opens an issue.' };
@@ -1923,7 +1929,7 @@ window.V7 = (function () {
     const dr = S.lib.drafts[code]; const t = now(); const set = setOf(dr.typeName); const version = libVersion(code) + 1; const diffs = wl.diffs;
     if (set) {
       /* the default "must hold for" depends on whether an Emergency band exists: pin it first so a limits change never moves it silently */
-      Object.keys(dr.limits).forEach((k) => { const [reading, dir] = k.split('|'); const ta = set.alerts.find((a) => a.sensorKind === reading && a.direction === dir); if (ta && ta.hold == null) ta.hold = libTiming(dr.typeName, reading, dir, 'hold'); if (ta) ta.limits = sparse(dr.limits[k]); else set.alerts.push({ name: `${reading === 'Dissolved oxygen' ? 'DO' : reading} ${dir === 'below' ? 'low' : 'high'}`, sensorKind: reading, direction: dir, limits: sparse(dr.limits[k]) }); });
+      Object.keys(dr.limits).forEach((k) => { const [reading, dir] = k.split('|'); const ta = set.alerts.find((a) => a.sensorKind === reading && a.direction === dir); if (ta && ta.hold == null) ta.hold = libTiming(dr.typeName, reading, dir, 'hold'); if (ta) ta.limits = sparse(dr.limits[k]); else set.alerts.push({ name: newAlertName(reading, dir), sensorKind: reading, direction: dir, limits: sparse(dr.limits[k]) }); });
       Object.keys(dr.schedules).forEach((name) => { const ts = set.schedules.find((x) => x.name === name); if (ts) { ts.every = { ...dr.schedules[name] }; } });
       Object.keys(dr.alerts).forEach((name) => { const ta = set.alerts.find((a) => a.name === name); if (ta) Object.assign(ta, dr.alerts[name]); });
     }
@@ -2158,7 +2164,7 @@ window.V7 = (function () {
     plants, plant, state, trialStart, tellList, withPlant, equipment, eq, sensors, readings, alerts, alert, schedules, people, addSamplePeople,
     series, latest, replay, previewLimits, trialStats, isNoisy,
     alertState, setAlertState,
-    limitsOf, dirs: dirsOf, libLimits, sourceOf, setLimits, setAlertTiming, setCadence, setTier,
+    limitsOf, dirs: dirsOf, libLimits, libNewAlertName: newAlertName, sourceOf, setLimits, setAlertTiming, setCadence, setTier,
     overrides, revert, revertAll, revertPreview, keep, suggest, suggestions,
     scadaReview, acceptScadaGroup, acceptAllScada, autoSetup, libraryReview, manualTestSensor, decide, acceptAllFor, acceptAllPreview,
     checklist, noLimitsYet, eachOf, goLivePreview, goLive, returnToCommissioning,
