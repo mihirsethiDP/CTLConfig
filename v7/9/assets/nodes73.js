@@ -82,8 +82,9 @@
 
   /* ── 3. Unit-process types: (group, name, stored value, tank?, code, existing codes, label words,
         the equipment type the node is on its own, axes, its name in the taxonomy when that differs) ── */
-  const GROUPS = [['preliminary', 'Preliminary'], ['primary', 'Primary'], ['secondary', 'Secondary'], ['tertiary', 'Tertiary'], ['zld', 'ZLD'], ['utility', 'Utility'],
-    ['flowpath', 'Flow-path tank'], ['sludge', 'Sludge handling'], ['other', 'Catch-all']].map(([key, label]) => ({ key, label }));
+  /* 27 Nov: six stages only. A holding tank takes the stage of the step it serves, and everything about sludge is under sludge handling */
+  const GROUPS = [['preliminary', 'Preliminary'], ['primary', 'Primary'], ['secondary', 'Secondary/Biological'], ['tertiary', 'Tertiary'], ['utility', 'Utility'],
+    ['sludge', 'Sludge handling']].map(([key, label]) => ({ key, label }));
   const P = (group, name, stored, tank, code, existing, labels, eq, axes, sub) => ({ kind: 'process', group, name, stored, tank: !!tank, code, existing: existing || [], labels: labels || [], eq, axes: axes || [], ...(sub ? { sub } : {}) });
   const UP = [
     P('preliminary', 'Screening (manual)', 'screening', 0, 'OS_TANK_SC', ['OS_TANK_SC'], [], 'OS_TANK_SC', [FINENESS, SURFACE]),
@@ -103,7 +104,7 @@
     P('secondary', 'Sequencing batch reactor', 'sbr', 1, 'SBR_TANK', ['SBR_TANK'], ['sbr'], 'SBR_TANK'),
     P('secondary', 'Cyclic activated sludge system', 'cass', 1, 'CASS_BASIN', ['CASS_BASIN'], [], 'CASS_BASIN'),
     P('secondary', 'SABRE treatment', 'sabre', 1, 'SABRE', ['BIG_SABRE', 'MINI_SABRE'], [], 'BIG_SABRE', [AX('size', 'Size', true, false, [['BIG_SABRE', 'big', 'Big', ['BIG_SABRE']], ['MINI_SABRE', 'mini', 'Mini', ['MINI_SABRE']]], 'The two codes are kept whole: SABRE is never drawn on its own')], 'SABRE'),
-    P('secondary', 'Membrane filtration (generic)', 'membrane_filtration', 0, 'MEMBRANE', [], [], 'MEMBRANE'),
+    P('tertiary', 'Membrane filtration (generic)', 'membrane_filtration', 0, 'MEMBRANE', [], [], 'MEMBRANE'),
     P('secondary', 'Cascade aeration', 'cascade_aeration', 0, 'CASCADE_AREATOR', ['CASCADE_AREATOR'], [], 'CASCADE_AREATOR'),
     P('secondary', 'Anaerobic treatment', 'anaerobic_treatment', 1, 'ANAEROBIC', [], [], 'ANAEROBIC', [AX('reactor', 'Reactor type', false, false, [], 'Values not defined yet')]),
     P('tertiary', 'Media filtration', 'media_filtration', 1, 'MF', ['ACF_MGF'], [], 'ACF_MGF', [AX('media', 'Media', true, false, [['PSF', 'sand', 'Sand'], ['ANTHRA', 'anthracite', 'Anthracite'], ['ACF', 'granular_activated_carbon', 'Granular activated carbon', ['ACF_MGF']], ['MGF', 'multigrade_media', 'Multigrade media', ['ACF_MGF']]], 'The existing code cannot tell an activated carbon filter from a multigrade filter')]),
@@ -115,15 +116,15 @@
     P('tertiary', 'Chlorination', 'chlorination', 0, 'CCT', [], [], 'CCT', [AX('source', 'Chlorine source', true, false, [['GAS', 'gas', 'Chlorine gas'], ['NAOCL', 'sodium_hypochlorite', 'Sodium hypochlorite'], ['CAOCL', 'calcium_hypochlorite', 'Calcium hypochlorite']])]),
     P('tertiary', 'Dechlorination', 'dechlorination', 0, 'DECHLOR', [], [], 'DECHLOR'),
     P('tertiary', 'Softening', 'softening', 0, 'SOFTNER', ['SOFTNER'], [], 'SOFTNER', [AX('softener', 'Softener type', false, false, [], 'Values not defined yet')]),
-    P('zld', 'Brine concentration', 'brine_concentration', 0, 'QUADSON_EVAPORATOR', ['QUADSON_EVAPORATOR'], [], 'QUADSON_EVAPORATOR', [AX('evaporator', 'Evaporator type', false, false, [], 'Values not defined yet')]),
+    P('tertiary', 'Brine concentration', 'brine_concentration', 0, 'QUADSON_EVAPORATOR', ['QUADSON_EVAPORATOR'], [], 'QUADSON_EVAPORATOR', [AX('evaporator', 'Evaporator type', false, false, [], 'Values not defined yet')]),
     P('utility', 'Cooling', 'cooling', 0, 'COOLING_TOWER', ['COOLING_TOWER'], [], 'COOLING_TOWER'),
-    P('flowpath', 'Collection', 'collection', 1, 'COL-TANK', [], ['collection'], 'COL-TANK', [], 'Collection tank'),
-    P('flowpath', 'Sludge holding', 'sludge_holding', 1, 'SLH-TANK', [], ['sludge holding'], 'SLH-TANK', [], 'Sludge holding tank'),
-    P('flowpath', 'Treated water', 'treated_water', 1, 'TW-TANK', [], ['treated water', 'soft water'], 'TW-TANK', [AX('enduse', 'End use', false, true, [['FLUSH', 'flushing', 'Flushing'], ['IRRIG', 'irrigation', 'Irrigation'], ['DOMESTIC', 'domestic', 'Domestic']], 'The list of end uses is not complete yet')], 'Treated water tank'),
-    P('flowpath', 'Equalization', 'equalization', 1, 'EQ-TANK', [], ['equalization', 'equalisation', 'eqt'], 'EQ-TANK', [], 'Equalization tank'),
-    P('flowpath', 'Filter feed', 'filter_feed', 1, 'FF-TANK', [], ['filter feed'], 'FF-TANK', [], 'Filter feed tank'),
-    P('flowpath', 'Filtered water', 'filtered_water', 1, 'FW-TANK', [], ['filtered water'], 'FW-TANK', [], 'Filtered water tank'),
-    P('flowpath', 'Recirculation holding', 'recirculation_holding', 1, 'RC-TANK', [], ['recirculation', 're-circulation'], 'RC-TANK', [], 'Recirculation holding tank'),
+    P('preliminary', 'Collection', 'collection', 1, 'COL-TANK', [], ['collection'], 'COL-TANK', [], 'Collection tank'),
+    P('sludge', 'Sludge holding', 'sludge_holding', 1, 'SLH-TANK', [], ['sludge holding'], 'SLH-TANK', [], 'Sludge holding tank'),
+    P('tertiary', 'Treated water', 'treated_water', 1, 'TW-TANK', [], ['treated water', 'soft water'], 'TW-TANK', [AX('enduse', 'End use', false, true, [['FLUSH', 'flushing', 'Flushing'], ['IRRIG', 'irrigation', 'Irrigation'], ['DOMESTIC', 'domestic', 'Domestic']], 'The list of end uses is not complete yet')], 'Treated water tank'),
+    P('preliminary', 'Equalization', 'equalization', 1, 'EQ-TANK', [], ['equalization', 'equalisation', 'eqt'], 'EQ-TANK', [], 'Equalization tank'),
+    P('tertiary', 'Filter feed', 'filter_feed', 1, 'FF-TANK', [], ['filter feed'], 'FF-TANK', [], 'Filter feed tank'),
+    P('tertiary', 'Filtered water', 'filtered_water', 1, 'FW-TANK', [], ['filtered water'], 'FW-TANK', [], 'Filtered water tank'),
+    P('secondary', 'Recirculation holding', 'recirculation_holding', 1, 'RC-TANK', [], ['recirculation', 're-circulation'], 'RC-TANK', [], 'Recirculation holding tank'),
     P('sludge', 'Clarification', 'clarification', 0, 'CLARIFIER', ['CLARIFIER'], [], 'CLARIFIER'),
     P('sludge', 'Gravity thickening', 'gravity_thickening', 0, 'GRAV-THICK', [], [], 'GRAV-THICK'),
     P('sludge', 'DAF thickening', 'daf_thickening', 0, 'DAF-THICK', [], [], 'DAF-THICK'),
@@ -138,14 +139,14 @@
     P('sludge', 'Thermal drying', 'thermal_drying', 0, 'THERMAL-DRYER', [], [], 'THERMAL-DRYER'),
     P('sludge', 'Solar drying', 'solar_drying', 0, 'SOLAR-DRYER', [], [], 'SOLAR-DRYER'),
     P('sludge', 'Sludge drying beds', 'sludge_drying_bed', 0, 'DRYING-BED', [], [], 'DRYING-BED'),
-    P('other', 'Unspecified', 'unspecified', 0, 'OTHER', [], [], 'OTHER'),
+    P('utility', 'Unspecified', 'unspecified', 0, 'OTHER', [], [], 'OTHER'),
   ];
   const SUBGROUP = { clarification: 'Thickening', gravity_thickening: 'Thickening', daf_thickening: 'Thickening', gravity_belt_thickening: 'Thickening', rotary_drum_thickening: 'Thickening', centrifuge_thickening: 'Thickening',
-    belt_filter_press_dewatering: 'Dewatering', plate_frame_filtration: 'Dewatering', centrifuge_dewatering: 'Dewatering', screw_press_dewatering: 'Dewatering', sludge_digestion: 'Digestion', thermal_drying: 'Drying', solar_drying: 'Drying', sludge_drying_bed: 'Drying' };
+    belt_filter_press_dewatering: 'Dewatering', plate_frame_filtration: 'Dewatering', centrifuge_dewatering: 'Dewatering', screw_press_dewatering: 'Dewatering', sludge_digestion: 'Digestion', thermal_drying: 'Drying', solar_drying: 'Drying', sludge_drying_bed: 'Drying', sludge_holding: 'Holding' };
   /* v7/4: the node code or codes that detect each unit process, as the hand-off doc lists them (the 53 of the unit process library).
      Where none is given here, the unit process is detected by its own code above. */
   const DETECT = { flash_mixing: ['FLASH_MIXER'], anoxic_treatment: ['OS_TANK_ANX'], activated_sludge: ['OS_TANK_AER'], sabre: ['BIG_SABRE', 'MINI_SABRE'], chlorination: ['OS_TANK_CCT'], collection: ['OS_TANK_CT'], sludge_holding: ['OS_TANK_SHT'], treated_water: ['OS_TANK_TWT'], equalization: ['OS_TANK_EQT'], filter_feed: ['OS_TANK_FFT'], filtered_water: ['OS_TANK_FWT'], recirculation_holding: ['OS_TANK_RHT'] };
-  const upByKey = {}; UP.forEach((p) => { upByKey[p.stored] = p; p.groupLabel = GROUPS.find((g) => g.key === p.group).label; if (SUBGROUP[p.stored]) p.groupLabel = 'Sludge, ' + SUBGROUP[p.stored].toLowerCase(); p.detect = DETECT[p.stored] || [p.code]; });
+  const upByKey = {}; UP.forEach((p) => { upByKey[p.stored] = p; p.groupLabel = GROUPS.find((g) => g.key === p.group).label; if (SUBGROUP[p.stored]) p.subgroup = SUBGROUP[p.stored]; p.detect = DETECT[p.stored] || [p.code]; });
   const upByExisting = {}; UP.forEach((p) => p.existing.forEach((c) => { upByExisting[c] = p; }));
 
   /* ── 4. Library content. Readings, alerts and tasks use the library's own vocabulary (window.READINGS). ── */

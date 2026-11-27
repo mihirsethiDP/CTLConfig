@@ -432,6 +432,14 @@ V.reset(); { const UL = g.V7UPLIB; const N = g.V7NAMES; const UA = g.V7UPALERT; 
   const bl = V.libraryReview('manesar').find((r) => r.tag === 'BL-1');
   check('names', 'a plant that already had the task keeps it, under the new name', bl.proposals.some((p) => p.name === 'Blower bearing and belt service' && p.decided === 'accepted') && !bl.proposals.some((p) => p.name === 'Bearing service') && !V.libType('BLW').schedules.some((s) => s.name === 'Bearing service'));
 }
+/* 27 Nov: six stages only, and everything about sludge under sludge handling */
+V.reset(); { const N6 = g.V7NODES; const want = ['Preliminary', 'Primary', 'Secondary/Biological', 'Tertiary', 'Utility', 'Sludge handling']; const by = (k) => N6.UP.filter((p) => p.group === k).map((p) => p.stored);
+  check('stages', 'the unit-process library has six stages, in the order a plant runs', N6.GROUPS.map((x) => x.label).join('|') === want.join('|') && N6.UP.length === 53 && N6.UP.every((p) => N6.GROUPS.some((x) => x.key === p.group) && want.includes(p.groupLabel)));
+  check('stages', 'everything about sludge is under sludge handling; the two activated sludge processes stay the biological steps they are', N6.UP.filter((p) => /sludge|thicken|dewater|drying|digestion/i.test(p.name) && !/activated sludge/i.test(p.name)).every((p) => p.group === 'sludge') && by('sludge').length === 15 && by('sludge').includes('sludge_holding') && N6.upByKey.activated_sludge.group === 'secondary' && N6.upByKey.cass.group === 'secondary');
+  check('stages', 'a holding tank takes the stage of the step it serves', ['collection', 'equalization'].every((k) => N6.upByKey[k].group === 'preliminary') && ['filter_feed', 'filtered_water', 'treated_water', 'brine_concentration', 'membrane_filtration'].every((k) => N6.upByKey[k].group === 'tertiary') && N6.upByKey.recirculation_holding.group === 'secondary' && by('utility').join() === 'cooling,unspecified' && by('preliminary').length === 8 && by('primary').length === 4 && by('secondary').length === 10 && by('tertiary').length === 14);
+  const fams = [...new Set(V.libTypes().filter((t) => g.V7NODES.upByKey[t.code]).map((t) => t.family))];
+  check('stages', 'the library lists its unit-process types under those six headings and no other, and a plant\'s unit processes carry them', fams.length === 6 && fams.every((f) => want.includes(f)) && g.V7_STAGES.filter((x) => x.key).length === 6 && Object.values(g.V7_STRUCTURE).every((st) => st.ups.every((u) => !u.stage || want.includes(u.stageLabel))));
+}
 V.reset();
 
 const bad = results.filter((x) => !x).length;
