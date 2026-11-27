@@ -148,6 +148,7 @@
     const WT = (C() && C().WT_LABEL) || {}; const LF = W.V7LIBFLOW; const fo = LF && LF.options ? LF.options('task', code) : { near: [], rest: [] }; const have = new Set(arr((setOf(c.type) || {}).schedules).map((x) => x.name)); const fopt = (f) => `<option value="${esc(f.id)}"${have.has(f.name) ? ' disabled' : ''}>${esc(f.name)}${have.has(f.name) ? ' (already a task here)' : ''}</option>`;
     /* 27 Nov: a task is named after the flow it follows, and a task may come on a condition instead of a date */
     U.modal({ title: `Add a task to ${c.type}`, body: U.field({ label: 'Flow it follows', hint: 'The steps a person works through. The task takes its name from the flow.', html: `<select id="la-tflow"><option value="">No flow yet: I will name the task</option>${fo.near.length ? `<optgroup label="For ${esc(c.type)}">${fo.near.map(fopt).join('')}</optgroup>` : ''}${fo.rest.length ? `<optgroup label="Other task flows">${fo.rest.map(fopt).join('')}</optgroup>` : ''}</select>` })
+      + (LF && LF.newFlow && LF.returning ? `<p class="ua-newflow">None of these fits? ${btn('Write a new task flow', { act: 'la:flow-new', data: { code }, small: true, kind: 'secondary', title: 'Write it here. Once saved you are back on this form with it chosen' })}</p>` : '')
       + U.field({ label: 'Name', html: '<input type="text" id="la-tname" placeholder="For example: Check the belt guard">' })
       + `<div class="la-2">${U.field({ label: 'Kind of work', hint: 'Condition-based: it comes when a condition holds, not on a date.', html: `<select id="la-wt" data-act="la:wt" data-code="${esc(code)}">${Object.keys(WT).filter((k) => k !== 'condition').map((k) => `<option value="${esc(k)}"${k === 'pm' ? ' selected' : ''}>${esc(WT[k])}</option>`).join('')}<option value="condition">Condition-based task</option></select>` })}${U.field({ label: 'Every', hint: 'Nothing comes round more often than once a day.', html: '<span class="la-ev"><input type="number" min="1" step="1" id="la-n" value="1"><select id="la-unit"><option value="day">days</option><option value="week">weeks</option><option value="month" selected>months</option><option value="year">years</option></select></span>' })}</div>` + lands, foot: foot('task', code) });
   }
@@ -164,5 +165,12 @@
   });
   /* a condition-based task is written as its condition: the same form as an alert, leading to a task */
   U.on('la:wt', (el) => { if (el.value !== 'condition') return false; const code = el.getAttribute('data-code'); U.closeModal(true); const b = document.createElement('button'); b.type = 'button'; b.hidden = true; b.setAttribute('data-act', 'ua:lib-open'); b.setAttribute('data-code', code); b.setAttribute('data-starts', 'task'); document.body.appendChild(b); b.click(); b.remove(); return false; });
+  /* 27 Nov: a new task flow can be written from the form, as it can from an alert's form. What was typed is kept; once the flow
+     is saved the form is back with it chosen, and the task takes its name */
+  U.on('la:flow-new', (el) => { const code = el.getAttribute('data-code'); const c = cat(code); const LF = W.V7LIBFLOW; if (!c || !LF || !LF.newFlow || !LF.returning) return false;
+    const keep = { wt: val('la-wt'), n: val('la-n'), unit: val('la-unit'), name: val('la-tname') }; U.closeModal(true);
+    LF.returning((id) => { openForm('task', code); const put = (i, v) => { const e = document.getElementById(i); if (e && v != null && v !== '') e.value = v; }; put('la-wt', keep.wt); put('la-n', keep.n); put('la-unit', keep.unit);
+      const sel = document.getElementById('la-tflow'); if (id && sel && Array.from(sel.options).some((o) => o.value === id && !o.disabled)) { sel.value = id; sel.dispatchEvent(new Event('change', { bubbles: true })); } else put('la-tname', keep.name); });
+    LF.newFlow(keep.wt === 'calibration' ? 'calibration' : 'task', [c.type]); return false; });
   U.on('la:remove', (el) => { const r = remove(el.getAttribute('data-code'), el.getAttribute('data-kind'), el.getAttribute('data-name')); U.toast(r.ok ? 'Removed from the type.' : r.error); return undefined; });
 })();
