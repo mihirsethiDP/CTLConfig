@@ -146,7 +146,11 @@
   /* v7/4: the node code or codes that detect each unit process, as the hand-off doc lists them (the 53 of the unit process library).
      Where none is given here, the unit process is detected by its own code above. */
   const DETECT = { flash_mixing: ['FLASH_MIXER'], anoxic_treatment: ['OS_TANK_ANX'], activated_sludge: ['OS_TANK_AER'], sabre: ['BIG_SABRE', 'MINI_SABRE'], chlorination: ['OS_TANK_CCT'], collection: ['OS_TANK_CT'], sludge_holding: ['OS_TANK_SHT'], treated_water: ['OS_TANK_TWT'], equalization: ['OS_TANK_EQT'], filter_feed: ['OS_TANK_FFT'], filtered_water: ['OS_TANK_FWT'], recirculation_holding: ['OS_TANK_RHT'] };
-  const upByKey = {}; UP.forEach((p) => { upByKey[p.stored] = p; p.groupLabel = GROUPS.find((g) => g.key === p.group).label; if (SUBGROUP[p.stored]) p.subgroup = SUBGROUP[p.stored]; p.detect = DETECT[p.stored] || [p.code]; });
+  /* 27 Nov: a type that can sit in more than one stage is listed under each of them. Flocculation runs before the biological step, or after it as polishing.
+     The first stage is where a plant's unit process of that type sits until a person says otherwise */
+  const ALSO = { flocculation: ['tertiary'] };
+  const upByKey = {}; UP.forEach((p) => { upByKey[p.stored] = p; p.groupLabel = GROUPS.find((g) => g.key === p.group).label; if (SUBGROUP[p.stored]) p.subgroup = SUBGROUP[p.stored];
+    p.groups = [p.group].concat(ALSO[p.stored] || []); p.groupLabels = p.groups.map((k) => GROUPS.find((g) => g.key === k).label); p.stagesLabel = p.groupLabels.join(' and '); p.detect = DETECT[p.stored] || [p.code]; });
   const upByExisting = {}; UP.forEach((p) => p.existing.forEach((c) => { upByExisting[c] = p; }));
 
   /* ── 4. Library content. Readings, alerts and tasks use the library's own vocabulary (window.READINGS). ── */
@@ -283,7 +287,7 @@
     const schedules = base.schedules.concat(arr(add.tasks).filter((t) => !base.schedules.some((x) => x.name === t.name)));
     cat.confirm = `A first draft for this unit process: what the ${base.b.type} carries on its own${arr(add.tasks).length ? `, plus the routine work of the step (${arr(add.tasks).map((t) => t.name).join(', ')})` : ''}. Confirm it.`;
     delete cat.copiedFrom;
-    if (register(p.stored, p.name, cat, { alerts, schedules }, { library: 'process', family: p.groupLabel, group: p.group, node: p.eq, addedBy: 'taxonomy' })) (SHARES[base.b.type] = SHARES[base.b.type] || []).push(p.name);
+    if (register(p.stored, p.name, cat, { alerts, schedules }, { library: 'process', family: p.stagesLabel, families: p.groupLabels, group: p.group, node: p.eq, addedBy: 'taxonomy' })) (SHARES[base.b.type] = SHARES[base.b.type] || []).push(p.name);
   });
   /* a flow, a root cause, an issue or a task written for a base type also serves the types built on it */
   const share = (list) => { if (!Array.isArray(list)) return; Object.keys(SHARES).forEach((b) => { if (list.includes(b)) SHARES[b].forEach((n) => { if (!list.includes(n)) list.push(n); }); }); };
@@ -370,7 +374,7 @@
 
   /* ── 9. The structure the console already has, moved onto the 53 types ── */
   W.V7_STAGES = GROUPS.map((g) => ({ key: g.key, label: g.label })).concat([{ key: null, label: 'No stage' }]);
-  W.V7_UP_TYPES = UP.map((p) => ({ id: p.stored, name: p.name, stage: p.group, code: p.detect.join(', '), node: p.eq, tank: p.tank, ...(p.subgroup ? { subgroup: p.subgroup } : {}) }));
+  W.V7_UP_TYPES = UP.map((p) => ({ id: p.stored, name: p.name, stage: p.group, stages: p.groups, code: p.detect.join(', '), node: p.eq, tank: p.tank, ...(p.subgroup ? { subgroup: p.subgroup } : {}) }));
   Object.values(W.V7_STRUCTURE || {}).forEach((st) => arr(st.ups).forEach((u) => { const p = upByKey[OLD_TYPE[u.typeId]] || upByKey[u.typeId]; if (!p) return; u.typeId = p.stored; u.typeName = p.name; u.stage = p.group; u.stageLabel = p.groupLabel; }));
 
   /* ── 10. Detection: an offered library wins; a new-style code is read to the library type it stands for ── */
@@ -390,7 +394,7 @@
   const eqTypeOf = (code) => EQ.find((t) => t.code === code || t.existing.includes(code)) || null;
   function about(code) {
     const cat = W.CATALOGUE_BY_CODE[code]; if (!cat) return null;
-    if (cat.library === 'process') { const p = upByKey[code]; return { library: 'process', name: cat.type, p, group: p.groupLabel, subgroup: p.subgroup || null, code: p.code, existing: p.existing, labels: p.labels, axes: p.axes, tank: p.tank, node: { code: p.eq, name: (W.CATALOGUE_BY_CODE[p.eq] || {}).type || p.eq }, sub: p.sub || null }; }
+    if (cat.library === 'process') { const p = upByKey[code]; return { library: 'process', name: cat.type, p, group: p.stagesLabel, subgroup: p.subgroup || null, code: p.code, existing: p.existing, labels: p.labels, axes: p.axes, tank: p.tank, node: { code: p.eq, name: (W.CATALOGUE_BY_CODE[p.eq] || {}).type || p.eq }, sub: p.sub || null }; }
     const procs = UP.filter((p) => p.eq === code || p.existing.includes(code)); const t = eqTypeOf(code);
     const sets = t ? t.axes.map((a) => ({ axis: a.label, values: a.values.filter((v) => v.existing.includes(code)).map((v) => v.name) })).filter((x) => x.values.length) : [];
     return { library: 'equipment', name: cat.type, t, sets, processes: procs.map((p) => ({ key: p.stored, name: p.name })), added: cat.addedBy === 'taxonomy', copiedFrom: cat.copiedFrom ? (W.CATALOGUE_BY_CODE[cat.copiedFrom] || {}).type : null };

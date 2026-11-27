@@ -161,9 +161,13 @@ window.V7 = (function () {
     const st = structDraft(key); if (!st) return { ok: false, error: 'No such plant.' }; const x = o || {}; const u = st.ups.find((y) => y.id === id); if (!u) return { ok: false, error: 'No such unit process.' };
     const t = x.typeId ? upTypeOf(x.typeId) : null; if (x.typeId && !t) return { ok: false, error: 'No such type.' };
     const moves = (x.moves || []).filter((m) => m && m.eqId && m.to != null && m.to !== ''); const add = (x.add || []).filter(Boolean); const bits = [];
-    if (!(t && x.typeId !== u.typeId) && !moves.length && !add.length) return { ok: true, text: '', nothing: true };
+    /* v7/9: a type that sits in more than one stage (flocculation: primary or tertiary) is placed by a person at each plant */
+    const typeTo = !!(t && x.typeId !== u.typeId); const tNow = t || upTypeOf(u.typeId); const stages = tNow ? tNow.groups || [tNow.group] : [];
+    const stageTo = x.stage && stages.includes(x.stage) && x.stage !== (typeTo ? tNow.group : u.stage) ? x.stage : null;
+    if (!typeTo && !moves.length && !add.length && !stageTo) return { ok: true, text: '', nothing: true };
     const why = structWhy(key, x); if (why) return why;
     if (t && x.typeId !== u.typeId) { u.typeId = x.typeId; u.typeName = t.name; u.stage = t.group || null; u.stageLabel = t.groupLabel || ''; u.why = 'Type set by hand'; bits.push(`type set to ${t.name}`); }
+    if (stageTo) { u.stage = stageTo; u.stageLabel = tNow.groupLabels[stages.indexOf(stageTo)]; bits.push(`placed under ${u.stageLabel}`); }
     moves.forEach((m) => { const to = structMove(key, st, m.eqId, u.id, m.to === '__out' ? null : m.to); bits.push(to ? `${tagOfEq(key, m.eqId)} moved to ${to.tag}` : `${tagOfEq(key, m.eqId)} taken out`); });
     add.forEach((eqId) => { if (eqRaw(key, eqId) && eqId !== u.id && !u.members.some((m) => m.eqId === eqId)) { structMove(key, st, eqId, null, u.id); bits.push(`${tagOfEq(key, eqId)} added`); } });
     return structDone(key, `Unit process ${u.tag}: ${bits.join('; ')}`, x);
@@ -1801,7 +1805,7 @@ window.V7 = (function () {
     return cached('libtypes', () => (window.CATALOGUE || []).map((cat) => {
       const per = ORDER.filter((k) => dOf(k)).map((k) => ({ key: k, name: plantName(k), count: dOf(k).equipment.filter((e) => e.type === cat.type).length })).filter((x) => x.count);
       const t = setOf(cat.type) || { alerts: [], schedules: [] };
-      return { code: cat.code, typeName: cat.type, library: cat.library === 'process' ? 'process' : 'equipment', added: cat.addedBy === 'taxonomy', family: familyOf(cat), archetype: cat.archetype, tier: cat.tier, version: libVersion(cat.code), draft: !!S.lib.drafts[cat.code], plants: per, plantCount: per.length, equipmentCount: per.reduce((n, x) => n + x.count, 0), readings: cat.sensors.length, alerts: t.alerts.length, tasks: t.schedules.filter((x) => !subDaily(x)).length, issues: issueTypes(cat.type).length, generalTasks: C.tasksOf(cat.type).length, nextPhase: ((cat.nextPhase || {}).readings || []).length + ((cat.nextPhase || {}).alerts || []).length, suggestions: S.lib.suggestions.filter((x) => x.code === cat.code).length };
+      return { code: cat.code, typeName: cat.type, library: cat.library === 'process' ? 'process' : 'equipment', added: cat.addedBy === 'taxonomy', family: familyOf(cat), families: Array.isArray(cat.families) ? cat.families.slice() : null, archetype: cat.archetype, tier: cat.tier, version: libVersion(cat.code), draft: !!S.lib.drafts[cat.code], plants: per, plantCount: per.length, equipmentCount: per.reduce((n, x) => n + x.count, 0), readings: cat.sensors.length, alerts: t.alerts.length, tasks: t.schedules.filter((x) => !subDaily(x)).length, issues: issueTypes(cat.type).length, generalTasks: C.tasksOf(cat.type).length, nextPhase: ((cat.nextPhase || {}).readings || []).length + ((cat.nextPhase || {}).alerts || []).length, suggestions: S.lib.suggestions.filter((x) => x.code === cat.code).length };
     }));
   }
   function libType(code) {

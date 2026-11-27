@@ -174,7 +174,8 @@
     const counts = {}; SHOW_LIB.forEach(([id]) => { counts[id] = types.filter((t) => libShowOk(t, id)).length; });
     const shown = types.filter((t) => libShowOk(t, show) && (!needle || hay(t).includes(needle)));
     const fams = [];
-    shown.forEach((t) => { let f = fams.find((x) => x.name === t.family); if (!f) fams.push(f = { name: t.family, rows: [] }); f.rows.push(t); });
+    shown.forEach((t) => { (t.families && t.families.length ? t.families : [t.family]).forEach((name) => { let f = fams.find((x) => x.name === name); if (!f) fams.push(f = { name, rows: [] }); f.rows.push(t); }); });
+    if (lib === 'process' && Array.isArray(W.V7_STAGES)) { const at = (n) => { const i = W.V7_STAGES.findIndex((g) => g.label === n); return i < 0 ? 99 : i; }; fams.sort((a, b) => at(a.name) - at(b.name)); }
     fams.forEach((f) => { f.rows = f.rows.filter((t) => t.plantCount).concat(f.rows.filter((t) => !t.plantCount)); });
     const tools = `<div class="lib-tools"><input type="search" id="libSearch" placeholder="Search a type, a code or a reading" aria-label="Search the library" value="${esc(ST.q)}" data-act="lib:search" data-live autocomplete="off">`
       + filters(SHOW_LIB.map(([id, label]) => ({ label, href: '#/library' + qs({ lib: lib === 'process' ? 'process' : null, show: id === 'all' ? null : id, view: view === 'table' ? 'table' : null }), on: id === show, count: counts[id] })))
